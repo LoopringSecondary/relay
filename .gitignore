@@ -1,0 +1,5 @@
+.idea
+ringminer.iml
+ringminer
+*.log
+leveldb
