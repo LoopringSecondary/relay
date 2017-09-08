@@ -1,0 +1,20 @@
+title = "Loopring TOML"
+
+[owner]
+name = "Loopring corporation"
+
+[database]
+server = "localhost"
+port = 8001
+name = "leveldb"
+cache_capacity = 8
+buffer_capacity = 4
+
+[ipfs]
+server = "localhost"
+port = 9001
+topic = "topic"
+
+[eth_client]
+server = "localhost"
+port = 9092
