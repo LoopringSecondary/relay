@@ -19,41 +19,51 @@
 package log
 
 import (
-	"go.uber.org/zap"
 	"encoding/json"
+	"go.uber.org/zap"
 )
 
+//todo: I'm not sure whether zap support Rotating
 var logger *zap.Logger
+var sugaredLogger *zap.SugaredLogger
 
 const logConfig = `{
 	  "level": "debug",
-	  "development": false,
-	  "encoding": "json",
-	  "outputPaths": ["zap.log"],
+	  "development": true,
+	  "disableStacktrace": false,
+	  "encoding": "console",
+	  "outputPaths": ["zap.log","stderr"],
 	  "errorOutputPaths": ["err.log"],
-	  "initialFields": {"foo": "bar"},
 	  "encoderConfig": {
-	    "messageKey": "message",
+	    "messageKey": "msg",
 	    "levelKey": "level",
-	    "levelEncoder": "lowercase"
+	    "stacktraceKey":"trace",
+	    "timeKey":"ts",
+	    "levelEncoder": "lowercase",
+	    "timeEncoder":"iso8601"
 	  }
 	}`
 
-func NewLogger() *zap.Logger {
+func Initialize(cfg zap.Config) *zap.Logger {
 	rawJSON := []byte(logConfig)
 
-	var (
-		cfg zap.Config
-		err error
-	)
+	var err error
+
 	if err = json.Unmarshal(rawJSON, &cfg); err != nil {
 		panic(err)
 	}
+
+	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	//"callerKey":"C"
+	//cfg.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	//cfg.EncoderConfig.LineEnding = zapcore.DefaultLineEnding
+	//opts := zap.AddStacktrace(zap.DebugLevel)
 
 	logger, err = cfg.Build()
 	if err != nil {
 		panic(err)
 	}
+	sugaredLogger = logger.Sugar()
 
 	return logger
 }

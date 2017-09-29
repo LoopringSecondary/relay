@@ -19,116 +19,168 @@
 package orderbook
 
 import (
-	"sync"
-	"github.com/Loopring/ringminer/types"
-	"github.com/Loopring/ringminer/lrcdb"
-	"log"
-	"os"
+	"encoding/json"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/ringminer/types"
+	"math/big"
+	"sync"
 )
 
-type ORDER_STATUS int
+/**
+todo:
+1. filter
+2. chain event
+3. 事件执行到第几个块等信息数据
+4. 订单完成的标志，以及需要发送到miner
+*/
 
 const (
-	FINISH_TABLE_NAME = "finished"
+	FINISH_TABLE_NAME  = "finished"
 	PARTIAL_TABLE_NAME = "partial"
 )
 
-type OrderBookConfig struct {
-	name           string
-	cacheCapacity   int
-	bufferCapacity  int
+type Whisper struct {
+	PeerOrderChan   chan *types.Order
+	EngineOrderChan chan *types.OrderState
+	ChainOrderChan  chan *types.OrderMined
 }
 
 type OrderBook struct {
-	conf         OrderBookConfig
-	toml         config.DbOptions
-	db           lrcdb.Database
-	finishTable  lrcdb.Database
-	partialTable lrcdb.Database
-	whisper      *types.Whispers
+	options      config.OrderBookOptions
+	filters      []Filter
+	db           db.Database
+	finishTable  db.Database
+	partialTable db.Database
+	whisper      *Whisper
 	lock         sync.RWMutex
+
+	minAmount *big.Int
 }
 
-func (ob *OrderBook) loadConfig() {
-	// TODO(fk): set path as global variable
-	dir := os.Getenv("GOPATH") + "/github.com/Loopring/ringminer/"
-	file := dir + ob.toml.Name
-	cache := ob.toml.CacheCapacity
-	buffer := ob.toml.BufferCapacity
+func NewOrderBook(options config.OrderBookOptions, database db.Database, whisper *Whisper) *OrderBook {
+	ob := &OrderBook{}
 
-	// TODO(fk): load config from cli or genesis
+	ob.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
+	ob.partialTable = db.NewTable(database, PARTIAL_TABLE_NAME)
+	ob.whisper = whisper
 
-	ob.conf = OrderBookConfig{file, cache, buffer}
+	//todo:filters init
+	filters := []Filter{}
+	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
+	filters = append(filters, baseFilter)
+	tokenSFilter := &TokenSFilter{}
+	tokenBFilter := &TokenBFilter{}
+
+	filters = append(filters, tokenSFilter)
+	filters = append(filters, tokenBFilter)
+
+	return ob
 }
 
-func NewOrderBook(whisper *types.Whispers, options config.DbOptions) *OrderBook {
-	s := &OrderBook{}
+func (ob *OrderBook) recoverOrder() error {
+	iterator := ob.partialTable.NewIterator(nil, nil)
+	for iterator.Next() {
+		dataBytes := iterator.Value()
+		state := &types.OrderState{}
+		if err := json.Unmarshal(dataBytes, state); nil != err {
+			log.Errorf("err:%s", err.Error())
+		} else {
+			ob.whisper.EngineOrderChan <- state
+		}
+	}
+	return nil
+}
 
-	s.toml = options
-	s.loadConfig()
-
-	s.db = lrcdb.NewDB(s.conf.name, s.conf.cacheCapacity, s.conf.bufferCapacity)
-	s.finishTable = lrcdb.NewTable(s.db, FINISH_TABLE_NAME)
-	s.partialTable = lrcdb.NewTable(s.db, PARTIAL_TABLE_NAME)
-	s.whisper = whisper
-
-	return s
+func (ob *OrderBook) filter(o *types.Order) (bool, error) {
+	valid := true
+	var err error
+	for _, filter := range ob.filters {
+		valid, err = filter.filter(o)
+		if !valid {
+			return valid, err
+		}
+	}
+	return valid, nil
 }
 
 // Start start orderbook as a service
-func (s *OrderBook) Start() {
+func (ob *OrderBook) Start() {
+	ob.recoverOrder()
+
 	go func() {
 		for {
 			select {
-			case ord := <- s.whisper.PeerOrderChan:
-				s.peerOrderHook(ord)
-			case ord := <- s.whisper.ChainOrderChan:
-				s.chainOrderHook(ord)
+			case ord := <-ob.whisper.PeerOrderChan:
+				log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
+				if valid, err := ob.filter(ord); valid {
+					if err := ob.peerOrderHook(ord); nil != err {
+						log.Errorf("err:", err.Error())
+					}
+				} else {
+					log.Errorf("receive order but valid failed:%s", err.Error())
+				}
+			case ord := <-ob.whisper.ChainOrderChan:
+				ob.chainOrderHook(ord)
 			}
 		}
 	}()
 }
 
-func (s *OrderBook) Stop() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (ob *OrderBook) Stop() {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
 
-	s.finishTable.Close()
-	s.partialTable.Close()
-	s.db.Close()
+	ob.finishTable.Close()
+	ob.partialTable.Close()
+	//ob.db.Close()
 }
 
 func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 
-	// TODO(fk): order filtering
-
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	key := ord.GenHash().Bytes()
-	value,err := ord.MarshalJson()
-	if err != nil {
-		return err
-	}
+	// TODO(fk): order filtering
 
-	ob.partialTable.Put(key, value)
+	state := &types.OrderState{}
+	state.RawOrder = *ord
+	state.Hash = ord.GenerateHash()
 
-	// TODO(fk): delete after test
-	if input, err := ob.partialTable.Get(key); err != nil {
+	//todo:it should not query db everytime.
+	if input, err := ob.partialTable.Get(state.Hash.Bytes()); err != nil {
 		panic(err)
+	} else if len(input) == 0 {
+		if inpupt1, err1 := ob.finishTable.Get(state.Hash.Bytes()); nil != err1 {
+			panic(err1)
+		} else if len(inpupt1) == 0 {
+			state.Status = types.ORDER_NEW
+			state.RemainedAmountS = state.RawOrder.AmountS
+			state.RemainedAmountB = state.RawOrder.AmountB
+		} else {
+			state.Status = types.ORDER_FINISHED
+		}
 	} else {
-		var ord types.Order
-		ord.UnMarshalJson(input)
-		log.Println(ord.TokenS.Str())
-		log.Println(ord.TokenB.Str())
-		log.Println(ord.AmountS.Uint64())
-		log.Println(ord.AmountB.Uint64())
+		state.Status = types.ORDER_PARTIAL
 	}
 
-	// TODO(fk): send orderState to matchengine
-	//state := ord.Convert()
-	//ob.whisper.EngineOrderChan <- state
+	//do nothing when types.ORDER_NEW != state.Status
+	if types.ORDER_NEW == state.Status {
+
+		log.Debugf("state hash:%s", state.Hash.Hex())
+
+		//save to db
+		dataBytes, err := json.Marshal(state)
+		if err != nil {
+			return err
+		}
+		ob.partialTable.Put(state.Hash.Bytes(), dataBytes)
+
+		//send to miner
+		ob.whisper.EngineOrderChan <- state
+	}
+
 	return nil
 }
 
@@ -143,18 +195,19 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderMined) error {
 func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
 	var (
 		value []byte
-		err error
-		ord types.OrderState
+		err   error
+		ord   types.OrderState
 	)
 
 	if value, err = ob.partialTable.Get(id.Bytes()); err != nil {
 		value, err = ob.finishTable.Get(id.Bytes())
 	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	err = ord.UnMarshalJson(value)
+	err = json.Unmarshal(value, &ord)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +222,8 @@ func (ob *OrderBook) GetOrders() {
 
 // moveOrder move order when partial finished order fully exchanged
 func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
-	key := odw.OrderHash.Bytes()
-	value, err := odw.MarshalJson()
+	key := odw.Hash.Bytes()
+	value, err := json.Marshal(odw)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,26 @@
+title = "Loopring TOML"
+
+[owner]
+name = "Loopring corporation"
+
+[database]
+server = "localhost"
+port = 8001
+data_dir = "./leveldb"
+name = "leveldb"
+cache_capacity = 8
+buffer_capacity = 4
+
+[ipfs]
+server = "localhost"
+port = 8080
+topic = "test_topic"
+
+[chain_client]
+raw_url = "http://127.0.0.1:8545"
+    [chain_client.eth]
+        gas_price = 10000
+        gas_limit = 10000
+        password = "aaa"
+        [chain_client.eth.private_keys]
+            "0x4ec94e1007605d70a86279370ec5e4b755295eda" = "4f5b916dc82fb59cc57dbdd2fee5b49b2bdfe6ea34534a5d40c4475e9740c66e"

@@ -19,54 +19,68 @@
 package node
 
 import (
-	"sync"
-	"github.com/Loopring/ringminer/matchengine"
-	"go.uber.org/zap"
-	"github.com/Loopring/ringminer/orderbook"
-	"github.com/Loopring/ringminer/p2p"
-	"github.com/Loopring/ringminer/types"
+	ethClient "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/chainclient/eth"
+	"github.com/Loopring/ringminer/crypto"
+	ethCrypto "github.com/Loopring/ringminer/crypto/eth"
+	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/listener"
+	ethListener "github.com/Loopring/ringminer/listener/chain/eth"
+	ipfsListener "github.com/Loopring/ringminer/listener/p2p/ipfs"
+	"github.com/Loopring/ringminer/miner"
+	"github.com/Loopring/ringminer/miner/bucket"
+	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/types"
+	"go.uber.org/zap"
+	"sync"
 )
 
 // TODO(fk): add services
 type Node struct {
-	options *config.GlobalConfig
-	server *matchengine.Proxy
-	p2pListener p2p.Listener
-	ethListener eth.Listener
-	orderbook *orderbook.OrderBook
-	whisper *types.Whispers
-	stop chan struct{}
-	lock sync.RWMutex
-	logger *zap.Logger
+	globalConfig  *config.GlobalConfig
+	p2pListener   listener.Listener
+	chainListener listener.Listener
+	orderbook     *orderbook.OrderBook
+	miner         miner.Proxy
+	stop          chan struct{}
+	lock          sync.RWMutex
+	logger        *zap.Logger
 }
 
-// TODO(fk): inject whisper and logger
-func NewNode(logger *zap.Logger) *Node {
+// TODO(fk): inject whisper
+func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
-
-	whisper := &types.Whispers{}
-	whisper.PeerOrderChan = make(chan *types.Order)
-	whisper.ChainOrderChan = make(chan *types.OrderMined)
-	whisper.EngineOrderChan = make(chan *types.OrderState)
-
-	n.whisper = whisper
 	n.logger = logger
-	n.options = config.LoadConfig()
+	n.globalConfig = globalConfig
+	ethClient.Initialize(n.globalConfig.ChainClient)
 
-	n.registerP2PListener()
-	n.registerOrderBook()
+	database := db.NewDB(globalConfig.Database)
+	ringClient := miner.NewRingClient(database, ethClient.EthClient)
+	//
+	miner.Initialize(n.globalConfig.Miner, ringClient.Chainclient)
+	//
+	peerOrderChan := make(chan *types.Order)
+	chainOrderChan := make(chan *types.OrderMined)
+	engineOrderChan := make(chan *types.OrderState)
+	//
+	n.registerP2PListener(peerOrderChan)
+	//n.registerEthListener(chainOrderChan)
+	//
+	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
+	n.registerMiner(ringClient, engineOrderChan)
+
+	crypto.CryptoInstance = &ethCrypto.EthCrypto{Homestead: false}
 
 	return n
 }
 
 func (n *Node) Start() {
+	//n.chainListener.Start()
 	n.p2pListener.Start()
-	n.orderbook.Start()
+	//
 
-	// TODO(fk): start eth client
-	//n.ethListener.Start()
+	n.orderbook.Start()
+	n.miner.Start()
 }
 
 func (n *Node) Wait() {
@@ -83,21 +97,33 @@ func (n *Node) Wait() {
 func (n *Node) Stop() {
 	n.lock.RLock()
 
-	n.p2pListener.Stop()
-	n.ethListener.Stop()
+	//
+	//n.p2pListener.Stop()
+	//n.chainListener.Stop()
+	//n.orderbook.Stop()
+	//n.miner.Stop()
+
 	close(n.stop)
 
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerP2PListener() {
-	n.p2pListener = p2p.NewListener(n.whisper, n.options.Ipfs)
+func (n *Node) registerEthListener(chainOrderChan chan *types.OrderMined) {
+	whisper := &ethListener.Whisper{chainOrderChan}
+	n.chainListener = ethListener.NewListener(n.globalConfig.ChainClient, whisper)
 }
 
-func (n *Node) registerOrderBook() {
-	n.orderbook = orderbook.NewOrderBook(n.whisper, n.options.Database)
+func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
+	whisper := &ipfsListener.Whisper{peerOrderChan}
+	n.p2pListener = ipfsListener.NewListener(n.globalConfig.Ipfs, whisper)
 }
 
-func (n *Node) registerEthClient() {
-	n.ethListener = eth.NewListener(n.whisper, n.options.EthClient)
+func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderMined, engineOrderChan chan *types.OrderState) {
+	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
+	n.orderbook = orderbook.NewOrderBook(n.globalConfig.ObOptions, database, whisper)
+}
+
+func (n *Node) registerMiner(ringClient *miner.RingClient, orderStateChan chan *types.OrderState) {
+	whisper := bucket.Whisper{orderStateChan}
+	n.miner = bucket.NewBucketProxy(ringClient, whisper)
 }

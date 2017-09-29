@@ -18,16 +18,41 @@
 
 package eth
 
+import (
+	"crypto/ecdsa"
+	"github.com/Loopring/ringminer/crypto"
+	"github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+)
 
-//暂不考虑，使用eth节点的账号处理方式
+//address -> account
+var Accounts map[string]*Account
+
+var passphrase []byte //as aes key
+
 type Account struct {
-	privateKey	[]byte
-	address	string
+	PrivKey          *ecdsa.PrivateKey
+	PubKey           *ecdsa.PublicKey
+	Address          common.Address
+	EncryptedPrivKey []byte
 }
 
-func (account *Account) Sign() {
-
+func (account *Account) Encrypted(passphrase []byte) ([]byte, error) {
+	encrypted, err := crypto.AesEncrypted(passphrase, account.PrivKey.D.Bytes())
+	if nil != err {
+		return nil, err
+	}
+	account.EncryptedPrivKey = encrypted
+	return encrypted, nil
 }
 
-
-
+func (account *Account) Decrypted(passphrase []byte) ([]byte, error) {
+	decrypted, err := crypto.AesDecrypted(account.EncryptedPrivKey, passphrase)
+	if nil != err {
+		return nil, err
+	}
+	account.PrivKey, err = ethCrypto.ToECDSA(decrypted)
+	account.PubKey = &account.PrivKey.PublicKey
+	account.Address = ethCrypto.PubkeyToAddress(*account.PubKey)
+	return decrypted, nil
+}

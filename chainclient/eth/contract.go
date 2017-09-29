@@ -19,93 +19,122 @@
 package eth
 
 import (
+	"errors"
+	"github.com/Loopring/ringminer/log"
+	types "github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"reflect"
 	"strings"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/ringminer/chainclient"
 )
 
-//合约的数据结构相关的，其余的不在此处
-const Erc20TokenAbiStr = `[{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"totalSupply","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_from","type":"address"},{"indexed":true,"name":"_to","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_owner","type":"address"},{"indexed":true,"name":"_spender","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Approval","type":"event"}]`
-
-type Contract struct {
-	Abi *abi.ABI
-	Address     string
-}
-
-func (c *Contract) GetAbi() interface{} {
-	return c.Abi
-}
-
-func (c *Contract) GetAddress() string {
-	return c.Address
-}
-
 type AbiMethod struct {
-	Abi *abi.ABI
-	Address	string
 	abi.Method
+	Abi     *abi.ABI
+	Address string
 }
 
-//todo：如何进行签名等处理～～～
-//调用eth_call，不会产生交易
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
-	if (nil != err) {
+
+	if nil != err {
 		return err
 	}
 	data := common.ToHex(dataBytes)
-	//合约的call，gas、gasPrice、value等暂为0
-	arg := &CallArgs{}
-	arg.From = m.Address	//设置地址，因为rpc.Client.Call不仅给eth_call使用，所以要求地址
-	arg.To = m.Address
+	//when call a contract method，gas,gasPrice and value are not needed.
+	arg := &CallArg{}
+	arg.From = m.Address
+	arg.To = m.Address //when call a contract method this arg is unnecessary.
 	arg.Data = data
-	//发送到区块链
+	//todo:m.Abi.Unpack
 	return EthClient.Call(result, arg, blockParameter)
 }
 
-func (m *AbiMethod) SendTransaction(contractAddress string, args ...interface{}) error {
-	//如何签名
-	dataBytes, err := m.Abi.Pack(m.Name, args)
-	if (nil != err) {
-		return err
-	}
-	data := common.ToHex(dataBytes)
+//contract transaction
+func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, error) {
+	var gas, gasPrice *types.Big
+	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
-	println(data)
-	//发送到区块链
-	//ChainClient.SendRawTransaction()
-	return nil
+	if nil != err {
+		return "", err
+	}
+
+	if err = EthClient.GasPrice(&gasPrice); nil != err {
+		return "", err
+	}
+
+	dataHex := common.ToHex(dataBytes)
+	callArg := &CallArg{}
+	callArg.From = from
+	callArg.To = m.Address
+	callArg.Data = dataHex
+	callArg.GasPrice = *gasPrice
+	if err = EthClient.EstimateGas(&gas, callArg); nil != err {
+		return "", err
+	}
+
+	//todo: m.Abi.Pack is double used
+	return m.SendTransactionWithSpecificGas(from, gas.BigInt(), gasPrice.BigInt(), args...)
 }
 
+func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
-func  applyAbiMethod(token *chainclient.Erc20Token) {
-	e := reflect.ValueOf(token).Elem()
-	abi := token.GetAbi().(abi.ABI)
+	if nil != err {
+		return "", err
+	}
 
-	for _, method := range abi.Methods {
+	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
+		return "", errors.New("gasPrice must be setted.")
+	}
+
+	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
+		return "", errors.New("gas must be setted.")
+	}
+
+	var nonce types.Big
+	if err = EthClient.GetTransactionCount(&nonce, from, "pending"); nil != err {
+		return "", err
+	}
+
+	transaction := ethTypes.NewTransaction(nonce.Uint64(),
+		common.HexToAddress(m.Address),
+		big.NewInt(0),
+		gas,
+		gasPrice,
+		dataBytes)
+	var txHash string
+
+	err = EthClient.SignAndSendTransaction(&txHash, from, transaction)
+	return txHash, err
+}
+
+func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string) {
+	for _, method := range cabi.Methods {
 		methodName := strings.ToUpper(method.Name[0:1]) + method.Name[1:]
 		abiMethod := &AbiMethod{}
 		abiMethod.Name = method.Name
-		abiMethod.Abi = &abi
-		abiMethod.Address = token.GetAddress()
+		abiMethod.Abi = cabi
+		abiMethod.Address = address
 		e.FieldByName(methodName).Set(reflect.ValueOf(abiMethod))
 	}
 }
 
-func NewErc20Token(address string) *chainclient.Erc20Token {
-	erc20Token := &chainclient.Erc20Token{}
+func NewContract(contract interface{}, address, abiStr string) error {
 
-	contract := &Contract{}
 	cabi := &abi.ABI{}
-	cabi.UnmarshalJSON([]byte(Erc20TokenAbiStr))
-	contract.Abi = cabi
-	contract.Address = address
+	if err := cabi.UnmarshalJSON([]byte(abiStr)); err != nil {
+		log.Fatalf("error:%s", err.Error())
+	}
 
-	erc20Token.Contract = contract
-	applyAbiMethod(erc20Token)
-	return erc20Token
+	e := reflect.ValueOf(contract).Elem()
+
+	e.FieldByName("Abi").Set(reflect.ValueOf(cabi))
+	e.FieldByName("Address").Set(reflect.ValueOf(address))
+
+	applyAbiMethod(e, cabi, address)
+
+	return nil
 }
-
-

@@ -18,44 +18,61 @@
 
 package main
 
-import(
-	"github.com/Loopring/ringminer/cmd/utils"
-	"sort"
-	"gopkg.in/urfave/cli.v1"
-	"runtime"
-	"os"
+import (
 	"fmt"
+	"github.com/Loopring/ringminer/cmd/utils"
+	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/node"
+	"go.uber.org/zap"
+	"gopkg.in/urfave/cli.v1"
+	"os"
+	"os/signal"
+	"reflect"
+	"sort"
 )
 
 var (
-	app = utils.NewApp()
-	logger = log.NewLogger()
+	app          *cli.App
+	configFile   string
+	globalConfig *config.GlobalConfig
+	logger       *zap.Logger
 )
 
-func init() {
-	app.Action = miner
+func main() {
+	app = utils.NewApp()
+	app.Action = minerNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2017 The Looprint Authors"
-	app.Commands = []cli.Command{
+	app.Flags = []cli.Flag{cli.StringFlag{Name: "conf", Usage: " config file"}}
 
+	app.Commands = []cli.Command{
+	//matchengineCommand,
 	}
+
 	sort.Sort(cli.CommandsByName(app.Commands))
 
-	//app.Flags = append(app.Flags, nodeFlags...)
-
 	app.Before = func(ctx *cli.Context) error {
-		runtime.GOMAXPROCS(runtime.NumCPU())
+		//runtime.GOMAXPROCS(runtime.NumCPU())
+		file := ""
+		if ctx.IsSet(configFile) {
+			file = ctx.String("conf")
+		}
+		globalConfig = config.LoadConfig(file)
+
+		//todo:merge flags to config, 区分node
+
+		if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
+			panic(err)
+		}
+
+		logger = log.Initialize(globalConfig.LogOptions)
 		return nil
 	}
 
 	app.After = func(ctx *cli.Context) error {
 		return nil
 	}
-}
-
-func main() {
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -64,9 +81,26 @@ func main() {
 	defer logger.Sync()
 }
 
-func miner(c *cli.Context) error {
-	n := node.NewNode(logger)
+func minerNode(c *cli.Context) error {
+	//todo：设置flag到config中
+	n := node.NewEthNode(logger, globalConfig)
 	n.Start()
+
+	log.Info("started")
+	//captiure stop signal
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	signal.Notify(signalChan, os.Kill)
+	go func() {
+		for {
+			select {
+			case sig := <-signalChan:
+				log.Infof("captured %s, exiting...\n", sig.String())
+				n.Stop()
+				os.Exit(1)
+			}
+		}
+	}()
 	n.Wait()
 	return nil
 }

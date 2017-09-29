@@ -19,10 +19,10 @@
 package utils
 
 import (
-	"path/filepath"
-	"os"
-	"gopkg.in/urfave/cli.v1"
 	"github.com/Loopring/ringminer/params"
+	"gopkg.in/urfave/cli.v1"
+	"os"
+	"path/filepath"
 )
 
 func NewApp() *cli.App {
@@ -32,6 +32,53 @@ func NewApp() *cli.App {
 	app.Usage = "the Loopring/ringminer command line interface"
 	app.Author = ""
 	app.Email = ""
-
 	return app
+}
+
+func matchengineCommands() cli.Command {
+	matchengineCommand := cli.Command{
+		Name:     "matchengine",
+		Usage:    "matchengine ",
+		Category: "Matchengine Commands",
+		Action:   nil,
+	}
+	return matchengineCommand
+}
+
+func chainclientCommands() cli.Command {
+	c := cli.Command{
+		Name:        "chainclient",
+		Usage:       "chainclient ",
+		Category:    "Chainclient Commands",
+		Subcommands: []cli.Command{
+		//秘钥以及地址，生成时的密码
+		},
+	}
+	return c
+}
+
+//todo:imp it
+func accountCommands() cli.Command {
+	c := cli.Command{
+		Name:     "account",
+		Usage:    "account",
+		Category: "account Commands",
+		Subcommands: []cli.Command{
+			cli.Command{
+				Name:  "generate",
+				Usage: "generate a new account",
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "display",
+						Usage: "display the privatekey",
+					},
+					cli.StringFlag{
+						Name:  "pass",
+						Usage: "passphrase for encrypted the private",
+					},
+				},
+			},
+		},
+	}
+	return c
 }

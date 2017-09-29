@@ -19,40 +19,37 @@
 package eth
 
 import (
-	"github.com/ethereum/go-ethereum/rpc"
+	"errors"
 	"github.com/Loopring/ringminer/chainclient"
-	"reflect"
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"github.com/ethereum/go-ethereum/common"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/rpc"
+	"reflect"
 	"time"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-/**
-todo：未完成：
-1、返回的struct定义
-2、新订单、余额变动等事件定义
-3、余额等变动的处理
-4、应当给orderbook持有listener，然后在orderbook内部处理各种event，否则处理逻辑分散
- */
-
-var RPCClient *rpc.Client
+var rpcClient *rpc.Client
 
 var EthClient *chainclient.Client
 
 func newRpcMethod(name string) func(result interface{}, args ...interface{}) error {
-	return func(result interface{}, args ...interface{}) error  {
-		return RPCClient.Call(result, name, args...)
+	return func(result interface{}, args ...interface{}) error {
+		return rpcClient.Call(result, name, args...)
 	}
 }
 
-//todo:hexutil.Big是否应被更合理地替换
-type CallArgs struct {
-	From	string
-	To	string
-	Gas      hexutil.Big
-	GasPrice hexutil.Big
-	Value	hexutil.Big
-	Data	string
+type CallArg struct {
+	From     string
+	To       string
+	Gas      types.Big
+	GasPrice types.Big
+	Value    types.Big
+	Data     string
 }
 
 func NewClient() *chainclient.Client {
@@ -60,101 +57,160 @@ func NewClient() *chainclient.Client {
 
 	//set rpcmethod
 	applyMethod(client)
+
 	//Subscribe
 	client.Subscribe = subscribe
+
+	//SignAndSendTransaction
+	client.SignAndSendTransaction = signAndSendTransaction
 	return client
 }
 
-func dGetOrder(chanVal reflect.Value) {
-	//todo:test
-	i := 10
+func signAndSendTransaction(result interface{}, args ...interface{}) error {
+	from := args[0].(string)
+	transaction := args[1].(*ethTypes.Transaction)
+	if account, ok := Accounts[from]; !ok {
+		return errors.New("there isn't a private key for this address:" + from)
+	} else {
+		signer := &ethTypes.HomesteadSigner{}
+
+		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
+
+		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.Bytes2Hex(signature))
+		if nil != err {
+			return err
+		}
+		if transaction, err = transaction.WithSignature(signer, signature); nil != err {
+			return err
+		} else {
+			if txData, err := rlp.EncodeToBytes(transaction); nil != err {
+				return err
+			} else {
+				err = EthClient.SendRawTransaction(result, common.ToHex(txData))
+				return err
+			}
+		}
+	}
+}
+
+func doSubscribe(chanVal reflect.Value, filterId string) {
 	for {
-		i = i + 1
 		select {
-		case <-time.Tick(1000000):
-			// Id:types.BytesToHash([]byte("idx:" + strconv.Itoa(i)))
-			ord := &types.OrderState{RawOrder:types.Order{}}
-			//(*r) <- ord
-			chanVal.Send(reflect.ValueOf(ord))
+		case <-time.Tick(1000000000):
+			v := chanVal.Type().Elem()
+			result := reflect.New(v)
+			if err := EthClient.GetFilterChanges(result.Interface(), filterId); nil != err {
+				log.Errorf("error:%s", err.Error())
+				break
+			} else {
+				chanVal.Send(result.Elem())
+			}
 		}
 	}
 }
 
 func subscribe(result interface{}, args ...interface{}) error {
-	//先获取filterId，然后定时更新filterChanges
-	//todo:类型不定，需要根据不同情况返回不同值
-	//r := result.(*chan *types.NewOrderEvent)
+	//the first arg must be filterId
+	filterId := args[0].(string)
+	//todo:should check result is a chan
 	chanVal := reflect.ValueOf(result).Elem()
-	go dGetOrder(chanVal)
+	go doSubscribe(chanVal, filterId)
 	return nil
 }
 
 func applyMethod(client *chainclient.Client) error {
+	//todo:is it should be in config ?
 	methodNameMap := map[string]string{
-		"clientVersion":"web3_clientVersion",
-		"sha3":"web3_sha3",
-		"version":"net_version",
-		"peerCount":"net_peerCount",
-		"listening":"net_listening",
-		"protocolVersion":"eth_protocolVersion",
-		"syncing":"eth_syncing",
-		"coinbase":"eth_coinbase",
-		"mining":"eth_mining",
-		"hashrate":"eth_hashrate",
-		"gasPrice":"eth_gasPrice",
-		"accounts":"eth_accounts",
-		"blockNumber":"eth_blockNumber",
-		"getBalance":"eth_getBalance",
-		"getStorageAt":"eth_getStorageAt",
-		"getTransactionCount":"eth_getTransactionCount",
-		"getBlockTransactionCountByHash":"eth_getBlockTransactionCountByHash",
-		"getBlockTransactionCountByNumber":"eth_getBlockTransactionCountByNumber",
-		"getUncleCountByBlockHash":"eth_getUncleCountByBlockHash",
-		"getUncleCountByBlockNumber":"eth_getUncleCountByBlockNumber",
-		"getCode":"eth_getCode",
-		"sign":"eth_sign",
-		"sendTransaction":"eth_sendTransaction",
-		"sendRawTransaction":"eth_sendRawTransaction",
-		"call":"eth_call",
-		"estimateGas":"eth_estimateGas",
-		"getBlockByHash":"eth_getBlockByHash",
-		"getBlockByNumber":"eth_getBlockByNumber",
-		"getTransactionByHash":"eth_getTransactionByHash",
-		"getTransactionByBlockHashAndIndex":"eth_getTransactionByBlockHashAndIndex",
-		"getTransactionByBlockNumberAndIndex":"eth_getTransactionByBlockNumberAndIndex",
-		"getTransactionReceipt":"eth_getTransactionReceipt",
-		"getUncleByBlockHashAndIndex":"eth_getUncleByBlockHashAndIndex",
-		"getUncleByBlockNumberAndIndex":"eth_getUncleByBlockNumberAndIndex",
-		"getCompilers":"eth_getCompilers",
-		"compileLLL":"eth_compileLLL",
-		"compileSolidity":"eth_compileSolidity",
-		"compileSerpent":"eth_compileSerpent",
-		"newFilter":"eth_newFilter",
-		"newBlockFilter":"eth_newBlockFilter",
-		"newPendingTransactionFilter":"eth_newPendingTransactionFilter",
-		"uninstallFilter":"eth_uninstallFilter",
-		"getFilterChanges":"eth_getFilterChanges",
-		"getFilterLogs":"eth_getFilterLogs",
-		"getLogs":"eth_getLogs",
-		"getWork":"eth_getWork",
-		"submitWork":"eth_submitWork",
-		"submitHashrate":"eth_submitHashrate",
+		"clientVersion":                       "web3_clientVersion",
+		"sha3":                                "web3_sha3",
+		"version":                             "net_version",
+		"peerCount":                           "net_peerCount",
+		"listening":                           "net_listening",
+		"protocolVersion":                     "eth_protocolVersion",
+		"syncing":                             "eth_syncing",
+		"coinbase":                            "eth_coinbase",
+		"mining":                              "eth_mining",
+		"hashrate":                            "eth_hashrate",
+		"gasPrice":                            "eth_gasPrice",
+		"accounts":                            "eth_accounts",
+		"blockNumber":                         "eth_blockNumber",
+		"getBalance":                          "eth_getBalance",
+		"getStorageAt":                        "eth_getStorageAt",
+		"getTransactionCount":                 "eth_getTransactionCount",
+		"getBlockTransactionCountByHash":      "eth_getBlockTransactionCountByHash",
+		"getBlockTransactionCountByNumber":    "eth_getBlockTransactionCountByNumber",
+		"getUncleCountByBlockHash":            "eth_getUncleCountByBlockHash",
+		"getUncleCountByBlockNumber":          "eth_getUncleCountByBlockNumber",
+		"getCode":                             "eth_getCode",
+		"sign":                                "eth_sign",
+		"sendTransaction":                     "eth_sendTransaction",
+		"sendRawTransaction":                  "eth_sendRawTransaction",
+		"call":                                "eth_call",
+		"estimateGas":                         "eth_estimateGas",
+		"getBlockByHash":                      "eth_getBlockByHash",
+		"getBlockByNumber":                    "eth_getBlockByNumber",
+		"getTransactionByHash":                "eth_getTransactionByHash",
+		"getTransactionByBlockHashAndIndex":   "eth_getTransactionByBlockHashAndIndex",
+		"getTransactionByBlockNumberAndIndex": "eth_getTransactionByBlockNumberAndIndex",
+		"getTransactionReceipt":               "eth_getTransactionReceipt",
+		"getUncleByBlockHashAndIndex":         "eth_getUncleByBlockHashAndIndex",
+		"getUncleByBlockNumberAndIndex":       "eth_getUncleByBlockNumberAndIndex",
+		"getCompilers":                        "eth_getCompilers",
+		"compileLLL":                          "eth_compileLLL",
+		"compileSolidity":                     "eth_compileSolidity",
+		"compileSerpent":                      "eth_compileSerpent",
+		"newFilter":                           "eth_newFilter",
+		"newBlockFilter":                      "eth_newBlockFilter",
+		"newPendingTransactionFilter":         "eth_newPendingTransactionFilter",
+		"uninstallFilter":                     "eth_uninstallFilter",
+		"getFilterChanges":                    "eth_getFilterChanges",
+		"getFilterLogs":                       "eth_getFilterLogs",
+		"getLogs":                             "eth_getLogs",
+		"getWork":                             "eth_getWork",
+		"submitWork":                          "eth_submitWork",
+		"submitHashrate":                      "eth_submitHashrate",
 
-		"unlockAccount":"personal_unlockAccount",
-		"newAccount":"personal_newAccount",
+		"unlockAccount": "personal_unlockAccount",
+		"newAccount":    "personal_newAccount",
 	}
 	v := reflect.ValueOf(client).Elem()
-	for i:=0; i < v.NumField();i++ {
+	for i := 0; i < v.NumField(); i++ {
 		fieldV := v.Field(i)
-		methodName := methodNameMap[v.Type().Field(i).Tag.Get("methodName")]
-		if (methodName != "") {
+		if methodName, ok := methodNameMap[v.Type().Field(i).Tag.Get("methodName")]; ok && methodName != "" {
 			fieldV.Set(reflect.ValueOf(newRpcMethod(methodName)))
 		}
 	}
 	return nil
 }
 
-func init() {
-	//TODO：change to inject
+func Initialize(clientConfig config.ChainClientOptions) {
+	client, _ := rpc.Dial(clientConfig.RawUrl)
+	rpcClient = client
 	EthClient = NewClient()
+
+	Accounts = make(map[string]*Account)
+	passphrase = []byte(clientConfig.Eth.Password)
+	passphraseLength := len(passphrase)
+	if passphraseLength < 16 {
+		passphrase = types.LeftPadBytes(passphrase, 16)
+	} else if passphraseLength > 16 && passphraseLength < 24 {
+		passphrase = types.LeftPadBytes(passphrase, 24)
+	} else if passphraseLength > 24 && passphraseLength < 32 {
+		passphrase = types.LeftPadBytes(passphrase, 32)
+	} else if passphraseLength > 32 {
+		panic("eth.password too long")
+	}
+
+	for addr, p := range clientConfig.Eth.PrivateKeys {
+		account := &Account{EncryptedPrivKey: types.FromHex(p)}
+		if _, err := account.Decrypted(passphrase); nil != err {
+			log.Errorf("err:%s", err.Error())
+			panic(err)
+		}
+		if account.Address.Hex() != addr {
+			log.Errorf("address:%s and privkey:%s not match", addr, p)
+			panic("address and privkey not match")
+		}
+		Accounts[addr] = account
+	}
 }

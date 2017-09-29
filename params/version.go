@@ -45,3 +45,15 @@ func VersionWithCommit(gitCommit string) string {
 	}
 	return vsn
 }
+
+//only process order supported it
+func SupportedContractAddress() map[string]bool {
+	addresses := make(map[string]bool)
+	addresses["0x211c9fb2c5ad60a31587a4a11b289e37ed3ea520"] = true
+	return addresses
+}
+
+//only process order supported it
+func SupportedEthVersion() map[string]bool {
+	return make(map[string]bool)
+}

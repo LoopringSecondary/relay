@@ -20,30 +20,84 @@ package log
 
 import (
 	"go.uber.org/zap"
-	"time"
 	"go.uber.org/zap/zapcore"
 )
 
-const key = "content"
-
-// TODO(fk): logger should be used more convenient
-
-func Info(level, value string) {
-	logger.Info(level, setTime(), zap.String(key, value))
+func NewField(key string, v interface{}) zapcore.Field {
+	return zap.Any(key, v)
 }
 
-func Error(level, value string) {
-	logger.Error(level, zap.String(key, value))
+func Debug(msg string, fields ...zapcore.Field) {
+	logger.Debug(msg, fields...)
 }
 
-func Warn(level, value string) {
-	logger.Warn(level, zap.String(key, value))
+func Info(msg string, fields ...zapcore.Field) {
+	logger.Info(msg, fields...)
 }
 
-func Crit(level, value string) {
-	logger.Fatal(level, zap.String(key, value))
+func Error(msg string, fields ...zapcore.Field) {
+	logger.Error(msg, fields...)
 }
 
-func setTime() zapcore.Field {
-	return zap.Int64("timestamp", time.Now().Unix())
+func Warn(msg string, fields ...zapcore.Field) {
+	logger.Warn(msg, fields...)
+}
+
+func Fatal(msg string, fields ...zapcore.Field) {
+	logger.Fatal(msg, fields...)
+}
+
+func Debugf(template string, args ...interface{}) {
+	sugaredLogger.Debugf(template, args...)
+}
+
+func Infof(template string, args ...interface{}) {
+	sugaredLogger.Infof(template, args...)
+}
+
+func Warnf(template string, args ...interface{}) {
+	sugaredLogger.Warnf(template, args...)
+}
+
+func Errorf(template string, args ...interface{}) {
+	sugaredLogger.Errorf(template, args...)
+}
+
+func DPanicf(template string, args ...interface{}) {
+	sugaredLogger.DPanicf(template, args...)
+}
+
+func Panicf(template string, args ...interface{}) {
+	sugaredLogger.Panicf(template, args...)
+}
+
+func Fatalf(template string, args ...interface{}) {
+	sugaredLogger.Fatalf(template, args...)
+}
+
+func Debugw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Debugw(msg, keysAndValues...)
+}
+func Infow(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Infow(msg, keysAndValues...)
+}
+
+func Warnw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Warnw(msg, keysAndValues...)
+}
+
+func Errorw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Errorw(msg, keysAndValues...)
+}
+
+func DPanicw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.DPanicw(msg, keysAndValues...)
+}
+
+func Panicw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Panicw(msg, keysAndValues...)
+}
+
+func Fatalw(msg string, keysAndValues ...interface{}) {
+	sugaredLogger.Fatalw(msg, keysAndValues...)
 }

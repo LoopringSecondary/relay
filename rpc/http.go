@@ -18,13 +18,13 @@
 
 package rpc
 
-
 type HttpConfig struct {
 	remote string
-	port int
+	port   int
 }
 
 type server struct{}
 
-
 func NewServer() {}
+
+// TODO(fukun): http服务&jsonrpc服务以及内部查询

@@ -18,7 +18,9 @@
 
 package types
 
-import "encoding/hex"
+import (
+	"encoding/hex"
+)
 
 func ToHex(b []byte) string {
 	hex := Bytes2Hex(b)
@@ -108,4 +110,3 @@ func LeftPadBytes(slice []byte, l int) []byte {
 
 	return padded
 }
-
