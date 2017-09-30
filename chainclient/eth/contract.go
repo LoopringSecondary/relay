@@ -34,11 +34,11 @@ type AbiMethod struct {
 	abi.Method
 	Abi     *abi.ABI
 	Address string
+	Client  *EthClient
 }
 
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
-
 	if nil != err {
 		return err
 	}
@@ -49,7 +49,7 @@ func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...inte
 	arg.To = m.Address //when call a contract method this arg is unnecessary.
 	arg.Data = data
 	//todo:m.Abi.Unpack
-	return EthClient.Call(result, arg, blockParameter)
+	return m.Client.Call(result, arg, blockParameter)
 }
 
 //contract transaction
@@ -61,7 +61,7 @@ func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, e
 		return "", err
 	}
 
-	if err = EthClient.GasPrice(&gasPrice); nil != err {
+	if err = m.Client.GasPrice(&gasPrice); nil != err {
 		return "", err
 	}
 
@@ -71,7 +71,7 @@ func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, e
 	callArg.To = m.Address
 	callArg.Data = dataHex
 	callArg.GasPrice = *gasPrice
-	if err = EthClient.EstimateGas(&gas, callArg); nil != err {
+	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err
 	}
 
@@ -95,7 +95,7 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *b
 	}
 
 	var nonce types.Big
-	if err = EthClient.GetTransactionCount(&nonce, from, "pending"); nil != err {
+	if err = m.Client.GetTransactionCount(&nonce, from, "pending"); nil != err {
 		return "", err
 	}
 
@@ -107,23 +107,26 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *b
 		dataBytes)
 	var txHash string
 
-	err = EthClient.SignAndSendTransaction(&txHash, from, transaction)
+	err = m.Client.SignAndSendTransaction(&txHash, from, transaction)
 	return txHash, err
 }
 
-func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string) {
+func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
 	for _, method := range cabi.Methods {
 		methodName := strings.ToUpper(method.Name[0:1]) + method.Name[1:]
 		abiMethod := &AbiMethod{}
 		abiMethod.Name = method.Name
 		abiMethod.Abi = cabi
 		abiMethod.Address = address
-		e.FieldByName(methodName).Set(reflect.ValueOf(abiMethod))
+		abiMethod.Client = ethClient
+		field := e.FieldByName(methodName)
+		if field.IsValid() {
+			field.Set(reflect.ValueOf(abiMethod))
+		}
 	}
 }
 
-func NewContract(contract interface{}, address, abiStr string) error {
-
+func (ethClient *EthClient) newContract(contract interface{}, address, abiStr string) error {
 	cabi := &abi.ABI{}
 	if err := cabi.UnmarshalJSON([]byte(abiStr)); err != nil {
 		log.Fatalf("error:%s", err.Error())
@@ -134,7 +137,6 @@ func NewContract(contract interface{}, address, abiStr string) error {
 	e.FieldByName("Abi").Set(reflect.ValueOf(cabi))
 	e.FieldByName("Address").Set(reflect.ValueOf(address))
 
-	applyAbiMethod(e, cabi, address)
-
+	applyAbiMethod(e, cabi, address, ethClient)
 	return nil
 }

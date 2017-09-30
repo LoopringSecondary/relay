@@ -20,16 +20,13 @@ package eth
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"github.com/Loopring/ringminer/crypto"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 )
-
-//address -> account
-var Accounts map[string]*Account
-
-var passphrase []byte //as aes key
 
 type Account struct {
 	PrivKey          *ecdsa.PrivateKey
@@ -38,7 +35,7 @@ type Account struct {
 	EncryptedPrivKey []byte
 }
 
-func (account *Account) Encrypted(passphrase *types.Passphrase) ([]byte, error) {
+func (account *Account) Encrypt(passphrase *types.Passphrase) ([]byte, error) {
 	encrypted, err := crypto.AesEncrypted(passphrase.Bytes(), account.PrivKey.D.Bytes())
 	if nil != err {
 		return nil, err
@@ -47,7 +44,7 @@ func (account *Account) Encrypted(passphrase *types.Passphrase) ([]byte, error) 
 	return encrypted, nil
 }
 
-func (account *Account) Decrypted(passphrase *types.Passphrase) ([]byte, error) {
+func (account *Account) Decrypt(passphrase *types.Passphrase) ([]byte, error) {
 	decrypted, err := crypto.AesDecrypted(passphrase.Bytes(), account.EncryptedPrivKey)
 	if nil != err {
 		return nil, err
@@ -62,7 +59,7 @@ func (account *Account) Decrypted(passphrase *types.Passphrase) ([]byte, error) 
 func NewAccount(pk string) (*Account, error) {
 	var privKey *ecdsa.PrivateKey
 	var err error
-	if "" == pk {
+	if "" != pk {
 		privKey, err = ethCrypto.GenerateKey()
 	} else {
 		privKey, err = ethCrypto.ToECDSA(types.FromHex(pk))
@@ -76,4 +73,22 @@ func NewAccount(pk string) (*Account, error) {
 		account.Address = ethCrypto.PubkeyToAddress(*account.PubKey)
 		return account, nil
 	}
+}
+
+func DecryptAccounts(passphrase *types.Passphrase, encryptedPks map[string]string) (map[string]*Account, error) {
+	accounts := make(map[string]*Account)
+
+	for address, enctypted := range encryptedPks {
+		account := &Account{EncryptedPrivKey: types.FromHex(enctypted)}
+		if _, err := account.Decrypt(passphrase); nil != err {
+			log.Errorf("err:%s", err.Error())
+			return nil, err
+		}
+		if account.Address.Hex() != address {
+			log.Errorf("address:%s and privkey:%s not match", address, enctypted)
+			return nil, errors.New("address and privkey not match")
+		}
+		accounts[address] = account
+	}
+	return accounts, nil
 }

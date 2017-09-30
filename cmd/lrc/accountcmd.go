@@ -132,7 +132,7 @@ func generateEthPrivateKey(pk string, passphrase *types.Passphrase, display bool
 	if account, err := ethClient.NewAccount(pk); nil != err {
 		fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
 	} else {
-		if _, err := account.Encrypted(passphrase); nil != err {
+		if _, err := account.Encrypt(passphrase); nil != err {
 			fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
 		} else {
 			fmt.Fprintf(c.App.Writer, "address:%v encrypted private key:%v \n", account.Address.Hex(), types.ToHex(account.EncryptedPrivKey))

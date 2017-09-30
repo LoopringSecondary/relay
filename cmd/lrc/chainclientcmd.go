@@ -26,7 +26,7 @@ func chainclientCommands() cli.Command {
 		Usage:       "chainclient ",
 		Category:    "Chainclient Commands",
 		Subcommands: []cli.Command{
-			//秘钥以及地址，生成时的密码
+		//秘钥以及地址，生成时的密码
 		},
 	}
 	return c

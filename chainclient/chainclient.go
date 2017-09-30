@@ -22,10 +22,13 @@ package chainclient
 type RpcMethod func(result interface{}, args ...interface{}) error
 
 type Client struct {
-	//subscribe and signAndSendTransaction are customed
-	Subscribe              RpcMethod `methodName:"subscribe"`
-	SignAndSendTransaction RpcMethod `methodName:"signAndSendTransaction"`
+	//subscribe, signAndSendTransaction and NewContract are customed
+	//the first arg must be filterId in eth
+	Subscribe RpcMethod `methodName:"subscribe"`
+	SignAndSendTransaction func(result interface{}, from string, transaction interface{}) error
+	NewContract            func(result interface{}, address, abiStr string) error
 
+	//rpc method:
 	ClientVersion                       RpcMethod `methodName:"clientVersion"`
 	Sha3                                RpcMethod `methodName:"sha3"`
 	Version                             RpcMethod `methodName:"version"`

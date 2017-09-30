@@ -37,7 +37,7 @@ func TestRingClient(t *testing.T) {
 	loopring.LoopringImpls = make(map[types.Address]*chainclient.LoopringProtocolImpl)
 	loopring.LoopringFingerprints = make(map[types.Address]*chainclient.LoopringFingerprintRegistry)
 	loopring.Tokens = make(map[types.Address]*chainclient.Erc20Token)
-	loopring.Client = eth.EthClient
+	loopring.Client = eth.EthClientInstance
 
 	ringClient := miner.NewRingClient(loopring)
 	ringClient.Start()

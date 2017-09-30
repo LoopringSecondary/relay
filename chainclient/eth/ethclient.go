@@ -33,13 +33,16 @@ import (
 	"time"
 )
 
-var rpcClient *rpc.Client
+type EthClient struct {
+	*chainclient.Client
+	signer    *ethTypes.HomesteadSigner
+	senders   map[string]*Account
+	rpcClient *rpc.Client
+}
 
-var EthClient *chainclient.Client
-
-func newRpcMethod(name string) func(result interface{}, args ...interface{}) error {
+func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, args ...interface{}) error {
 	return func(result interface{}, args ...interface{}) error {
-		return rpcClient.Call(result, name, args...)
+		return ethClient.rpcClient.Call(result, name, args...)
 	}
 }
 
@@ -52,31 +55,44 @@ type CallArg struct {
 	Data     string
 }
 
-func NewClient() *chainclient.Client {
-	client := &chainclient.Client{}
+func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
+	ethClient := &EthClient{}
+	var err error
+	ethClient.rpcClient, err = rpc.Dial(clientConfig.RawUrl)
+	if nil != err {
+		panic(err)
+	}
 
-	//set rpcmethod
-	applyMethod(client)
+	ethClient.Client = &chainclient.Client{}
 
-	//Subscribe
-	client.Subscribe = subscribe
+	ethClient.applyMethod()
+	ethClient.Subscribe = ethClient.subscribe
+	ethClient.SignAndSendTransaction = ethClient.signAndSendTransaction
+	ethClient.NewContract = ethClient.newContract
 
-	//SignAndSendTransaction
-	client.SignAndSendTransaction = signAndSendTransaction
-	return client
+	ethClient.signer = &ethTypes.HomesteadSigner{}
+
+	passphrase := &types.Passphrase{}
+	passphrase.SetBytes([]byte(clientConfig.Passphrase))
+	if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
+		panic(err)
+	} else {
+		ethClient.senders = accounts
+	}
+
+	return ethClient
 }
 
-func signAndSendTransaction(result interface{}, args ...interface{}) error {
-	from := args[0].(string)
-	transaction := args[1].(*ethTypes.Transaction)
-	if account, ok := Accounts[from]; !ok {
+func (ethClient *EthClient) signAndSendTransaction(result interface{}, from string, tx interface{}) error {
+	transaction := tx.(*ethTypes.Transaction)
+	if account, ok := ethClient.senders[from]; !ok {
 		return errors.New("there isn't a private key for this address:" + from)
 	} else {
 		signer := &ethTypes.HomesteadSigner{}
 
 		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
 
-		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.Bytes2Hex(signature))
+		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.ToHex(signature))
 		if nil != err {
 			return err
 		}
@@ -86,20 +102,20 @@ func signAndSendTransaction(result interface{}, args ...interface{}) error {
 			if txData, err := rlp.EncodeToBytes(transaction); nil != err {
 				return err
 			} else {
-				err = EthClient.SendRawTransaction(result, common.ToHex(txData))
+				err = ethClient.SendRawTransaction(result, common.ToHex(txData))
 				return err
 			}
 		}
 	}
 }
 
-func doSubscribe(chanVal reflect.Value, filterId string) {
+func (ethClient *EthClient) doSubscribe(chanVal reflect.Value, filterId string) {
 	for {
 		select {
 		case <-time.Tick(1000000000):
 			v := chanVal.Type().Elem()
 			result := reflect.New(v)
-			if err := EthClient.GetFilterChanges(result.Interface(), filterId); nil != err {
+			if err := ethClient.GetFilterChanges(result.Interface(), filterId); nil != err {
 				log.Errorf("error:%s", err.Error())
 				break
 			} else {
@@ -109,16 +125,16 @@ func doSubscribe(chanVal reflect.Value, filterId string) {
 	}
 }
 
-func subscribe(result interface{}, args ...interface{}) error {
+func (ethClient *EthClient) subscribe(result interface{}, args ...interface{}) error {
 	//the first arg must be filterId
 	filterId := args[0].(string)
 	//todo:should check result is a chan
 	chanVal := reflect.ValueOf(result).Elem()
-	go doSubscribe(chanVal, filterId)
+	go ethClient.doSubscribe(chanVal, filterId)
 	return nil
 }
 
-func applyMethod(client *chainclient.Client) error {
+func (ethClient *EthClient) applyMethod() error {
 	//todo:is it should be in config ?
 	methodNameMap := map[string]string{
 		"clientVersion":                       "web3_clientVersion",
@@ -173,35 +189,12 @@ func applyMethod(client *chainclient.Client) error {
 		"unlockAccount": "personal_unlockAccount",
 		"newAccount":    "personal_newAccount",
 	}
-	v := reflect.ValueOf(client).Elem()
+	v := reflect.ValueOf(ethClient.Client).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		fieldV := v.Field(i)
 		if methodName, ok := methodNameMap[v.Type().Field(i).Tag.Get("methodName")]; ok && methodName != "" {
-			fieldV.Set(reflect.ValueOf(newRpcMethod(methodName)))
+			fieldV.Set(reflect.ValueOf(ethClient.newRpcMethod(methodName)))
 		}
 	}
 	return nil
-}
-
-func Initialize(clientConfig config.ChainClientOptions) {
-	client, _ := rpc.Dial(clientConfig.RawUrl)
-	rpcClient = client
-	EthClient = NewClient()
-
-	Accounts = make(map[string]*Account)
-	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(clientConfig.Passphrase))
-
-	for addr, p := range clientConfig.Eth.PrivateKeys {
-		account := &Account{EncryptedPrivKey: types.FromHex(p)}
-		if _, err := account.Decrypted(passphrase); nil != err {
-			log.Errorf("err:%s", err.Error())
-			panic(err)
-		}
-		if account.Address.Hex() != addr {
-			log.Errorf("address:%s and privkey:%s not match", addr, p)
-			panic("address and privkey not match")
-		}
-		Accounts[addr] = account
-	}
 }

@@ -48,8 +48,8 @@ func LoadConfig(file string) *GlobalConfig {
 }
 
 type GlobalConfig struct {
-	Title       string `required:"true"`
-	Owner       struct {
+	Title string `required:"true"`
+	Owner struct {
 		Name string
 	}
 	Database    DbOptions
@@ -81,19 +81,23 @@ type DbOptions struct {
 
 type ChainClientOptions struct {
 	RawUrl     string `required:"true"`
+	Senders              map[string]string `required:"true"` //address->encrypted private key, used to send transaction
 	Passphrase string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	Eth        struct {
 		GasPrice    int
 		GasLimit    int
-		PrivateKeys map[string]string `required:"true"` //地址 -> 加密后的私钥，如果密码不对，地址与私钥则不会匹配
-	}
+		   }
 }
 
 type MinerOptions struct {
+	Passphrase string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	LoopringImps         []ContractOpts `required:"true"`
 	LoopringFingerprints []ContractOpts `required:"true"`
-	RingMaxLength        int
+	RingMaxLength        int  `required:"true"` //recommended value:4
+	Miner                string `required:"true"` //private key, used to sign the ring
+	FeeRecepient         string          //address the recepient of fee
 }
+
 type OrderBookOptions struct {
 	Filters struct {
 		BaseFilter struct {

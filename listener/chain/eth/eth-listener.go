@@ -19,6 +19,7 @@
 package eth
 
 import (
+	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/types"
@@ -39,13 +40,17 @@ type EthClientListener struct {
 	whisper *Whisper
 	stop    chan struct{}
 	lock    sync.RWMutex
+
+	ethClient *chainclient.Client
 }
 
-func NewListener(options config.ChainClientOptions, whisper *Whisper) *EthClientListener {
+func NewListener(options config.ChainClientOptions, whisper *Whisper, ethClient *chainclient.Client) *EthClientListener {
 	var l EthClientListener
 	l.options = options
 
 	l.whisper = whisper
+	l.ethClient = ethClient
+
 	return &l
 }
 
@@ -57,7 +62,7 @@ func (l *EthClientListener) Start() {
 	filterId := ""
 
 	ethlog := make(chan []eth.Log)
-	err := eth.EthClient.Subscribe(&ethlog, filterId)
+	err := l.ethClient.Subscribe(&ethlog, filterId)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +75,7 @@ func (l *EthClientListener) Start() {
 		}
 	}
 
-	defer eth.EthClient.UninstallFilter(filterId)
+	defer l.ethClient.UninstallFilter(filterId)
 }
 
 func (l *EthClientListener) Stop() {

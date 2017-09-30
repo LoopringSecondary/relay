@@ -2,38 +2,15 @@ package eth_test
 
 import (
 	"github.com/Loopring/ringminer/chainclient"
-	ethClient "github.com/Loopring/ringminer/chainclient/eth"
+	EthClient "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/crypto/eth"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"strconv"
 	"testing"
+	"github.com/Loopring/ringminer/config"
 )
-
-//func TestGenOrderHash(t *testing.T) {
-//	var ord types.Order
-//
-//	ord.Protocol = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.TokenS = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.TokenB = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.AmountS = types.IntToBig(20000)
-//	ord.AmountB = types.IntToBig(800)
-//	ord.Expiration = uint64(time.Now().Unix())
-//	ord.Rand = types.IntToBig(int64(3))
-//	ord.LrcFee = types.IntToBig(30)
-//	ord.SavingSharePercentage = 51
-//	//ord.V = 8
-//	//ord.R = types.StringToSign("hhhhhhhh")
-//	//ord.S = types.StringToSign("fjalskdf")
-//
-//	ethCrypto := &eth.EthCrypto{}
-//	ethCrypto.GenerateHash()
-//	//hash := eth.GenOrderHash(ord)
-//
-//	//t.Log(string(hash))
-//	//t.Log(types.BytesToHash(hash).Hex())
-//}
 
 func TestGenOrderAddress(t *testing.T) {
 	dst := []byte{'a', 'b'}
@@ -59,8 +36,11 @@ func TestEthCrypto_SigToAddress(t *testing.T) {
 	//	t.Log(err.Error())
 	//}
 	//t.Log("address", common.Bytes2Hex(address))
+	config := &config.ChainClientOptions{}
+	config.RawUrl = "http://127.0.0.1:8545"
+	ethClient := EthClient.NewChainClient(*config)
 	tx := &ethTypes.Transaction{}
-	if err := ethClient.EthClient.GetTransactionByHash(tx, "0xb0fae8141315ea396b5b6c5576e59b15c2ee156ef0d8c06f32753575f4616557"); err != nil {
+	if err := ethClient.GetTransactionByHash(tx, "0xb0fae8141315ea396b5b6c5576e59b15c2ee156ef0d8c06f32753575f4616557"); err != nil {
 		t.Error(err.Error())
 	} else {
 		v, r, s := tx.RawSignatureValues()
@@ -100,6 +80,9 @@ func TestEthCrypto_SigToAddress(t *testing.T) {
 }
 
 func TestWithContract(t *testing.T) {
+	config := &config.ChainClientOptions{}
+	config.RawUrl = "http://127.0.0.1:8545"
+	ethClient := EthClient.NewChainClient(*config)
 	type SigTest struct {
 		chainclient.Contract
 		CalculateHash          chainclient.AbiMethod

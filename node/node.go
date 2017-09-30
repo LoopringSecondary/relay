@@ -19,14 +19,15 @@
 package node
 
 import (
-	ethClient "github.com/Loopring/ringminer/chainclient/eth"
+	"github.com/Loopring/ringminer/chainclient"
+	ethClientLib "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
-	ethCrypto "github.com/Loopring/ringminer/crypto/eth"
+	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/listener"
-	ethListener "github.com/Loopring/ringminer/listener/chain/eth"
-	ipfsListener "github.com/Loopring/ringminer/listener/p2p/ipfs"
+	ethListenerLib "github.com/Loopring/ringminer/listener/chain/eth"
+	ipfsListenerLib "github.com/Loopring/ringminer/listener/p2p/ipfs"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/miner/bucket"
 	"github.com/Loopring/ringminer/orderbook"
@@ -52,10 +53,10 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
 	n.globalConfig = globalConfig
-	ethClient.Initialize(n.globalConfig.ChainClient)
+	ethClient := ethClientLib.NewChainClient(n.globalConfig.ChainClient)
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient := miner.NewRingClient(database, ethClient.EthClient)
+	ringClient := miner.NewRingClient(database, ethClient.Client)
 	//
 	miner.Initialize(n.globalConfig.Miner, ringClient.Chainclient)
 	//
@@ -69,7 +70,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerMiner(ringClient, engineOrderChan)
 
-	crypto.CryptoInstance = &ethCrypto.EthCrypto{Homestead: false}
+	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
 	return n
 }
@@ -108,14 +109,14 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(chainOrderChan chan *types.OrderMined) {
-	whisper := &ethListener.Whisper{chainOrderChan}
-	n.chainListener = ethListener.NewListener(n.globalConfig.ChainClient, whisper)
+func (n *Node) registerEthListener(client *chainclient.Client, chainOrderChan chan *types.OrderMined) {
+	whisper := &ethListenerLib.Whisper{chainOrderChan}
+	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, whisper, client)
 }
 
 func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
-	whisper := &ipfsListener.Whisper{peerOrderChan}
-	n.p2pListener = ipfsListener.NewListener(n.globalConfig.Ipfs, whisper)
+	whisper := &ipfsListenerLib.Whisper{peerOrderChan}
+	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs, whisper)
 }
 
 func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderMined, engineOrderChan chan *types.OrderState) {
