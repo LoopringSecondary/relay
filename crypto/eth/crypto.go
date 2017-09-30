@@ -19,7 +19,6 @@
 package eth
 
 import (
-	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/log"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
@@ -27,18 +26,6 @@ import (
 
 type EthCrypto struct {
 	Homestead bool
-}
-
-//生成账号
-func (c *EthCrypto) GenerateAccount(result interface{}) {
-	privKey, err := crypto.GenerateKey()
-	if nil == err {
-		account := eth.Account{}
-		account.PrivKey = privKey
-		account.PubKey = &privKey.PublicKey
-		account.Address = crypto.PubkeyToAddress(*account.PubKey)
-		result = account
-	}
 }
 
 //签名验证
@@ -71,7 +58,7 @@ func (c *EthCrypto) VRSToSig(v byte, r, s []byte) []byte {
 
 func (c *EthCrypto) Sign(hash, pkBytes []byte) ([]byte, error) {
 	if pk, err := crypto.ToECDSA(pkBytes); err != nil {
-		log.Errorf("err:", err.Error())
+		log.Errorf("err:%s", err.Error())
 		return nil, err
 	} else {
 		return crypto.Sign(hash, pk)

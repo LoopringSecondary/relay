@@ -120,7 +120,7 @@ func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
 
 func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderMined, engineOrderChan chan *types.OrderState) {
 	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
-	n.orderbook = orderbook.NewOrderBook(n.globalConfig.ObOptions, database, whisper)
+	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, database, whisper)
 }
 
 func (n *Node) registerMiner(ringClient *miner.RingClient, orderStateChan chan *types.OrderState) {

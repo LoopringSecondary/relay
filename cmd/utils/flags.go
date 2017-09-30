@@ -47,9 +47,11 @@ func defaultIpfsSubTopic() string {
 	return DEFAULT_IPFS_SUB_TOPIC
 }
 
-//matchengineCommand.Flags = []cli.Flag{
-//	cli.StringFlag{
-//		Name:  "node_laddr",
-//		Usage: "node listen address(0.0.0.0:0 means any interface any port)",
-//	},
-//}
+func GlobalFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  "cnf,c",
+			Usage: "config file",
+		},
+	}
+}

@@ -252,7 +252,7 @@ func ComputeRing(ring *types.RingState) {
 			order.FeeS = savingAmount
 			//todo:address of sell token
 			legalAmountOfSaving.Mul(order.FeeS, GetLegalRate(CNY, *lrcAddress))
-			println("savingAmount", savingAmount.RealValue().Int64())
+			log.Debugf("savingAmount:%d", savingAmount.RealValue().Int64())
 
 		} else {
 			savingAmount := &types.EnlargedInt{Value: big.NewInt(0).Set(order.FillAmountB.Value), Decimals: big.NewInt(0).Set(order.FillAmountB.Decimals)}

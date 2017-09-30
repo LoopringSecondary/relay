@@ -189,17 +189,8 @@ func Initialize(clientConfig config.ChainClientOptions) {
 	EthClient = NewClient()
 
 	Accounts = make(map[string]*Account)
-	passphrase = []byte(clientConfig.Eth.Password)
-	passphraseLength := len(passphrase)
-	if passphraseLength < 16 {
-		passphrase = types.LeftPadBytes(passphrase, 16)
-	} else if passphraseLength > 16 && passphraseLength < 24 {
-		passphrase = types.LeftPadBytes(passphrase, 24)
-	} else if passphraseLength > 24 && passphraseLength < 32 {
-		passphrase = types.LeftPadBytes(passphrase, 32)
-	} else if passphraseLength > 32 {
-		panic("eth.password too long")
-	}
+	passphrase := &types.Passphrase{}
+	passphrase.SetBytes([]byte(clientConfig.Passphrase))
 
 	for addr, p := range clientConfig.Eth.PrivateKeys {
 		account := &Account{EncryptedPrivKey: types.FromHex(p)}

@@ -48,16 +48,16 @@ func LoadConfig(file string) *GlobalConfig {
 }
 
 type GlobalConfig struct {
-	Title string `required:"true"`
-	Owner struct {
+	Title       string `required:"true"`
+	Owner       struct {
 		Name string
 	}
 	Database    DbOptions
 	Ipfs        IpfsOptions
 	ChainClient ChainClientOptions
 	Miner       MinerOptions
-	ObOptions   OrderBookOptions
-	LogOptions  zap.Config
+	Orderbook   OrderBookOptions
+	Log         zap.Config
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -80,12 +80,12 @@ type DbOptions struct {
 }
 
 type ChainClientOptions struct {
-	RawUrl string `required:"true"`
-	Eth    struct {
+	RawUrl     string `required:"true"`
+	Passphrase string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	Eth        struct {
 		GasPrice    int
 		GasLimit    int
 		PrivateKeys map[string]string `required:"true"` //地址 -> 加密后的私钥，如果密码不对，地址与私钥则不会匹配
-		Password    string            //密码，用于加密私钥，最好不出现在配置文件中
 	}
 }
 

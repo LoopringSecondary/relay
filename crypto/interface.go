@@ -21,8 +21,6 @@ package crypto
 var CryptoInstance Crypto
 
 type Crypto interface {
-	//生成账号
-	GenerateAccount(result interface{})
 	//签名验证
 	ValidateSignatureValues(v byte, r, s []byte) bool
 	//生成hash
@@ -33,5 +31,6 @@ type Crypto interface {
 	SigToAddress(hash, sig []byte) ([]byte, error)
 	//生成sig
 	VRSToSig(v byte, r, s []byte) []byte
+
 	SigToVRS([]byte) (v byte, r []byte, s []byte)
 }

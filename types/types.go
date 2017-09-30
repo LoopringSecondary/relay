@@ -19,6 +19,7 @@
 package types
 
 import (
+	"github.com/Loopring/ringminer/log"
 	"math/big"
 )
 
@@ -129,6 +130,19 @@ func (a *Address) SetBytes(b []byte) {
 		b = b[len(b)-AddressLength:]
 	}
 	copy(a[AddressLength-len(b):], b)
+}
+
+type Passphrase [32]byte
+
+func (p *Passphrase) SetBytes(b []byte) {
+	if len(b) > 32 {
+		log.Info("the passphrase will only use 32 bytes ")
+	}
+	copy(p[32-len(b):], b)
+}
+
+func (p *Passphrase) Bytes() []byte {
+	return p[:]
 }
 
 func BigintToHex(b *big.Int) string {

@@ -40,7 +40,7 @@ func AesEncrypted(key, data []byte) (encrypted []byte, err error) {
 	return encrypted, err
 }
 
-func AesDecrypted(encrypted, key []byte) (decrypted []byte, err error) {
+func AesDecrypted(key, encrypted []byte) (decrypted []byte, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = e.(error)

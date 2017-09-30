@@ -43,11 +43,11 @@ func main() {
 	app = utils.NewApp()
 	app.Action = minerNode
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2017 The Looprint Authors"
-	app.Flags = []cli.Flag{cli.StringFlag{Name: "conf", Usage: " config file"}}
+	app.Copyright = "Copyright 2013-2017 The Loopring Authors"
+	app.Flags = utils.GlobalFlags()
 
 	app.Commands = []cli.Command{
-	//matchengineCommand,
+		accountCommands(),
 	}
 
 	sort.Sort(cli.CommandsByName(app.Commands))
@@ -66,28 +66,28 @@ func main() {
 			panic(err)
 		}
 
-		logger = log.Initialize(globalConfig.LogOptions)
+		logger = log.Initialize(globalConfig.Log)
 		return nil
 	}
 
 	app.After = func(ctx *cli.Context) error {
 		return nil
 	}
+
 	if err := app.Run(os.Args); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	defer logger.Sync()
+	defer func() {
+		if nil != logger {
+			logger.Sync()
+		}
+	}()
 }
 
 func minerNode(c *cli.Context) error {
-	//todo：设置flag到config中
-	n := node.NewEthNode(logger, globalConfig)
-	n.Start()
-
-	log.Info("started")
-	//captiure stop signal
+	var n *node.Node
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 	signal.Notify(signalChan, os.Kill)
@@ -96,11 +96,21 @@ func minerNode(c *cli.Context) error {
 			select {
 			case sig := <-signalChan:
 				log.Infof("captured %s, exiting...\n", sig.String())
-				n.Stop()
+				if nil != n {
+					n.Stop()
+				}
 				os.Exit(1)
 			}
 		}
 	}()
+
+	//todo：设置flag到config中
+	n = node.NewEthNode(logger, globalConfig)
+	//n.Start()
+
+	log.Info("started")
+	//captiure stop signal
+
 	n.Wait()
 	return nil
 }
