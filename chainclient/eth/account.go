@@ -60,9 +60,9 @@ func NewAccount(pk string) (*Account, error) {
 	var privKey *ecdsa.PrivateKey
 	var err error
 	if "" != pk {
-		privKey, err = ethCrypto.GenerateKey()
-	} else {
 		privKey, err = ethCrypto.ToECDSA(types.FromHex(pk))
+	} else {
+		privKey, err = ethCrypto.GenerateKey()
 	}
 	if nil != err {
 		return nil, err

@@ -28,7 +28,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"
-	"reflect"
 	"sort"
 )
 
@@ -62,9 +61,9 @@ func main() {
 
 		//todo:merge flags to config, 区分node
 
-		if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
-			panic(err)
-		}
+		//if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
+		//	panic(err)
+		//}
 
 		logger = log.Initialize(globalConfig.Log)
 		return nil

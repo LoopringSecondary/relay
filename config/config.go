@@ -131,7 +131,7 @@ func Validator(cv reflect.Value) (bool, error) {
 			}
 		} else {
 			if "true" == cvt.Tag.Get("required") {
-				if isNil(cv.Field(i)) {
+				if !isSet(cv.Field(i)) {
 					return false, errors.New("The field " + cvt.Name + " in config must be setted")
 				}
 			}
@@ -141,18 +141,18 @@ func Validator(cv reflect.Value) (bool, error) {
 	return true, nil
 }
 
-func isNil(v reflect.Value) bool {
+func isSet(v reflect.Value) bool {
 	switch v.Type().Kind() {
 	case reflect.Invalid:
-		return true
+		return false
 	case reflect.String:
-		return v.String() == ""
+		return v.String() != ""
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return v.Uint() == 0
+		return v.Uint() != 0
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
+		return v.Int() != 0
 	case reflect.Map:
-		return len(v.MapKeys()) == 0
+		return len(v.MapKeys()) != 0
 	}
-	return false
+	return true
 }
