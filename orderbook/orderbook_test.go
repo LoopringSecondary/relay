@@ -19,15 +19,20 @@
 package orderbook_test
 
 import (
-	"github.com/Loopring/ringminer/orderbook"
-	"github.com/Loopring/ringminer/types"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
+	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/types"
 )
 
-const dbname = "leveldb"
+const (
+	dbname = "leveldb"
+	topic1 = "OrderFilled"
+	topic2 = "RingMined"
+)
 
 var sep = func() string { return string(filepath.Separator) }
 
@@ -37,7 +42,48 @@ func file() string {
 	return gopath + sep() + "src" + sep() + proj + sep() + dbname
 }
 
-//
+func getOrderBook() *orderbook.OrderBook{
+	database := db.NewDB(config.DbOptions{DataDir:file(), BufferCapacity: 8, CacheCapacity: 4})
+	opts := config.OrderBookOptions{FilterTopics:[]string{topic1, topic2}, DefaultBlockNumber: 100}
+
+	peerOrderChan := make(chan *types.Order)
+	chainOrderChan := make(chan *types.OrderMined)
+	engineOrderChan := make(chan *types.OrderState)
+	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
+	ob := orderbook.NewOrderBook(opts, database, whisper)
+
+	ob.RuntimeDataReady()
+	return ob
+}
+
+func TestOrderBook_GetBlockNumber(t *testing.T) {
+	ob := getOrderBook()
+	t.Log(ob.GetBlockNumber())
+}
+
+func TestOrderBook_SetBlockNumber(t *testing.T) {
+	ob := getOrderBook()
+	ob.SetBlockNumber(topic1, 200)
+	num := ob.GetBlockNumber()
+	t.Log("height:", num)
+}
+
+func TestOrderBook_SetTransaction(t *testing.T) {
+	ob := getOrderBook()
+	height := ob.GetBlockNumber()
+	tx := types.HexToHash("0x4f07194d6601954c8de8cec792f1702ed29b61d6f4d8bf3587f113abbce544f2")
+	data := []byte("222")
+	ob.SetTransaction(topic1, height, tx, data)
+
+	data, height, err := ob.GetTransaction(topic1, tx)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log("data:", string(data))
+		t.Log("height:", height)
+	}
+}
+
 //func getOrderWrap() *types.OrderWrap {
 //	var (
 //		ord types.Order

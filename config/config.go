@@ -99,6 +99,8 @@ type MinerOptions struct {
 }
 
 type OrderBookOptions struct {
+	FilterTopics 				[]string			`required:"true"`
+	DefaultBlockNumber 			int					`required:"true"`
 	Filters struct {
 		BaseFilter struct {
 			MinLrcFee int64

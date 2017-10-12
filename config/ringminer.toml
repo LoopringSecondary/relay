@@ -3,6 +3,10 @@ title = "Loopring TOML"
 [owner]
 name = "Loopring corporation"
 
+[order_book]
+filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
+default_block_number = 100
+
 [database]
 server = "localhost"
 port = 8001

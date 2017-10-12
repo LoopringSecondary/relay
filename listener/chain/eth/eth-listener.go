@@ -36,12 +36,12 @@ type Whisper struct {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type EthClientListener struct {
-	options config.ChainClientOptions
-	whisper *Whisper
-	stop    chan struct{}
-	lock    sync.RWMutex
-
-	ethClient *chainclient.Client
+	options 	config.ChainClientOptions
+	whisper 	*Whisper
+	stop    	chan struct{}
+	lock    	sync.RWMutex
+	filterIds 	map[string]string
+	ethClient 	*chainclient.Client
 }
 
 func NewListener(options config.ChainClientOptions, whisper *Whisper, ethClient *chainclient.Client) *EthClientListener {
@@ -76,6 +76,24 @@ func (l *EthClientListener) Start() {
 	}
 
 	defer l.ethClient.UninstallFilter(filterId)
+}
+
+// todo(fk): convert height to big int & get token address
+func (l *EthClientListener) newFilter() (string, error) {
+	var filterId string
+
+	// 使用jsonrpc的方式调用newFilter
+	filter := eth.FilterQuery{}
+	filter.FromBlock = types.Int2BlockNumHex(int64(height))
+	filter.ToBlock = "latest"
+	filter.Address = TransferTokenAddress
+
+	err := l.ethClient.Call(&filterId, "eth_newFilter", &filter)
+	if err != nil {
+		return "", err
+	}
+
+	return filterId, nil
 }
 
 func (l *EthClientListener) Stop() {
