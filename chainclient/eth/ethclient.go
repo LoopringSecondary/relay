@@ -31,10 +31,12 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"reflect"
 	"time"
+	"github.com/Loopring/ringminer/db"
 )
 
 type EthClient struct {
 	*chainclient.Client
+	runtimedb *db.Database
 	signer    *ethTypes.HomesteadSigner
 	senders   map[string]*Account
 	rpcClient *rpc.Client
