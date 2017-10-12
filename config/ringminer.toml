@@ -24,7 +24,15 @@ topic = "test_topic"
 raw_url = "http://127.0.0.1:8545"
 passphrase = "sa"
 [chain_client.senders]
-"0xA16992135207c57A569AeB2E6455B97Ec35A833d" = "0x6696d1c16b04875a2f3d2fcbab3fd6af16fd27d7a813cb69cb5cbf678b81e0df"
+"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
+"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
     [chain_client.eth]
         gas_price = 10000
         gas_limit = 10000
+
+[miner]
+loopringImpAddresses = ["0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"]
+ringMaxLength = 4
+feeRecepient = ""
+miner = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
+ifRegistryRingHash = false

@@ -30,7 +30,7 @@ type Crypto interface {
 	//签名恢复到地址
 	SigToAddress(hash, sig []byte) ([]byte, error)
 	//生成sig
-	VRSToSig(v byte, r, s []byte) []byte
+	VRSToSig(v byte, r, s []byte) ([]byte, error)
 
 	SigToVRS([]byte) (v byte, r []byte, s []byte)
 }

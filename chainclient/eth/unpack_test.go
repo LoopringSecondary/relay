@@ -16,17 +16,16 @@
 
 */
 
-
 package eth_test
 
 import (
-	"testing"
-	"github.com/ethereum/go-ethereum/common"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/Loopring/ringminer/chainclient/eth"
-	"strings"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"math/big"
+	"strings"
+	"testing"
 )
 
 // 字符串转地址必须使用hexToAddress
@@ -76,10 +75,10 @@ func TestUnpack(t *testing.T) {
 	}
 
 	type DepositEvent struct {
-		Hash 		[]byte
-		Account     common.Address
-		Amount 		*big.Int
-		Ok 			bool
+		Hash    []byte
+		Account common.Address
+		Amount  *big.Int
+		Ok      bool
 	}
 
 	event := DepositEvent{}

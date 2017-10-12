@@ -19,13 +19,13 @@
 package orderbook_test
 
 import (
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/types"
 	"os"
 	"path/filepath"
 	"testing"
-	"github.com/Loopring/ringminer/orderbook"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/types"
 )
 
 const (
@@ -42,9 +42,9 @@ func file() string {
 	return gopath + sep() + "src" + sep() + proj + sep() + dbname
 }
 
-func getOrderBook() *orderbook.OrderBook{
-	database := db.NewDB(config.DbOptions{DataDir:file(), BufferCapacity: 8, CacheCapacity: 4})
-	opts := config.OrderBookOptions{FilterTopics:[]string{topic1, topic2}, DefaultBlockNumber: 100}
+func getOrderBook() *orderbook.OrderBook {
+	database := db.NewDB(config.DbOptions{DataDir: file(), BufferCapacity: 8, CacheCapacity: 4})
+	opts := config.OrderBookOptions{FilterTopics: []string{topic1, topic2}, DefaultBlockNumber: 100}
 
 	peerOrderChan := make(chan *types.Order)
 	chainOrderChan := make(chan *types.OrderMined)

@@ -13,7 +13,7 @@ var _ = (*filledOrderMarshaling)(nil)
 func (f FilledOrder) MarshalJSON() ([]byte, error) {
 	type FilledOrder struct {
 		OrderState       OrderState   `json:"orderState" gencodec:"required"`
-		FeeSelection     int          `json:"feeSelection"`
+		FeeSelection     uint8        `json:"feeSelection"`
 		RateAmountS      *Big         `json:"rateAmountS"`
 		AvailableAmountS *Big         `json:"availableAmountS"`
 		FillAmountS      *EnlargedInt `json:"fillAmountS"`
@@ -44,7 +44,7 @@ func (f FilledOrder) MarshalJSON() ([]byte, error) {
 func (f *FilledOrder) UnmarshalJSON(input []byte) error {
 	type FilledOrder struct {
 		OrderState       *OrderState  `json:"orderState" gencodec:"required"`
-		FeeSelection     *int         `json:"feeSelection"`
+		FeeSelection     *uint8       `json:"feeSelection"`
 		RateAmountS      *Big         `json:"rateAmountS"`
 		AvailableAmountS *Big         `json:"availableAmountS"`
 		FillAmountS      *EnlargedInt `json:"fillAmountS"`

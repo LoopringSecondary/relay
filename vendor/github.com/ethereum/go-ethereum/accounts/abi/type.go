@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -65,14 +66,23 @@ var (
 	//      string     int       uint       fixed
 	//      string32   int8      uint8      uint[]
 	//      address    int256    uint256    fixed128x128[2]
-	fullTypeRegex = regexp.MustCompile(`([a-zA-Z0-9]+)(\[([0-9]*)\])?`)
+	//todo:support mutil array, but need to perfect it
+	fullTypeRegex  = regexp.MustCompile(`([a-zA-Z0-9]+)(\[([0-9]*)\])?`)
+	fullTypeRegex1 = regexp.MustCompile(`([a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
+
 	// typeRegex parses the abi sub types
 	typeRegex = regexp.MustCompile("([a-zA-Z]+)(([0-9]+)(x([0-9]+))?)?")
 )
 
 // NewType creates a new reflection type of abi type given in t.
 func NewType(t string) (typ Type, err error) {
-	res := fullTypeRegex.FindAllStringSubmatch(t, -1)[0]
+	var res []string
+	if strings.HasSuffix(t, "]") {
+		res = fullTypeRegex1.FindAllStringSubmatch(t, -1)[0]
+	} else {
+		res = fullTypeRegex.FindAllStringSubmatch(t, -1)[0]
+	}
+
 	// check if type is slice and parse type.
 	switch {
 	case res[3] != "":

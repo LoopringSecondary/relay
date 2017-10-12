@@ -70,7 +70,6 @@ func Bytes2Hex(d []byte) string {
 
 func Hex2Bytes(str string) []byte {
 	h, _ := hex.DecodeString(str)
-
 	return h
 }
 
@@ -109,4 +108,22 @@ func LeftPadBytes(slice []byte, l int) []byte {
 	copy(padded[l-len(slice):], slice)
 
 	return padded
+}
+
+func Xor(bytes1, bytes2 []byte) []byte {
+	bs1Length := len(bytes1)
+	bs2Length := len(bytes2)
+	var bytesTmp []byte
+	bytesTmp = make([]byte, bs1Length)
+	if bs1Length > bs2Length {
+		bytes2 = LeftPadBytes(bytes2, bs1Length)
+	} else if bs1Length < bs2Length {
+		bytes1 = LeftPadBytes(bytes1, bs2Length)
+		bytesTmp = make([]byte, bs2Length)
+	}
+
+	for idx, _ := range bytesTmp {
+		bytesTmp[idx] = bytes1[idx] ^ bytes2[idx]
+	}
+	return bytesTmp
 }

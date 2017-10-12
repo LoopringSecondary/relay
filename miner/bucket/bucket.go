@@ -19,11 +19,10 @@
 package bucket
 
 import (
+	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
-	"math/rand"
-	"strconv"
 	"sync"
 )
 
@@ -35,7 +34,7 @@ import (
 //应当尝试更改为node，提高内存的利用率
 
 //todo：环的最大长度
-const RingLength = 4
+var RingLength int
 
 type OrderWithPos struct {
 	types.OrderState
@@ -43,26 +42,41 @@ type OrderWithPos struct {
 }
 
 type semiRingPos struct {
-	semiRingKey string //可以到达的途径
-	index       int    //所在的数组索引
+	semiRingKey types.Hash //可以到达的途径
+	index       int        //所在的数组索引
 }
 
 type SemiRing struct {
-	orders []*OrderWithPos //组成该半环的node
-	hash   string
+	orders []*OrderWithPos //组成该半环的order
+	hash   types.Hash
 	finish bool
-	//reduction reductionOrder 	//半环组成的规约后的新的order
+	//reduction reductionOrder
 }
 
-func (r *SemiRing) hashFunc() string {
-	//todo:just for test
-	return strconv.Itoa(rand.Int())
+func (ring *SemiRing) generateHash() types.Hash {
+	h := &types.Hash{}
+
+	vBytes := []byte{byte(ring.orders[0].RawOrder.V)}
+	rBytes := ring.orders[0].RawOrder.R.Bytes()
+	sBytes := ring.orders[0].RawOrder.S.Bytes()
+	for idx, order := range ring.orders {
+		if idx > 0 {
+			vBytes = types.Xor(vBytes, []byte{byte(order.RawOrder.V)})
+			rBytes = types.Xor(rBytes, order.RawOrder.R.Bytes())
+			sBytes = types.Xor(sBytes, order.RawOrder.S.Bytes())
+		}
+	}
+
+	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
+	h.SetBytes(hashBytes)
+
+	return *h
 }
 
 type Bucket struct {
 	ringChan  chan *types.RingState
 	token     types.Address                //开始的地址
-	semiRings map[string]*SemiRing         //每个semiRing都给定一个key
+	semiRings map[types.Hash]*SemiRing     //每个semiRing都给定一个key
 	orders    map[types.Hash]*OrderWithPos //order hash -> order
 	mtx       *sync.RWMutex
 }
@@ -73,7 +87,7 @@ func NewBucket(token types.Address, ringChan chan *types.RingState) *Bucket {
 	bucket.token = token
 	bucket.ringChan = ringChan
 	bucket.orders = make(map[types.Hash]*OrderWithPos)
-	bucket.semiRings = make(map[string]*SemiRing)
+	bucket.semiRings = make(map[types.Hash]*SemiRing)
 	bucket.mtx = &sync.RWMutex{}
 	return bucket
 }
@@ -104,12 +118,12 @@ func (b *Bucket) generateRing(order *types.OrderState) {
 			//兑换率是否匹配
 			if miner.PriceValid(ringTmp) {
 				miner.ComputeRing(ringTmp) //计算兑换的费用、折扣率等，便于计算收益，选择最大环
-				log.Debugf("bucket:%s, len:%d, fee:%d, order.idx:%s", b.token.Str(), len(b.orders), ringTmp.LegalFee.RealValue().Int64(), semiRing.orders[0].Hash.Str())
+				log.Debugf("bucket:%s, len:%d, fee:%d, order.idx:%s", b.token.Str(), len(b.orders), ringTmp.LegalFee.RealValue().Int64(), semiRing.orders[0].RawOrder.Hash.Str())
 				//选择收益最大的环
 				if ring == nil ||
 					ringTmp.LegalFee.Cmp(ring.LegalFee) > 0 ||
 					(ringTmp.LegalFee.Cmp(ring.LegalFee) == 0 && len(ringTmp.RawRing.Orders) < len(ring.RawRing.Orders)) {
-					ringTmp.Hash = miner.Hash(ringTmp)
+					ringTmp.RawRing.Hash = ringTmp.RawRing.GenerateHash()
 					ring = ringTmp
 				}
 			}
@@ -132,14 +146,14 @@ func (b *Bucket) generateSemiRing(order *types.OrderState) {
 	//首先生成包含自己的semiRing
 	selfSemiRing := &SemiRing{}
 	selfSemiRing.orders = []*OrderWithPos{orderWithPos}
-	selfSemiRing.hash = selfSemiRing.hashFunc()
+	selfSemiRing.hash = selfSemiRing.generateHash()
 	pos := &semiRingPos{semiRingKey: selfSemiRing.hash, index: len(selfSemiRing.orders)}
 	orderWithPos.postions = []*semiRingPos{pos}
-	b.orders[orderWithPos.Hash] = orderWithPos
+	b.orders[orderWithPos.RawOrder.Hash] = orderWithPos
 	b.semiRings[selfSemiRing.hash] = selfSemiRing
 
 	//新半环列表
-	semiRingMap := make(map[string]*SemiRing)
+	semiRingMap := make(map[types.Hash]*SemiRing)
 
 	//相等的话，则为第一层，下面每一层都加过来
 	for _, semiRing := range b.semiRings {
@@ -150,7 +164,7 @@ func (b *Bucket) generateSemiRing(order *types.OrderState) {
 
 			semiRingNew := &SemiRing{}
 			semiRingNew.orders = append(selfSemiRing.orders, semiRing.orders[1:]...)
-			semiRingNew.hash = semiRingNew.hashFunc()
+			semiRingNew.hash = semiRingNew.generateHash()
 
 			semiRingMap[semiRingNew.hash] = semiRingNew
 
@@ -168,7 +182,7 @@ func (b *Bucket) generateSemiRing(order *types.OrderState) {
 }
 
 func (b *Bucket) appendToSemiRing(order *types.OrderState) {
-	semiRingMap := make(map[string]*SemiRing)
+	semiRingMap := make(map[types.Hash]*SemiRing)
 
 	//第二层以下，只检测最后的token 即可
 	for _, semiRing := range b.semiRings {
@@ -179,11 +193,11 @@ func (b *Bucket) appendToSemiRing(order *types.OrderState) {
 			orderWithPos := &OrderWithPos{}
 			orderWithPos.OrderState = *order
 			orderWithPos.postions = []*semiRingPos{}
-			b.orders[orderWithPos.Hash] = orderWithPos
+			b.orders[orderWithPos.RawOrder.Hash] = orderWithPos
 
 			semiRingNew := &SemiRing{}
 			semiRingNew.orders = append(semiRing.orders, orderWithPos)
-			semiRingNew.hash = semiRingNew.hashFunc()
+			semiRingNew.hash = semiRingNew.generateHash()
 
 			semiRingMap[semiRingNew.hash] = semiRingNew
 
@@ -208,11 +222,11 @@ func (b *Bucket) DeleteOrder(ord types.OrderState) {
 	b.mtx.RLock()
 	defer b.mtx.RUnlock()
 
-	if o, ok := b.orders[ord.Hash]; ok {
+	if o, ok := b.orders[ord.RawOrder.Hash]; ok {
 		for _, pos := range o.postions {
 			delete(b.semiRings, pos.semiRingKey)
 		}
-		delete(b.orders, ord.Hash)
+		delete(b.orders, ord.RawOrder.Hash)
 	}
 
 }
@@ -228,10 +242,10 @@ func (b *Bucket) Stop() {
 //this fun should not be called without mtx.lock()
 func (b *Bucket) newOrderWithoutLock(ord types.OrderState) {
 	//if orders contains this order, there are nothing to do
-	if _, ok := b.orders[ord.Hash]; !ok {
+	if _, ok := b.orders[ord.RawOrder.Hash]; !ok {
 		//最后一个token为当前token，则可以组成环，匹配出最大环，并发送到proxy
 		if ord.RawOrder.TokenB == b.token {
-			log.Debugf("bucket receive order:%s", ord.Hash.Hex())
+			log.Debugf("bucket receive order:%s", ord.RawOrder.Hash.Hex())
 
 			b.generateRing(&ord)
 		} else if ord.RawOrder.TokenS == b.token {

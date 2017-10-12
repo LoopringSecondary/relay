@@ -51,7 +51,7 @@ func newOrder(outToken string, inToken string, outAmount, inAmount int64, buyFir
 	h := &types.Hash{}
 	h.SetBytes([]byte(strconv.Itoa(*idx)))
 	orderState.RawOrder = *order
-	orderState.Hash = *h
+	orderState.RawOrder.Hash = *h
 	orderState.Status = types.ORDER_NEW
 
 	return orderState
@@ -153,7 +153,7 @@ func listentRingStored(debugRingChan chan *types.RingState) {
 				s = s + " -> " + " {outtoken:" + string(o.OrderState.RawOrder.TokenS.Bytes()) +
 					", fillamountS:" + o.FillAmountS.RealValue().String() +
 					", intoken:" + string(o.OrderState.RawOrder.TokenB.Bytes()) +
-					", idx:" + o.OrderState.Hash.Str() +
+					", idx:" + o.OrderState.RawOrder.Hash.Str() +
 					"}"
 			}
 			log.Infof("ringChan receive:%s ring is %s", string(orderRing.Hash.Bytes()), s)
