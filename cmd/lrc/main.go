@@ -105,7 +105,7 @@ func minerNode(c *cli.Context) error {
 
 	//todo：设置flag到config中
 	n = node.NewEthNode(logger, globalConfig)
-	//n.Start()
+	n.Start()
 
 	log.Info("started")
 	//captiure stop signal

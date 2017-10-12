@@ -18,7 +18,9 @@ topic = "test_topic"
 
 [chain_client]
 raw_url = "http://127.0.0.1:8545"
-passphrase = "aaa"
+passphrase = "sa"
+[chain_client.senders]
+"0xA16992135207c57A569AeB2E6455B97Ec35A833d" = "0x6696d1c16b04875a2f3d2fcbab3fd6af16fd27d7a813cb69cb5cbf678b81e0df"
     [chain_client.eth]
         gas_price = 10000
         gas_limit = 10000
