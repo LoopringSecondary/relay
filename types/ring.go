@@ -21,6 +21,7 @@ package types
 import (
 	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/log"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -41,17 +42,23 @@ type Ring struct {
 	V                                           uint8          `json:"v"`
 	R                                           Sign           `json:"r"`
 	S                                           Sign           `json:"s"`
-	Hash                                        Hash           `json:"-"`
+	Hash                                        Hash           `json:"hash"`
 }
 
 func (ring *Ring) GenerateHash() Hash {
 	h := &Hash{}
-	//todo:refer to contract
-	hashBytes := crypto.CryptoInstance.GenerateHash(
-		ring.Hash.Bytes(),
-	)
+	vBytes := []byte{byte(ring.Orders[0].OrderState.RawOrder.V)}
+	rBytes := ring.Orders[0].OrderState.RawOrder.R.Bytes()
+	sBytes := ring.Orders[0].OrderState.RawOrder.S.Bytes()
+	for idx, order := range ring.Orders {
+		if idx > 0 {
+			vBytes = Xor(vBytes, []byte{byte(order.OrderState.RawOrder.V)})
+			rBytes = Xor(rBytes, order.OrderState.RawOrder.R.Bytes())
+			sBytes = Xor(sBytes, order.OrderState.RawOrder.S.Bytes())
+		}
+	}
+	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
 	h.SetBytes(hashBytes)
-
 	return *h
 }
 
@@ -83,7 +90,7 @@ func (ring *Ring) SignerAddress() (Address, error) {
 		hash = ring.GenerateHash()
 	}
 
-	sig := crypto.CryptoInstance.VRSToSig(ring.V, ring.R.Bytes(), ring.S.Bytes())
+	sig, _ := crypto.CryptoInstance.VRSToSig(ring.V, ring.R.Bytes(), ring.S.Bytes())
 	log.Debugf("orderstate.hash:%s", hash.Hex())
 
 	if addressBytes, err := crypto.CryptoInstance.SigToAddress(hash.Bytes(), sig); nil != err {
@@ -95,10 +102,70 @@ func (ring *Ring) SignerAddress() (Address, error) {
 	}
 }
 
+func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
+	ringSubmitArgs := emptyRingSubmitArgs()
+
+	for _, filledOrder := range ring.Orders {
+		order := filledOrder.OrderState.RawOrder
+		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [2]common.Address{common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.TokenS.Bytes())})
+
+		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, filledOrder.RateAmountS})
+
+		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [2]uint8{order.MarginSplitPercentage, filledOrder.FeeSelection})
+
+		ringSubmitArgs.BuyNoMoreThanAmountBList = append(ringSubmitArgs.BuyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)
+
+		ringSubmitArgs.VList = append(ringSubmitArgs.VList, order.V)
+		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R.Bytes())
+		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S.Bytes())
+	}
+
+	ringSubmitArgs.ThrowIfLRCIsInsuffcient = ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient
+
+	if err := ring.GenerateAndSetSignature(minerPk); nil != err {
+		log.Error(err.Error())
+	} else {
+		ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
+		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R.Bytes())
+		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S.Bytes())
+	}
+	//if ringSubmitArgs.Ringminer {
+	ringminer, _ := ring.SignerAddress()
+	ringSubmitArgs.Ringminer = common.BytesToAddress(ringminer.Bytes())
+	//}
+	return ringSubmitArgs
+}
+
 type RingState struct {
-	RawRing     *Ring        `json:"rawRing"`
-	Hash        Hash         `json:"hash"`        // 订单链id
-	ReducedRate *EnlargedInt `json:"reducedRate"` //成环之后，折价比例
-	LegalFee    *EnlargedInt `json:"legalFee"`    //法币计算的fee
-	FeeMode     int          `json:"feeMode"`     //收费方式，0 lrc 1 share
+	RawRing        *Ring        `json:"rawRing"`
+	ReducedRate    *EnlargedInt `json:"reducedRate"` //成环之后，折价比例
+	LegalFee       *EnlargedInt `json:"legalFee"`    //法币计算的fee
+	FeeMode        int          `json:"feeMode"`     //收费方式，0 lrc 1 share
+	SubmitTxHash   Hash         `json:"submitTxHash"`
+	RegistryTxHash Hash         `json:"registryTxHash"`
+}
+
+type RingSubmitArgs struct {
+	AddressList              [][2]common.Address
+	UintArgsList             [][7]*big.Int
+	Uint8ArgsList            [][2]uint8
+	BuyNoMoreThanAmountBList []bool
+	VList                    []uint8
+	RList                    [][]byte
+	SList                    [][]byte
+	Ringminer                common.Address
+	FeeRecepient             common.Address
+	ThrowIfLRCIsInsuffcient  bool
+}
+
+func emptyRingSubmitArgs() *RingSubmitArgs {
+	return &RingSubmitArgs{
+		AddressList:              [][2]common.Address{},
+		UintArgsList:             [][7]*big.Int{},
+		Uint8ArgsList:            [][2]uint8{},
+		BuyNoMoreThanAmountBList: []bool{},
+		VList: []uint8{},
+		RList: [][]byte{},
+		SList: [][]byte{},
+	}
 }

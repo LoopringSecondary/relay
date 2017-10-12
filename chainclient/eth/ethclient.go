@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,14 +32,13 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"reflect"
 	"time"
-	"github.com/Loopring/ringminer/db"
 )
 
 type EthClient struct {
 	*chainclient.Client
 	runtimedb *db.Database
 	signer    *ethTypes.HomesteadSigner
-	senders   map[string]*Account
+	senders   map[types.Address]*Account
 	rpcClient *rpc.Client
 }
 
@@ -49,12 +49,12 @@ func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, a
 }
 
 type CallArg struct {
-	From     string
-	To       string
-	Gas      types.Big
-	GasPrice types.Big
-	Value    types.Big
-	Data     string
+	From     string    `json:"from"`
+	To       string    `json:"to"`
+	Gas      types.Big `json:"gas"`
+	GasPrice types.Big `json:"gasPrice"`
+	Value    types.Big `json:"value"`
+	Data     string    `json:"data"`
 }
 
 func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
@@ -85,10 +85,10 @@ func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
 	return ethClient
 }
 
-func (ethClient *EthClient) signAndSendTransaction(result interface{}, from string, tx interface{}) error {
+func (ethClient *EthClient) signAndSendTransaction(result interface{}, from types.Address, tx interface{}) error {
 	transaction := tx.(*ethTypes.Transaction)
 	if account, ok := ethClient.senders[from]; !ok {
-		return errors.New("there isn't a private key for this address:" + from)
+		return errors.New("there isn't a private key for this address:" + from.Hex())
 	} else {
 		signer := &ethTypes.HomesteadSigner{}
 

@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"sync"
 )
 
@@ -38,7 +39,7 @@ type RingClient struct {
 
 	unSubmitedRingsStore db.Database
 
-	fingerprintChan chan *chainclient.FingerprintEvent
+	ringhashRegistryChan chan *chainclient.RinghashRegistryEvent
 
 	//ring 的失败包括：提交失败，ring的合约执行时失败，执行时包括：gas不足，以及其他失败
 	ringSubmitFailedChans []RingSubmitFailedChan
@@ -78,17 +79,22 @@ func (ringClient *RingClient) DeleteRingSubmitFailedChan(c RingSubmitFailedChan)
 	ringClient.ringSubmitFailedChans = chans
 }
 
-func (ringClient *RingClient) NewRing(ring *types.RingState) {
+func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 	ringClient.mtx.Lock()
 	defer ringClient.mtx.Unlock()
 
-	if canSubmit(ring) {
+	if canSubmit(ringState) {
 		//todo:save
-		if ringBytes, err := json.Marshal(ring); err == nil {
-			ringClient.unSubmitedRingsStore.Put(ring.Hash.Bytes(), ringBytes)
-			log.Infof("ringHash:%s", ring.Hash.Hex())
-			//todo:async send to block chain
-			ringClient.sendRingFingerprint(ring)
+		if ringBytes, err := json.Marshal(ringState); err == nil {
+			//ringState.RawRing.Hash = ringState.RawRing.GenerateHash()
+
+			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
+			log.Infof("ringHash:%s", ringState.RawRing.Hash.Hex())
+			if IfRegistryRingHash {
+				ringClient.sendRinghashRegistry(ringState)
+			} else {
+				ringClient.submitRing(ringState)
+			}
 		} else {
 			log.Errorf("error:%s", err.Error())
 		}
@@ -101,20 +107,35 @@ func canSubmit(ring *types.RingState) bool {
 }
 
 //send Fingerprint to block chain
-func (ringClient *RingClient) sendRingFingerprint(ring *types.RingState) {
-	//contractAddress := ring.RawRing.Orders[0].OrderState.RawOrder.Protocol
-	//_, err := loopring.LoopringFingerprints[contractAddress].SubmitRingFingerprint.SendTransaction("",nil,nil,"")
-	//if err != nil {
-	//	println(err.Error())
-	//}
+func (ringClient *RingClient) sendRinghashRegistry(ringState *types.RingState) {
+	ring := ringState.RawRing
+	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
+	ringRegistryArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
+
+	if txHash, err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.SubmitRinghash.SendTransaction(types.HexToAddress("0x"),
+		big.NewInt(int64(len(ring.Orders))),
+		ringRegistryArgs.FeeRecepient,
+		ringRegistryArgs.VList,
+		ringRegistryArgs.RList,
+		ringRegistryArgs.SList,
+	); nil != err {
+		log.Error(err.Error())
+	} else {
+		ringState.RegistryTxHash = types.HexToHash(txHash)
+		if ringBytes, err := json.Marshal(ringState); nil != err {
+			log.Error(err.Error())
+		} else {
+			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
+		}
+	}
 }
 
-//listen fingerprint  accept by chain and then send Ring to block chain
-func (ringClient *RingClient) listenFingerprintSucessAndSendRing() {
+//listen ringhash  accept by chain and then send Ring to block chain
+func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 	var filterId string
 	addresses := []common.Address{}
-	for _, fingerprint := range Loopring.LoopringFingerprints {
-		addresses = append(addresses, common.HexToAddress(fingerprint.Address))
+	for _, impl := range LoopringInstance.LoopringImpls {
+		addresses = append(addresses, common.HexToAddress(impl.RingHashRegistry.Address))
 	}
 	filterReq := &eth.FilterQuery{}
 	filterReq.Address = addresses
@@ -122,7 +143,7 @@ func (ringClient *RingClient) listenFingerprintSucessAndSendRing() {
 	filterReq.ToBlock = "latest"
 	//todo:topics, eventId
 	//filterReq.Topics =
-	if err := Loopring.Client.NewFilter(&filterId, filterReq); nil != err {
+	if err := LoopringInstance.Client.NewFilter(&filterId, filterReq); nil != err {
 		log.Errorf("error:%s", err.Error())
 	} else {
 		log.Infof("filterId:%s", filterId)
@@ -130,11 +151,11 @@ func (ringClient *RingClient) listenFingerprintSucessAndSendRing() {
 	//todo：Uninstall this filterId when stop
 	defer func() {
 		var a string
-		Loopring.Client.UninstallFilter(&a, filterId)
+		LoopringInstance.Client.UninstallFilter(&a, filterId)
 	}()
 
 	logChan := make(chan []eth.Log)
-	if err := Loopring.Client.Subscribe(&logChan, filterId); nil != err {
+	if err := LoopringInstance.Client.Subscribe(&logChan, filterId); nil != err {
 		log.Errorf("error:%s", err.Error())
 	} else {
 		for {
@@ -142,20 +163,13 @@ func (ringClient *RingClient) listenFingerprintSucessAndSendRing() {
 			case logs := <-logChan:
 				for _, log1 := range logs {
 					ringHash := []byte(log1.TransactionHash)
-					if _, err := ringClient.store.Get(ringHash); err == nil {
-						ring := &types.RingState{}
-						contractAddress := ring.RawRing.Orders[0].OrderState.RawOrder.Protocol
-						//todo:发送到区块链
-						_, err1 := Loopring.LoopringImpls[contractAddress].SubmitRing.SendTransactionWithSpecificGas("", nil, nil, "")
-						if err1 != nil {
-							log.Errorf("error:%s", err1.Error())
-						} else {
-							//标记为已删除,迁移到已完成的列表中
-							ringClient.unSubmitedRingsStore.Delete(ringHash)
-							//submitedRingsStore.Put(ringHash, ring.MarshalJSON())
-						}
-					} else {
+					if ringData, err := ringClient.store.Get(ringHash); nil != err {
 						log.Errorf("error:%s", err.Error())
+					} else {
+						ring := &types.RingState{}
+						if json.Unmarshal(ringData, ring); nil != err {
+							log.Errorf("error:%s", err.Error())
+						}
 					}
 				}
 			case stop := <-ringClient.stopChan:
@@ -163,6 +177,36 @@ func (ringClient *RingClient) listenFingerprintSucessAndSendRing() {
 					break
 				}
 			}
+		}
+	}
+}
+
+func (ringClient *RingClient) submitRing(ringSate *types.RingState) {
+	ring := ringSate.RawRing
+	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
+
+	ringSubmitArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
+	if txHash, err1 := LoopringInstance.LoopringImpls[contractAddress].SubmitRing.SendTransaction(types.HexToAddress("0x"),
+		ringSubmitArgs.AddressList,
+		ringSubmitArgs.UintArgsList,
+		ringSubmitArgs.Uint8ArgsList,
+		ringSubmitArgs.BuyNoMoreThanAmountBList,
+		ringSubmitArgs.VList,
+		ringSubmitArgs.RList,
+		ringSubmitArgs.SList,
+		ringSubmitArgs.Ringminer,
+		ringSubmitArgs.FeeRecepient,
+		ringSubmitArgs.ThrowIfLRCIsInsuffcient,
+	); nil != err1 {
+		log.Errorf("error:%s", err1.Error())
+	} else {
+		//标记为已删除,迁移到已完成的列表中
+		ringClient.unSubmitedRingsStore.Delete(ring.Hash.Bytes())
+		ringSate.SubmitTxHash = types.HexToHash(txHash)
+		if data, err := json.Marshal(ringSate); nil != err {
+			log.Error(err.Error())
+		} else {
+			ringClient.submitedRingsStore.Put(ring.Hash.Bytes(), data)
 		}
 	}
 }
@@ -179,21 +223,21 @@ func (ringClient *RingClient) recoverRing() {
 			log.Errorf("error:%s", err.Error())
 		} else {
 			contractAddress := ring.RawRing.Orders[0].OrderState.RawOrder.Protocol
-			var isSubmitFingerprint bool
-			var isSubmitRing bool
+			var isRinghashRegistered bool
+			//var isSubmitRing bool
 			if canSubmit(ring) {
-				if err := Loopring.LoopringFingerprints[contractAddress].FingerprintFound.Call(&isSubmitFingerprint, "", ""); err == nil {
-					if isSubmitFingerprint {
+				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "", ""); err == nil {
+					if isRinghashRegistered {
 						//todo:sendTransaction, check have ring been submited.
-						if err := Loopring.LoopringImpls[contractAddress].SettleRing.Call(&isSubmitRing, "", ""); err == nil {
-							if !isSubmitRing && canSubmit(ring) {
-								//loopring.LoopringImpls[contractAddress].SubmitRing.SendTransaction(contractAddress, "", "")
-							}
-						} else {
-							log.Errorf("error:%s", err.Error())
-						}
+						//if err := LoopringInstance.LoopringImpls[contractAddress].SettleRing.Call(&isSubmitRing, "", ""); err == nil {
+						//	if !isSubmitRing && canSubmit(ring) {
+						//		//loopring.LoopringImpls[contractAddress].SubmitRing.SendTransaction(contractAddress, "", "")
+						//	}
+						//} else {
+						//	log.Errorf("error:%s", err.Error())
+						//}
 					} else {
-						ringClient.sendRingFingerprint(ring)
+						ringClient.sendRinghashRegistry(ring)
 					}
 				} else {
 					log.Errorf("error:%s", err.Error())
@@ -210,6 +254,5 @@ func (ringClient *RingClient) recoverRing() {
 func (ringClient *RingClient) Start() {
 
 	ringClient.recoverRing()
-	//go listenFingerprintSucessAndSendRing();
-
+	go ringClient.listenRinghashRegistrySucessAndSendRing()
 }

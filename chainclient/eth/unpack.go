@@ -16,27 +16,26 @@
 
 */
 
-
 package eth
 
 import (
-	"fmt"
-	"reflect"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
+	"bytes"
 	"encoding/binary"
 	"errors"
-	"strings"
-	"bytes"
+	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"math/big"
+	"reflect"
+	"strings"
 )
 
 var (
 	errBadBool = errors.New("abi: improperly encoded boolean value")
 )
 
-func Unpack(e abi.Event,v interface{}, output []byte, topics []string) error {
+func Unpack(e abi.Event, v interface{}, output []byte, topics []string) error {
 	output = combine(e, output, topics)
 
 	// make sure the passed value is a pointer
@@ -54,7 +53,7 @@ func Unpack(e abi.Event,v interface{}, output []byte, topics []string) error {
 		return fmt.Errorf("abi: cannot unmarshal tuple in to %v", typ)
 	}
 
-	for i:=0; i < len(e.Inputs); i++ {
+	for i := 0; i < len(e.Inputs); i++ {
 		marshalledValue, err := toGoType(i, e.Inputs[i], output)
 
 		if err != nil {
@@ -64,7 +63,7 @@ func Unpack(e abi.Event,v interface{}, output []byte, topics []string) error {
 		reflectValue := reflect.ValueOf(marshalledValue)
 		for j := 0; j < typ.NumField(); j++ {
 			field := typ.Field(j)
-			if field.Name == strings.ToUpper(e.Inputs[i].Name[:1]) + e.Inputs[i].Name[1:] {
+			if field.Name == strings.ToUpper(e.Inputs[i].Name[:1])+e.Inputs[i].Name[1:] {
 				if err := set(value.Field(j), reflectValue, e.Inputs[i]); err != nil {
 					return err
 				}
@@ -85,7 +84,7 @@ func combine(e abi.Event, output []byte, topics []string) []byte {
 	j := 0
 	k := 0
 	var ret [][]byte
-	for i:=0;i<len(e.Inputs);i++ {
+	for i := 0; i < len(e.Inputs); i++ {
 		if e.Inputs[i].Indexed {
 			bs := hexutil.MustDecode(idxflds[j])
 			ret = append(ret, bs)
@@ -93,7 +92,7 @@ func combine(e abi.Event, output []byte, topics []string) []byte {
 			continue
 		}
 
-		bs := output[k*32:(k+1)*32]
+		bs := output[k*32 : (k+1)*32]
 		ret = append(ret, bs)
 		k += 1
 	}
@@ -142,20 +141,20 @@ func toGoType(i int, t abi.Argument, output []byte) (interface{}, error) {
 	switch t.Type.T {
 	case abi.StringTy, abi.BytesTy: // variable arrays are written at the end of the return bytes
 		// parse offset from which we should start reading
-		offset := int(binary.BigEndian.Uint64(output[index+24: index+32]))
+		offset := int(binary.BigEndian.Uint64(output[index+24 : index+32]))
 		if offset+32 > len(output) {
 			return nil, fmt.Errorf("abi: cannot marshal in to go type: length insufficient %d require %d", len(output), offset+32)
 		}
 		// parse the size up until we should be reading
-		size := int(binary.BigEndian.Uint64(output[offset+24: offset+32]))
+		size := int(binary.BigEndian.Uint64(output[offset+24 : offset+32]))
 		if offset+32+size > len(output) {
 			return nil, fmt.Errorf("abi: cannot marshal in to go type: length insufficient %d require %d", len(output), offset+32+size)
 		}
 
 		// get the bytes for this return value
-		returnOutput = output[offset+32: offset+32+size]
+		returnOutput = output[offset+32 : offset+32+size]
 	default:
-		returnOutput = output[index: index+32]
+		returnOutput = output[index : index+32]
 	}
 
 	// convert the bytes to whatever is specified by the ABI.
@@ -331,4 +330,3 @@ func readBool(word []byte) (bool, error) {
 	}
 
 }
-

@@ -36,12 +36,12 @@ type Whisper struct {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type EthClientListener struct {
-	options 	config.ChainClientOptions
-	whisper 	*Whisper
-	stop    	chan struct{}
-	lock    	sync.RWMutex
-	filterIds 	map[string]string
-	ethClient 	*chainclient.Client
+	options   config.ChainClientOptions
+	whisper   *Whisper
+	stop      chan struct{}
+	lock      sync.RWMutex
+	filterIds map[string]string
+	ethClient *chainclient.Client
 }
 
 func NewListener(options config.ChainClientOptions, whisper *Whisper, ethClient *chainclient.Client) *EthClientListener {

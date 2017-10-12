@@ -19,16 +19,16 @@
 package orderbook
 
 import (
-	"github.com/Loopring/ringminer/db"
 	"errors"
-	"strconv"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/types"
+	"strconv"
 )
 
 const (
 	DEFAULT_BLOCKER_NUMBER_FIELD = "defaultBlockerNumber"
-	TX_INDEX_TABLE_PREFIX = "index"
-	TX_CONTENT_TABLE_PREFIX = "log"
+	TX_INDEX_TABLE_PREFIX        = "index"
+	TX_CONTENT_TABLE_PREFIX      = "log"
 )
 
 // db根据events/topic保存两张表，一张存储块高度，一张存储内容
@@ -97,7 +97,7 @@ func (ob *OrderBook) SetTransaction(topic string, height int, tx types.Hash, dat
 	return nil
 }
 
-func (ob *OrderBook) GetTransaction(topic string, tx types.Hash) ([]byte, int, error){
+func (ob *OrderBook) GetTransaction(topic string, tx types.Hash) ([]byte, int, error) {
 	ob.lock.RLock()
 	defer ob.lock.RUnlock()
 
@@ -126,8 +126,8 @@ func (ob *OrderBook) GetTransaction(topic string, tx types.Hash) ([]byte, int, e
 	return content, bytes2int(height), nil
 }
 
-func getTableName(topic,prefix string) string { return topic + "_" + prefix }
-func defaultBlockNumKey() []byte { return []byte(DEFAULT_BLOCKER_NUMBER_FIELD) }
+func getTableName(topic, prefix string) string { return topic + "_" + prefix }
+func defaultBlockNumKey() []byte               { return []byte(DEFAULT_BLOCKER_NUMBER_FIELD) }
 
 func int2bytes(num int) []byte {
 	str := strconv.Itoa(num)

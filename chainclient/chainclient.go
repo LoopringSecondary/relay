@@ -18,14 +18,16 @@
 
 package chainclient
 
+import "github.com/Loopring/ringminer/types"
+
 //similar to web3
 type RpcMethod func(result interface{}, args ...interface{}) error
 
 type Client struct {
 	//subscribe, signAndSendTransaction and NewContract are customed
 	//the first arg must be filterId in eth
-	Subscribe RpcMethod `methodName:"subscribe"`
-	SignAndSendTransaction func(result interface{}, from string, transaction interface{}) error
+	Subscribe              RpcMethod `methodName:"subscribe"`
+	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
 
 	//rpc method:
