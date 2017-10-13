@@ -90,12 +90,12 @@ type ChainClientOptions struct {
 }
 
 type MinerOptions struct {
-	Passphrase           string         //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
-	LoopringImps         []ContractOpts `required:"true"`
-	LoopringFingerprints []ContractOpts `required:"true"`
-	RingMaxLength        int            `required:"true"` //recommended value:4
-	Miner                string         `required:"true"` //private key, used to sign the ring
-	FeeRecepient         string         //address the recepient of fee
+	Passphrase           string   //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	LoopringImpAddresses []string `required:"true"`
+	RingMaxLength        int      `required:"true"` //recommended value:4
+	Miner                string   `required:"true"` //private key, used to sign the ring
+	FeeRecepient         string   //address the recepient of fee
+	IfRegistryRingHash   bool
 }
 
 type OrderBookOptions struct {
@@ -116,11 +116,6 @@ type OrderBookOptions struct {
 	}
 
 	OrderMinAmounts map[string]string //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
-}
-
-type ContractOpts struct {
-	Abi     string `required:"true"`
-	Address string `required:"true"`
 }
 
 func Validator(cv reflect.Value) (bool, error) {

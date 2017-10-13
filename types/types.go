@@ -132,6 +132,10 @@ func (a *Address) SetBytes(b []byte) {
 	copy(a[AddressLength-len(b):], b)
 }
 
+func (a *Address) IsZero() bool {
+	return *a == HexToAddress("0x")
+}
+
 type Passphrase [32]byte
 
 func (p *Passphrase) SetBytes(b []byte) {

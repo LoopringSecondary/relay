@@ -43,11 +43,6 @@ todo：此时环路的撮合驱动是由新订单的到来进行驱动，但是�
 该处负责接受neworder, cancleorder等事件，并把事件广播给所有的bucket，同时调用client将已形成的环路发送至区块链，发送时需要再次查询订单的最新状态，保证无错，一旦出错需要更改ring的各种数据，如交易量、费用分成等
 */
 
-//// TODO(fukun): modify config
-//type BucketProxyConfig struct {
-//	Num int
-//}
-
 type Whisper struct {
 	OrderStateChan chan *types.OrderState
 }
@@ -65,9 +60,6 @@ type BucketProxy struct {
 func NewBucketProxy(ringClient *miner.RingClient, orderStateChan Whisper) miner.Proxy {
 	var proxy miner.Proxy
 	bp := &BucketProxy{}
-
-	//bp.opts = opts
-	//bp.loadConfig()
 
 	ringChan := make(chan *types.RingState, 1000)
 	bp.ringChan = ringChan
@@ -94,13 +86,11 @@ func (bp *BucketProxy) Start() {
 		case orderRing := <-bp.ringChan:
 			bp.ringClient.NewRing(orderRing)
 			for _, b := range bp.buckets {
-				//todo:this should call deleteOrder if the order was fullfilled, and do nothing else.
+				//this should call deleteOrder if the order was fullfilled, and do nothing else.
 				for _, order := range orderRing.RawRing.Orders {
-					//todo:查询orderbook获取最新值,是否已被匹配过
-					b.DeleteOrder(order.OrderState)
-					//if (order.FullFilled) {
-					//	b.DeleteOrder(order.OrderState)
-					//}
+					if order.IsFullFilled() {
+						b.DeleteOrder(order.OrderState)
+					}
 				}
 				log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", b.token.Str(), len(b.orders), len(b.semiRings))
 			}
@@ -124,6 +114,7 @@ func (bp *BucketProxy) listenOrderState() {
 			if types.ORDER_NEW == order.Status {
 				bp.newOrder(order)
 			} else if types.ORDER_CANCEL == order.Status || types.ORDER_FINISHED == order.Status {
+				//todo:process when cancel partable
 				bp.deleteOrder(order)
 			}
 		}
@@ -171,13 +162,11 @@ func (bp *BucketProxy) listenRingSubmit() {
 
 //todo:需要ringclient在提交失败后通知到该proxy，估计使用chan
 func (bp *BucketProxy) submitFailed(ring *types.RingState) {
-	for _, bucket := range bp.buckets {
-		for _, order := range ring.RawRing.Orders {
-			//todo:查询orderbook获取最新值,是否已被匹配过
-			bucket.NewOrder(order.OrderState)
-			//if (order.FullFilled) {
-			//	bucket.NewOrder(order.OrderState)
-			//}
-		}
-	}
+	//for _, order := range ring.RawRing.Orders {
+	//todo:查询orderbook获取最新值, 是否已被匹配过
+	//if () {
+	//	bp.OrderStateChan <- order.OrderState
+	//}
+	//bucket.NewOrder(order.OrderState)
+	//}
 }

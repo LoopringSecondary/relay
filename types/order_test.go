@@ -22,7 +22,6 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"testing"
 	//ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	"encoding/json"
 	"math/big"
 )
 
@@ -49,47 +48,6 @@ import (
 //		t.Log(string(data))
 //	}
 //}
-
-type B struct {
-	B1
-	Age int
-}
-
-type B1 struct {
-	Name string
-}
-
-func TestA(t *testing.T) {
-	filledOrder := &types.FilledOrder{}
-	b := big.NewInt(1031001682784)
-	b.Mul(b, big.NewInt(1000000000))
-	t1 := &types.Big{b}
-	filledOrder.RateAmountS = t1
-
-	orderState := &types.OrderState{}
-	orderState.RemainedAmountB = big.NewInt(1000)
-	ei := &types.EnlargedInt{}
-	ei.Decimals = big.NewInt(1)
-	ei.Value = b
-	filledOrder.FillAmountB = ei
-	if bytes, err := json.Marshal(filledOrder); nil != err {
-		println(err.Error())
-	} else {
-		println(string(bytes))
-	}
-
-	b1 := &B1{}
-	b1.Name = "test"
-	b2 := &B{}
-	b2.Age = 2
-	b2.B1 = *b1
-	if bytes, err := json.Marshal(b2); nil != err {
-		println(err.Error())
-	} else {
-		println(string(bytes))
-	}
-
-}
 
 //func TestOrderState_MarshalJson(t *testing.T) {
 //	var ord types.OrderState

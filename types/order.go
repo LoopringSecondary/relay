@@ -62,7 +62,7 @@ type Order struct {
 	S                     Sign     `json:"s" gencodec:"required"`
 
 	Owner Address `json:"owner" `
-	Hash  Hash    `json:"-"`
+	Hash  Hash    `json:"hash"`
 }
 
 type orderMarshaling struct {
@@ -99,6 +99,7 @@ func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
 	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
 		o.Hash = o.GenerateHash()
 	}
+
 	if sig, err := crypto.CryptoInstance.Sign(o.Hash.Bytes(), pkBytes); nil != err {
 		return err
 	} else {
@@ -121,7 +122,7 @@ func (o *Order) SignerAddress() (Address, error) {
 		o.Hash = o.GenerateHash()
 	}
 
-	sig := crypto.CryptoInstance.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
+	sig, _ := crypto.CryptoInstance.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
 	log.Debugf("orderstate.hash:%s", o.Hash.Hex())
 
 	if addressBytes, err := crypto.CryptoInstance.SigToAddress(o.Hash.Bytes(), sig); nil != err {
@@ -138,7 +139,7 @@ func (o *Order) SignerAddress() (Address, error) {
 
 type FilledOrder struct {
 	OrderState       OrderState `json:"orderState" gencodec:"required"`
-	FeeSelection     int        `json:"feeSelection"`     //0 -> lrc
+	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
 	RateAmountS      *big.Int   `json:"rateAmountS"`      //提交需要
 	AvailableAmountS *big.Int   `json:"availableAmountS"` //需要，也是用于计算fee
 	//AvailableAmountB *big.Int	//需要，也是用于计算fee
@@ -161,10 +162,14 @@ type filledOrderMarshaling struct {
 	AvailableAmountS *Big
 }
 
+//todo: impl it
+func (o *FilledOrder) IsFullFilled() bool {
+	return true
+}
+
 //go:generate gencodec -type OrderState -field-override orderStateMarshaling -out gen_orderstate_json.go
 type OrderState struct {
 	RawOrder        Order       `json:"rawOrder"`
-	Hash            Hash        `json:"hash"`
 	RemainedAmountS *big.Int    `json:"remainedAmountS"`
 	RemainedAmountB *big.Int    `json:"remainedAmountB"`
 	Status          OrderStatus `json:"status"`

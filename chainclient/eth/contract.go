@@ -53,7 +53,13 @@ func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...inte
 }
 
 //contract transaction
-func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, error) {
+func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (string, error) {
+	if from.IsZero() {
+		for address, _ := range m.Client.senders {
+			from = address
+			break
+		}
+	}
 	var gas, gasPrice *types.Big
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
@@ -67,10 +73,11 @@ func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, e
 
 	dataHex := common.ToHex(dataBytes)
 	callArg := &CallArg{}
-	callArg.From = from
+	callArg.From = from.Hex()
 	callArg.To = m.Address
 	callArg.Data = dataHex
-	callArg.GasPrice = *gasPrice
+	//todo:can't unmarshal
+	//callArg.GasPrice = *gasPrice
 	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err
 	}
@@ -79,7 +86,7 @@ func (m *AbiMethod) SendTransaction(from string, args ...interface{}) (string, e
 	return m.SendTransactionWithSpecificGas(from, gas.BigInt(), gasPrice.BigInt(), args...)
 }
 
-func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
 	if nil != err {
@@ -95,7 +102,7 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *b
 	}
 
 	var nonce types.Big
-	if err = m.Client.GetTransactionCount(&nonce, from, "pending"); nil != err {
+	if err = m.Client.GetTransactionCount(&nonce, from.Hex(), "pending"); nil != err {
 		return "", err
 	}
 
@@ -111,6 +118,17 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from string, gas, gasPrice *b
 	return txHash, err
 }
 
+type AbiEvent struct {
+	abi.Event
+	Address string
+	Client  *EthClient
+}
+
+//todo:impl it
+func (e *AbiEvent) Subscribe() {
+
+}
+
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
 	for _, method := range cabi.Methods {
 		methodName := strings.ToUpper(method.Name[0:1]) + method.Name[1:]
@@ -119,6 +137,7 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *E
 		abiMethod.Abi = cabi
 		abiMethod.Address = address
 		abiMethod.Client = ethClient
+		abiMethod.Method = cabi.Methods[method.Name]
 		field := e.FieldByName(methodName)
 		if field.IsValid() {
 			field.Set(reflect.ValueOf(abiMethod))

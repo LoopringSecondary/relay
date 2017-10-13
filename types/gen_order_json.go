@@ -27,7 +27,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 		R                     Sign    `json:"r" gencodec:"required"`
 		S                     Sign    `json:"s" gencodec:"required"`
 		Owner                 Address `json:"owner" `
-		Hash                  Hash    `json:"-"`
+		Hash                  Hash    `json:"hash"`
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
@@ -66,7 +66,7 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		R                     *Sign    `json:"r" gencodec:"required"`
 		S                     *Sign    `json:"s" gencodec:"required"`
 		Owner                 *Address `json:"owner" `
-		Hash                  *Hash    `json:"-"`
+		Hash                  *Hash    `json:"hash"`
 	}
 	var dec Order
 	if err := json.Unmarshal(input, &dec); err != nil {

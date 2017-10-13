@@ -148,13 +148,13 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 
 	state := &types.OrderState{}
 	state.RawOrder = *ord
-	state.Hash = ord.GenerateHash()
+	state.RawOrder.Hash = ord.GenerateHash()
 
 	//todo:it should not query db everytime.
-	if input, err := ob.partialTable.Get(state.Hash.Bytes()); err != nil {
+	if input, err := ob.partialTable.Get(state.RawOrder.Hash.Bytes()); err != nil {
 		panic(err)
 	} else if len(input) == 0 {
-		if inpupt1, err1 := ob.finishTable.Get(state.Hash.Bytes()); nil != err1 {
+		if inpupt1, err1 := ob.finishTable.Get(state.RawOrder.Hash.Bytes()); nil != err1 {
 			panic(err1)
 		} else if len(inpupt1) == 0 {
 			state.Status = types.ORDER_NEW
@@ -170,14 +170,14 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 	//do nothing when types.ORDER_NEW != state.Status
 	if types.ORDER_NEW == state.Status {
 
-		log.Debugf("state hash:%s", state.Hash.Hex())
+		log.Debugf("state hash:%s", state.RawOrder.Hash.Hex())
 
 		//save to db
 		dataBytes, err := json.Marshal(state)
 		if err != nil {
 			return err
 		}
-		ob.partialTable.Put(state.Hash.Bytes(), dataBytes)
+		ob.partialTable.Put(state.RawOrder.Hash.Bytes(), dataBytes)
 
 		//send to miner
 		ob.whisper.EngineOrderChan <- state
@@ -224,7 +224,7 @@ func (ob *OrderBook) GetOrders() {
 
 // moveOrder move order when partial finished order fully exchanged
 func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
-	key := odw.Hash.Bytes()
+	key := odw.RawOrder.Hash.Bytes()
 	value, err := json.Marshal(odw)
 	if err != nil {
 		return err
@@ -237,6 +237,5 @@ func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
 // isFinished judge order state
 func isFinished(odw *types.OrderState) bool {
 	//if odw.RawOrder.
-
 	return true
 }

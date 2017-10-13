@@ -39,7 +39,8 @@ func (c *EthCrypto) GenerateHash(data ...[]byte) []byte {
 }
 
 //签名回复到地址
-func (c *EthCrypto) SigToAddress(hash, sig []byte) ([]byte, error) {
+func (c *EthCrypto) SigToAddress(hashPre, sig []byte) ([]byte, error) {
+	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
 	pubKey, err := crypto.SigToPub(hash, sig)
 	if nil != err {
 		return nil, err
@@ -48,15 +49,20 @@ func (c *EthCrypto) SigToAddress(hash, sig []byte) ([]byte, error) {
 	}
 }
 
-func (c *EthCrypto) VRSToSig(v byte, r, s []byte) []byte {
-	sig := make([]byte, 65)
+func (c *EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
+	sig = make([]byte, 65)
+	vUint8 := uint8(v)
+	if vUint8 >= 27 {
+		vUint8 -= 27
+	}
 	copy(sig[32-len(r):32], r)
 	copy(sig[64-len(s):64], s)
-	sig[64] = v
-	return sig
+	sig[64] = byte(vUint8)
+	return sig, nil
 }
 
-func (c *EthCrypto) Sign(hash, pkBytes []byte) ([]byte, error) {
+func (c *EthCrypto) Sign(hashPre, pkBytes []byte) ([]byte, error) {
+	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
 	if pk, err := crypto.ToECDSA(pkBytes); err != nil {
 		log.Errorf("err:%s", err.Error())
 		return nil, err
@@ -66,9 +72,9 @@ func (c *EthCrypto) Sign(hash, pkBytes []byte) ([]byte, error) {
 }
 
 func (c *EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
-	r = []byte{}
-	s = []byte{}
-	v = sig[64]
+	r = make([]byte, 32)
+	s = make([]byte, 32)
+	v = byte(uint8(sig[64]) + uint8(27))
 	copy(r, sig[0:32])
 	copy(s, sig[32:64])
 	return v, r, s

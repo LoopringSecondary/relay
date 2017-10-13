@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"strings"
 )
 
 type Account struct {
@@ -75,20 +76,21 @@ func NewAccount(pk string) (*Account, error) {
 	}
 }
 
-func DecryptAccounts(passphrase *types.Passphrase, encryptedPks map[string]string) (map[string]*Account, error) {
-	accounts := make(map[string]*Account)
+func DecryptAccounts(passphrase *types.Passphrase, encryptedPks map[string]string) (map[types.Address]*Account, error) {
+	accounts := make(map[types.Address]*Account)
 
 	for address, enctypted := range encryptedPks {
+		address = strings.ToUpper(address)
 		account := &Account{EncryptedPrivKey: types.FromHex(enctypted)}
 		if _, err := account.Decrypt(passphrase); nil != err {
 			log.Errorf("err:%s", err.Error())
 			return nil, err
 		}
-		if account.Address.Hex() != address {
+		if strings.ToUpper(account.Address.Hex()) != address {
 			log.Errorf("address:%s and privkey:%s not match", address, enctypted)
 			return nil, errors.New("address and privkey not match")
 		}
-		accounts[address] = account
+		accounts[types.BytesToAddress(account.Address.Bytes())] = account
 	}
 	return accounts, nil
 }

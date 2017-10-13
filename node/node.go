@@ -53,6 +53,11 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
 	n.globalConfig = globalConfig
+
+	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
+
+	bucket.RingLength = globalConfig.Miner.RingMaxLength
+
 	ethClient := ethClientLib.NewChainClient(n.globalConfig.ChainClient)
 
 	database := db.NewDB(globalConfig.Database)

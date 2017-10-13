@@ -12,14 +12,12 @@ var _ = (*orderStateMarshaling)(nil)
 func (o OrderState) MarshalJSON() ([]byte, error) {
 	type OrderState struct {
 		RawOrder        Order       `json:"rawOrder"`
-		Hash            Hash        `json:"hash"`
 		RemainedAmountS *Big        `json:"remainedAmountS"`
 		RemainedAmountB *Big        `json:"remainedAmountB"`
 		Status          OrderStatus `json:"status"`
 	}
 	var enc OrderState
 	enc.RawOrder = o.RawOrder
-	enc.Hash = o.Hash
 	enc.RemainedAmountS = (*Big)(o.RemainedAmountS)
 	enc.RemainedAmountB = (*Big)(o.RemainedAmountB)
 	enc.Status = o.Status
@@ -29,7 +27,6 @@ func (o OrderState) MarshalJSON() ([]byte, error) {
 func (o *OrderState) UnmarshalJSON(input []byte) error {
 	type OrderState struct {
 		RawOrder        *Order       `json:"rawOrder"`
-		Hash            *Hash        `json:"hash"`
 		RemainedAmountS *Big         `json:"remainedAmountS"`
 		RemainedAmountB *Big         `json:"remainedAmountB"`
 		Status          *OrderStatus `json:"status"`
@@ -40,9 +37,6 @@ func (o *OrderState) UnmarshalJSON(input []byte) error {
 	}
 	if dec.RawOrder != nil {
 		o.RawOrder = *dec.RawOrder
-	}
-	if dec.Hash != nil {
-		o.Hash = *dec.Hash
 	}
 	if dec.RemainedAmountS != nil {
 		o.RemainedAmountS = (*big.Int)(dec.RemainedAmountS)
