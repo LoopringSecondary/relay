@@ -61,7 +61,7 @@ func Initialize(options config.MinerOptions, client *chainclient.Client) {
 		LoopringInstance.Tokens[lrcTokenAddress] = lrcToken
 
 		var registryAddressHex string
-		imp.RinghashRegistryAddress.coCall(&registryAddressHex, "pending")
+		imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
 		registryAddress := types.HexToAddress(registryAddressHex)
 		registry := &chainclient.LoopringRinghashRegistry{}
 		client.NewContract(registry, registryAddress.Hex(), chainclient.CurrentRinghashRegistryAbiStr)
