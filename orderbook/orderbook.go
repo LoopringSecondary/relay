@@ -48,15 +48,15 @@ type Whisper struct {
 }
 
 type OrderBook struct {
-	options      	config.OrderBookOptions
-	filters      	[]Filter
-	db           	db.Database
-	finishTable  	db.Database
-	partialTable 	db.Database
-	runtimeTables 	map[string]db.Database
-	whisper      	*Whisper
-	lock         	sync.RWMutex
-	minAmount 		*big.Int
+	options       config.OrderBookOptions
+	filters       []Filter
+	db            db.Database
+	finishTable   db.Database
+	partialTable  db.Database
+	runtimeTables map[string]db.Database
+	whisper       *Whisper
+	lock          sync.RWMutex
+	minAmount     *big.Int
 }
 
 func NewOrderBook(options config.OrderBookOptions, database db.Database, whisper *Whisper) *OrderBook {

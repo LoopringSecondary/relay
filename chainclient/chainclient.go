@@ -24,7 +24,7 @@ type RpcMethod func(result interface{}, args ...interface{}) error
 type Client struct {
 	//subscribe, signAndSendTransaction and NewContract are customed
 	//the first arg must be filterId in eth
-	Subscribe RpcMethod `methodName:"subscribe"`
+	Subscribe              RpcMethod `methodName:"subscribe"`
 	SignAndSendTransaction func(result interface{}, from string, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
 

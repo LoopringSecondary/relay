@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"reflect"
 	"time"
-	"github.com/Loopring/ringminer/db"
 )
 
 type EthClient struct {

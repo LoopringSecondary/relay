@@ -21,8 +21,8 @@ package miner
 import (
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/types"
 	"github.com/Loopring/ringminer/crypto"
+	"github.com/Loopring/ringminer/types"
 )
 
 //代理，控制整个match流程，其中会提供几种实现，如bucket、realtime，etc。
@@ -31,7 +31,7 @@ type RingSubmitFailedChan chan *types.RingState
 
 var Loopring *chainclient.Loopring
 
-var Miner []byte  //used to sign the ring
+var Miner []byte               //used to sign the ring
 var FeeRecepient types.Address //used to receive fee
 
 type Proxy interface {
@@ -69,7 +69,7 @@ func Initialize(options config.MinerOptions, client *chainclient.Client) {
 	passphrase := &types.Passphrase{}
 	passphrase.SetBytes([]byte(options.Passphrase))
 	var err error
-	Miner,err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(options.Miner))
+	Miner, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(options.Miner))
 	if nil != err {
 		panic(err)
 	}

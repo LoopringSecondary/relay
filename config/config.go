@@ -80,28 +80,28 @@ type DbOptions struct {
 }
 
 type ChainClientOptions struct {
-	RawUrl     string `required:"true"`
-	Senders              map[string]string `required:"true"` //address->encrypted private key, used to send transaction
-	Passphrase string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	RawUrl     string            `required:"true"`
+	Senders    map[string]string `required:"true"` //address->encrypted private key, used to send transaction
+	Passphrase string            //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	Eth        struct {
-		GasPrice    int
-		GasLimit    int
-		   }
+		GasPrice int
+		GasLimit int
+	}
 }
 
 type MinerOptions struct {
-	Passphrase string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	Passphrase           string         //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	LoopringImps         []ContractOpts `required:"true"`
 	LoopringFingerprints []ContractOpts `required:"true"`
-	RingMaxLength        int  `required:"true"` //recommended value:4
-	Miner                string `required:"true"` //private key, used to sign the ring
-	FeeRecepient         string          //address the recepient of fee
+	RingMaxLength        int            `required:"true"` //recommended value:4
+	Miner                string         `required:"true"` //private key, used to sign the ring
+	FeeRecepient         string         //address the recepient of fee
 }
 
 type OrderBookOptions struct {
-	FilterTopics 				[]string			`required:"true"`
-	DefaultBlockNumber 			int					`required:"true"`
-	Filters struct {
+	FilterTopics       []string `required:"true"`
+	DefaultBlockNumber int      `required:"true"`
+	Filters            struct {
 		BaseFilter struct {
 			MinLrcFee int64
 		}
