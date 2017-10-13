@@ -61,7 +61,7 @@ type Order struct {
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
 
-	Owner Address `json:"owner" `
+	Owner Address `json:"owner"`
 	Hash  Hash    `json:"hash"`
 }
 
@@ -78,6 +78,7 @@ func (o *Order) GenerateHash() Hash {
 	h := &Hash{}
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
+		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
 		o.AmountS.Bytes(),

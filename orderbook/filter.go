@@ -48,9 +48,9 @@ func (f *SignFilter) filter(o *types.Order) (bool, error) {
 	//	return false
 	//}
 
-	if valid := o.ValidateSignatureValues(); !valid {
-		return false, nil
-	}
+	//if valid := o.ValidateSignatureValues(); !valid {
+	//	return false, nil
+	//}
 
 	if addr, err := o.SignerAddress(); nil != err {
 		return false, err

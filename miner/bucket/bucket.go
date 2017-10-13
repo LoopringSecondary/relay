@@ -117,14 +117,17 @@ func (b *Bucket) generateRing(order *types.OrderState) {
 			ringTmp.RawRing.Orders = append(ringTmp.RawRing.Orders, convertOrderStateToFilledOrder(order))
 			//兑换率是否匹配
 			if miner.PriceValid(ringTmp) {
-				miner.ComputeRing(ringTmp) //计算兑换的费用、折扣率等，便于计算收益，选择最大环
-				log.Debugf("bucket:%s, len:%d, fee:%d, order.idx:%s", b.token.Str(), len(b.orders), ringTmp.LegalFee.RealValue().Int64(), semiRing.orders[0].RawOrder.Hash.Str())
-				//选择收益最大的环
-				if ring == nil ||
-					ringTmp.LegalFee.Cmp(ring.LegalFee) > 0 ||
-					(ringTmp.LegalFee.Cmp(ring.LegalFee) == 0 && len(ringTmp.RawRing.Orders) < len(ring.RawRing.Orders)) {
-					ringTmp.RawRing.Hash = ringTmp.RawRing.GenerateHash()
-					ring = ringTmp
+				//计算兑换的费用、折扣率等，便于计算收益，选择最大环
+				if err := miner.ComputeRing(ringTmp); nil != err {
+					log.Errorf("err:%s", err.Error())
+				} else {
+					//选择收益最大的环
+					if ring == nil ||
+						ringTmp.LegalFee.Cmp(ring.LegalFee) > 0 ||
+						(ringTmp.LegalFee.Cmp(ring.LegalFee) == 0 && len(ringTmp.RawRing.Orders) < len(ring.RawRing.Orders)) {
+						ringTmp.RawRing.Hash = ringTmp.RawRing.GenerateHash()
+						ring = ringTmp
+					}
 				}
 			}
 		}
@@ -133,7 +136,6 @@ func (b *Bucket) generateRing(order *types.OrderState) {
 	//todo：生成新环后，需要proxy将新环对应的各个订单的状态发送给每个bucket，便于修改，, 还有一些过滤条件
 	//删除对应的semiRing，转到等待proxy通知，但是会暂时标记该半环
 	if ring != nil {
-		//b.newRingWithoutLock(ring)
 		b.ringChan <- ring
 	}
 

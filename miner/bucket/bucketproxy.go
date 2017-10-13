@@ -81,21 +81,24 @@ func (bp *BucketProxy) Start() {
 	//orderstatechan and ringchan
 	go bp.listenOrderState()
 
-	for {
-		select {
-		case orderRing := <-bp.ringChan:
-			bp.ringClient.NewRing(orderRing)
-			for _, b := range bp.buckets {
-				//this should call deleteOrder if the order was fullfilled, and do nothing else.
-				for _, order := range orderRing.RawRing.Orders {
-					if order.IsFullFilled() {
-						b.DeleteOrder(order.OrderState)
+	go func() {
+		for {
+			select {
+			case orderRing := <-bp.ringChan:
+				bp.ringClient.NewRing(orderRing)
+				for _, b := range bp.buckets {
+					//this should call deleteOrder if the order was fullfilled, and do nothing else.
+					for _, order := range orderRing.RawRing.Orders {
+						if order.IsFullFilled() {
+							b.DeleteOrder(order.OrderState)
+						}
 					}
+					log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", b.token.Hex(), len(b.orders), len(b.semiRings))
 				}
-				log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", b.token.Str(), len(b.orders), len(b.semiRings))
 			}
 		}
-	}
+	}()
+
 }
 
 func (bp *BucketProxy) Stop() {
@@ -112,6 +115,8 @@ func (bp *BucketProxy) listenOrderState() {
 		select {
 		case order := <-bp.OrderStateChan.OrderStateChan:
 			if types.ORDER_NEW == order.Status {
+				miner.LoopringInstance.AddToken(order.RawOrder.TokenS)
+				miner.LoopringInstance.AddToken(order.RawOrder.TokenB)
 				bp.newOrder(order)
 			} else if types.ORDER_CANCEL == order.Status || types.ORDER_FINISHED == order.Status {
 				//todo:process when cancel partable
