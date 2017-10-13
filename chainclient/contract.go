@@ -125,3 +125,14 @@ type Loopring struct {
 	Tokens        map[types.Address]*Erc20Token
 	LoopringImpls LoopringProtocolImplMap
 }
+
+func (loopring *Loopring) AddToken(tokenAddress types.Address) {
+	if _, ok := loopring.Tokens[tokenAddress]; !ok {
+		tokenContract := &Erc20Token{}
+		if err := loopring.Client.NewContract(tokenContract, tokenAddress.Hex(), Erc20TokenAbiStr); nil != err {
+
+		} else {
+			loopring.Tokens[tokenAddress] = tokenContract
+		}
+	}
+}

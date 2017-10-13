@@ -115,7 +115,7 @@ func (ob *OrderBook) Start() {
 		for {
 			select {
 			case ord := <-ob.whisper.PeerOrderChan:
-				log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
+				log.Debugf("accept order:%s from peer", ord.Hash.Hex())
 				if valid, err := ob.filter(ord); valid {
 					if err := ob.peerOrderHook(ord); nil != err {
 						log.Errorf("err:", err.Error())
@@ -143,20 +143,16 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
-
-	// TODO(fk): order filtering
-
 	state := &types.OrderState{}
 	state.RawOrder = *ord
 	state.RawOrder.Hash = ord.GenerateHash()
 
 	//todo:it should not query db everytime.
-	if input, err := ob.partialTable.Get(state.RawOrder.Hash.Bytes()); err != nil {
-		panic(err)
-	} else if len(input) == 0 {
-		if inpupt1, err1 := ob.finishTable.Get(state.RawOrder.Hash.Bytes()); nil != err1 {
-			panic(err1)
-		} else if len(inpupt1) == 0 {
+	pInput, _ := ob.partialTable.Get(state.RawOrder.Hash.Bytes())
+
+	if nil == pInput || len(pInput) == 0 {
+		fInput, _ := ob.finishTable.Get(state.RawOrder.Hash.Bytes())
+		if nil == fInput || len(fInput) == 0 {
 			state.Status = types.ORDER_NEW
 			state.RemainedAmountS = state.RawOrder.AmountS
 			state.RemainedAmountB = state.RawOrder.AmountB
