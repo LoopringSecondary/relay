@@ -82,16 +82,16 @@ func (l *EthClientListener) Start() {
 func (l *EthClientListener) newFilter() (string, error) {
 	var filterId string
 
-	// 使用jsonrpc的方式调用newFilter
-	filter := eth.FilterQuery{}
-	filter.FromBlock = types.Int2BlockNumHex(int64(height))
-	filter.ToBlock = "latest"
-	filter.Address = TransferTokenAddress
-
-	err := l.ethClient.Call(&filterId, "eth_newFilter", &filter)
-	if err != nil {
-		return "", err
-	}
+	//// 使用jsonrpc的方式调用newFilter
+	//filter := eth.FilterQuery{}
+	//filter.FromBlock = types.Int2BlockNumHex(int64(height))
+	//filter.ToBlock = "latest"
+	//filter.Address = TransferTokenAddress
+	//
+	//err := l.ethClient.Call(&filterId, "eth_newFilter", &filter)
+	//if err != nil {
+	//	return "", err
+	//}
 
 	return filterId, nil
 }
