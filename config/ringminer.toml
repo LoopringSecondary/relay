@@ -4,7 +4,6 @@ title = "Loopring TOML"
 name = "Loopring corporation"
 
 [order_book]
-filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
 default_block_number = 100
 
 [database]
@@ -30,8 +29,11 @@ passphrase = "sa"
         gas_price = 10000
         gas_limit = 10000
 
+[common]
+loopringImpAddresses = ["0xa221f7c8cd24a7a383d116aa5d7430b48d1e0063"]
+filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
+
 [miner]
-loopringImpAddresses = ["0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"]
 ringMaxLength = 4
 feeRecepient = ""
 miner = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"

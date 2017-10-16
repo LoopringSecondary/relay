@@ -124,9 +124,21 @@ type AbiEvent struct {
 	Client  *EthClient
 }
 
+func (e *AbiEvent) Id() string {
+	return e.Event.Id().String()
+}
+
+func (e *AbiEvent) Name() string {
+	return e.Event.Name
+}
+
 //todo:impl it
 func (e *AbiEvent) Subscribe() {
+	e.Event.Id().String()
+}
 
+func (e *AbiEvent) Unpack(v interface{}, output []byte, topics []string) {
+	Unpack(e.Event, v, output, topics)
 }
 
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
@@ -157,5 +169,6 @@ func (ethClient *EthClient) newContract(contract interface{}, address, abiStr st
 	e.FieldByName("Address").Set(reflect.ValueOf(address))
 
 	applyAbiMethod(e, cabi, address, ethClient)
+
 	return nil
 }
