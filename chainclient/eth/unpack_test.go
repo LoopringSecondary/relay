@@ -91,7 +91,7 @@ func TestUnpack(t *testing.T) {
 		t.Error("event do not exist")
 	}
 
-	if err := eth.Unpack(abievent, &event, data); err != nil {
+	if err := eth.Unpack(abievent, &event, data, []string{}); err != nil {
 		panic(err)
 	}
 

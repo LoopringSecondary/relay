@@ -49,6 +49,7 @@ type Whisper struct {
 
 type OrderBook struct {
 	options       config.OrderBookOptions
+	commOpts      config.CommonOptions
 	filters       []Filter
 	db            db.Database
 	finishTable   db.Database
@@ -59,10 +60,11 @@ type OrderBook struct {
 	minAmount     *big.Int
 }
 
-func NewOrderBook(options config.OrderBookOptions, database db.Database, whisper *Whisper) *OrderBook {
+func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database, whisper *Whisper) *OrderBook {
 	ob := &OrderBook{}
 
 	ob.options = options
+	ob.commOpts = commOpts
 	ob.db = database
 	ob.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
 	ob.partialTable = db.NewTable(database, PARTIAL_TABLE_NAME)

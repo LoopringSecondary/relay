@@ -80,6 +80,10 @@ func (listener *IPFSListener) Stop() {
 	listener.lock.Unlock()
 }
 
+func (listener *IPFSListener) Restart() {
+
+}
+
 func (listener *IPFSListener) Name() string {
 	return "ipfs-listener"
 }

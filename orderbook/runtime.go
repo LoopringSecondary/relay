@@ -41,7 +41,7 @@ const (
 // RuntimeDataReady create tables for topics
 func (ob *OrderBook) RuntimeDataReady() {
 	ob.runtimeTables = make(map[string]db.Database)
-	for _, topic := range ob.options.FilterTopics {
+	for _, topic := range ob.commOpts.FilterTopics {
 		idx := getTableName(topic, TX_INDEX_TABLE_PREFIX)
 		con := getTableName(topic, TX_CONTENT_TABLE_PREFIX)
 		ob.runtimeTables[idx] = db.NewTable(ob.db, idx)
@@ -59,11 +59,16 @@ func (ob *OrderBook) GetBlockNumber() int {
 	bs, err := ob.db.Get(defaultBlockNumKey())
 	num := bytes2int(bs)
 	if err != nil {
-		num = ob.options.DefaultBlockNumber
+		num = ob.commOpts.DefaultBlockNumber
 		ob.db.Put(defaultBlockNumKey(), int2bytes(num))
 	}
 
 	return num
+}
+
+// todo(fk):filter transaction,return bool/false ,if do not exist setTransaction
+func (ob *OrderBook) FilterTransaction(topic string, height int, tx types.Hash, data []byte) bool {
+	return true
 }
 
 // SetTransaction set transaction

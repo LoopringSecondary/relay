@@ -55,6 +55,7 @@ type GlobalConfig struct {
 	Database    DbOptions
 	Ipfs        IpfsOptions
 	ChainClient ChainClientOptions
+	Common      CommonOptions
 	Miner       MinerOptions
 	Orderbook   OrderBookOptions
 	Log         zap.Config
@@ -89,19 +90,22 @@ type ChainClientOptions struct {
 	}
 }
 
-type MinerOptions struct {
-	Passphrase           string   //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+type CommonOptions struct {
 	LoopringImpAddresses []string `required:"true"`
-	RingMaxLength        int      `required:"true"` //recommended value:4
-	Miner                string   `required:"true"` //private key, used to sign the ring
-	FeeRecepient         string   //address the recepient of fee
-	IfRegistryRingHash   bool
+	FilterTopics         []string `required:"true"`
+	DefaultBlockNumber   int      `required:"true"`
+}
+
+type MinerOptions struct {
+	Passphrase         string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	RingMaxLength      int    `required:"true"` //recommended value:4
+	Miner              string `required:"true"` //private key, used to sign the ring
+	FeeRecepient       string //address the recepient of fee
+	IfRegistryRingHash bool
 }
 
 type OrderBookOptions struct {
-	FilterTopics       []string `required:"true"`
-	DefaultBlockNumber int      `required:"true"`
-	Filters            struct {
+	Filters struct {
 		BaseFilter struct {
 			MinLrcFee int64
 		}

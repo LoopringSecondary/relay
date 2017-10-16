@@ -41,14 +41,14 @@ type Proxy interface {
 	AddFilter()
 }
 
-func Initialize(options config.MinerOptions, client *chainclient.Client) {
+func Initialize(options config.MinerOptions, commOpts config.CommonOptions, client *chainclient.Client) {
 	LoopringInstance = &chainclient.Loopring{}
 	LoopringInstance.Client = client
 	LoopringInstance.Tokens = make(map[types.Address]*chainclient.Erc20Token)
 
 	protocolImps := make(map[types.Address]*chainclient.LoopringProtocolImpl)
 
-	for _, implAddress := range options.LoopringImpAddresses {
+	for _, implAddress := range commOpts.LoopringImpAddresses {
 		imp := &chainclient.LoopringProtocolImpl{}
 		client.NewContract(imp, implAddress, chainclient.CurrentImplAbiStr)
 		addr := types.HexToAddress(implAddress)
