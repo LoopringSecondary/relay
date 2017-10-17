@@ -19,6 +19,7 @@
 package eth
 
 import (
+	"errors"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
@@ -133,7 +134,7 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 	address := types.HexToAddress(v.Address)
 	impl, ok := miner.LoopringInstance.LoopringImpls[address]
 	if !ok {
-		return error("contract address do not exsit")
+		return errors.New("contract address do not exsit")
 	}
 
 	topic := v.Topics[0]

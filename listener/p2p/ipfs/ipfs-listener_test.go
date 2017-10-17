@@ -51,6 +51,11 @@ func TestA(t *testing.T) {
 	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 	data2, _ := json.Marshal(order2)
 	pubMessage(sh, string(data2))
+
+	for i := 0; i < 1000; i++ {
+		pubMessage(sh, string(data2))
+	}
+
 }
 
 func pubMessage(sh *shell.Shell, data string) {

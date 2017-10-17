@@ -81,6 +81,8 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	filters = append(filters, tokenSFilter)
 	filters = append(filters, tokenBFilter)
 
+	ob.RuntimeDataReady()
+
 	return ob
 }
 
@@ -112,7 +114,7 @@ func (ob *OrderBook) filter(o *types.Order) (bool, error) {
 
 // Start start orderbook as a service
 func (ob *OrderBook) Start() {
-	ob.recoverOrder()
+	//ob.recoverOrder()
 
 	go func() {
 		for {
@@ -138,6 +140,9 @@ func (ob *OrderBook) Stop() {
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
 func (ob *OrderBook) peerOrderHook(ord *types.Order) {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+
 	log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
 	if valid, err := ob.filter(ord); !valid {
 		log.Errorf("receive order but valid failed:%s", err.Error())
@@ -146,9 +151,6 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 	state := &types.OrderState{}
 	state.RawOrder = *ord
 	state.RawOrder.Hash = ord.GenerateHash()
-
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
 
 	// 之前从未存储过
 	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
@@ -163,7 +165,7 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 			log.Errorf("ipfs order marshal error:%s", err.Error())
 		} else {
 			ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs)
-			ob.whisper.EngineOrderChan <- state
+			//ob.whisper.EngineOrderChan <- state
 		}
 	}
 }
