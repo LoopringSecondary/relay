@@ -65,7 +65,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
 	//
 	peerOrderChan := make(chan *types.Order)
-	chainOrderChan := make(chan *types.OrderMined)
+	chainOrderChan := make(chan *types.OrderState)
 	engineOrderChan := make(chan *types.OrderState)
 	//
 	n.registerP2PListener(peerOrderChan)
@@ -113,7 +113,7 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(client *ethClientLib.EthClient, chainOrderChan chan *types.OrderMined) {
+func (n *Node) registerEthListener(client *ethClientLib.EthClient, chainOrderChan chan *types.OrderState) {
 	whisper := &ethListenerLib.Whisper{chainOrderChan}
 	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook)
 }
@@ -123,7 +123,7 @@ func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
 	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs, whisper)
 }
 
-func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderMined, engineOrderChan chan *types.OrderState) {
+func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderState, engineOrderChan chan *types.OrderState) {
 	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
 	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database, whisper)
 }

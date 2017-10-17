@@ -31,7 +31,7 @@ type AbiMethod interface {
 
 type AbiEvent interface {
 	Id() string                                           //返回事件id
-	Name() string 											//返回事件名
+	Name() string                                         //返回事件名
 	Subscribe()                                           //对事件进行订阅
 	Unpack(v interface{}, output []byte, topics []string) //事件解析
 }
@@ -94,75 +94,75 @@ type LoopringProtocolImpl struct {
 //go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
 type RingMinedEvent struct {
 	AbiEvent
-	RingIndex     *big.Int 		`json:"ringIndex" gencodec:"required"`
-	Time          *big.Int		`json:"time" gencodec:"required"`
-	Blocknumber   *big.Int		`json:"blockNumber" gencodec:"required"`
-	Ringhash      types.Hash	`json:"ringHash" gencodec:"required"`
-	Miner         types.Address	`json:"miner" gencodec:"required"`
+	RingIndex     *big.Int      `json:"ringIndex" gencodec:"required"`
+	Time          *big.Int      `json:"time" gencodec:"required"`
+	Blocknumber   *big.Int      `json:"blockNumber" gencodec:"required"`
+	Ringhash      types.Hash    `json:"ringHash" gencodec:"required"`
+	Miner         types.Address `json:"miner" gencodec:"required"`
 	FeeRecepient  types.Address `json:"feeRecepient" gencodec:"required"`
-	RinghashFound bool			`json:"ringHashFound" gencodec:"required"`
+	RinghashFound bool          `json:"ringHashFound" gencodec:"required"`
 }
 
 type ringMinedEventMarshaling struct {
-	RingIndex      	*types.Big
-	Time 			*types.Big
-	Blocknumber 	*types.Big
+	RingIndex   *types.Big
+	Time        *types.Big
+	Blocknumber *types.Big
 }
 
 //go:generate gencodec -type OrderFilledEvent -field-override orderFilledEventMarshaling -out gen_orderfilledevent_json.go
 type OrderFilledEvent struct {
 	AbiEvent
-	RingIndex     *big.Int 		`json:"ringIndex" gencodec:"required"`
-	Time          *big.Int		`json:"time" gencodec:"required"`
-	Blocknumber   *big.Int		`json:"blockNumber"	gencodec:"required"`
-	Ringhash      []byte		`json:"ringHash" gencodec:"required"`
-	PreOrderHash  []byte		`json:"preOrderHash" gencodec:"required"`
-	OrderHash     []byte		`json:"orderHash" gencodec:"required"`
-	NextOrderHash []byte		`json:"nextOrderHash" gencodec:"required"`
-	AmountS       *big.Int		`json:"amountS" gencodec:"required"`
-	AmountB       *big.Int		`json:"amountB" gencodec:"required"`
-	LrcReward     *big.Int		`json:"lrcReward" gencodec:"required"`
-	LrcFee        *big.Int		`json:"lrcFee" gencodec:"required"`
+	RingIndex     *big.Int `json:"ringIndex" gencodec:"required"`
+	Time          *big.Int `json:"time" gencodec:"required"`
+	Blocknumber   *big.Int `json:"blockNumber"	gencodec:"required"`
+	Ringhash      []byte   `json:"ringHash" gencodec:"required"`
+	PreOrderHash  []byte   `json:"preOrderHash" gencodec:"required"`
+	OrderHash     []byte   `json:"orderHash" gencodec:"required"`
+	NextOrderHash []byte   `json:"nextOrderHash" gencodec:"required"`
+	AmountS       *big.Int `json:"amountS" gencodec:"required"`
+	AmountB       *big.Int `json:"amountB" gencodec:"required"`
+	LrcReward     *big.Int `json:"lrcReward" gencodec:"required"`
+	LrcFee        *big.Int `json:"lrcFee" gencodec:"required"`
 }
 
 type orderFilledEventMarshaling struct {
-	RingIndex 	*types.Big
-	Time 		*types.Big
+	RingIndex   *types.Big
+	Time        *types.Big
 	Blocknumber *types.Big
-	AmountS 	*types.Big
-	AmountB 	*types.Big
-	LrcReward 	*types.Big
-	LrcFee 		*types.Big
+	AmountS     *types.Big
+	AmountB     *types.Big
+	LrcReward   *types.Big
+	LrcFee      *types.Big
 }
 
 //go:generate gencodec -type OrderCancelledEvent -field-override orderCancelledEventMarshaling -out gen_ordercancelledevent_json.go
 type OrderCancelledEvent struct {
 	AbiEvent
-	Time            *big.Int	`json:"time" gencodec:"required"`
-	Blocknumber     *big.Int	`json:"blockNumber" gencodec:"required"`
-	OrderHash       []byte		`json:"orderHash" gencodec:"required"`
-	AmountCancelled *big.Int	`json:"amountCancelled gencodec:"required"`
+	Time            *big.Int `json:"time" gencodec:"required"`
+	Blocknumber     *big.Int `json:"blockNumber" gencodec:"required"`
+	OrderHash       []byte   `json:"orderHash" gencodec:"required"`
+	AmountCancelled *big.Int `json:"amountCancelled gencodec:"required"`
 }
 
 type orderCancelledEventMarshaling struct {
-	Time 				*types.Big
-	Blocknumber 		*types.Big
-	AmountCancelled 	*types.Big
+	Time            *types.Big
+	Blocknumber     *types.Big
+	AmountCancelled *types.Big
 }
 
 //go:generate gencodec -type CutoffTimestampChangedEvent -field-override cutoffTimestampChangedEventtMarshaling -out gen_cutofftimestampevent_json.go
 type CutoffTimestampChangedEvent struct {
 	AbiEvent
-	Time        *big.Int		`json:"time" gencodec:"required"`
-	Blocknumber *big.Int		`json:"blockNumber" gencodec:"required"`
-	Address     types.Address	`json:"address" gencodec:"required"`
-	Cutoff      *big.Int		`json:"cutoff" gencodec:"required"`
+	Time        *big.Int      `json:"time" gencodec:"required"`
+	Blocknumber *big.Int      `json:"blockNumber" gencodec:"required"`
+	Address     types.Address `json:"address" gencodec:"required"`
+	Cutoff      *big.Int      `json:"cutoff" gencodec:"required"`
 }
 
 type cutoffTimestampChangedEventtMarshaling struct {
-	Time 		*types.Big
+	Time        *types.Big
 	Blocknumber *types.Big
-	Cutoff 		*types.Big
+	Cutoff      *types.Big
 }
 
 type LoopringRinghashRegistry struct {

@@ -136,6 +136,8 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
 	return ringSubmitArgs
 }
 
+// todo:unpack transaction data to ring,finally get orders
+
 type RingState struct {
 	RawRing        *Ring        `json:"rawRing"`
 	ReducedRate    *EnlargedInt `json:"reducedRate"` //成环之后，折价比例

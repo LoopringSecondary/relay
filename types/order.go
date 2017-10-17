@@ -19,7 +19,6 @@
 package types
 
 import (
-	"debug/elf"
 	"errors"
 	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/log"

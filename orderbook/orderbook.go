@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
+	"errors"
 )
 
 /**
@@ -44,7 +45,7 @@ const (
 type Whisper struct {
 	PeerOrderChan   chan *types.Order
 	EngineOrderChan chan *types.OrderState
-	ChainOrderChan  chan *types.OrderMined
+	ChainOrderChan  chan *types.OrderState
 }
 
 type OrderBook struct {
@@ -117,14 +118,8 @@ func (ob *OrderBook) Start() {
 		for {
 			select {
 			case ord := <-ob.whisper.PeerOrderChan:
-				log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
-				if valid, err := ob.filter(ord); valid {
-					if err := ob.peerOrderHook(ord); nil != err {
-						log.Errorf("err:", err.Error())
-					}
-				} else {
-					log.Errorf("receive order but valid failed:%s", err.Error())
-				}
+				ob.peerOrderHook(ord)
+
 			case ord := <-ob.whisper.ChainOrderChan:
 				ob.chainOrderHook(ord)
 			}
@@ -141,82 +136,100 @@ func (ob *OrderBook) Stop() {
 	//ob.db.Close()
 }
 
-func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
-
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-
-	// TODO(fk): order filtering
+// 来自ipfs的新订单
+// 所有来自ipfs的订单都是新订单
+func (ob *OrderBook) peerOrderHook(ord *types.Order) {
+	log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
+	if valid, err := ob.filter(ord); !valid {
+		log.Errorf("receive order but valid failed:%s", err.Error())
+	}
 
 	state := &types.OrderState{}
 	state.RawOrder = *ord
 	state.RawOrder.Hash = ord.GenerateHash()
 
-	//todo:it should not query db everytime.
-	if input, err := ob.partialTable.Get(state.RawOrder.Hash.Bytes()); err != nil {
-		panic(err)
-	} else if len(input) == 0 {
-		if inpupt1, err1 := ob.finishTable.Get(state.RawOrder.Hash.Bytes()); nil != err1 {
-			panic(err1)
-		} else if len(inpupt1) == 0 {
-			state.Status = types.ORDER_NEW
-			state.RemainedAmountS = state.RawOrder.AmountS
-			state.RemainedAmountB = state.RawOrder.AmountB
-		} else {
-			state.Status = types.ORDER_FINISHED
-		}
-	} else {
-		state.Status = types.ORDER_PARTIAL
-	}
-
-	//do nothing when types.ORDER_NEW != state.Status
-	if types.ORDER_NEW == state.Status {
-
-		log.Debugf("state hash:%s", state.RawOrder.Hash.Hex())
-
-		//save to db
-		dataBytes, err := json.Marshal(state)
-		if err != nil {
-			return err
-		}
-		ob.partialTable.Put(state.RawOrder.Hash.Bytes(), dataBytes)
-
-		//send to miner
-		ob.whisper.EngineOrderChan <- state
-	}
-
-	return nil
-}
-
-func (ob *OrderBook) chainOrderHook(ord *types.OrderMined) error {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	return nil
+	// 之前从未存储过
+	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
+		log.Debugf("ipfs new order hash:%s", state.RawOrder.Hash.Hex())
+		vd := types.VersionData{}
+		vd.RemainedAmountB = state.RawOrder.AmountB
+		vd.RemainedAmountS = state.RawOrder.AmountS
+		vd.Status = types.ORDER_NEW
+
+		state.States = append(state.States, vd)
+		if bs, err := json.Marshal(state); err != nil {
+			log.Errorf("ipfs order marshal error:%s", err.Error())
+		} else {
+			ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs)
+			ob.whisper.EngineOrderChan <- state
+		}
+	}
+}
+
+// 处理来自eth网络的evt/transaction转换后的orderState
+// 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
+// 如果之前已经存储，那么应该直接处理并发送到miner
+func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
+	log.Debugf("accept data from block chain:%s", ord.RawOrder.Protocol.Hex())
+
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+
+	ord, tn, err := ob.getOrder(ord.RawOrder.Hash)
+
+	if err == nil {
+		log.Debugf("chain order exist in:%s", tn)
+
+		// 该orderState已经添加了types.versionData
+
+		// todo:判断订单状态
+
+		// todo:根据订单状态从部分完成表转移到完全完成表
+		if vd, errvd := ord.LatestVersion(); errvd == nil {
+			if vd.Status == types.ORDER_FINISHED || vd.Status == types.ORDER_CANCEL {
+				ob.moveOrder(ord)
+			}
+		}
+
+		// 发送到miner
+		ob.whisper.EngineOrderChan <- ord
+	}
 }
 
 // GetOrder get single order with hash
 func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
+	ord, _, err := ob.getOrder(id)
+	return ord, err
+}
+
+func (ob *OrderBook) getOrder(id types.Hash) (*types.OrderState, string, error) {
 	var (
-		value []byte
-		err   error
-		ord   types.OrderState
+		value 	[]byte
+		err   	error
+		tn 		string
+		ord   	types.OrderState
 	)
 
 	if value, err = ob.partialTable.Get(id.Bytes()); err != nil {
 		value, err = ob.finishTable.Get(id.Bytes())
-	}
-
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, "", errors.New("order do not exist")
+		} else {
+			tn = FINISH_TABLE_NAME
+		}
+	} else {
+		tn = PARTIAL_TABLE_NAME
 	}
 
 	err = json.Unmarshal(value, &ord)
 	if err != nil {
-		return nil, err
+		return nil, tn, err
 	}
 
-	return &ord, nil
+	return &ord, tn, nil
 }
 
 // GetOrders get orders from persistence database

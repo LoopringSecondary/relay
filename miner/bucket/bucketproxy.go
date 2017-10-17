@@ -111,9 +111,10 @@ func (bp *BucketProxy) listenOrderState() {
 	for {
 		select {
 		case order := <-bp.OrderStateChan.OrderStateChan:
-			if types.ORDER_NEW == order.Status {
+			vd, _ := order.LatestVersion()
+			if types.ORDER_NEW == vd.Status {
 				bp.newOrder(order)
-			} else if types.ORDER_CANCEL == order.Status || types.ORDER_FINISHED == order.Status {
+			} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
 				//todo:process when cancel partable
 				bp.deleteOrder(order)
 			}
