@@ -111,12 +111,15 @@ func TestRingClient_NewRing(t *testing.T) {
 	fOrder1.OrderState = types.OrderState{}
 	fOrder1.OrderState.RawOrder = *order1
 	fOrder1.RateAmountS = order1.AmountS
+	//fOrder1.RateAmountS = big.NewInt(99)
+
 	fOrder1.FeeSelection = uint8(0)
 
 	fOrder2 := &types.FilledOrder{}
 	fOrder2.OrderState = types.OrderState{}
 	fOrder2.OrderState.RawOrder = *order2
 	fOrder2.RateAmountS = order2.AmountS
+	//fOrder2.RateAmountS = big.NewInt(999)
 	fOrder2.FeeSelection = uint8(0)
 
 	cTest := &chainclient.Erc20Token{}
@@ -139,5 +142,56 @@ func TestRingClient_NewRing(t *testing.T) {
 
 	ringState := &types.RingState{}
 	ringState.RawRing = ring
+	miner.PriceRateCVSquare(ringState)
 	//ringClient.NewRing(ringState)
+}
+
+func TestB(t *testing.T) {
+	rateRatios := []*big.Int{big.NewInt(1), big.NewInt(5), big.NewInt(6), big.NewInt(8), big.NewInt(10), big.NewInt(40), big.NewInt(65), big.NewInt(88)}
+	//rateRatios := []*big.Int{big.NewInt(0), big.NewInt(10), big.NewInt(20), big.NewInt(30), big.NewInt(40)}
+	cvs := miner.CVSquare(rateRatios, big.NewInt(1000))
+	println(cvs.Int64())
+	//RATE_RATIO_SCALE := big.NewInt(10000)
+	//ratio := new(big.Int).Set(RATE_RATIO_SCALE)
+	//ratio.Mul(ratio, big.NewInt(100)).Div(ratio, big.NewInt(1))
+	//rateRatios = append(rateRatios, ratio)
+	//
+	//t.Log(rateRatios[0].Int64())
+
+	//var s string = "address[24]"
+	//fullTypeRegex1 := regexp.MustCompile(`([a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
+	//var res []string
+	//if res = fullTypeRegex1.FindAllStringSubmatch(s, -1)[0]; len(res) == 0 {
+	//	println(s)
+	//} else {
+	//
+	//}
+	//
+	//typeRegex := regexp.MustCompile("([a-zA-Z]+)(([0-9]+)(x([0-9]+))?)?")
+	//
+	////println(len(res))
+	//println("aaa",len(res))
+	//println(res[0], res[1], res[2], res[3], "aa")
+	//res = typeRegex.FindAllStringSubmatch(s, -1)[0]
+	//println(res[0], res[1])
+}
+
+func TestCVSquare(t *testing.T) {
+
+	rateRatios := []*big.Int{big.NewInt(1), big.NewInt(5), big.NewInt(6), big.NewInt(8), big.NewInt(10), big.NewInt(40), big.NewInt(65), big.NewInt(88)}
+	//rateRatios := []*big.Int{big.NewInt(0), big.NewInt(10)}
+	scale := big.NewInt(10000)
+	cvs := miner.CVSquare(rateRatios, scale)
+	println("cvs:", cvs.Int64())
+
+	type Contract struct {
+		chainclient.Contract
+		Cvsquare chainclient.AbiMethod
+	}
+
+	c := &Contract{}
+	client.NewContract(c, "0xb002cf4f4595a0e19c21913ce7c6b2678dc17167", `[{"constant":true,"inputs":[{"name":"arr","type":"uint256[]"},{"name":"scale","type":"uint256"}],"name":"cvsquare","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}]`)
+	var res types.Big
+	c.Cvsquare.Call(&res, "pending", rateRatios, scale)
+	println("res:", res.Int64())
 }

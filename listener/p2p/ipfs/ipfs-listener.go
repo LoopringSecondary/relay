@@ -60,15 +60,18 @@ func (l *IPFSListener) Start() {
 	l.stop = make(chan struct{})
 	go func() {
 		for {
-			record, _ := l.sub.Next()
-			data := record.Data()
-			ord := &types.Order{}
-			err := json.Unmarshal(data, ord)
-			if err != nil {
-				log.Errorf(log.ERROR_P2P_LISTEN_ACCEPT, err.Error())
+			if record, err := l.sub.Next(); nil != err {
+				log.Errorf("err:%s", err.Error())
 			} else {
-				log.Debugf(log.LOG_P2P_ACCEPT, string(data))
-				l.whisper.PeerOrderChan <- ord
+				data := record.Data()
+				ord := &types.Order{}
+				err := json.Unmarshal(data, ord)
+				if err != nil {
+					log.Errorf(log.ERROR_P2P_LISTEN_ACCEPT, err.Error())
+				} else {
+					log.Debugf(log.LOG_P2P_ACCEPT, string(data))
+					l.whisper.PeerOrderChan <- ord
+				}
 			}
 		}
 	}()

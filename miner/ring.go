@@ -19,6 +19,7 @@
 package miner
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
@@ -27,6 +28,8 @@ import (
 	"math/big"
 	"strconv"
 )
+
+var RateRatioCVSThreshold int64
 
 //compute availableAmountS of order
 func AvailableAmountS(filledOrder *types.FilledOrder) (bool, error) {
@@ -54,13 +57,13 @@ func AvailableAmountS(filledOrder *types.FilledOrder) (bool, error) {
 //费用、收取费用方式、折扣率等一切计算，在此完成
 //计算匹配比例
 //todo:折扣
-func ComputeRing(ring *types.RingState) {
+func ComputeRing(ringState *types.RingState) error {
 	DECIMALS := big.NewInt(10000000000000) //todo:最好采用10的18次方，或者对应token的DECIMALS, 但是注意，计算价格时，目前使用math.pow, 需要转为float64，不要超出范围
 	FOURTIMESDECIMALS := &types.EnlargedInt{Value: big.NewInt(0).Mul(DECIMALS, DECIMALS), Decimals: big.NewInt(0).Mul(DECIMALS, DECIMALS)}
 	FOURTIMESDECIMALS.Value.Mul(FOURTIMESDECIMALS.Value, DECIMALS)
 	FOURTIMESDECIMALS.Decimals.Mul(FOURTIMESDECIMALS.Decimals, DECIMALS)
 
-	ring.LegalFee = &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
+	ringState.LegalFee = &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
 
 	//根据订单原始金额，计算成交量、成交价
 	productPrice := &types.EnlargedInt{}
@@ -68,7 +71,7 @@ func ComputeRing(ring *types.RingState) {
 	productAmountB := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
 
 	//compute price
-	for _, order := range ring.RawRing.Orders {
+	for _, order := range ringState.RawRing.Orders {
 		enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.OrderState.RawOrder.AmountS, DECIMALS), Decimals: big.NewInt(1).Set(DECIMALS)}
 		enlargedAmountB := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.OrderState.RawOrder.AmountB, DECIMALS), Decimals: big.NewInt(1).Set(DECIMALS)}
 
@@ -86,10 +89,10 @@ func ComputeRing(ring *types.RingState) {
 
 	productPrice.Div(productEnlargedAmountS, productAmountB)
 	priceOfFloat, _ := strconv.ParseFloat(productPrice.Value.String(), 0)
-	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ring.RawRing.Orders)))
+	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.RawRing.Orders)))
 
-	ring.ReducedRate = &types.EnlargedInt{Value: big.NewInt(int64((float64(DECIMALS.Int64()) / rootOfRing) * float64(DECIMALS.Int64()))), Decimals: big.NewInt(1).Set(DECIMALS)}
-	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ring.RawRing.Orders), rootOfRing, ring.ReducedRate.Value.Int64())
+	ringState.ReducedRate = &types.EnlargedInt{Value: big.NewInt(int64((float64(DECIMALS.Int64()) / rootOfRing) * float64(DECIMALS.Int64()))), Decimals: big.NewInt(1).Set(DECIMALS)}
+	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.Value.Int64())
 
 	//
 	minShareRate := &types.EnlargedInt{Value: big.NewInt(100), Decimals: big.NewInt(100)}
@@ -100,8 +103,8 @@ func ComputeRing(ring *types.RingState) {
 	//如何计算最小成交量的订单，计算下一次订单的卖出或买入，然后根据比例替换
 	minVolumeIdx := 0
 
-	for idx, order := range ring.RawRing.Orders {
-		order.EnlargedSPrice.Mul(order.EnlargedSPrice, ring.ReducedRate)
+	for idx, order := range ringState.RawRing.Orders {
+		order.EnlargedSPrice.Mul(order.EnlargedSPrice, ringState.ReducedRate)
 
 		order.EnlargedBPrice.Div(FOURTIMESDECIMALS, order.EnlargedSPrice)
 		enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(0).Mul(order.OrderState.RawOrder.AmountS, DECIMALS), Decimals: DECIMALS}
@@ -114,13 +117,13 @@ func ComputeRing(ring *types.RingState) {
 		if order.OrderState.RawOrder.BuyNoMoreThanAmountB {
 			savingAmount := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)} //节省的金额
 			rate1 := &types.EnlargedInt{Decimals: big.NewInt(100), Value: big.NewInt(100)}
-			savingAmount.Mul(enlargedAmountS, rate1.Sub(rate1, ring.ReducedRate))
+			savingAmount.Mul(enlargedAmountS, rate1.Sub(rate1, ringState.ReducedRate))
 
 			order.RateAmountS = &big.Int{}
 			order.RateAmountS.Sub(order.OrderState.RawOrder.AmountS, savingAmount.RealValue())
 
 			//todo:计算availableAmountS,vd需要替换
-			vd , _ := order.OrderState.LatestVersion()
+			vd, _ := order.OrderState.LatestVersion()
 			enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(vd.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			//enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(order.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			availableAmountS := &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
@@ -141,7 +144,7 @@ func ComputeRing(ring *types.RingState) {
 		//与上一订单的买入进行比较
 		var lastOrder *types.FilledOrder
 		if idx > 0 {
-			lastOrder = ring.RawRing.Orders[idx-1]
+			lastOrder = ringState.RawRing.Orders[idx-1]
 		}
 
 		if lastOrder != nil && lastOrder.FillAmountB.CmpBigInt(order.AvailableAmountS) >= 0 {
@@ -178,25 +181,25 @@ func ComputeRing(ring *types.RingState) {
 
 	for i := minVolumeIdx - 1; i >= 0; i-- {
 		//按照前面的，同步减少交易量
-		order := ring.RawRing.Orders[i]
+		order := ringState.RawRing.Orders[i]
 		var nextOrder *types.FilledOrder
-		nextOrder = ring.RawRing.Orders[i+1]
+		nextOrder = ringState.RawRing.Orders[i+1]
 		order.FillAmountB = nextOrder.FillAmountS
 		order.FillAmountS.Mul(order.FillAmountB, order.EnlargedSPrice)
 	}
 
-	for i := minVolumeIdx + 1; i < len(ring.RawRing.Orders); i++ {
+	for i := minVolumeIdx + 1; i < len(ringState.RawRing.Orders); i++ {
 
-		order := ring.RawRing.Orders[i]
+		order := ringState.RawRing.Orders[i]
 		var lastOrder *types.FilledOrder
 
-		lastOrder = ring.RawRing.Orders[i-1]
+		lastOrder = ringState.RawRing.Orders[i-1]
 		order.FillAmountS = lastOrder.FillAmountB
 		order.FillAmountB.Mul(order.FillAmountS, order.EnlargedBPrice)
 	}
 
 	//todo:取最小的分润比例
-	for _, order := range ring.RawRing.Orders {
+	for _, order := range ringState.RawRing.Orders {
 		//todo:根据分润比例计算收益, 现在分润方式确定，都是先看lrcfee，然后看分润，因此无所谓的分润方式的选择
 		percentage := int64(order.OrderState.RawOrder.MarginSplitPercentage)
 		if minShareRate.Value.Int64() > percentage {
@@ -225,7 +228,7 @@ func ComputeRing(ring *types.RingState) {
 	}
 
 	//计算ring以及各个订单的费用，以及费用支付方式
-	for _, order := range ring.RawRing.Orders {
+	for _, order := range ringState.RawRing.Orders {
 		lrcAddress := &types.Address{}
 
 		lrcAddress.SetBytes([]byte(LRC_ADDRESS))
@@ -248,7 +251,7 @@ func ComputeRing(ring *types.RingState) {
 
 		} else {
 			savingAmount := &types.EnlargedInt{Value: big.NewInt(0).Set(order.FillAmountB.Value), Decimals: big.NewInt(0).Set(order.FillAmountB.Decimals)}
-			savingAmount.Mul(savingAmount, ring.ReducedRate)
+			savingAmount.Mul(savingAmount, ringState.ReducedRate)
 			savingAmount.Sub(order.FillAmountB, savingAmount)
 			order.FeeS = savingAmount
 			//todo:address of buy token
@@ -282,7 +285,18 @@ func ComputeRing(ring *types.RingState) {
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.RealValue().String(), order.LegalFee.RealValue().String())
 			order.LrcReward = lrcReward
 		}
-		ring.LegalFee.Add(ring.LegalFee, order.LegalFee)
+		ringState.LegalFee.Add(ringState.LegalFee, order.LegalFee)
+	}
+	if cvs, err := PriceRateCVSquare(ringState); nil != err {
+		return err
+	} else {
+		data, _ := json.Marshal(ringState)
+		log.Debugf("ringState:%s , cvs:%d", string(data), cvs.Int64())
+		if cvs.Int64() <= RateRatioCVSThreshold {
+			return nil
+		} else {
+			return errors.New("cvs must less than RateRatioCVSThreshold")
+		}
 	}
 }
 
@@ -295,4 +309,46 @@ func PriceValid(ring *types.RingState) bool {
 		amountB.Mul(amountB, order.OrderState.RawOrder.AmountB)
 	}
 	return amountS.Cmp(amountB) >= 0
+}
+
+func PriceRateCVSquare(ringState *types.RingState) (*big.Int, error) {
+	rateRatios := []*big.Int{}
+	scale := big.NewInt(10000)
+	for _, filledOrder := range ringState.RawRing.Orders {
+		rawOrder := filledOrder.OrderState.RawOrder
+		s1b0 := new(big.Int).Set(filledOrder.RateAmountS)
+		s1b0 = s1b0.Mul(s1b0, rawOrder.AmountB)
+		s0b1 := new(big.Int).Set(rawOrder.AmountS)
+		s0b1 = s0b1.Mul(s0b1, rawOrder.AmountB)
+		if s1b0.Cmp(s0b1) > 0 {
+			return nil, errors.New("rateAmountS must less than amountS")
+		}
+		ratio := new(big.Int).Set(scale)
+		ratio.Mul(ratio, s1b0).Div(ratio, s0b1)
+		rateRatios = append(rateRatios, ratio)
+	}
+	return CVSquare(rateRatios, scale), nil
+
+}
+
+func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
+	avg := big.NewInt(0)
+	length := big.NewInt(int64(len(rateRatios)))
+	length1 := big.NewInt(int64(len(rateRatios) - 1))
+	for _, ratio := range rateRatios {
+		avg.Add(avg, ratio)
+	}
+	avg = avg.Div(avg, length)
+
+	cvs := big.NewInt(0)
+	for _, ratio := range rateRatios {
+		sub := big.NewInt(0)
+		sub.Sub(ratio, avg)
+
+		subSquare := big.NewInt(1)
+		subSquare.Mul(sub, sub)
+		cvs.Add(cvs, subSquare)
+	}
+
+	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }

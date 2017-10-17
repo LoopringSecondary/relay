@@ -20,13 +20,13 @@ package orderbook
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
-	"errors"
 )
 
 /**
@@ -119,7 +119,6 @@ func (ob *OrderBook) Start() {
 			select {
 			case ord := <-ob.whisper.PeerOrderChan:
 				ob.peerOrderHook(ord)
-
 			case ord := <-ob.whisper.ChainOrderChan:
 				ob.chainOrderHook(ord)
 			}
@@ -207,10 +206,10 @@ func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
 
 func (ob *OrderBook) getOrder(id types.Hash) (*types.OrderState, string, error) {
 	var (
-		value 	[]byte
-		err   	error
-		tn 		string
-		ord   	types.OrderState
+		value []byte
+		err   error
+		tn    string
+		ord   types.OrderState
 	)
 
 	if value, err = ob.partialTable.Get(id.Bytes()); err != nil {

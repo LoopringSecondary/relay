@@ -47,7 +47,6 @@ type Node struct {
 	logger        *zap.Logger
 }
 
-// TODO(fk): inject whisper
 func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
@@ -82,10 +81,9 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) Start() {
 	n.chainListener.Start()
 	n.p2pListener.Start()
-	//
 
-	n.orderbook.Start()
 	n.miner.Start()
+	n.orderbook.Start()
 }
 
 func (n *Node) Wait() {
