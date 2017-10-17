@@ -14,7 +14,7 @@ func (f FilledOrder) MarshalJSON() ([]byte, error) {
 	type FilledOrder struct {
 		OrderState       OrderState   `json:"orderState" gencodec:"required"`
 		FeeSelection     uint8        `json:"feeSelection"`
-		RateAmountS      *Big         `json:"rateAmountS"`
+		RateAmountS      *EnlargedInt `json:"rateAmountS"`
 		AvailableAmountS *Big         `json:"availableAmountS"`
 		FillAmountS      *EnlargedInt `json:"fillAmountS"`
 		FillAmountB      *EnlargedInt `json:"fillAmountB"`
@@ -28,7 +28,7 @@ func (f FilledOrder) MarshalJSON() ([]byte, error) {
 	var enc FilledOrder
 	enc.OrderState = f.OrderState
 	enc.FeeSelection = f.FeeSelection
-	enc.RateAmountS = (*Big)(f.RateAmountS)
+	enc.RateAmountS = f.RateAmountS
 	enc.AvailableAmountS = (*Big)(f.AvailableAmountS)
 	enc.FillAmountS = f.FillAmountS
 	enc.FillAmountB = f.FillAmountB
@@ -45,7 +45,7 @@ func (f *FilledOrder) UnmarshalJSON(input []byte) error {
 	type FilledOrder struct {
 		OrderState       *OrderState  `json:"orderState" gencodec:"required"`
 		FeeSelection     *uint8       `json:"feeSelection"`
-		RateAmountS      *Big         `json:"rateAmountS"`
+		RateAmountS      *EnlargedInt `json:"rateAmountS"`
 		AvailableAmountS *Big         `json:"availableAmountS"`
 		FillAmountS      *EnlargedInt `json:"fillAmountS"`
 		FillAmountB      *EnlargedInt `json:"fillAmountB"`
@@ -68,7 +68,7 @@ func (f *FilledOrder) UnmarshalJSON(input []byte) error {
 		f.FeeSelection = *dec.FeeSelection
 	}
 	if dec.RateAmountS != nil {
-		f.RateAmountS = (*big.Int)(dec.RateAmountS)
+		f.RateAmountS = dec.RateAmountS
 	}
 	if dec.AvailableAmountS != nil {
 		f.AvailableAmountS = (*big.Int)(dec.AvailableAmountS)

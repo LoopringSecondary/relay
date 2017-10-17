@@ -28,15 +28,16 @@ type EnlargedInt struct {
 	Decimals *big.Int
 }
 
+
 func (ei *EnlargedInt) Div(x, y *EnlargedInt) *EnlargedInt {
 	if ei.Value == nil {
-		ei.Value = big.NewInt(0)
+		ei.Value = big.NewInt(1)
 	}
 	if ei.Decimals == nil {
-		ei.Decimals = big.NewInt(0)
+		ei.Decimals = big.NewInt(1)
 	}
-	ei.Value.Div(x.Value, y.Value)
-	ei.Decimals.Div(x.Decimals, y.Decimals)
+	ei.Value.Mul(x.Value, y.Decimals)
+	ei.Decimals.Mul(x.Decimals, y.Value)
 	return ei
 }
 
@@ -64,14 +65,11 @@ func (ei *EnlargedInt) Mul(x, y *EnlargedInt) {
 }
 
 func (ei *EnlargedInt) MulBigInt(x *EnlargedInt, y *big.Int) *EnlargedInt {
-	if ei.Value == nil {
+	if nil == ei.Value {
 		ei.Value = big.NewInt(1)
 	}
-	if ei.Decimals == nil {
-		ei.Decimals = big.NewInt(1)
-	}
+	ei.Decimals = new(big.Int).Set(x.Decimals)
 	ei.Value.Mul(x.Value, y)
-	ei.Decimals = ei.Decimals.Mul(ei.Decimals, x.Decimals)
 	return ei
 }
 
@@ -140,7 +138,7 @@ func (ei *EnlargedInt) Add(x, y *EnlargedInt) *EnlargedInt {
 }
 
 func (ei *EnlargedInt) RealValue() *big.Int {
-	realValue := big.NewInt(0)
+	realValue := big.NewInt(1)
 	return realValue.Div(ei.Value, ei.Decimals)
 }
 
