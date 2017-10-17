@@ -169,7 +169,7 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 			case logs := <-logChan:
 				for _, log1 := range logs {
 					ringHash := types.HexToHash(log1.TransactionHash)
-					ringData, _ := ringClient.ringhashRegistryStore.Get(ringHash.Bytes());
+					ringData, _ := ringClient.ringhashRegistryStore.Get(ringHash.Bytes())
 					if nil != ringData {
 						ring := &types.RingState{}
 						if json.Unmarshal(ringData, ring); nil != err {
@@ -235,18 +235,18 @@ func (ringClient *RingClient) recoverRing() {
 					log.Errorf("error:%s", err.Error())
 				} else {
 
-					if isRinghashRegistered {
-						//todo:sendTransaction, check have ring been submited.
-						//if err := LoopringInstance.LoopringImpls[contractAddress].SettleRing.Call(&isSubmitRing, "", ""); err == nil {
-						//	if !isSubmitRing && canSubmit(ring) {
-						//		//loopring.LoopringImpls[contractAddress].SubmitRing.SendTransaction(contractAddress, "", "")
-						//	}
-						//} else {
-						//	log.Errorf("error:%s", err.Error())
-						//}
-					} else {
-						ringClient.sendRinghashRegistry(ring)
-					}
+					//if isRinghashRegistered {
+					//	//todo:sendTransaction, check have ring been submited.
+					//	//if err := LoopringInstance.LoopringImpls[contractAddress].SettleRing.Call(&isSubmitRing, "", ""); err == nil {
+					//	//	if !isSubmitRing && canSubmit(ring) {
+					//	//		//loopring.LoopringImpls[contractAddress].SubmitRing.SendTransaction(contractAddress, "", "")
+					//	//	}
+					//	//} else {
+					//	//	log.Errorf("error:%s", err.Error())
+					//	//}
+					//} else {
+					//	ringClient.sendRinghashRegistry(ring)
+					//}
 				}
 			} else {
 				for _, c := range ringClient.ringSubmitFailedChans {

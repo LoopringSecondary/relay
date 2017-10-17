@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 	"strconv"
@@ -91,7 +92,7 @@ func ComputeRing(ringState *types.RingState) error {
 	priceOfFloat, _ := strconv.ParseFloat(productPrice.RealValue().String(), 64)
 	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.RawRing.Orders)))
 	v := big.NewInt(int64((float64(DECIMALS.Int64()) / rootOfRing)))
-	ringState.ReducedRate = &types.EnlargedInt{Value: v , Decimals: big.NewInt(1).Set(DECIMALS)}
+	ringState.ReducedRate = &types.EnlargedInt{Value: v, Decimals: big.NewInt(1).Set(DECIMALS)}
 	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.RealValue().Int64())
 
 	minShareRate := &types.EnlargedInt{Value: big.NewInt(100), Decimals: big.NewInt(100)}
@@ -118,13 +119,12 @@ func ComputeRing(ringState *types.RingState) error {
 			rate1 := &types.EnlargedInt{Decimals: big.NewInt(100), Value: big.NewInt(100)}
 			savingAmount.Mul(enlargedAmountS, rate1.Sub(rate1, ringState.ReducedRate))
 
-			filledOrder.RateAmountS = &types.EnlargedInt{Value:new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS), Decimals:big.NewInt(1)}
+			filledOrder.RateAmountS = &types.EnlargedInt{Value: new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS), Decimals: big.NewInt(1)}
 			filledOrder.RateAmountS.Sub(filledOrder.RateAmountS, savingAmount)
 
-			//todo:计算availableAmountS
-			enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(filledOrder.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
+			//enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(filledOrder.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			//todo:计算availableAmountS,vd需要替换
-			vd, _ := order.OrderState.LatestVersion()
+			vd, _ := filledOrder.OrderState.LatestVersion()
 			enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(vd.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			//enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(order.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			availableAmountS := &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
@@ -145,7 +145,7 @@ func ComputeRing(ringState *types.RingState) error {
 			//println("rate2", rate2.RealValue().Int64(), rate2.Value.Int64(), rate2.Decimals.Int64())
 			savingAmount.Mul(enlargedAmountS, rate2)
 
-			filledOrder.RateAmountS = &types.EnlargedInt{Value:new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS), Decimals:big.NewInt(1)}
+			filledOrder.RateAmountS = &types.EnlargedInt{Value: new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS), Decimals: big.NewInt(1)}
 			filledOrder.RateAmountS.Sub(filledOrder.RateAmountS, savingAmount)
 
 			//println("savingAmount",savingAmount.RealValue().String(), savingAmount.Value.String(), savingAmount.Decimals.String(), filledOrder.RateAmountS.RealValue().String())
@@ -324,10 +324,10 @@ func PriceValid(ring *types.RingState) bool {
 
 func PriceRateCVSquare(ringState *types.RingState) (*big.Int, error) {
 	rateRatios := []*big.Int{}
-	scale,_ := new(big.Int).SetString("10000", 0)
+	scale, _ := new(big.Int).SetString("10000", 0)
 	for _, filledOrder := range ringState.RawRing.Orders {
 		rawOrder := filledOrder.OrderState.RawOrder
-		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s",rawOrder.AmountS.String(), filledOrder.RateAmountS.RealValue().String())
+		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.RealValue().String())
 		s1b0 := new(big.Int).Set(filledOrder.RateAmountS.RealValue())
 		//s1b0 = s1b0.Mul(s1b0, rawOrder.AmountB)
 

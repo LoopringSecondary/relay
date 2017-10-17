@@ -29,9 +29,9 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"regexp"
 	"testing"
 	"time"
-	"regexp"
 )
 
 var client *chainclient.Client
@@ -171,7 +171,7 @@ func TestB(t *testing.T) {
 	typeRegex := regexp.MustCompile("([a-zA-Z]+)(([0-9]+)(x([0-9]+))?)?")
 
 	//println(len(res))
-	println("aaa",len(res))
+	println("aaa", len(res))
 	println(res[0], res[1], res[2], res[3], "aa")
 	res = typeRegex.FindAllStringSubmatch(s, -1)[0]
 	println(res[0], res[1])
@@ -217,12 +217,12 @@ func TestCSV(t *testing.T) {
 	//cvsF(nums, 100.0)
 	//cvsF1(nums, 100.0)
 	//cvsF2(nums, 0.55)
-	for i:=100000000;i<=100000000000000000;i=i*10 {
+	for i := 100000000; i <= 100000000000000000; i = i * 10 {
 		nums = []float64{10000000000000.0, float64(i)}
 		//cvsF2(nums, 0)
 		cvsF2(nums, 0.9)
 	}
-//length:2 [1.0,2.0] a=1 max:2 [1.0, 100000.0] a=1 max:2
+	//length:2 [1.0,2.0] a=1 max:2 [1.0, 100000.0] a=1 max:2
 	//length:3
 }
 
@@ -232,7 +232,7 @@ func cvsF(nums []float64, a float64) {
 	for _, n := range nums {
 		sum += n
 	}
-	avg := sum/length
+	avg := sum / length
 
 	s1 := 0.0
 	for _, n := range nums {
@@ -240,7 +240,7 @@ func cvsF(nums []float64, a float64) {
 	}
 
 	println(s1)
-	cv := s1/(avg * avg)
+	cv := s1 / (avg * avg)
 	println(cv)
 }
 
@@ -252,11 +252,11 @@ func cvsF1(nums []float64, a float64) {
 		sum += n
 	}
 	sum1 := 0.0
-	for _,n := range nums {
-		sum1 = sum1 + (n*length - sum) * (n*length - sum)
+	for _, n := range nums {
+		sum1 = sum1 + (n*length-sum)*(n*length-sum)
 	}
 
-	println(sum1/(sum*sum))
+	println(sum1 / (sum * sum))
 }
 
 func cvsF2(nums []float64, a float64) {
@@ -265,21 +265,21 @@ func cvsF2(nums []float64, a float64) {
 
 	sum := 0.0
 	for _, n := range nums {
-		n1 := 1/n
-		sum = sum + neg * n1
+		n1 := 1 / n
+		sum = sum + neg*n1
 	}
 	sum1 := 0.0
-	for _,n := range nums {
-		n1 := neg * 1/n
-		sum1 = sum1 + (n1*length - sum) * (n1*length - sum)
+	for _, n := range nums {
+		n1 := neg * 1 / n
+		sum1 = sum1 + (n1*length-sum)*(n1*length-sum)
 	}
 
 	sum2 := 0.0
 	for _, n := range nums {
-		n1 := neg * 1/n
+		n1 := neg * 1 / n
 		sum2 += a + n1
 	}
-	println("last:", nums[1],"p:", a, "cvs", sum1/(sum2*sum2))
+	println("last:", nums[1], "p:", a, "cvs", sum1/(sum2*sum2))
 
 	//s := 0.0
 	//x1 := 2*(-0.9/100000000) + (-0.9/100000000 - 0.9/100000000000000000)

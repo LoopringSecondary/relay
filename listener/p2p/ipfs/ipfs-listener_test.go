@@ -19,23 +19,23 @@
 package ipfs_test
 
 import (
-	"github.com/ipfs/go-ipfs-api"
-	"math/big"
-	"testing"
 	"encoding/json"
 	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
+	"github.com/ipfs/go-ipfs-api"
+	"math/big"
 	"math/rand"
 	"strconv"
+	"testing"
 )
 
 func TestA(t *testing.T) {
 
 	sh := shell.NewLocalShell()
 
-	suffix  := "000000000000"
+	suffix := "000000000000"
 	//scheme 1:MarginSplitPercentage = 0
-	for i:=1;i <= 1000; i++ {
+	for i := 1; i <= 1000; i++ {
 		s1 := rand.Intn(100)
 		b1 := rand.Intn(10)
 		if b1 == 0 {
@@ -44,13 +44,13 @@ func TestA(t *testing.T) {
 		if s1 == 0 {
 			s1 = s1 + 1
 		}
-		amountS1,_ := new(big.Int).SetString(strconv.Itoa(s1) + suffix, 0)
-		amountB1,_ := new(big.Int).SetString(strconv.Itoa(b1) + suffix, 0)
+		amountS1, _ := new(big.Int).SetString(strconv.Itoa(s1)+suffix, 0)
+		amountB1, _ := new(big.Int).SetString(strconv.Itoa(b1)+suffix, 0)
 		saddr := rand.Intn(10)
 		baddr := rand.Intn(10)
 		order1 := test.CreateOrder(
-			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251" + strconv.Itoa(saddr)),
-			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c" + strconv.Itoa(baddr)),
+			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251"+strconv.Itoa(saddr)),
+			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c"+strconv.Itoa(baddr)),
 			amountS1,
 			amountB1,
 			types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
@@ -60,7 +60,6 @@ func TestA(t *testing.T) {
 		data1, _ := json.Marshal(order1)
 		pubMessage(sh, string(data1))
 
-
 		s2 := rand.Intn(100)
 		b2 := rand.Intn(10)
 		if b2 == 0 {
@@ -69,11 +68,11 @@ func TestA(t *testing.T) {
 		if s2 == 0 {
 			s2 = s2 + 1
 		}
-		amountS2,_ := new(big.Int).SetString( strconv.Itoa(s2) + suffix, 0)
-		amountB2,_ := new(big.Int).SetString(strconv.Itoa(b2) + suffix, 0)
+		amountS2, _ := new(big.Int).SetString(strconv.Itoa(s2)+suffix, 0)
+		amountB2, _ := new(big.Int).SetString(strconv.Itoa(b2)+suffix, 0)
 		order2 := test.CreateOrder(
-			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c" + strconv.Itoa(saddr)),
-			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251" + strconv.Itoa(baddr)),
+			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c"+strconv.Itoa(saddr)),
+			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251"+strconv.Itoa(baddr)),
 			amountS2,
 			amountB2,
 			types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
@@ -83,12 +82,10 @@ func TestA(t *testing.T) {
 		pubMessage(sh, string(data2))
 	}
 
-
 }
 
 func TestB(t *testing.T) {
 	sh := shell.NewLocalShell()
-
 
 	//scheme 1:MarginSplitPercentage = 0
 

@@ -28,7 +28,6 @@ type EnlargedInt struct {
 	Decimals *big.Int
 }
 
-
 func (ei *EnlargedInt) Div(x, y *EnlargedInt) *EnlargedInt {
 	if ei.Value == nil {
 		ei.Value = big.NewInt(1)

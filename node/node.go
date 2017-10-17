@@ -68,10 +68,10 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	engineOrderChan := make(chan *types.OrderState)
 	//
 	n.registerP2PListener(peerOrderChan)
-	n.registerEthListener(ethClient, chainOrderChan)
 	//
 	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerMiner(ringClient, engineOrderChan)
+	n.registerEthListener(ethClient, chainOrderChan)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 

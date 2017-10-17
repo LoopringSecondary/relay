@@ -4,7 +4,7 @@ title = "Loopring TOML"
 name = "Loopring corporation"
 
 [order_book]
-default_block_number = 100
+
 
 [database]
 server = "localhost"
@@ -32,6 +32,7 @@ passphrase = "sa"
 [common]
 loopringImpAddresses = ["0xa221f7c8cd24a7a383d116aa5d7430b48d1e0063"]
 filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
+default_block_number = 100
 
 [miner]
 ringMaxLength = 4

@@ -76,7 +76,7 @@ func NewType(t string) (typ Type, err error) {
 	var typeText string = t
 
 	//check if type is slice and parse type
-	if matches := fullTypeRegex.FindAllStringSubmatch(t, -1); (nil != matches && len(matches) > 0 ) {
+	if matches := fullTypeRegex.FindAllStringSubmatch(t, -1); nil != matches && len(matches) > 0 {
 		var res []string
 		res = matches[0]
 		typeText = res[1]
