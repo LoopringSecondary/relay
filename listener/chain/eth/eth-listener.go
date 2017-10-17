@@ -19,16 +19,16 @@
 package eth
 
 import (
+	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
-	"sync"
-	"github.com/Loopring/ringminer/log"
 	"go.uber.org/zap"
-	"github.com/Loopring/ringminer/chainclient"
+	"sync"
 )
 
 /**
@@ -36,7 +36,7 @@ import (
 */
 
 type Whisper struct {
-	ChainOrderChan chan *types.OrderMined
+	ChainOrderChan chan *types.OrderState
 }
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
@@ -108,7 +108,7 @@ func (l *EthClientListener) startSubEvents() {
 
 	// 所有logs重新存一遍
 	for _, v := range oldLogs {
-		if err := l.saveEvents(v); err != nil {
+		if err := l.doEvent(v); err != nil {
 			log.Error("save event error", zap.String("content", err.Error()))
 		}
 	}
@@ -122,14 +122,14 @@ func (l *EthClientListener) startSubEvents() {
 		}
 
 		for _, v := range newLogs {
-			if err := l.saveEvents(v); err != nil {
+			if err := l.doEvent(v); err != nil {
 				log.Error("save event error", zap.String("content", err.Error()))
 			}
 		}
 	}
 }
 
-func (l *EthClientListener) saveEvents(v eth.Log) error {
+func (l *EthClientListener) doEvent(v eth.Log) error {
 	address := types.HexToAddress(v.Address)
 	impl, ok := miner.LoopringInstance.LoopringImpls[address]
 	if !ok {
@@ -141,38 +141,63 @@ func (l *EthClientListener) saveEvents(v eth.Log) error {
 	tx := types.HexToHash(v.TransactionHash)
 	data := []byte(v.Data)
 
-	var (
-		bs []byte
-		err error
-	)
-
 	switch topic {
 	case impl.RingMined.Id():
+		// TODO(fukun): 无需转换
 		evt := chainclient.RingMinedEvent{}
 		impl.RingMined.Unpack(&evt, data, v.Topics)
-		bs, err = evt.MarshalJSON()
+		if _, err := evt.MarshalJSON(); err != nil {
+			return nil
+		}
 
 	case impl.OrderFilled.Id():
 		evt := chainclient.OrderFilledEvent{}
 		impl.OrderFilled.Unpack(&evt, data, v.Topics)
-		bs, err = evt.MarshalJSON()
+		bs, err := evt.MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		// todo: 如果ob中不存在该订单(其他形式传来的)，那么跳过该event，在doTransaction中解析该order
+		hash := types.BytesToHash(evt.OrderHash)
+		ord, err := l.ob.GetOrder(hash)
+		if err != nil {
+			return err
+		}
+
+		// 将event中相关数据装换为orderState
+		evt.ConvertDown(ord)
+		l.whisper.ChainOrderChan <- ord
+		l.ob.SetTransaction(topic, height, tx, bs)
 
 	case impl.OrderCancelled.Id():
 		evt := chainclient.OrderCancelledEvent{}
 		impl.OrderCancelled.Unpack(&evt, data, v.Topics)
-		bs, err = evt.MarshalJSON()
+
+		bs, err := evt.MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		hash := types.BytesToHash(evt.OrderHash)
+		ord, err := l.ob.GetOrder(hash)
+		if err != nil {
+			return err
+		}
+
+		evt.ConvertDown(ord)
+		l.whisper.ChainOrderChan <- ord
+		l.ob.SetTransaction(topic, height, tx, bs)
 
 	case impl.CutoffTimestampChanged.Id():
 		evt := chainclient.CutoffTimestampChangedEvent{}
 		impl.CutoffTimestampChanged.Unpack(&evt, data, v.Topics)
-		bs, err = evt.MarshalJSON()
-	}
+		if _, err := evt.MarshalJSON(); err != nil {
+			return err
+		}
+		// todo(fukun)
 
-	if err != nil {
-		return err
 	}
-
-	l.ob.SetTransaction(topic, height, tx, bs)
 
 	return nil
 }

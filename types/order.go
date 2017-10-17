@@ -19,6 +19,7 @@
 package types
 
 import (
+	"errors"
 	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/log"
 	"math/big"
@@ -168,17 +169,39 @@ func (o *FilledOrder) IsFullFilled() bool {
 	return true
 }
 
-//go:generate gencodec -type OrderState -field-override orderStateMarshaling -out gen_orderstate_json.go
+// 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order       `json:"rawOrder"`
-	RemainedAmountS *big.Int    `json:"remainedAmountS"`
-	RemainedAmountB *big.Int    `json:"remainedAmountB"`
+	RawOrder Order         `json:"rawOrder"`
+	States   []VersionData `json:"states"`
+}
+
+//go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
+type VersionData struct {
+	RemainedAmountS *big.Int    `json:"remainedAmountS" gencodec:"required"`
+	RemainedAmountB *big.Int    `json:"remainedAmountB" gencodec:"required"`
+	Block           *big.Int    `json:"block"`
 	Status          OrderStatus `json:"status"`
 }
 
-type orderStateMarshaling struct {
+type versionDataMarshaling struct {
 	RemainedAmountS *Big
 	RemainedAmountB *Big
+	Block           *Big
+}
+
+func (ord *OrderState) LatestVersion() (VersionData, error) {
+	length := len(ord.States)
+	if length < 1 {
+		d := VersionData{}
+		return d, errors.New("no version data")
+	}
+
+	return ord.States[length-1], nil
+}
+
+// 放到common package 根据配置决定状态
+func (ord *OrderState) SettleStatus() {
+
 }
 
 type OrderMined struct {

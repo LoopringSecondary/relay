@@ -122,8 +122,10 @@ func ComputeRing(ringState *types.RingState) error {
 			order.RateAmountS = &big.Int{}
 			order.RateAmountS.Sub(order.OrderState.RawOrder.AmountS, savingAmount.RealValue())
 
-			//todo:计算availableAmountS
-			enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(order.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
+			//todo:计算availableAmountS,vd需要替换
+			vd, _ := order.OrderState.LatestVersion()
+			enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(vd.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
+			//enlargedRemainAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(order.OrderState.RemainedAmountB, DECIMALS), Decimals: DECIMALS}
 			availableAmountS := &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
 
 			//BuyNoMoreThanAmountB，根据剩余的买入量以及价格重新计算卖出
