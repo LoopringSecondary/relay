@@ -142,7 +142,7 @@ func (o *Order) SignerAddress() (Address, error) {
 type FilledOrder struct {
 	OrderState       OrderState `json:"orderState" gencodec:"required"`
 	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
-	RateAmountS      *big.Int   `json:"rateAmountS"`      //提交需要
+	RateAmountS      *EnlargedInt   `json:"rateAmountS"`      //提交需要
 	AvailableAmountS *big.Int   `json:"availableAmountS"` //需要，也是用于计算fee
 	//AvailableAmountB *big.Int	//需要，也是用于计算fee
 	FillAmountS *EnlargedInt `json:"fillAmountS"`
@@ -160,7 +160,6 @@ type FilledOrder struct {
 }
 
 type filledOrderMarshaling struct {
-	RateAmountS      *Big
 	AvailableAmountS *Big
 }
 

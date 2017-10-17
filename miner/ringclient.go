@@ -39,6 +39,8 @@ type RingClient struct {
 
 	unSubmitedRingsStore db.Database
 
+	ringhashRegistryStore db.Database
+
 	ringhashRegistryChan chan *chainclient.RinghashRegistryEvent
 
 	//ring 的失败包括：提交失败，ring的合约执行时失败，执行时包括：gas不足，以及其他失败
@@ -55,6 +57,7 @@ func NewRingClient(database db.Database, client *chainclient.Client) *RingClient
 	ringClient.store = database
 	ringClient.unSubmitedRingsStore = db.NewTable(ringClient.store, "unsubmited")
 	ringClient.submitedRingsStore = db.NewTable(ringClient.store, "submited")
+	ringClient.ringhashRegistryStore = db.NewTable(ringClient.store, "registry")
 	ringClient.mtx = &sync.RWMutex{}
 	ringClient.ringSubmitFailedChans = make([]RingSubmitFailedChan, 0)
 	return ringClient
@@ -90,11 +93,11 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
 			log.Infof("ringHash:%s", ringState.RawRing.Hash.Hex())
-			if IfRegistryRingHash {
-				ringClient.sendRinghashRegistry(ringState)
-			} else {
-				ringClient.submitRing(ringState)
-			}
+			//if IfRegistryRingHash {
+			//	ringClient.sendRinghashRegistry(ringState)
+			//} else {
+			//	ringClient.submitRing(ringState)
+			//}
 		} else {
 			log.Errorf("error:%s", err.Error())
 		}
@@ -103,7 +106,7 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 
 func canSubmit(ring *types.RingState) bool {
 	//todo:args validator
-	return true
+	return false
 }
 
 //send Fingerprint to block chain
@@ -114,7 +117,7 @@ func (ringClient *RingClient) sendRinghashRegistry(ringState *types.RingState) {
 
 	if txHash, err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.SubmitRinghash.SendTransaction(types.HexToAddress("0x"),
 		big.NewInt(int64(len(ring.Orders))),
-		ringRegistryArgs.FeeRecepient,
+		ringRegistryArgs.Ringminer,
 		ringRegistryArgs.VList,
 		ringRegistryArgs.RList,
 		ringRegistryArgs.SList,
@@ -126,6 +129,7 @@ func (ringClient *RingClient) sendRinghashRegistry(ringState *types.RingState) {
 			log.Error(err.Error())
 		} else {
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
+			ringClient.ringhashRegistryStore.Put(ringState.RegistryTxHash.Bytes(), ringBytes)
 		}
 	}
 }
@@ -142,12 +146,14 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 	filterReq.FromBlock = "latest"
 	filterReq.ToBlock = "latest"
 	//todo:topics, eventId
+	//todo:Registry，没有事件发生，无法判断执行情况
 	//filterReq.Topics =
 	if err := LoopringInstance.Client.NewFilter(&filterId, filterReq); nil != err {
 		log.Errorf("error:%s", err.Error())
 	} else {
 		log.Infof("filterId:%s", filterId)
 	}
+
 	//todo：Uninstall this filterId when stop
 	defer func() {
 		var a string
@@ -162,10 +168,9 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 			select {
 			case logs := <-logChan:
 				for _, log1 := range logs {
-					ringHash := []byte(log1.TransactionHash)
-					if ringData, err := ringClient.store.Get(ringHash); nil != err {
-						log.Errorf("error:%s", err.Error())
-					} else {
+					ringHash := types.HexToHash(log1.TransactionHash)
+					ringData, _ := ringClient.ringhashRegistryStore.Get(ringHash.Bytes());
+					if nil != ringData {
 						ring := &types.RingState{}
 						if json.Unmarshal(ringData, ring); nil != err {
 							log.Errorf("error:%s", err.Error())
@@ -223,10 +228,13 @@ func (ringClient *RingClient) recoverRing() {
 			log.Errorf("error:%s", err.Error())
 		} else {
 			contractAddress := ring.RawRing.Orders[0].OrderState.RawOrder.Protocol
-			var isRinghashRegistered bool
+			var isRinghashRegistered string
 			//var isSubmitRing bool
 			if canSubmit(ring) {
-				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "", ""); err == nil {
+				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "pending", common.BytesToHash(ring.RawRing.Hash.Bytes())); err != nil {
+					log.Errorf("error:%s", err.Error())
+				} else {
+
 					if isRinghashRegistered {
 						//todo:sendTransaction, check have ring been submited.
 						//if err := LoopringInstance.LoopringImpls[contractAddress].SettleRing.Call(&isSubmitRing, "", ""); err == nil {
@@ -239,8 +247,6 @@ func (ringClient *RingClient) recoverRing() {
 					} else {
 						ringClient.sendRinghashRegistry(ring)
 					}
-				} else {
-					log.Errorf("error:%s", err.Error())
 				}
 			} else {
 				for _, c := range ringClient.ringSubmitFailedChans {
