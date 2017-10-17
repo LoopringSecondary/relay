@@ -56,10 +56,7 @@ func (ob *OrderBook) SetBlockNumber(topic string, height int) {
 
 // GetBlockNumber get recent block number from db or toml config
 func (ob *OrderBook) GetBlockNumber() int {
-	println("-----tst1")
-	println(string(defaultBlockNumKey()))
 	bs, err := ob.db.Get(defaultBlockNumKey())
-	println("-----tst2")
 	num := bytes2int(bs)
 	if err != nil {
 		num = ob.commOpts.DefaultBlockNumber

@@ -60,17 +60,17 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 	ringClient := miner.NewRingClient(database, ethClient.Client)
-	//
-	//miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
-	//
+
+	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
+
 	peerOrderChan := make(chan *types.Order)
 	chainOrderChan := make(chan *types.OrderState)
 	engineOrderChan := make(chan *types.OrderState)
 
-	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerP2PListener(peerOrderChan)
-	n.registerEthListener(ethClient, chainOrderChan)
+	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerMiner(ringClient, engineOrderChan)
+	n.registerEthListener(ethClient, chainOrderChan)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 

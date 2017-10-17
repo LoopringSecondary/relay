@@ -21,7 +21,6 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 const (
@@ -66,9 +65,7 @@ var (
 	//      string     int       uint       fixed
 	//      string32   int8      uint8      uint[]
 	//      address    int256    uint256    fixed128x128[2]
-	//todo:support mutil array, but need to perfect it
-	fullTypeRegex  = regexp.MustCompile(`([a-zA-Z0-9]+)(\[([0-9]*)\])?`)
-	fullTypeRegex1 = regexp.MustCompile(`([a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
+	fullTypeRegex = regexp.MustCompile(`([a-zA-Z][a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
 
 	// typeRegex parses the abi sub types
 	typeRegex = regexp.MustCompile("([a-zA-Z]+)(([0-9]+)(x([0-9]+))?)?")
@@ -76,31 +73,31 @@ var (
 
 // NewType creates a new reflection type of abi type given in t.
 func NewType(t string) (typ Type, err error) {
-	var res []string
-	if strings.HasSuffix(t, "]") {
-		res = fullTypeRegex1.FindAllStringSubmatch(t, -1)[0]
-	} else {
-		res = fullTypeRegex.FindAllStringSubmatch(t, -1)[0]
-	}
+	var typeText string = t
 
-	// check if type is slice and parse type.
-	switch {
-	case res[3] != "":
-		// err is ignored. Already checked for number through the regexp
-		typ.SliceSize, _ = strconv.Atoi(res[3])
-		typ.IsArray = true
-	case res[2] != "":
-		typ.IsSlice, typ.SliceSize = true, -1
-	case res[0] == "":
-		return Type{}, fmt.Errorf("abi: type parse error: %s", t)
-	}
-	if typ.IsArray || typ.IsSlice {
-		sliceType, err := NewType(res[1])
+	//check if type is slice and parse type
+	if matches := fullTypeRegex.FindAllStringSubmatch(t, -1); nil != matches && len(matches) > 0 {
+		var res []string
+		res = matches[0]
+		typeText = res[1]
+
+		switch {
+		default:
+			typ.IsSlice, typ.SliceSize = true, -1
+		case res[3] != "":
+			// err is ignored. Already checked for number through the regexp
+			typ.SliceSize, _ = strconv.Atoi(res[3])
+			typ.IsArray = true
+		case res[0] == "":
+			return Type{}, fmt.Errorf("abi: type parse error: %s", t)
+		}
+
+		sliceType, err := NewType(typeText)
 		if err != nil {
 			return Type{}, err
 		}
 		typ.Elem = &sliceType
-		typ.stringKind = sliceType.stringKind + t[len(res[1]):]
+		typ.stringKind = sliceType.stringKind + t[len(typeText):]
 		// Although we know that this is an array, we cannot return
 		// as we don't know the type of the element, however, if it
 		// is still an array, then don't determine the type.
@@ -108,9 +105,12 @@ func NewType(t string) (typ Type, err error) {
 			return typ, nil
 		}
 	}
+	parsedTypes := typeRegex.FindAllStringSubmatch(typeText, -1)
+	if nil == parsedTypes || len(parsedTypes) == 0 {
+		return Type{}, fmt.Errorf("abi: type parse error: %s", t)
+	}
+	parsedType := parsedTypes[0]
 
-	// parse the type and size of the abi-type.
-	parsedType := typeRegex.FindAllStringSubmatch(res[1], -1)[0]
 	// varSize is the size of the variable
 	var varSize int
 	if len(parsedType[3]) > 0 {

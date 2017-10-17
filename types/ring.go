@@ -109,7 +109,7 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
 		order := filledOrder.OrderState.RawOrder
 		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [2]common.Address{common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.TokenS.Bytes())})
 
-		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, filledOrder.RateAmountS})
+		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, filledOrder.RateAmountS.RealValue()})
 
 		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [2]uint8{order.MarginSplitPercentage, filledOrder.FeeSelection})
 
