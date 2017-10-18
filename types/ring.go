@@ -148,16 +148,16 @@ type RingState struct {
 }
 
 type RingSubmitArgs struct {
-	AddressList              [][2]common.Address
-	UintArgsList             [][7]*big.Int
-	Uint8ArgsList            [][2]uint8
-	BuyNoMoreThanAmountBList []bool
-	VList                    []uint8
-	RList                    [][]byte
-	SList                    [][]byte
-	Ringminer                common.Address
-	FeeRecepient             common.Address
-	ThrowIfLRCIsInsuffcient  bool
+	AddressList              [][2]common.Address `alias:"addressList"`
+	UintArgsList             [][7]*big.Int       `alias:"uintArgsList"`
+	Uint8ArgsList            [][2]uint8          `alias:"uint8ArgsList"`
+	BuyNoMoreThanAmountBList []bool              `alias:"buyNoMoreThanAmountBList"`
+	VList                    []uint8             `alias:"vList"`
+	RList                    [][]byte            `alias:"rList"`
+	SList                    [][]byte            `alias:"sList"`
+	Ringminer                common.Address      `alias:"ringminer"`
+	FeeRecepient             common.Address      `alias:"feeRecepient"`
+	ThrowIfLRCIsInsuffcient  bool                `alias:"throwIfLRCIsInsuffcient"`
 }
 
 func emptyRingSubmitArgs() *RingSubmitArgs {

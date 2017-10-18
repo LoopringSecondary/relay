@@ -137,8 +137,12 @@ func (e *AbiEvent) Subscribe() {
 	e.Event.Id().String()
 }
 
-func (e *AbiEvent) Unpack(v interface{}, output []byte, topics []string) {
-	Unpack(e.Event, v, output, topics)
+func (e *AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
+	return UnpackEvent(e.Inputs, v, output, topics)
+}
+
+func (e *AbiMethod) Unpack(v interface{}, hex string) error {
+	return UnpackTransaction(e.Inputs, v, hex, e.Method)
 }
 
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
