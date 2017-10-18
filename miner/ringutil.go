@@ -22,13 +22,15 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 	"strconv"
 )
 
-var RateRatioCVSThreshold int64
+var (
+	RateRatioCVSThreshold int64
+	RateProvider *ExchangeRateProvider
+)
 
 //compute availableAmountS of order
 func AvailableAmountS(filledOrder *types.FilledOrder) (bool, error) {
@@ -58,7 +60,7 @@ func AvailableAmountS(filledOrder *types.FilledOrder) (bool, error) {
 //计算匹配比例
 //todo:折扣
 func ComputeRing(ringState *types.RingState) error {
-	DECIMALS := big.NewInt(10000000000000) //todo:最好采用10的18次方，或者对应token的DECIMALS, 但是注意，计算价格时，目前使用math.pow, 需要转为float64，不要超出范围
+	DECIMALS := big.NewInt(1000000000000000) //todo:最好采用10的18次方，或者对应token的DECIMALS, 但是注意，计算价格时，目前使用math.pow, 需要转为float64，不要超出范围
 	FOURTIMESDECIMALS := &types.EnlargedInt{Value: big.NewInt(0).Mul(DECIMALS, DECIMALS), Decimals: big.NewInt(0).Mul(DECIMALS, DECIMALS)}
 	FOURTIMESDECIMALS.Value.Mul(FOURTIMESDECIMALS.Value, DECIMALS)
 	FOURTIMESDECIMALS.Decimals.Mul(FOURTIMESDECIMALS.Decimals, DECIMALS)
@@ -243,7 +245,7 @@ func ComputeRing(ringState *types.RingState) error {
 	for _, order := range ringState.RawRing.Orders {
 		lrcAddress := &types.Address{}
 
-		lrcAddress.SetBytes([]byte(LRC_ADDRESS))
+		lrcAddress.SetBytes([]byte(RateProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
 		if order.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -258,7 +260,7 @@ func ComputeRing(ringState *types.RingState) error {
 			savingAmount.Sub(savingAmount, order.FillAmountS)
 			order.FeeS = savingAmount
 			//todo:address of sell token
-			legalAmountOfSaving.Mul(order.FeeS, GetLegalRate(CNY, *lrcAddress))
+			legalAmountOfSaving.Mul(order.FeeS, RateProvider.GetLegalRate(order.OrderState.RawOrder.TokenS))
 			log.Debugf("savingAmount:%d", savingAmount.RealValue().Int64())
 
 		} else {
@@ -267,7 +269,7 @@ func ComputeRing(ringState *types.RingState) error {
 			savingAmount.Sub(order.FillAmountB, savingAmount)
 			order.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(order.FeeS, GetLegalRate(CNY, *lrcAddress))
+			legalAmountOfSaving.Mul(order.FeeS, RateProvider.GetLegalRate(order.OrderState.RawOrder.TokenB))
 			//println("orderFee", legalAmountOfSaving.RealValue().Int64(), " savingAmount:", savingAmount.RealValue().Int64())
 		}
 
@@ -280,7 +282,7 @@ func ComputeRing(ringState *types.RingState) error {
 
 		legalAmountOfLrc := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
 
-		legalAmountOfLrc.Mul(GetLegalRate(CNY, *lrcAddress), order.LrcFee)
+		legalAmountOfLrc.Mul(RateProvider.GetLegalRate(*lrcAddress), order.LrcFee)
 
 		//todo：比例以及lrc需要*2
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -288,12 +290,11 @@ func ComputeRing(ringState *types.RingState) error {
 			order.LegalFee = legalAmountOfLrc
 		} else {
 			order.FeeSelection = 1
-
 			legalAmountOfSaving.Mul(legalAmountOfSaving, minShareRate)
 			order.LegalFee = legalAmountOfSaving
 			lrcReward := &types.EnlargedInt{Value: big.NewInt(0).Set(legalAmountOfSaving.Value), Decimals: big.NewInt(0).Set(legalAmountOfSaving.Decimals)}
 			lrcReward.DivBigInt(lrcReward, big.NewInt(2))
-			lrcReward.Div(lrcReward, GetLegalRate(CNY, *lrcAddress))
+			lrcReward.Div(lrcReward, RateProvider.GetLegalRate(*lrcAddress))
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.RealValue().String(), order.LegalFee.RealValue().String())
 			order.LrcReward = lrcReward
 		}
@@ -342,7 +343,6 @@ func PriceRateCVSquare(ringState *types.RingState) (*big.Int, error) {
 		rateRatios = append(rateRatios, ratio)
 	}
 	return CVSquare(rateRatios, scale), nil
-
 }
 
 func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {

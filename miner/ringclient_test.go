@@ -19,6 +19,8 @@
 package miner_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
@@ -28,7 +30,9 @@ import (
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"regexp"
 	"testing"
 	"time"
@@ -51,7 +55,7 @@ func init() {
 	database := db.NewDB(globalConfig.Database)
 	ringClient = miner.NewRingClient(database, ethClient.Client)
 	//
-	miner.Initialize(globalConfig.Miner, ringClient.Chainclient)
+	miner.Initialize(globalConfig.Miner, config.CommonOptions{}, ringClient.Chainclient)
 
 	client = ethClient.Client
 	client.NewContract(imp, implAddress, chainclient.CurrentImplAbiStr)
@@ -286,4 +290,28 @@ func cvsF2(nums []float64, a float64) {
 	//x2 := 2*(-0.9/100000000000000000) + (-0.9/100000000 - 0.9/100000000000000000)
 	//s = (x1*x1 + x2*x2)/((0.9 - 0.9/100000000000000000 - 0.9/100000000) * (0.9 - 0.9/100000000000000000 - 0.9/100000000))
 	//println(s)
+}
+
+func TestExchangeRateProvider_GetLegalRate(t *testing.T) {
+	var baseUrl string = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
+	url := fmt.Sprintf(baseUrl, "Loopring")
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Errorf("can't get new currency cap, err:%s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Log(string(body))
+	}
+
+	var caps []*miner.CurrencyMarketCap
+	if err := json.Unmarshal([]byte(body), &caps); nil != err {
+		t.Error(err)
+	}
+	t.Log(caps[0].Name)
+	t.Log(caps[0].PriceCny)
 }

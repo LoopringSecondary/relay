@@ -39,3 +39,10 @@ ringMaxLength = 4
 feeRecepient = ""
 miner = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
 ifRegistryRingHash = false
+rate_ratio_cvs_threshold = 1000000000000000
+[miner.rate_provider]
+lrc_address = "0x5132a8ce9a61b13b9cAEcd2261abF95323056423"
+base_url = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
+currency = "USD"
+[miner.rate_provider.currencies_map]
+"0x5132a8ce9a61b13b9cAEcd2261abF95323056423" = "Loopring"

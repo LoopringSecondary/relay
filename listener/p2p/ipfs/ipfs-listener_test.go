@@ -87,34 +87,34 @@ func TestA(t *testing.T) {
 func TestB(t *testing.T) {
 	sh := shell.NewLocalShell()
 
-	//scheme 1:MarginSplitPercentage = 0
+	suffix := "0000000000"
 
+	//scheme 1:MarginSplitPercentage = 0
+	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92512"),
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
-		big.NewInt(100000),
-		big.NewInt(1000000),
+		amountS1,
+		amountB1,
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
 	)
 	order1.Owner = types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
-
 	data1, _ := json.Marshal(order1)
 	pubMessage(sh, string(data1))
+
+	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92512"),
-		big.NewInt(2000000),
-		big.NewInt(100000),
+		amountS2,
+		amountB2,
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
 	)
 	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 	data2, _ := json.Marshal(order2)
 	pubMessage(sh, string(data2))
-
-	for i := 0; i < 1000; i++ {
-		pubMessage(sh, string(data2))
-	}
-
 }
 
 func pubMessage(sh *shell.Shell, data string) {

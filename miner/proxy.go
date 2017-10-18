@@ -79,4 +79,8 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 	}
 	FeeRecepient = types.HexToAddress(options.FeeRecepient)
 	IfRegistryRingHash = options.IfRegistryRingHash
+
+	RateProvider = NewExchangeRateProvider(options)
+
+	RateRatioCVSThreshold = options.RateRatioCVSThreshold
 }
