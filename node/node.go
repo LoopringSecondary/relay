@@ -60,15 +60,14 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 	ringClient := miner.NewRingClient(database, ethClient.Client)
-	//
+
 	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
-	//
+
 	peerOrderChan := make(chan *types.Order)
 	chainOrderChan := make(chan *types.OrderState)
 	engineOrderChan := make(chan *types.OrderState)
-	//
+
 	n.registerP2PListener(peerOrderChan)
-	//
 	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerMiner(ringClient, engineOrderChan)
 	n.registerEthListener(ethClient, chainOrderChan)
@@ -81,7 +80,6 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) Start() {
 	n.chainListener.Start()
 	n.p2pListener.Start()
-
 	n.miner.Start()
 	n.orderbook.Start()
 }

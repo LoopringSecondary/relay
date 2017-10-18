@@ -35,7 +35,7 @@ func TestAddress(t *testing.T) {
 	t.Log(common.HexToAddress(account).String())
 }
 
-func TestUnpack(t *testing.T) {
+func newAbi() (abi.ABI, error) {
 	const definition = `[
 	{"constant":false,"inputs":[
 		{"name":"hash","type":"bytes32"},
@@ -69,16 +69,20 @@ func TestUnpack(t *testing.T) {
 		{"indexed":false,"name":"message","type":"string"}],"name":"Exception","type":"event"}]
 `
 
-	tabi, err := abi.JSON(strings.NewReader(definition))
+	return abi.JSON(strings.NewReader(definition))
+}
+
+func TestUnpackEvent(t *testing.T) {
+	tabi, err := newAbi()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	type DepositEvent struct {
-		Hash    []byte
-		Account common.Address
-		Amount  *big.Int
-		Ok      bool
+		Hash    []byte         `alias:"hash"`
+		Account common.Address `alias:"account"`
+		Amount  *big.Int       `alias:"amount"`
+		Ok      bool           `alias:"ok"`
 	}
 
 	event := DepositEvent{}
@@ -91,7 +95,7 @@ func TestUnpack(t *testing.T) {
 		t.Error("event do not exist")
 	}
 
-	if err := eth.Unpack(abievent, &event, data, []string{}); err != nil {
+	if err := eth.UnpackEvent(abievent.Inputs, &event, data, []string{}); err != nil {
 		panic(err)
 	}
 
@@ -99,4 +103,29 @@ func TestUnpack(t *testing.T) {
 	t.Log(event.Account.Hex())
 	t.Log(event.Amount)
 	t.Log(event.Ok)
+}
+
+func TestUnpackTransaction(t *testing.T) {
+	tabi, err := newAbi()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type Deposit struct {
+		Id     []byte         `alias:"_id"`
+		Owner  common.Address `alias:"_owner"`
+		Amount *big.Int       `alias:"_amount"`
+	}
+
+	tx := "0x8a024a21000000000000000000000000000000000000000000000000000000000000000100000000000000000000000046c5683c754b2eba04b2701805617c0319a9b4dd000000000000000000000000000000000000000000000000000000001dcd6500"
+	method, _ := tabi.Methods["submitDeposit"]
+	out := &Deposit{}
+
+	if err := eth.UnpackTransaction(method.Inputs, out, tx, method); err != nil {
+		panic(err)
+	}
+
+	t.Log(common.BytesToHash(out.Id).Hex())
+	t.Log(out.Owner.Hex())
+	t.Log(out.Amount.String())
 }

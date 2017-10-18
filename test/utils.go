@@ -51,7 +51,9 @@ func CreateOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkByte
 }
 
 func init() {
-	globalConfig := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/ringminer/config/ringminer.toml")
+	path := "/Users/fukun/projects/gohome/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	globalConfig := config.LoadConfig(path)
+	//globalConfig := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/ringminer/config/ringminer.toml")
 	log.Initialize(globalConfig.Log)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
@@ -61,6 +63,5 @@ func init() {
 	database := db.NewDB(globalConfig.Database)
 	ringClient := miner.NewRingClient(database, ethClient.Client)
 	//
-	miner.Initialize(globalConfig.Miner, ringClient.Chainclient)
-
+	miner.Initialize(globalConfig.Miner, globalConfig.Common, ringClient.Chainclient)
 }
