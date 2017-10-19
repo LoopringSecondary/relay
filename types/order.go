@@ -77,17 +77,19 @@ type orderMarshaling struct {
 
 func (o *Order) GenerateHash() Hash {
 	h := &Hash{}
+
+	//todo:check args not empty
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
-		o.AmountS.Bytes(),
-		o.AmountB.Bytes(),
-		o.Timestamp.Bytes(),
-		o.Ttl.Bytes(),
-		o.Salt.Bytes(),
-		o.LrcFee.Bytes(),
+		LeftPadBytes(o.AmountS.Bytes(), 32),
+		LeftPadBytes(o.AmountB.Bytes(), 32),
+		LeftPadBytes(o.Timestamp.Bytes(), 32),
+		LeftPadBytes(o.Ttl.Bytes(), 32),
+		LeftPadBytes(o.Salt.Bytes(), 32),
+		LeftPadBytes(o.LrcFee.Bytes(), 32),
 		[]byte{byte(0)}, //todo:o.BuyNoMoreThanAmountB to byte, test with contract
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
@@ -144,7 +146,7 @@ type FilledOrder struct {
 	FeeSelection     uint8        `json:"feeSelection"`     //0 -> lrc
 	RateAmountS      *EnlargedInt `json:"rateAmountS"`      //提交需要
 	AvailableAmountS *big.Int     `json:"availableAmountS"` //需要，也是用于计算fee
-	//AvailableAmountB *big.Int	//需要，也是用于计算fee
+	AvailableAmountB *big.Int	//需要，也是用于计算fee
 	FillAmountS *EnlargedInt `json:"fillAmountS"`
 	FillAmountB *EnlargedInt `json:"fillAmountB"` //计算需要
 	LrcReward   *EnlargedInt `json:"lrcReward"`

@@ -57,7 +57,7 @@ func (ring *Ring) GenerateHash() Hash {
 			sBytes = Xor(sBytes, order.OrderState.RawOrder.S.Bytes())
 		}
 	}
-	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
+	hashBytes := crypto.CryptoInstance.GenerateHash(ring.Miner.Bytes(), vBytes, rBytes, sBytes)
 	h.SetBytes(hashBytes)
 	return *h
 }
