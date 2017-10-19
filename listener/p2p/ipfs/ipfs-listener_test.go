@@ -49,8 +49,8 @@ func TestA(t *testing.T) {
 		saddr := rand.Intn(10)
 		baddr := rand.Intn(10)
 		order1 := test.CreateOrder(
-			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251"+strconv.Itoa(saddr)),
-			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c"+strconv.Itoa(baddr)),
+			types.HexToAddress("0x45fbfca061477ed69cf8d94673d04295bba15f2e"+strconv.Itoa(saddr)),
+			types.HexToAddress("0xab4c5bda9cfa40e6877f29b0d729af66ad217958"+strconv.Itoa(baddr)),
 			amountS1,
 			amountB1,
 			types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
@@ -71,8 +71,8 @@ func TestA(t *testing.T) {
 		amountS2, _ := new(big.Int).SetString(strconv.Itoa(s2)+suffix, 0)
 		amountB2, _ := new(big.Int).SetString(strconv.Itoa(b2)+suffix, 0)
 		order2 := test.CreateOrder(
-			types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c"+strconv.Itoa(saddr)),
-			types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c9251"+strconv.Itoa(baddr)),
+			types.HexToAddress("0xab4c5bda9cfa40e6877f29b0d729af66ad217958"+strconv.Itoa(saddr)),
+			types.HexToAddress("0x45fbfca061477ed69cf8d94673d04295bba15f2e"+strconv.Itoa(baddr)),
 			amountS2,
 			amountB2,
 			types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
@@ -87,14 +87,14 @@ func TestA(t *testing.T) {
 func TestB(t *testing.T) {
 	sh := shell.NewLocalShell()
 
-	suffix := "0000000000"
+	suffix := "0"
 
 	//scheme 1:MarginSplitPercentage = 0
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
-		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92512"),
-		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
+		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
 		amountS1,
 		amountB1,
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
@@ -106,8 +106,8 @@ func TestB(t *testing.T) {
 	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
-		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
-		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92512"),
+		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
+		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		amountS2,
 		amountB2,
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),

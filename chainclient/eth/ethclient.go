@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"reflect"
 	"time"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type EthClient struct {
@@ -51,9 +52,9 @@ func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, a
 type CallArg struct {
 	From     string    `json:"from"`
 	To       string    `json:"to"`
-	Gas      types.Big `json:"gas"`
-	GasPrice types.Big `json:"gasPrice"`
-	Value    types.Big `json:"value"`
+	Gas      hexutil.Big `json:"gas"`
+	GasPrice hexutil.Big `json:"gasPrice"`
+	Value    hexutil.Big `json:"value"`
 	Data     string    `json:"data"`
 }
 
@@ -94,7 +95,7 @@ func (ethClient *EthClient) signAndSendTransaction(result interface{}, from type
 
 		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
 
-		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.ToHex(signature))
+		log.Debugf("hash:%s, sig:%s, value%s, gas:%s, gasPrice:%s", signer.Hash(transaction).Hex(), common.ToHex(signature), transaction.Value().String(),transaction.Gas().String(), transaction.GasPrice().String())
 		if nil != err {
 			return err
 		}

@@ -120,7 +120,7 @@ func (p *ExchangeRateProvider) GetLegalRate(tokenAddress types.Address) *types.E
 		}
 		return &types.EnlargedInt{Value: v, Decimals: decimals}
 	} else {
-		return &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(100)}
+		return &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(100)}
 	}
 }
 

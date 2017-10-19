@@ -93,11 +93,11 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
 			log.Infof("ringHash:%s", ringState.RawRing.Hash.Hex())
-			//if IfRegistryRingHash {
-			//	ringClient.sendRinghashRegistry(ringState)
-			//} else {
-			//	ringClient.submitRing(ringState)
-			//}
+			if IfRegistryRingHash {
+				ringClient.sendRinghashRegistry(ringState)
+			} else {
+				ringClient.submitRing(ringState)
+			}
 		} else {
 			log.Errorf("error:%s", err.Error())
 		}
@@ -106,7 +106,7 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 
 func canSubmit(ring *types.RingState) bool {
 	//todo:args validator
-	return false
+	return true
 }
 
 //send Fingerprint to block chain
@@ -189,7 +189,6 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 func (ringClient *RingClient) submitRing(ringSate *types.RingState) {
 	ring := ringSate.RawRing
 	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
-
 	ringSubmitArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
 	if txHash, err1 := LoopringInstance.LoopringImpls[contractAddress].SubmitRing.SendTransaction(types.HexToAddress("0x"),
 		ringSubmitArgs.AddressList,
@@ -258,7 +257,7 @@ func (ringClient *RingClient) recoverRing() {
 }
 
 func (ringClient *RingClient) Start() {
-	ringClient.recoverRing()
+	//ringClient.recoverRing()
 	go ringClient.listenRinghashRegistrySucessAndSendRing()
 }
 

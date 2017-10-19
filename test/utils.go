@@ -33,7 +33,7 @@ import (
 
 func CreateOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
 	order := &types.Order{}
-	order.Protocol = types.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa")
+	order.Protocol = types.HexToAddress("0xbc887ce07cee5624715f6ff39e1dd6603633c777")
 	order.TokenS = tokenS
 	order.TokenB = tokenB
 	order.AmountS = amountS
