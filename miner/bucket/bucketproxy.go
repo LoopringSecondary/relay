@@ -122,7 +122,7 @@ func (bp *BucketProxy) listenOrderState() {
 				miner.LoopringInstance.AddToken(order.RawOrder.TokenB)
 				bp.newOrder(order)
 			} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
-				//todo:process when cancel partable
+				//todo:process the case of cancel partable
 				bp.deleteOrder(order)
 			}
 		}

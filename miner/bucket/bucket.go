@@ -33,7 +33,6 @@ import (
 //同时会监听proxy发送过来的订单环，及时进行订单的删除与修改
 //应当尝试更改为node，提高内存的利用率
 
-//todo：环的最大长度
 var RingLength int
 
 type OrderWithPos struct {

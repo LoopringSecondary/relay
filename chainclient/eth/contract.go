@@ -77,7 +77,6 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 	callArg.From = from.Hex()
 	callArg.To = m.Address
 	callArg.Data = dataHex
-	//todo:can't unmarshal
 	callArg.GasPrice = *gasPrice
 	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err

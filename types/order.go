@@ -78,6 +78,10 @@ type orderMarshaling struct {
 func (o *Order) GenerateHash() Hash {
 	h := &Hash{}
 
+	buyNoMoreThanAmountB := byte(0)
+	if o.BuyNoMoreThanAmountB {
+		buyNoMoreThanAmountB = byte(1)
+	}
 	//todo:check args not empty
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
@@ -90,7 +94,7 @@ func (o *Order) GenerateHash() Hash {
 		LeftPadBytes(o.Ttl.Bytes(), 32),
 		LeftPadBytes(o.Salt.Bytes(), 32),
 		LeftPadBytes(o.LrcFee.Bytes(), 32),
-		[]byte{byte(0)}, //todo:o.BuyNoMoreThanAmountB to byte, test with contract
+		[]byte{buyNoMoreThanAmountB},
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
 	h.SetBytes(hashBytes)
@@ -99,8 +103,7 @@ func (o *Order) GenerateHash() Hash {
 }
 
 func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
@@ -121,8 +124,7 @@ func (o *Order) ValidateSignatureValues() bool {
 
 func (o *Order) SignerAddress() (Address, error) {
 	address := &Address{}
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
