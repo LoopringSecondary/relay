@@ -22,15 +22,15 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 	"strconv"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
 	RateRatioCVSThreshold int64
-	RateProvider *ExchangeRateProvider
+	RateProvider          *ExchangeRateProvider
 )
 
 //compute availableAmountS of order
@@ -117,7 +117,6 @@ func ComputeRing(ringState *types.RingState) error {
 	ringState.ReducedRate = &types.EnlargedInt{Value: v, Decimals: big.NewInt(1).Set(DECIMALS)}
 	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.RealValue().Int64())
 
-
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
 	//分润的fee，首先需要计算fillAmountS，fillAmountS取决于整个环路上的完全匹配的订单
@@ -131,7 +130,7 @@ func ComputeRing(ringState *types.RingState) error {
 		enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(0).Mul(filledOrder.OrderState.RawOrder.AmountS, DECIMALS), Decimals: DECIMALS}
 
 		//todo:当以Sell为基准时，考虑账户余额、订单剩余金额的最小值
-		if err := AvailableAmountS(filledOrder);nil != err {
+		if err := AvailableAmountS(filledOrder); nil != err {
 			return err
 		}
 

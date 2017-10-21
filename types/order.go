@@ -148,12 +148,12 @@ type FilledOrder struct {
 	FeeSelection     uint8        `json:"feeSelection"`     //0 -> lrc
 	RateAmountS      *EnlargedInt `json:"rateAmountS"`      //提交需要
 	AvailableAmountS *big.Int     `json:"availableAmountS"` //需要，也是用于计算fee
-	AvailableAmountB *big.Int	//需要，也是用于计算fee
-	FillAmountS *EnlargedInt `json:"fillAmountS"`
-	FillAmountB *EnlargedInt `json:"fillAmountB"` //计算需要
-	LrcReward   *EnlargedInt `json:"lrcReward"`
-	LrcFee      *EnlargedInt `json:"lrcFee"`
-	FeeS        *EnlargedInt `json:"feeS"`
+	AvailableAmountB *big.Int     //需要，也是用于计算fee
+	FillAmountS      *EnlargedInt `json:"fillAmountS"`
+	FillAmountB      *EnlargedInt `json:"fillAmountB"` //计算需要
+	LrcReward        *EnlargedInt `json:"lrcReward"`
+	LrcFee           *EnlargedInt `json:"lrcFee"`
+	FeeS             *EnlargedInt `json:"feeS"`
 	//FeeB             *EnlargedInt
 	LegalFee *EnlargedInt `json:"legalFee"` //法币计算的fee
 

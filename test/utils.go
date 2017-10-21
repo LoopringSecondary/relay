@@ -31,9 +31,9 @@ import (
 	"time"
 )
 
-func CreateOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
+func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
 	order := &types.Order{}
-	order.Protocol = types.HexToAddress("0xbc887ce07cee5624715f6ff39e1dd6603633c777")
+	order.Protocol = protocol
 	order.TokenS = tokenS
 	order.TokenB = tokenB
 	order.AmountS = amountS

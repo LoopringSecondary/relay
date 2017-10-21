@@ -32,16 +32,20 @@ import (
 	"time"
 )
 
-var client *chainclient.Client
-var imp *chainclient.LoopringProtocolImpl = &chainclient.LoopringProtocolImpl{}
-var implAddress string = "0xbc887ce07cee5624715f6ff39e1dd6603633c777"
-var registry *chainclient.LoopringRinghashRegistry = &chainclient.LoopringRinghashRegistry{}
-var MinerPrivateKey []byte
+var (
+	client          *chainclient.Client
+	imp             *chainclient.LoopringProtocolImpl = &chainclient.LoopringProtocolImpl{}
+	implAddress     string
+	registry        *chainclient.LoopringRinghashRegistry = &chainclient.LoopringRinghashRegistry{}
+	MinerPrivateKey []byte
+	delegateAddress string
+)
 
 func init() {
 	globalConfig := config.LoadConfig("../config/ringminer.toml")
 	log.Initialize(globalConfig.Log)
 
+	implAddress = globalConfig.Common.LoopringImpAddresses[0]
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
 	ethClient := eth.NewChainClient(globalConfig.ChainClient)
@@ -59,6 +63,8 @@ func init() {
 	registryAddress := types.HexToAddress(registryAddressHex)
 	client.NewContract(registry, registryAddress.Hex(), chainclient.CurrentRinghashRegistryAbiStr)
 
+	imp.DelegateAddress.Call(&delegateAddress, "pending")
+
 	passphrase := &types.Passphrase{}
 	passphrase.SetBytes([]byte(globalConfig.Miner.Passphrase))
 	var err error
@@ -73,20 +79,19 @@ func TestErc20(t *testing.T) {
 
 	tokenAddrs := []string{"0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"}
 	accounts := []string{"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A", "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"}
-	protocolAddress := "0xbc887ce07cee5624715f6ff39e1dd6603633c777"
 	for _, tokenAddr := range tokenAddrs {
 		client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
 
-		for _,account := range accounts {
+		for _, account := range accounts {
 			//balance := &types.Big{}
 			//
 			//token.BalanceOf.Call(balance, "pending", common.HexToAddress(account))
 			//t.Log(balance.BigInt().String())
-			//token.Allowance.Call(balance, "pending", common.HexToAddress(account), common.HexToAddress(protocolAddress))
+			//token.Allowance.Call(balance, "pending", common.HexToAddress(account), common.HexToAddress(implAddress))
 			//
 			//t.Log(balance.BigInt().String())
 
-			if txHash,err := token.Approve.SendTransaction(types.HexToAddress(account),common.HexToAddress(protocolAddress), big.NewInt(300000));nil != err {
+			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), common.HexToAddress(implAddress), big.NewInt(300000)); nil != err {
 				t.Error(err)
 			} else {
 				t.Log(txHash)
@@ -94,8 +99,6 @@ func TestErc20(t *testing.T) {
 		}
 
 	}
-
-
 }
 
 func createOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte, owner types.Address) *types.Order {
@@ -141,7 +144,7 @@ func TestLoopringRingHash(t *testing.T) {
 	var res1 string
 	t.Log(order1.V)
 	t.Log(order2.V)
-	vList := []uint8{order1.V-27, order2.V-27, order1.V-27}
+	vList := []uint8{order1.V - 27, order2.V - 27, order1.V - 27}
 	rList := [][]byte{order1.R.Bytes(), order2.R.Bytes(), order1.R.Bytes()}
 	sList := [][]byte{order1.S.Bytes(), order2.S.Bytes(), order1.S.Bytes()}
 	err := registry.CalculateRinghash.Call(&res1, "pending", big.NewInt(2), vList, rList, sList)
@@ -281,12 +284,12 @@ func TestRingHashRegistry(t *testing.T) {
 	fOrder1 := &types.FilledOrder{}
 	fOrder1.OrderState = types.OrderState{}
 	fOrder1.OrderState.RawOrder = *order1
-	fOrder1.RateAmountS = &types.EnlargedInt{Value:order1.AmountS,Decimals:big.NewInt(1)}
+	fOrder1.RateAmountS = &types.EnlargedInt{Value: order1.AmountS, Decimals: big.NewInt(1)}
 	fOrder1.FeeSelection = uint8(0)
 	fOrder2 := &types.FilledOrder{}
 	fOrder2.OrderState = types.OrderState{}
 	fOrder2.OrderState.RawOrder = *order2
-	fOrder2.RateAmountS = &types.EnlargedInt{Value:order2.AmountS,Decimals:big.NewInt(1)}
+	fOrder2.RateAmountS = &types.EnlargedInt{Value: order2.AmountS, Decimals: big.NewInt(1)}
 	fOrder2.FeeSelection = uint8(0)
 
 	ring.Orders = append(ring.Orders, fOrder1)
@@ -347,13 +350,13 @@ func TestSubmitRing(t *testing.T) {
 	fOrder1 := &types.FilledOrder{}
 	fOrder1.OrderState = types.OrderState{}
 	fOrder1.OrderState.RawOrder = *order1
-	fOrder1.RateAmountS = &types.EnlargedInt{Value:order1.AmountS,Decimals:big.NewInt(1)}
+	fOrder1.RateAmountS = &types.EnlargedInt{Value: order1.AmountS, Decimals: big.NewInt(1)}
 	fOrder1.FeeSelection = uint8(0)
 	t.Logf("order1.h : %s, order2.h : %s", order1.Hash.Hex(), order2.R.Hex())
 	fOrder2 := &types.FilledOrder{}
 	fOrder2.OrderState = types.OrderState{}
 	fOrder2.OrderState.RawOrder = *order2
-	fOrder2.RateAmountS = &types.EnlargedInt{Value:order2.AmountS,Decimals:big.NewInt(1)}
+	fOrder2.RateAmountS = &types.EnlargedInt{Value: order2.AmountS, Decimals: big.NewInt(1)}
 	fOrder2.FeeSelection = uint8(0)
 
 	ring.Orders = append(ring.Orders, fOrder1)
@@ -524,4 +527,18 @@ func TestApprove(t *testing.T) {
 		t.Log(res)
 	}
 
+}
+
+func TestClient_BlockIterator(t *testing.T) {
+	iterator := client.BlockIterator(big.NewInt(4069), big.NewInt(4080))
+	for {
+		_, err := iterator.Next()
+		if nil != err {
+			println(err.Error())
+			break
+		} else {
+			//block := b.(eth.Block)
+			//println(block.Number.BigInt().String(), block.Hash.Hex())
+		}
+	}
 }

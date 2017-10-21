@@ -44,8 +44,7 @@ type Client struct {
 	//the first arg must be filterId in eth
 	//Subscribe              func(callback func(args ...interface{}) error, filterArgs ...interface{}) error
 	Subscribe              func(result interface{}, filterId string) error
-
-	BlockIterator    func(startHashOrNumber, endHashOrNumber string) BlockIterator
+	BlockIterator          func(startNumber, endNumber *big.Int) BlockIterator
 	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
 	StartForkDetect        func(observers []chan ForkedEvent, database db.Database) error

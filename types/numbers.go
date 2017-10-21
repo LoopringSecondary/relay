@@ -19,8 +19,8 @@
 package types
 
 import (
-	"math/big"
 	"errors"
+	"math/big"
 )
 
 //todo:test and fix bug (bug exists)

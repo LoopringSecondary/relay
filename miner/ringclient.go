@@ -260,4 +260,3 @@ func (ringClient *RingClient) Start() {
 	//ringClient.recoverRing()
 	go ringClient.listenRinghashRegistrySucessAndSendRing()
 }
-

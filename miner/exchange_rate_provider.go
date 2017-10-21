@@ -21,6 +21,7 @@ package miner
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"io/ioutil"
@@ -29,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/Loopring/ringminer/config"
 )
 
 type LegalCurrency int
@@ -162,7 +162,7 @@ func NewExchangeRateProvider(options config.MinerOptions) *ExchangeRateProvider 
 	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
 	provider.currenciesMap = make(map[types.Address]*CurrencyMarketCap)
 
-	for addr,name := range options.RateProvider.CurrenciesMap {
+	for addr, name := range options.RateProvider.CurrenciesMap {
 		c := &CurrencyMarketCap{}
 		c.Address = types.HexToAddress(addr)
 		c.Id = name
