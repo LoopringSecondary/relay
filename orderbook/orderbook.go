@@ -55,7 +55,6 @@ type OrderBook struct {
 	db            db.Database
 	finishTable   db.Database
 	partialTable  db.Database
-	runtimeTables map[string]db.Database
 	whisper       *Whisper
 	lock          sync.RWMutex
 	minAmount     *big.Int
@@ -80,8 +79,6 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 
 	filters = append(filters, tokenSFilter)
 	filters = append(filters, tokenBFilter)
-
-	ob.RuntimeDataReady()
 
 	return ob
 }

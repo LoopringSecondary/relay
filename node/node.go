@@ -19,7 +19,6 @@
 package node
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
 	ethClientLib "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
@@ -73,7 +72,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerP2PListener(peerOrderChan)
 	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
 	n.registerMiner(ringClient, engineOrderChan)
-	//n.registerEthListener(ethClient, chainOrderChan)
+	n.registerEthListener(ethClient, database, chainOrderChan)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
@@ -112,9 +111,9 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(client *ethClientLib.EthClient, chainOrderChan chan *types.OrderState) {
+func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database, chainOrderChan chan *types.OrderState) {
 	whisper := &ethListenerLib.Whisper{chainOrderChan}
-	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook)
+	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook, database)
 }
 
 func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {

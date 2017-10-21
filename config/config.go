@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 	"os"
 	"reflect"
+	"math/big"
 )
 
 func LoadConfig(file string) *GlobalConfig {
@@ -93,7 +94,8 @@ type ChainClientOptions struct {
 type CommonOptions struct {
 	LoopringImpAddresses []string `required:"true"`
 	FilterTopics         []string `required:"true"`
-	DefaultBlockNumber   int      `required:"true"`
+	DefaultBlockNumber   *big.Int `required:"true"`
+	EndBlockNumber		 *big.Int `required:"true"`
 }
 
 type MinerOptions struct {
