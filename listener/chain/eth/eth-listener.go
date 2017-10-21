@@ -28,9 +28,8 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
-	"go.uber.org/zap"
 	"sync"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 /**
@@ -88,13 +87,57 @@ func (l *EthClientListener) Start() {
 	end := l.commOpts.EndBlockNumber
 
 	for {
-		blockData, err := l.ethClient.BlockIterator(start, end).Next()
+		// get block data
+		inter, err := l.ethClient.BlockIterator(start, end).Next()
 		if err != nil {
 			log.Errorf("get block hash error:%s", err.Error())
 			continue
 		}
-		// todo:
-		println(blockData)
+
+		// save block index
+		block := inter.(*eth.BlockWithTxObject)
+		if len(block.Transactions) < 1 {
+			log.Errorf("block transaction empty error")
+		}
+		if err := l.saveBlock(block); err != nil {
+			log.Errorf("get block hash error:%s", err.Error())
+			continue
+		}
+
+		// get transactions with blockhash
+		txs := []types.Hash{}
+		for _, tx := range block.Transactions {
+
+			// 判断合约地址是否合法
+			if !l.judgeContractAddress(tx.To) {
+				continue
+			}
+
+			// 解析method，获得ring内等orders并发送到orderbook保存
+			l.doMethod(tx.Input)
+
+			// 解析event,并发送到orderbook
+			var receipt eth.TransactionReceipt
+			err := l.ethClient.GetTransactionReceipt(&receipt, tx)
+			if err != nil {
+				log.Errorf("eth listener get transaction receipt error:%s", err.Error())
+				continue
+			}
+			for _, v := range receipt.Logs {
+				if err := l.doEvent(v); err != nil {
+					log.Errorf("eth listener do event error:%s",  err.Error())
+				}
+			}
+
+			txhash := types.HexToHash(tx.Hash)
+			txs = append(txs, txhash)
+		}
+
+		if  err := l.saveTransactions(block.Hash, txs); err != nil {
+			log.Errorf("eth listener save transactions error:%s", err.Error())
+			continue
+		}
+
 	}
 
 }
@@ -115,42 +158,12 @@ func (l *EthClientListener) Name() string {
 	return "eth-listener"
 }
 
-func (l *EthClientListener) startSubEvents() {
-	// 获取filterId
-	//filterId, err := l.newEventFilter()
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	filterId := ""
-
-	//获取blockNumber对应的所有logs
-	var oldLogs []eth.Log
-	if err := l.ethClient.GetFilterLogs(&oldLogs, filterId); err != nil {
-		panic(err)
-	}
-
-	// 所有logs重新存一遍
-	for _, v := range oldLogs {
-		if err := l.doEvent(v); err != nil {
-			log.Error("save event error", zap.String("content", err.Error()))
-		}
-	}
-
-	// 监听新事件
-	var newLogs []eth.Log
-	for {
-		err := l.ethClient.GetFilterChanges(&newLogs, filterId)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, v := range newLogs {
-			if err := l.doEvent(v); err != nil {
-				log.Error("save event error", zap.String("content", err.Error()))
-			}
-		}
-	}
+// 解析方法中orders，并发送到orderbook
+// 看情况是否需要转换
+func (l *EthClientListener) doMethod(input string) {
+	// todo: unpack event
+	// input := tx.Input
+	// l.ethClient
 }
 
 func (l *EthClientListener) doEvent(v eth.Log) error {
@@ -161,46 +174,29 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 	}
 
 	topic := v.Topics[0]
-	//height := v.BlockNumber.Int()
-	//tx := types.HexToHash(v.TransactionHash)
-	data := []byte(v.Data)
+	data := hexutil.MustDecode(v.Data)
 
 	switch topic {
-	case impl.RingMined.Id():
-		// TODO(fukun): 无需转换
-		evt := chainclient.RingMinedEvent{}
-		impl.RingMined.Unpack(&evt, data, v.Topics)
-		if _, err := evt.MarshalJSON(); err != nil {
-			return nil
-		}
-
 	case impl.OrderFilled.Id():
 		evt := chainclient.OrderFilledEvent{}
-		impl.OrderFilled.Unpack(&evt, data, v.Topics)
-		//bs, err := evt.MarshalJSON()
-		//if err != nil {
-		//	return err
-		//}
+		if err := impl.OrderFilled.Unpack(&evt, data, v.Topics); err != nil {
+			return err
+		}
 
-		// todo: 如果ob中不存在该订单(其他形式传来的)，那么跳过该event，在doTransaction中解析该order
 		hash := types.BytesToHash(evt.OrderHash)
 		ord, err := l.ob.GetOrder(hash)
 		if err != nil {
 			return err
 		}
 
-		// 将event中相关数据装换为orderState
 		evt.ConvertDown(ord)
 		l.whisper.ChainOrderChan <- ord
 
 	case impl.OrderCancelled.Id():
 		evt := chainclient.OrderCancelledEvent{}
-		impl.OrderCancelled.Unpack(&evt, data, v.Topics)
-
-		//bs, err := evt.MarshalJSON()
-		//if err != nil {
-		//	return err
-		//}
+		if err:= impl.OrderCancelled.Unpack(&evt, data, v.Topics); err != nil {
+			return err
+		}
 
 		hash := types.BytesToHash(evt.OrderHash)
 		ord, err := l.ob.GetOrder(hash)
@@ -212,38 +208,17 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 		l.whisper.ChainOrderChan <- ord
 
 	case impl.CutoffTimestampChanged.Id():
-		evt := chainclient.CutoffTimestampChangedEvent{}
-		impl.CutoffTimestampChanged.Unpack(&evt, data, v.Topics)
-		if _, err := evt.MarshalJSON(); err != nil {
-			return err
-		}
-		// todo(fukun)
 
 	}
 
 	return nil
 }
 
-//func (l *EthClientListener) newEventFilter() (string, error) {
-//	var filterId string
-//
-//	filter := eth.FilterQuery{}
-//	filter.FromBlock = types.Int2BlockNumHex(l.ob.GetBlockNumber())
-//	filter.ToBlock = "latest"
-//	filter.Address = l.getTokenAddress()
-//
-//	err := l.ethClient.NewFilter(&filterId, &filter)
-//	if err != nil {
-//		return "", err
-//	}
-//
-//	return filterId, nil
-//}
-
-func (l *EthClientListener) getTokenAddress() []common.Address {
-	var ret []common.Address
+func (l *EthClientListener) judgeContractAddress(addr string) bool {
 	for _, v := range l.commOpts.LoopringImpAddresses {
-		ret = append(ret, common.HexToAddress(v))
+		if addr == v {
+			return true
+		}
 	}
-	return ret
+	return false
 }

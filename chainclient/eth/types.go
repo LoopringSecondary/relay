@@ -21,6 +21,7 @@ package eth
 import (
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 //todo:need to modify
@@ -89,4 +90,15 @@ type FilterQuery struct {
 
 type LogParameter struct {
 	Topics []string
+}
+
+type TransactionReceipt struct {
+	TransactionHash 	types.Hash			`json:"transactionHash"`
+	TransactionIndex 	types.Big			`json:"transactionIndex"`
+	BlockHash 			types.Hash			`json:"blockHash"`
+	BlockNumber 		types.Big			`json:"blockNumber"`
+	CumulativeGasUsed	types.Big			`json:"cumulativeGasUsed"`
+	GasUsed				types.Big			`json:"gasUsed"`
+	ContractAddress 	types.Address		`json:"contractAddress"`
+	Logs 				[]Log				`json:"logs"`
 }

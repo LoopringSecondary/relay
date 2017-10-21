@@ -212,11 +212,11 @@ type BlockIterator struct {
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
-	block := &Block{}
+	block := &BlockWithTxObject{}
 	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
 		return nil, errors.New("finished")
 	}
-	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), false); nil != err {
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil != err {
 		//log.Errorf("err:%s", err.Error())
 		return nil, err
 	} else {
@@ -225,7 +225,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 			for {
 				select {
 				case <-time.After(time.Duration(5000000000)):
-					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), false); nil == err1 && nil != block {
+					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil == err1 && nil != block {
 						break hasNext
 					}
 				}
