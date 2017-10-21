@@ -93,7 +93,7 @@ func (l *EthClientListener) Start() {
 			log.Errorf("get block hash error:%s", err.Error())
 			continue
 		}
-		// todo: 
+		// todo:
 		println(blockData)
 	}
 

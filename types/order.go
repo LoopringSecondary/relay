@@ -77,18 +77,24 @@ type orderMarshaling struct {
 
 func (o *Order) GenerateHash() Hash {
 	h := &Hash{}
+
+	buyNoMoreThanAmountB := byte(0)
+	if o.BuyNoMoreThanAmountB {
+		buyNoMoreThanAmountB = byte(1)
+	}
+	//todo:check args not empty
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
-		o.AmountS.Bytes(),
-		o.AmountB.Bytes(),
-		o.Timestamp.Bytes(),
-		o.Ttl.Bytes(),
-		o.Salt.Bytes(),
-		o.LrcFee.Bytes(),
-		[]byte{byte(0)}, //todo:o.BuyNoMoreThanAmountB to byte, test with contract
+		LeftPadBytes(o.AmountS.Bytes(), 32),
+		LeftPadBytes(o.AmountB.Bytes(), 32),
+		LeftPadBytes(o.Timestamp.Bytes(), 32),
+		LeftPadBytes(o.Ttl.Bytes(), 32),
+		LeftPadBytes(o.Salt.Bytes(), 32),
+		LeftPadBytes(o.LrcFee.Bytes(), 32),
+		[]byte{buyNoMoreThanAmountB},
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
 	h.SetBytes(hashBytes)
@@ -97,8 +103,7 @@ func (o *Order) GenerateHash() Hash {
 }
 
 func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
@@ -119,8 +124,7 @@ func (o *Order) ValidateSignatureValues() bool {
 
 func (o *Order) SignerAddress() (Address, error) {
 	address := &Address{}
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
@@ -144,12 +148,12 @@ type FilledOrder struct {
 	FeeSelection     uint8        `json:"feeSelection"`     //0 -> lrc
 	RateAmountS      *EnlargedInt `json:"rateAmountS"`      //提交需要
 	AvailableAmountS *big.Int     `json:"availableAmountS"` //需要，也是用于计算fee
-	//AvailableAmountB *big.Int	//需要，也是用于计算fee
-	FillAmountS *EnlargedInt `json:"fillAmountS"`
-	FillAmountB *EnlargedInt `json:"fillAmountB"` //计算需要
-	LrcReward   *EnlargedInt `json:"lrcReward"`
-	LrcFee      *EnlargedInt `json:"lrcFee"`
-	FeeS        *EnlargedInt `json:"feeS"`
+	AvailableAmountB *big.Int     //需要，也是用于计算fee
+	FillAmountS      *EnlargedInt `json:"fillAmountS"`
+	FillAmountB      *EnlargedInt `json:"fillAmountB"` //计算需要
+	LrcReward        *EnlargedInt `json:"lrcReward"`
+	LrcFee           *EnlargedInt `json:"lrcFee"`
+	FeeS             *EnlargedInt `json:"feeS"`
 	//FeeB             *EnlargedInt
 	LegalFee *EnlargedInt `json:"legalFee"` //法币计算的fee
 

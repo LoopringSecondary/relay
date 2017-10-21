@@ -26,23 +26,23 @@ import (
 //todo:need to modify
 
 type Block struct {
-	Number           types.Big
-	Hash             types.Hash
-	ParentHash       string
-	Nonce            string
-	Sha3Uncles       string
-	LogsBloom        string
-	TransactionsRoot string
-	ReceiptsRoot     string
-	Miner            string
-	Difficulty       types.Big
-	TotalDifficulty  types.Big
-	ExtraData        string
-	Size             types.Big
-	GasLimit         types.Big
-	GasUsed          types.Big
-	Timestamp        types.Big
-	Uncles           []string
+	Number           types.Big  `json:"number"`
+	Hash             types.Hash `json:"hash"`
+	ParentHash       types.Hash `json:"parentHash"`
+	Nonce            string     `json:"nonce"`
+	Sha3Uncles       string     `json:"sha3Uncles"`
+	LogsBloom        string     `json:"logsBloom"`
+	TransactionsRoot string     `json:"transactionsRoot"`
+	ReceiptsRoot     string     `json:"stateRoot"`
+	Miner            string     `json:"miner"`
+	Difficulty       types.Big  `json:"difficulty"`
+	TotalDifficulty  types.Big  `json:"totalDifficulty"`
+	ExtraData        string     `json:"extraData"`
+	Size             types.Big  `json:"size"`
+	GasLimit         types.Big  `json:"gasLimit"`
+	GasUsed          types.Big  `json:"gasUsed"`
+	Timestamp        types.Big  `json:"timestamp"`
+	Uncles           []string   `json:"uncles"`
 }
 
 type BlockWithTxObject struct {

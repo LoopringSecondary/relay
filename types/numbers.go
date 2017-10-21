@@ -19,6 +19,7 @@
 package types
 
 import (
+	"errors"
 	"math/big"
 )
 
@@ -34,6 +35,9 @@ func (ei *EnlargedInt) Div(x, y *EnlargedInt) *EnlargedInt {
 	}
 	if ei.Decimals == nil {
 		ei.Decimals = big.NewInt(1)
+	}
+	if x.Decimals.Cmp(big.NewInt(0)) == 0 || y.Value.Cmp(big.NewInt(0)) == 0 {
+		panic(errors.New("division by zero"))
 	}
 	ei.Value.Mul(x.Value, y.Decimals)
 	ei.Decimals.Mul(x.Decimals, y.Value)

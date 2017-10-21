@@ -31,9 +31,9 @@ import (
 	"time"
 )
 
-func CreateOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
+func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
 	order := &types.Order{}
-	order.Protocol = types.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa")
+	order.Protocol = protocol
 	order.TokenS = tokenS
 	order.TokenB = tokenB
 	order.AmountS = amountS
@@ -51,9 +51,9 @@ func CreateOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkByte
 }
 
 func init() {
-	path := "/Users/fukun/projects/gohome/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	//path := "/Users/fukun/projects/gohome/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	path := "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/ringminer/config/ringminer.toml"
 	globalConfig := config.LoadConfig(path)
-	//globalConfig := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/ringminer/config/ringminer.toml")
 	log.Initialize(globalConfig.Log)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}

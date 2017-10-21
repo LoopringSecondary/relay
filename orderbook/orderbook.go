@@ -162,7 +162,7 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 			log.Errorf("ipfs order marshal error:%s", err.Error())
 		} else {
 			ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs)
-			//ob.whisper.EngineOrderChan <- state
+			ob.whisper.EngineOrderChan <- state
 		}
 	}
 }

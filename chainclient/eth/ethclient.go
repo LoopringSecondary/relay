@@ -20,16 +20,19 @@ package eth
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
 	"reflect"
 	"time"
 )
@@ -49,12 +52,12 @@ func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, a
 }
 
 type CallArg struct {
-	From     string    `json:"from"`
-	To       string    `json:"to"`
-	Gas      types.Big `json:"gas"`
-	GasPrice types.Big `json:"gasPrice"`
-	Value    types.Big `json:"value"`
-	Data     string    `json:"data"`
+	From     string      `json:"from"`
+	To       string      `json:"to"`
+	Gas      hexutil.Big `json:"gas"`
+	GasPrice hexutil.Big `json:"gasPrice"`
+	Value    hexutil.Big `json:"value"`
+	Data     string      `json:"data"`
 }
 
 func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
@@ -71,6 +74,8 @@ func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
 	ethClient.Subscribe = ethClient.subscribe
 	ethClient.SignAndSendTransaction = ethClient.signAndSendTransaction
 	ethClient.NewContract = ethClient.newContract
+	ethClient.StartForkDetect = ethClient.startForkDetect
+	ethClient.BlockIterator = ethClient.blockIterator
 
 	ethClient.signer = &ethTypes.HomesteadSigner{}
 
@@ -94,7 +99,7 @@ func (ethClient *EthClient) signAndSendTransaction(result interface{}, from type
 
 		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
 
-		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.ToHex(signature))
+		log.Debugf("hash:%s, sig:%s, value%s, gas:%s, gasPrice:%s", signer.Hash(transaction).Hex(), common.ToHex(signature), transaction.Value().String(), transaction.Gas().String(), transaction.GasPrice().String())
 		if nil != err {
 			return err
 		}
@@ -127,9 +132,7 @@ func (ethClient *EthClient) doSubscribe(chanVal reflect.Value, filterId string) 
 	}
 }
 
-func (ethClient *EthClient) subscribe(result interface{}, args ...interface{}) error {
-	//the first arg must be filterId
-	filterId := args[0].(string)
+func (ethClient *EthClient) subscribe(result interface{}, filterId string) error {
 	//todo:should check result is a chan
 	chanVal := reflect.ValueOf(result).Elem()
 	go ethClient.doSubscribe(chanVal, filterId)
@@ -199,4 +202,63 @@ func (ethClient *EthClient) applyMethod() error {
 		}
 	}
 	return nil
+}
+
+type BlockIterator struct {
+	startNumber   *big.Int
+	endNumber     *big.Int
+	currentNumber *big.Int
+	ethClient     *EthClient
+}
+
+func (iterator *BlockIterator) Next() (interface{}, error) {
+	block := &Block{}
+	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
+		return nil, errors.New("finished")
+	}
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), false); nil != err {
+		//log.Errorf("err:%s", err.Error())
+		return nil, err
+	} else {
+		if nil == block {
+		hasNext:
+			for {
+				select {
+				case <-time.After(time.Duration(5000000000)):
+					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), false); nil == err1 && nil != block {
+						break hasNext
+					}
+				}
+			}
+		}
+		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
+		return *block, nil
+	}
+}
+
+func (iterator *BlockIterator) Prev() (interface{}, error) {
+	block := &Block{}
+	if nil != iterator.startNumber && iterator.startNumber.Cmp(big.NewInt(0)) > 0 && iterator.startNumber.Cmp(iterator.currentNumber) > 0 {
+		return nil, errors.New("finished")
+	}
+	prevNumber := new(big.Int).Sub(iterator.currentNumber, big.NewInt(1))
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", prevNumber), false); nil != err {
+		return nil, err
+	} else {
+		if nil == block {
+			return nil, errors.New("there isn't a block with number:" + prevNumber.String())
+		}
+		iterator.currentNumber.Sub(iterator.currentNumber, big.NewInt(1))
+		return *block, nil
+	}
+}
+
+func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int) chainclient.BlockIterator {
+	iterator := &BlockIterator{
+		startNumber:   new(big.Int).Set(startNumber),
+		endNumber:     endNumber,
+		currentNumber: new(big.Int).Set(startNumber),
+		ethClient:     ethClient,
+	}
+	return iterator
 }

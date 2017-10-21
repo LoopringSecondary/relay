@@ -57,14 +57,13 @@ func (ring *Ring) GenerateHash() Hash {
 			sBytes = Xor(sBytes, order.OrderState.RawOrder.S.Bytes())
 		}
 	}
-	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
+	hashBytes := crypto.CryptoInstance.GenerateHash(ring.Miner.Bytes(), vBytes, rBytes, sBytes)
 	h.SetBytes(hashBytes)
 	return *h
 }
 
 func (ring *Ring) GenerateAndSetSignature(pkBytes []byte) error {
-	//todo:how to check hash is nil,this use big.Int
-	if ring.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if ring.Hash.IsZero() {
 		ring.Hash = ring.GenerateHash()
 	}
 	if sig, err := crypto.CryptoInstance.Sign(ring.Hash.Bytes(), pkBytes); nil != err {
@@ -85,8 +84,7 @@ func (ring *Ring) ValidateSignatureValues() bool {
 func (ring *Ring) SignerAddress() (Address, error) {
 	address := &Address{}
 	hash := ring.Hash
-	//todo:how to check hash is nil,this use big.Int
-	if hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if hash.IsZero() {
 		hash = ring.GenerateHash()
 	}
 

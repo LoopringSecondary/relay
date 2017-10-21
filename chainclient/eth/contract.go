@@ -24,6 +24,7 @@ import (
 	types "github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"reflect"
@@ -60,7 +61,7 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 			break
 		}
 	}
-	var gas, gasPrice *types.Big
+	var gas, gasPrice *hexutil.Big
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
 	if nil != err {
@@ -76,14 +77,13 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 	callArg.From = from.Hex()
 	callArg.To = m.Address
 	callArg.Data = dataHex
-	//todo:can't unmarshal
-	//callArg.GasPrice = *gasPrice
+	callArg.GasPrice = *gasPrice
 	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err
 	}
 
 	//todo: m.Abi.Pack is double used
-	return m.SendTransactionWithSpecificGas(from, gas.BigInt(), gasPrice.BigInt(), args...)
+	return m.SendTransactionWithSpecificGas(from, gas.ToInt(), gasPrice.ToInt(), args...)
 }
 
 func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error) {

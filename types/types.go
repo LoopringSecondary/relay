@@ -98,6 +98,10 @@ func (h *Hash) SetBytes(b []byte) {
 	copy(h[HashLength-len(b):], b)
 }
 
+func (h *Hash) IsZero() bool {
+	return *h == HexToHash("0x")
+}
+
 type Address [AddressLength]byte
 
 func (a Address) Str() string   { return string(a[:]) }

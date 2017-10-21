@@ -104,6 +104,13 @@ type MinerOptions struct {
 	Miner              string `required:"true"` //private key, used to sign the ring
 	FeeRecepient       string //address the recepient of fee
 	IfRegistryRingHash bool
+	RateProvider       struct {
+		LrcAddress    string
+		BaseUrl       string
+		Currency      string
+		CurrenciesMap map[string]string //address -> name
+	}
+	RateRatioCVSThreshold int64
 }
 
 type OrderBookOptions struct {
