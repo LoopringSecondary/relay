@@ -141,8 +141,8 @@ func (e *AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
 	return UnpackEvent(e.Inputs, v, output, topics)
 }
 
-func (e *AbiMethod) Unpack(v interface{}, hex string) error {
-	return UnpackTransaction(e.Inputs, v, hex, e.Method)
+func (m *AbiMethod) Unpack(v interface{}, hex string) error {
+	return UnpackTransaction(m.Method, v, hex)
 }
 
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
