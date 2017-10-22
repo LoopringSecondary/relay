@@ -159,7 +159,7 @@ func (l *EthClientListener) Name() string {
 }
 
 // 解析方法中orders，并发送到orderbook
-// 看情况是否需要转换
+// 这些orders，不一定来自ipfs
 func (l *EthClientListener) doMethod(input string) {
 	// todo: unpack event
 	// input := tx.Input

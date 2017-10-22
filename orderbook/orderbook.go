@@ -186,14 +186,18 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
 		// todo:判断订单状态
 
 		// todo:根据订单状态从部分完成表转移到完全完成表
-		if vd, errvd := ord.LatestVersion(); errvd == nil {
-			if vd.Status == types.ORDER_FINISHED || vd.Status == types.ORDER_CANCEL {
+		if vd, errvd := ord.LatestVersion(); errvd != nil {
+			switch vd.Status {
+			case types.ORDER_PARTIAL:
+				ob.whisper.EngineOrderChan <- ord
+
+			case types.ORDER_FINISHED:
+				ob.moveOrder(ord)
+
+			case types.ORDER_CANCEL:
 				ob.moveOrder(ord)
 			}
 		}
-
-		// 发送到miner
-		ob.whisper.EngineOrderChan <- ord
 	}
 }
 
