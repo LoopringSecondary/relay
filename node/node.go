@@ -89,6 +89,7 @@ func (n *Node) Start() {
 func (n *Node) Wait() {
 	n.lock.RLock()
 
+
 	// TODO(fk): states should be judged
 
 	stop := n.stop

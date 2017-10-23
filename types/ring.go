@@ -106,8 +106,8 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
 	for _, filledOrder := range ring.Orders {
 		order := filledOrder.OrderState.RawOrder
 		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [2]common.Address{common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.TokenS.Bytes())})
-
-		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, filledOrder.RateAmountS.RealValue()})
+		rateAmountS,_ :=new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
+		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, rateAmountS})
 
 		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [2]uint8{order.MarginSplitPercentage, filledOrder.FeeSelection})
 
@@ -138,8 +138,8 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
 
 type RingState struct {
 	RawRing        *Ring        `json:"rawRing"`
-	ReducedRate    *EnlargedInt `json:"reducedRate"` //成环之后，折价比例
-	LegalFee       *EnlargedInt `json:"legalFee"`    //法币计算的fee
+	ReducedRate    *big.Rat `json:"reducedRate"` //成环之后，折价比例
+	LegalFee       *big.Rat `json:"legalFee"`    //法币计算的fee
 	FeeMode        int          `json:"feeMode"`     //收费方式，0 lrc 1 share
 	SubmitTxHash   Hash         `json:"submitTxHash"`
 	RegistryTxHash Hash         `json:"registryTxHash"`

@@ -530,15 +530,22 @@ func TestApprove(t *testing.T) {
 }
 
 func TestClient_BlockIterator(t *testing.T) {
-	iterator := client.BlockIterator(big.NewInt(4069), big.NewInt(4080))
-	for {
-		_, err := iterator.Next()
-		if nil != err {
-			println(err.Error())
-			break
-		} else {
-			//block := b.(eth.Block)
-			//println(block.Number.BigInt().String(), block.Hash.Hex())
-		}
-	}
+	//iterator := client.BlockIterator(big.NewInt(4069), big.NewInt(4080))
+	//for {
+	//	_, err := iterator.Next()
+	//	if nil != err {
+	//		println(err.Error())
+	//		break
+	//	} else {
+	//		//block := b.(eth.Block)
+	//		//println(block.Number.BigInt().String(), block.Hash.Hex())
+	//	}
+	//}
+	i := big.NewInt(8)
+	//i.Exp(i, big.NewInt(2), nil)
+	//i.Mod(i, big.NewInt(3))
+	//println(i.String())
+	i.Div(i, big.NewInt(3))
+	println(i.String())
+
 }

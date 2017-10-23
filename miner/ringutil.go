@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
-	"strconv"
 )
 
 var (
@@ -38,23 +37,22 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	order := filledOrder.OrderState.RawOrder
 	balance := &types.Big{}
 	allowance := &types.Big{}
-	filledOrder.AvailableAmountS = new(big.Int).Set(order.AmountS)
-	filledOrder.AvailableAmountB = new(big.Int).Set(order.AmountB)
+	filledOrder.AvailableAmountS = new(big.Rat).SetInt(order.AmountS)
+	filledOrder.AvailableAmountB = new(big.Rat).SetInt(order.AmountB)
 
 	LoopringInstance.Tokens[order.TokenS].BalanceOf.Call(balance, "pending", common.BytesToAddress(order.Owner.Bytes()))
 	LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "pending", common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.Protocol.Bytes()))
 
-	println("order.Owner", order.Owner.Hex(), order.TokenS.Hex())
 	if balance.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return errors.New("not enough balance")
 	} else if allowance.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return errors.New("not enough allowance")
 	} else {
-		if filledOrder.AvailableAmountS.Cmp(balance.BigInt()) > 0 {
-			filledOrder.AvailableAmountS = balance.BigInt()
+		if filledOrder.AvailableAmountS.Cmp(new(big.Rat).SetInt(balance.BigInt())) > 0 {
+			filledOrder.AvailableAmountS.SetInt(balance.BigInt())
 		}
-		if filledOrder.AvailableAmountS.Cmp(allowance.BigInt()) > 0 {
-			filledOrder.AvailableAmountS = allowance.BigInt()
+		if filledOrder.AvailableAmountS.Cmp(new(big.Rat).SetInt(allowance.BigInt())) > 0 {
+			filledOrder.AvailableAmountS.SetInt(allowance.BigInt())
 		}
 	}
 	//订单的剩余金额
@@ -62,60 +60,53 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	//filled buynomorethanb=true保存的为amountb，如果为false保存的为amounts
 	LoopringInstance.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", common.BytesToHash(order.Hash.Bytes()))
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-		remainedAmount := new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountB)
-		remainedAmount.Sub(remainedAmount, filledAmount.BigInt())
+		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
+		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))
 		if filledOrder.AvailableAmountB.Cmp(remainedAmount) > 0 {
-			filledOrder.AvailableAmountB = remainedAmount
+			filledOrder.AvailableAmountB.Set(remainedAmount)
 		}
 	} else {
-		remainedAmount := new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS)
-		remainedAmount.Sub(remainedAmount, filledAmount.BigInt())
+		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
+		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))
 		//todo:return false when remainedAmount less than amount x
 		if filledOrder.AvailableAmountS.Cmp(remainedAmount) > 0 {
-			filledOrder.AvailableAmountS = remainedAmount
+			filledOrder.AvailableAmountS.Set(remainedAmount)
 		}
 	}
 	return nil
 }
 
-var DECIMALS *big.Int = big.NewInt(1000000000000000) //todo:最好采用10的18次方，或者对应token的DECIMALS, 但是注意，计算价格时，目前使用math.pow, 需要转为float64，不要超出范围
-var FOURTIMESDECIMALS *types.EnlargedInt = &types.EnlargedInt{Value: big.NewInt(0).Mul(DECIMALS, DECIMALS), Decimals: big.NewInt(0).Mul(DECIMALS, DECIMALS)}
-
-//
 func ComputeRing(ringState *types.RingState) error {
-	FOURTIMESDECIMALS.Value.Mul(FOURTIMESDECIMALS.Value, DECIMALS)
-	FOURTIMESDECIMALS.Decimals.Mul(FOURTIMESDECIMALS.Decimals, DECIMALS)
 
-	ringState.LegalFee = &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
+	ringState.LegalFee = new(big.Rat)
 
-	productPrice := &types.EnlargedInt{}
-	productEnlargedAmountS := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-	productAmountB := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
+	productAmountS := big.NewRat(int64(1), int64(1))
+	productAmountB := big.NewRat(int64(1), int64(1))
 
 	//compute price
 	for _, order := range ringState.RawRing.Orders {
-		enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.OrderState.RawOrder.AmountS, DECIMALS), Decimals: big.NewInt(1).Set(DECIMALS)}
-		enlargedAmountB := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.OrderState.RawOrder.AmountB, DECIMALS), Decimals: big.NewInt(1).Set(DECIMALS)}
+		amountS := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS)
+		amountB := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountB)
 
-		productEnlargedAmountS.Mul(productEnlargedAmountS, enlargedAmountS)
-		productAmountB.MulBigInt(productAmountB, order.OrderState.RawOrder.AmountB)
+		productAmountS.Mul(productAmountS, amountS)
+		productAmountB.Mul(productAmountB, amountB)
 
-		enlargedSPrice := &types.EnlargedInt{}
-		enlargedSPrice.DivBigInt(enlargedAmountS, order.OrderState.RawOrder.AmountB)
-		order.EnlargedSPrice = enlargedSPrice
+		order.SPrice = new(big.Rat)
+		order.SPrice.Quo(amountS, amountB)
 
-		enlargedBPrice := &types.EnlargedInt{}
-		enlargedBPrice.DivBigInt(enlargedAmountB, order.OrderState.RawOrder.AmountS)
-		order.EnlargedBPrice = enlargedBPrice
+		order.BPrice = new(big.Rat)
+		order.BPrice.Quo(amountB, amountS)
 	}
 
-	productPrice.Div(productEnlargedAmountS, productAmountB)
+	productPrice := new(big.Rat)
+	productPrice.Quo(productAmountS, productAmountB)
 	//todo:change pow to big.Int
-	priceOfFloat, _ := strconv.ParseFloat(productPrice.RealValue().String(), 64)
+	priceOfFloat, _ := productPrice.Float64()
 	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.RawRing.Orders)))
-	v := big.NewInt(int64((float64(DECIMALS.Int64()) / rootOfRing)))
-	ringState.ReducedRate = &types.EnlargedInt{Value: v, Decimals: big.NewInt(1).Set(DECIMALS)}
-	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.RealValue().Int64())
+	rate := new(big.Rat).SetFloat64(rootOfRing)
+	ringState.ReducedRate = new(big.Rat)
+	ringState.ReducedRate.Inv(rate)
+	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.RatString())
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
@@ -124,37 +115,28 @@ func ComputeRing(ringState *types.RingState) error {
 	minVolumeIdx := 0
 
 	for idx, filledOrder := range ringState.RawRing.Orders {
-		filledOrder.EnlargedSPrice.Mul(filledOrder.EnlargedSPrice, ringState.ReducedRate)
+		filledOrder.SPrice.Mul(filledOrder.SPrice, ringState.ReducedRate)
 
-		filledOrder.EnlargedBPrice.Div(FOURTIMESDECIMALS, filledOrder.EnlargedSPrice)
-		enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(0).Mul(filledOrder.OrderState.RawOrder.AmountS, DECIMALS), Decimals: DECIMALS}
+		filledOrder.BPrice.Inv(filledOrder.SPrice)
 
 		//todo:当以Sell为基准时，考虑账户余额、订单剩余金额的最小值
 		if err := AvailableAmountS(filledOrder); nil != err {
 			return err
 		}
+		amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
+		amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 
 		//根据用户设置，判断是以卖还是买为基准
 		//买入不超过amountB
-		savingAmount := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)} //节省的金额
-		rate1 := &types.EnlargedInt{Decimals: big.NewInt(100), Value: big.NewInt(100)}
-		rate2 := rate1.Sub(rate1, ringState.ReducedRate)
-		savingAmount.Mul(enlargedAmountS, rate2)
-
-		filledOrder.RateAmountS = &types.EnlargedInt{Value: new(big.Int).Set(filledOrder.OrderState.RawOrder.AmountS), Decimals: big.NewInt(1)}
-		filledOrder.RateAmountS.Sub(filledOrder.RateAmountS, savingAmount)
+		filledOrder.RateAmountS = new(big.Rat).Set(amountS)
+		filledOrder.RateAmountS.Mul(amountS, ringState.ReducedRate)
 		//if BuyNoMoreThanAmountB , AvailableAmountS need to be reduced by the ratePrice
 		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-			enlargedAvailableAmountB := &types.EnlargedInt{Value: big.NewInt(0).Mul(filledOrder.AvailableAmountB, DECIMALS), Decimals: DECIMALS}
-			availableAmountS := &types.EnlargedInt{Value: big.NewInt(0), Decimals: big.NewInt(1)}
-
-			//compute availableAmountS
-			rate := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-			rate.DivBigInt(enlargedAvailableAmountB, filledOrder.OrderState.RawOrder.AmountB)
-
-			availableAmountS.Mul(rate, filledOrder.RateAmountS)
-			if availableAmountS.CmpBigInt(filledOrder.AvailableAmountS) < 0 {
-				filledOrder.AvailableAmountS = availableAmountS.RealValue()
+			availbleAmountB := new(big.Rat).Set(filledOrder.AvailableAmountB)
+			availableAmountS := new(big.Rat).Mul(filledOrder.RateAmountS, availbleAmountB)
+			availableAmountS.Quo(availableAmountS, amountB)
+			if filledOrder.AvailableAmountB.Cmp(new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)) < 0 {
+				filledOrder.AvailableAmountS.Set(availableAmountS)
 			}
 		}
 
@@ -164,20 +146,19 @@ func ComputeRing(ringState *types.RingState) error {
 			lastOrder = ringState.RawRing.Orders[idx-1]
 		}
 
-		if lastOrder != nil && lastOrder.FillAmountB.CmpBigInt(filledOrder.AvailableAmountS) >= 0 {
+		filledOrder.FillAmountS = new(big.Rat)
+		if lastOrder != nil && lastOrder.FillAmountB.Cmp(filledOrder.AvailableAmountS) >= 0 {
 			//当前订单为最小订单
-			filledOrder.FillAmountS = &types.EnlargedInt{Value: filledOrder.AvailableAmountS, Decimals: big.NewInt(1)}
+			filledOrder.FillAmountS.Set(filledOrder.AvailableAmountS)
 			minVolumeIdx = idx
 			//根据minVolumeIdx进行最小交易量的计算,两个方向进行
 		} else if lastOrder == nil {
-			filledOrder.FillAmountS = &types.EnlargedInt{Value: filledOrder.AvailableAmountS, Decimals: big.NewInt(1)}
+			filledOrder.FillAmountS.Set(filledOrder.AvailableAmountS)
 		} else {
 			//上一订单为最小订单需要对remainAmountS进行折扣计算
-			filledOrder.FillAmountS = lastOrder.FillAmountB
+			filledOrder.FillAmountS.Set(lastOrder.FillAmountB)
 		}
-		filledOrder.FillAmountB = &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-		filledOrder.FillAmountB.Mul(filledOrder.FillAmountS, filledOrder.EnlargedBPrice)
-
+		filledOrder.FillAmountB = new(big.Rat).Mul(filledOrder.FillAmountS, filledOrder.BPrice)
 	}
 
 	//compute the volume of the ring by the min volume
@@ -192,8 +173,6 @@ func ComputeRing(ringState *types.RingState) error {
 	//		nextOrder = ring.RawRing.Orders[i + 1]
 	//		order.FillAmountB = nextOrder.FillAmountS
 	//		order.FillAmountS.Mul(order.FillAmountB, order.EnlargedSPrice)
-	//
-	//
 	//	}
 	//}
 
@@ -203,7 +182,7 @@ func ComputeRing(ringState *types.RingState) error {
 		var nextOrder *types.FilledOrder
 		nextOrder = ringState.RawRing.Orders[i+1]
 		order.FillAmountB = nextOrder.FillAmountS
-		order.FillAmountS.Mul(order.FillAmountB, order.EnlargedSPrice)
+		order.FillAmountS.Mul(order.FillAmountB, order.SPrice)
 	}
 
 	for i := minVolumeIdx + 1; i < len(ringState.RawRing.Orders); i++ {
@@ -211,7 +190,7 @@ func ComputeRing(ringState *types.RingState) error {
 		var lastOrder *types.FilledOrder
 		lastOrder = ringState.RawRing.Orders[i-1]
 		order.FillAmountS = lastOrder.FillAmountB
-		order.FillAmountB.Mul(order.FillAmountS, order.EnlargedBPrice)
+		order.FillAmountB.Mul(order.FillAmountS, order.BPrice)
 	}
 
 	//compute the fee of this ring and orders, and set the feeSelection
@@ -233,11 +212,11 @@ func ComputeRing(ringState *types.RingState) error {
 func computeFeeOfRingAndOrder(ringState *types.RingState) {
 
 	//the ring use the min MarginSplitPercentage as self's MarginSplitPercentage
-	minShareRate := &types.EnlargedInt{Value: big.NewInt(100), Decimals: big.NewInt(100)}
+	minShareRate := new(big.Rat).SetInt(big.NewInt(0))
 	for _, order := range ringState.RawRing.Orders {
-		percentage := int64(order.OrderState.RawOrder.MarginSplitPercentage)
-		if minShareRate.Value.Int64() > percentage {
-			minShareRate.Value = big.NewInt(percentage)
+		percentage := new(big.Rat).SetInt64(int64(order.OrderState.RawOrder.MarginSplitPercentage))
+		if minShareRate.Cmp(percentage) > 0 {
+			minShareRate = percentage
 		}
 	}
 
@@ -246,19 +225,20 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 
 		lrcAddress.SetBytes([]byte(RateProvider.LRC_ADDRESS))
 		//todo:成本节约
-		legalAmountOfSaving := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
+		legalAmountOfSaving := new(big.Rat)
 		if order.OrderState.RawOrder.BuyNoMoreThanAmountB {
-			enlargedAmountS := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.OrderState.RawOrder.AmountS, DECIMALS), Decimals: big.NewInt(1).Set(DECIMALS)}
-			enlargedSPrice := &types.EnlargedInt{}
-			enlargedSPrice.DivBigInt(enlargedAmountS, order.OrderState.RawOrder.AmountB)
-			savingAmount := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-			savingAmount.Mul(order.FillAmountB, enlargedSPrice)
+			amountS := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS)
+			amountB := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountB)
+			sPrice := new(big.Rat)
+			sPrice.Quo(amountS, amountB)
+			savingAmount := new(big.Rat)
+			savingAmount.Mul(order.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, order.FillAmountS)
 			order.FeeS = savingAmount
 			legalAmountOfSaving.Mul(order.FeeS, RateProvider.GetLegalRate(order.OrderState.RawOrder.TokenS))
-			log.Debugf("savingAmount:%d", savingAmount.RealValue().Int64())
+			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
 		} else {
-			savingAmount := &types.EnlargedInt{Value: big.NewInt(0).Set(order.FillAmountB.Value), Decimals: big.NewInt(0).Set(order.FillAmountB.Decimals)}
+			savingAmount := new(big.Rat).Set(order.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
 			savingAmount.Sub(order.FillAmountB, savingAmount)
 			order.FeeS = savingAmount
@@ -267,15 +247,11 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 		}
 
 		//compute lrcFee
-		order.LrcFee = &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-		rate := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-		enlargedAvailabeAmountS := &types.EnlargedInt{Value: big.NewInt(1).Mul(order.AvailableAmountS, DECIMALS), Decimals: DECIMALS}
-		rate.DivBigInt(enlargedAvailabeAmountS, order.OrderState.RawOrder.AmountS)
-		order.LrcFee.MulBigInt(rate, order.OrderState.RawOrder.LrcFee)
+		rate := new(big.Rat).Quo(order.AvailableAmountS, new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS))
+		order.LrcFee = new(big.Rat).SetInt(order.OrderState.RawOrder.LrcFee)
+		order.LrcFee.Mul(order.LrcFee, rate)
 
-		legalAmountOfLrc := &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(1)}
-
-		legalAmountOfLrc.Mul(RateProvider.GetLegalRate(*lrcAddress), order.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(RateProvider.GetLegalRate(*lrcAddress), order.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -285,10 +261,10 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			order.FeeSelection = 1
 			legalAmountOfSaving.Mul(legalAmountOfSaving, minShareRate)
 			order.LegalFee = legalAmountOfSaving
-			lrcReward := &types.EnlargedInt{Value: big.NewInt(0).Set(legalAmountOfSaving.Value), Decimals: big.NewInt(0).Set(legalAmountOfSaving.Decimals)}
-			lrcReward.DivBigInt(lrcReward, big.NewInt(2))
-			lrcReward.Div(lrcReward, RateProvider.GetLegalRate(*lrcAddress))
-			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.RealValue().String(), order.LegalFee.RealValue().String())
+			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
+			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
+			lrcReward.Quo(lrcReward, RateProvider.GetLegalRate(*lrcAddress))
+			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), order.LegalFee.FloatString(10))
 			order.LrcReward = lrcReward
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, order.LegalFee)
@@ -311,8 +287,8 @@ func PriceRateCVSquare(ringState *types.RingState) (*big.Int, error) {
 	scale, _ := new(big.Int).SetString("10000", 0)
 	for _, filledOrder := range ringState.RawRing.Orders {
 		rawOrder := filledOrder.OrderState.RawOrder
-		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.RealValue().String())
-		s1b0 := new(big.Int).Set(filledOrder.RateAmountS.RealValue())
+		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.FloatString(10))
+		s1b0,_ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0),10)
 		//s1b0 = s1b0.Mul(s1b0, rawOrder.AmountB)
 
 		s0b1 := new(big.Int).SetBytes(rawOrder.AmountS.Bytes())
@@ -342,8 +318,7 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 		sub := big.NewInt(0)
 		sub.Sub(ratio, avg)
 
-		subSquare := big.NewInt(1)
-		subSquare.Mul(sub, sub)
+		subSquare := new(big.Int).Mul(sub, sub)
 		cvs.Add(cvs, subSquare)
 	}
 

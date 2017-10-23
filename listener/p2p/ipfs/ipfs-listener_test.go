@@ -30,7 +30,7 @@ import (
 )
 
 func TestB(t *testing.T) {
-	globalConfig := config.LoadConfig("../../config/ringminer.toml")
+	globalConfig := config.LoadConfig("../../../config/ringminer.toml")
 	log.Initialize(globalConfig.Log)
 
 	implAddress := globalConfig.Common.LoopringImpAddresses[0]
@@ -45,7 +45,7 @@ func TestB(t *testing.T) {
 	order1 := test.CreateOrder(
 		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
-		implAddress,
+		types.HexToAddress(implAddress),
 		amountS1,
 		amountB1,
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
@@ -59,7 +59,7 @@ func TestB(t *testing.T) {
 	order2 := test.CreateOrder(
 		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
 		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-		implAddress,
+		types.HexToAddress(implAddress),
 		amountS2,
 		amountB2,
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
