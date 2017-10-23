@@ -50,7 +50,7 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 
 	for _, implAddress := range commOpts.LoopringImpAddresses {
 		imp := &chainclient.LoopringProtocolImpl{}
-		client.NewContract(imp, implAddress, chainclient.CurrentImplAbiStr)
+		client.NewContract(imp, implAddress, chainclient.ImplAbiStr)
 		addr := types.HexToAddress(implAddress)
 
 		var lrcTokenAddressHex string
@@ -64,7 +64,7 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 		imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
 		registryAddress := types.HexToAddress(registryAddressHex)
 		registry := &chainclient.LoopringRinghashRegistry{}
-		client.NewContract(registry, registryAddress.Hex(), chainclient.CurrentRinghashRegistryAbiStr)
+		client.NewContract(registry, registryAddress.Hex(), chainclient.RinghashRegistryAbiStr)
 		imp.RingHashRegistry = registry
 		protocolImps[addr] = imp
 	}

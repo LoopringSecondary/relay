@@ -58,7 +58,7 @@ func init() {
 	miner.Initialize(globalConfig.Miner, config.CommonOptions{}, ringClient.Chainclient)
 
 	client = ethClient.Client
-	client.NewContract(imp, implAddress, chainclient.CurrentImplAbiStr)
+	client.NewContract(imp, implAddress, chainclient.ImplAbiStr)
 
 	var lrcTokenAddressHex string
 	imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "pending")
@@ -69,7 +69,7 @@ func init() {
 	var registryAddressHex string
 	imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
 	registryAddress := types.HexToAddress(registryAddressHex)
-	client.NewContract(registry, registryAddress.Hex(), chainclient.CurrentRinghashRegistryAbiStr)
+	client.NewContract(registry, registryAddress.Hex(), chainclient.RinghashRegistryAbiStr)
 }
 
 func createOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {

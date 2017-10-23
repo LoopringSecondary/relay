@@ -19,10 +19,10 @@
 package eth
 
 import (
+	"encoding/json"
 	ethch "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"encoding/json"
 )
 
 /*
@@ -36,17 +36,17 @@ const LATEST_BLOCK_NUM = "latestBlockNumber"
 
 //go:generate gencodec -type BlockIndex -field-override blockIndexMarshaling -out gen_blockindex_json.go
 type BlockIndex struct {
-	Number           *big.Int		`json:"number" 		gencodec:"required"`
-	Hash             types.Hash		`json:"hash"		gencodec:"required"`
-	ParentHash       types.Hash		`json:"parentHash"	gencodec:"required"`
+	Number     *big.Int   `json:"number" 		gencodec:"required"`
+	Hash       types.Hash `json:"hash"		gencodec:"required"`
+	ParentHash types.Hash `json:"parentHash"	gencodec:"required"`
 }
 
 type blockIndexMarshaling struct {
-	Number 		*types.Big
+	Number *types.Big
 }
 
 type TransactionIndex struct {
-	Txs 	[]types.Hash 			`json:"txs"	gencodec:"required"`
+	Txs []types.Hash `json:"txs"	gencodec:"required"`
 }
 
 // 存储最近一次使用的blocknumber到db，同时存储blocknumber，blockhash键值对
@@ -101,7 +101,7 @@ func (l *EthClientListener) saveBlockIndex(bi BlockIndex) error {
 // 根据hash查询blockIndex信息
 func (l *EthClientListener) getBlockIndex(key types.Hash) (*BlockIndex, error) {
 	ret := &BlockIndex{}
-	bs, err :=l .blockhashTable.Get(key.Bytes())
+	bs, err := l.blockhashTable.Get(key.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (l *EthClientListener) getBlockIndex(key types.Hash) (*BlockIndex, error) {
 		return nil, err
 	}
 
-	return ret,nil
+	return ret, nil
 }
 
 // 保存block内的所有txHash

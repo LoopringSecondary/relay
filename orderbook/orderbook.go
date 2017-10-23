@@ -49,15 +49,15 @@ type Whisper struct {
 }
 
 type OrderBook struct {
-	options       config.OrderBookOptions
-	commOpts      config.CommonOptions
-	filters       []Filter
-	db            db.Database
-	finishTable   db.Database
-	partialTable  db.Database
-	whisper       *Whisper
-	lock          sync.RWMutex
-	minAmount     *big.Int
+	options      config.OrderBookOptions
+	commOpts     config.CommonOptions
+	filters      []Filter
+	db           db.Database
+	finishTable  db.Database
+	partialTable db.Database
+	whisper      *Whisper
+	lock         sync.RWMutex
+	minAmount    *big.Int
 }
 
 func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database, whisper *Whisper) *OrderBook {
@@ -195,12 +195,6 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
 
 	if err == nil {
 		log.Debugf("chain order exist in:%s", tn)
-
-		// 该orderState已经添加了types.versionData
-
-		// todo:判断订单状态
-
-		// todo:根据订单状态从部分完成表转移到完全完成表
 		if vd, errvd := ord.LatestVersion(); errvd != nil {
 			switch vd.Status {
 			case types.ORDER_PARTIAL:
@@ -210,6 +204,9 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
 				ob.moveOrder(ord)
 
 			case types.ORDER_CANCEL:
+				ob.moveOrder(ord)
+
+			case types.ORDER_REJECT:
 				ob.moveOrder(ord)
 			}
 		}

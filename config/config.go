@@ -22,9 +22,9 @@ import (
 	"errors"
 	"github.com/naoina/toml"
 	"go.uber.org/zap"
+	"math/big"
 	"os"
 	"reflect"
-	"math/big"
 )
 
 func LoadConfig(file string) *GlobalConfig {
@@ -66,8 +66,8 @@ type GlobalConfig struct {
 	Miner       MinerOptions
 	Orderbook   OrderBookOptions
 	Log         zap.Config
-	LogDir 		LogDirOptions
-	BasePath	string
+	LogDir      LogDirOptions
+	BasePath    string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -103,7 +103,7 @@ type CommonOptions struct {
 	LoopringImpAddresses []string `required:"true"`
 	FilterTopics         []string `required:"true"`
 	DefaultBlockNumber   *big.Int `required:"true"`
-	EndBlockNumber		 *big.Int `required:"true"`
+	EndBlockNumber       *big.Int `required:"true"`
 }
 
 type LogDirOptions struct {

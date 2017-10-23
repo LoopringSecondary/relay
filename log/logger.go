@@ -20,8 +20,8 @@ package log
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"github.com/Loopring/ringminer/config"
+	"go.uber.org/zap"
 )
 
 //todo: I'm not sure whether zap support Rotating

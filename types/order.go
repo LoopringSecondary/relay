@@ -82,9 +82,7 @@ func (o *Order) GenerateHash() Hash {
 	if o.BuyNoMoreThanAmountB {
 		buyNoMoreThanAmountB = byte(1)
 	}
-	//todo:check args not empty
-	println("================mark")
-	println(o.Protocol.Hex())
+
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
@@ -143,30 +141,24 @@ func (o *Order) SignerAddress() (Address, error) {
 }
 
 //RateAmountS、FeeSelection 需要提交到contract
-//go:generate gencodec -type FilledOrder -field-override filledOrderMarshaling -out gen_filledorder_json.go
-
 type FilledOrder struct {
-	OrderState       OrderState   `json:"orderState" gencodec:"required"`
-	FeeSelection     uint8        `json:"feeSelection"`     //0 -> lrc
-	RateAmountS      *EnlargedInt `json:"rateAmountS"`      //提交需要
-	AvailableAmountS *big.Int     `json:"availableAmountS"` //需要，也是用于计算fee
-	AvailableAmountB *big.Int     //需要，也是用于计算fee
-	FillAmountS      *EnlargedInt `json:"fillAmountS"`
-	FillAmountB      *EnlargedInt `json:"fillAmountB"` //计算需要
-	LrcReward        *EnlargedInt `json:"lrcReward"`
-	LrcFee           *EnlargedInt `json:"lrcFee"`
-	FeeS             *EnlargedInt `json:"feeS"`
+	OrderState       OrderState `json:"orderState" gencodec:"required"`
+	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
+	RateAmountS      *big.Rat   `json:"rateAmountS"`      //提交需要
+	AvailableAmountS *big.Rat   `json:"availableAmountS"` //需要，也是用于计算fee
+	AvailableAmountB *big.Rat   //需要，也是用于计算fee
+	FillAmountS      *big.Rat   `json:"fillAmountS"`
+	FillAmountB      *big.Rat   `json:"fillAmountB"` //计算需要
+	LrcReward        *big.Rat   `json:"lrcReward"`
+	LrcFee           *big.Rat   `json:"lrcFee"`
+	FeeS             *big.Rat   `json:"feeS"`
 	//FeeB             *EnlargedInt
-	LegalFee *EnlargedInt `json:"legalFee"` //法币计算的fee
+	LegalFee *big.Rat `json:"legalFee"` //法币计算的fee
 
-	EnlargedSPrice *EnlargedInt `json:"enlargedSPrice"`
-	EnlargedBPrice *EnlargedInt `json:"enlargedBPrice"`
+	SPrice *big.Rat `json:"SPrice"`
+	BPrice *big.Rat `json:"BPrice"`
 
 	//FullFilled	bool	//this order is fullfilled
-}
-
-type filledOrderMarshaling struct {
-	AvailableAmountS *Big
 }
 
 //todo: impl it
@@ -207,7 +199,4 @@ func (ord *OrderState) LatestVersion() (VersionData, error) {
 // 放到common package 根据配置决定状态
 func (ord *OrderState) SettleStatus() {
 
-}
-
-type OrderMined struct {
 }

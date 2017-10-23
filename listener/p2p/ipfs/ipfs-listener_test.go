@@ -20,60 +20,66 @@ package ipfs_test
 
 import (
 	"encoding/json"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
-	"os"
 )
 
 const (
-	TokenAddressA   = "0x359bbea6ade5155bce1e95918879903d3e93365f"
-	TokenAddressB   = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
+	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
 )
 
-func TestNewOrders(t *testing.T) {
-	gopath := os.Getenv("GOPATH")
-	confPath := gopath + "/src/"
-	globalConfig := config.LoadConfig(confPath + "github.com/Loopring/ringminer/config/ringminer.toml")
-	log.Initialize(globalConfig.Log, globalConfig.LogDir)
+var testParams *test.TestParams
 
-	addrStr := globalConfig.Common.LoopringImpAddresses[0]
-	implAddress := types.HexToAddress(addrStr)
+func init() {
+	testParams = test.LoadConfigAndGenerateTestParams()
+}
 
+func TestPrepareAccount(t *testing.T) {
+	testParams.TestPrepareData()
+	t.Log("success")
+}
+
+/*
+fullhash=0x521fe41301c4b567b22212fc8b464396a719786ca559bd659f6f146cef59a546 recipient=0x937Ff659c8a9D85aAC39dfA84c4b49Bb7C9b226E
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0x866d5a7c44a0a12088681734f1724334c4a0c152ed760bc995f59fe1676af310 recipient=0x937Ff659c8a9D85aAC39dfA84c4b49Bb7C9b226E
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0xcd172bda3ab2680e70761d1bd70711694501a3ea463bb514f326aeeacb647ee3 recipient=0x8711aC984e6ce2169a2a6bd83eC15332c366Ee4F
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0x967ec954d366a6f8200747d18576834bbc30bbcfa37d63943948520d18c0e189 recipient=0x8711aC984e6ce2169a2a6bd83eC15332c366Ee4F
+*/
+func TestOrdersOfRing(t *testing.T) {
 	sh := shell.NewLocalShell()
 
 	suffix := "0"
 
 	//scheme 1:MarginSplitPercentage = 0
-	amountS1, _ := new(big.Int).SetString("10000"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("100000"+suffix, 0)
+	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
 		types.HexToAddress(TokenAddressA),
 		types.HexToAddress(TokenAddressB),
-		implAddress,
+		testParams.ImplAddress,
 		amountS1,
 		amountB1,
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
-	order1.Owner = types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
 	data1, _ := json.Marshal(order1)
 	pubMessage(sh, string(data1))
 
-	amountS2, _ := new(big.Int).SetString("200000"+suffix, 0)
-	amountB2, _ := new(big.Int).SetString("10000"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
-		types.HexToAddress(TokenAddressA),
 		types.HexToAddress(TokenAddressB),
-		implAddress,
+		types.HexToAddress(TokenAddressA),
+		testParams.ImplAddress,
 		amountS2,
 		amountB2,
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
+		types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
 	)
-	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 	data2, _ := json.Marshal(order2)
 	pubMessage(sh, string(data2))
 }

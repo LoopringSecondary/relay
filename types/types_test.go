@@ -19,7 +19,6 @@
 package types_test
 
 import (
-	"encoding/json"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
@@ -65,23 +64,6 @@ func TestHash(t *testing.T) {
 	//h := types.HexToHash(s)
 	//t.Log(h.Hex())
 	//println(fmt.Sprintf(`Header(%x)`, h.Bytes()))
-	a := &A{}
-	i := &types.EnlargedInt{}
-	i.Decimals = big.NewInt(1000)
-	i.Value = big.NewInt(10000)
-	a.I = i
-	a.Name = "dd"
-
-	dataBytes, _ := json.Marshal(a)
-	println(string(dataBytes))
-
-	s := `{"I":"0x0a","Name":"l"}`
-
-	a1 := &A{}
-	json.Unmarshal([]byte(s), a1)
-	println(a1.I.Decimals.String())
-	println(a1.I.Value.String())
-	println(a1.Name)
 }
 
 func TestAddress(t *testing.T) {
@@ -90,9 +72,4 @@ func TestAddress(t *testing.T) {
 	//addr := &types.Address{}
 	//addr.SetBytes(types.Hex2Bytes(s))
 	t.Log(addr.Hex())
-}
-
-type A struct {
-	I    *types.EnlargedInt
-	Name string `json:"-"`
 }

@@ -106,21 +106,20 @@ func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *ExchangeRateProvider) GetLegalRate(tokenAddress types.Address) *types.EnlargedInt {
-	decimals := big.NewInt(10000000)
+func (p *ExchangeRateProvider) GetLegalRate(tokenAddress types.Address) *big.Rat {
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
-		v := new(big.Int)
+		v := new(big.Rat)
 		switch p.currency {
 		case CNY:
-			v = new(big.Int).SetInt64(int64(c.PriceCny * float64(decimals.Int64())))
+			v = v.SetFloat64(c.PriceCny)
 		case USD:
-			v = new(big.Int).SetInt64(int64(c.PriceUsd * float64(decimals.Int64())))
+			v = v.SetFloat64(c.PriceUsd)
 		case BTC:
-			v = new(big.Int).SetInt64(int64(c.PriceBtc * float64(decimals.Int64())))
+			v = v.SetFloat64(c.PriceBtc)
 		}
-		return &types.EnlargedInt{Value: v, Decimals: decimals}
+		return v
 	} else {
-		return &types.EnlargedInt{Value: big.NewInt(1), Decimals: big.NewInt(100)}
+		return new(big.Rat).SetInt64(int64(1))
 	}
 }
 

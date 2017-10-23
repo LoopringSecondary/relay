@@ -92,12 +92,12 @@ type LogParameter struct {
 }
 
 type TransactionReceipt struct {
-	TransactionHash 	types.Hash			`json:"transactionHash"`
-	TransactionIndex 	types.Big			`json:"transactionIndex"`
-	BlockHash 			types.Hash			`json:"blockHash"`
-	BlockNumber 		types.Big			`json:"blockNumber"`
-	CumulativeGasUsed	types.Big			`json:"cumulativeGasUsed"`
-	GasUsed				types.Big			`json:"gasUsed"`
-	ContractAddress 	types.Address		`json:"contractAddress"`
-	Logs 				[]Log				`json:"logs"`
+	TransactionHash   types.Hash    `json:"transactionHash"`
+	TransactionIndex  types.Big     `json:"transactionIndex"`
+	BlockHash         types.Hash    `json:"blockHash"`
+	BlockNumber       types.Big     `json:"blockNumber"`
+	CumulativeGasUsed types.Big     `json:"cumulativeGasUsed"`
+	GasUsed           types.Big     `json:"gasUsed"`
+	ContractAddress   types.Address `json:"contractAddress"`
+	Logs              []Log         `json:"logs"`
 }
