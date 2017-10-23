@@ -29,6 +29,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"fmt"
 )
 
 type AbiMethod struct {
@@ -36,6 +37,10 @@ type AbiMethod struct {
 	Abi     *abi.ABI
 	Address string
 	Client  *EthClient
+}
+
+func (m *AbiMethod) Id() string {
+	return m.Id()
 }
 
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
@@ -103,6 +108,15 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasP
 	return m.doSendTransaction(from, gas, gasPrice, dataBytes)
 }
 
+type sendArgs struct {
+	From     common.Address  `json:"from"`
+	To       common.Address `json:"to"`
+	Gas      string   `json:"gas"`
+	GasPrice string `json:"gasPrice"`
+	Value    string    `json:"value"`
+	Data     string   `json:"data"`
+	Nonce    string `json:"nonce"`
+}
 
 func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int, data []byte ) (string,error) {
 	var txHash string
@@ -122,7 +136,16 @@ func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int
 	if _,exists := m.Client.senders[from]; exists {
 		err = m.Client.SignAndSendTransaction(&txHash, from, transaction)
 	} else {
-		err = m.Client.SendTransaction(&txHash, from, transaction)
+		args := &sendArgs{
+			From:common.HexToAddress(from.Hex()),
+			To:common.HexToAddress(m.Address),
+			Gas:fmt.Sprintf("%#x", gas),
+			GasPrice:fmt.Sprintf("%#x", gasPrice),
+			Value:fmt.Sprintf("%#x", big.NewInt(int64(0))),
+			Data:common.ToHex(data),
+			Nonce:fmt.Sprintf("%#x", nonce.BigInt()),
+		}
+		err = m.Client.SendTransaction(&txHash, args)
 	}
 	return txHash,err
 }
