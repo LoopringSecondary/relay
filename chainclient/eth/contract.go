@@ -72,18 +72,16 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 		return "", err
 	}
 
-	dataHex := common.ToHex(dataBytes)
 	callArg := &CallArg{}
 	callArg.From = from.Hex()
 	callArg.To = m.Address
-	callArg.Data = dataHex
+	callArg.Data = common.ToHex(dataBytes)
 	callArg.GasPrice = *gasPrice
 	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err
 	}
 
-	//todo: m.Abi.Pack is double used
-	return m.SendTransactionWithSpecificGas(from, gas.ToInt(), gasPrice.ToInt(), args...)
+	return m.doSendTransaction(from, gas.ToInt(), gasPrice.ToInt(), dataBytes)
 }
 
 func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
@@ -101,6 +99,14 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasP
 		return "", errors.New("gas must be setted.")
 	}
 
+
+	return m.doSendTransaction(from, gas, gasPrice, dataBytes)
+}
+
+
+func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int, data []byte ) (string,error) {
+	var txHash string
+	var err error
 	var nonce types.Big
 	if err = m.Client.GetTransactionCount(&nonce, from.Hex(), "pending"); nil != err {
 		return "", err
@@ -111,11 +117,14 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasP
 		big.NewInt(0),
 		gas,
 		gasPrice,
-		dataBytes)
-	var txHash string
+		data)
 
-	err = m.Client.SignAndSendTransaction(&txHash, from, transaction)
-	return txHash, err
+	if _,exists := m.Client.senders[from]; exists {
+		err = m.Client.SignAndSendTransaction(&txHash, from, transaction)
+	} else {
+		err = m.Client.SendTransaction(&txHash, from, transaction)
+	}
+	return txHash,err
 }
 
 type AbiEvent struct {

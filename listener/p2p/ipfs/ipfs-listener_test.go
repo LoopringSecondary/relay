@@ -20,8 +20,6 @@ package ipfs_test
 
 import (
 	"encoding/json"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
@@ -29,11 +27,14 @@ import (
 	"testing"
 )
 
-func TestB(t *testing.T) {
-	globalConfig := config.LoadConfig("../../../config/ringminer.toml")
-	log.Initialize(globalConfig.Log)
 
-	implAddress := globalConfig.Common.LoopringImpAddresses[0]
+var testParams *test.TestParams
+
+func init() {
+	testParams = test.LoadConfigAndGenerateTestParams()
+}
+
+func TestOrdersOfRing(t *testing.T) {
 
 	sh := shell.NewLocalShell()
 
@@ -45,12 +46,12 @@ func TestB(t *testing.T) {
 	order1 := test.CreateOrder(
 		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
-		types.HexToAddress(implAddress),
+		testParams.ImplAddress,
 		amountS1,
 		amountB1,
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
-	order1.Owner = types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
 	data1, _ := json.Marshal(order1)
 	pubMessage(sh, string(data1))
 
@@ -59,12 +60,12 @@ func TestB(t *testing.T) {
 	order2 := test.CreateOrder(
 		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
 		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-		types.HexToAddress(implAddress),
+		testParams.ImplAddress,
 		amountS2,
 		amountB2,
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
+		types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
 	)
-	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 	data2, _ := json.Marshal(order2)
 	pubMessage(sh, string(data2))
 }
