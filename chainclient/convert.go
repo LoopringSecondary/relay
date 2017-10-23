@@ -17,12 +17,8 @@ func (e *OrderFilledEvent) ConvertDown(r *types.OrderState) error {
 	// orderState更新时间
 	r.RawOrder.Timestamp = e.Time
 
-	rawAmountS := types.NewEnlargedInt(r.RawOrder.AmountS)
-	rawAmountB := types.NewEnlargedInt(r.RawOrder.AmountB)
-	evtAmountS := types.NewEnlargedInt(e.AmountS)
-	evtAmountB := types.NewEnlargedInt(e.AmountB)
-	remainAmountS := rawAmountS.Sub(rawAmountS, evtAmountS).Value
-	remainAmountB := rawAmountB.Sub(rawAmountB, evtAmountB).Value
+	remainAmountS := new(big.Int).Sub(r.RawOrder.AmountS, e.AmountS)
+	remainAmountB := new(big.Int).Sub(r.RawOrder.AmountB, e.AmountB)
 
 	if remainAmountS.Cmp(big.NewInt(0)) < 0 {
 		return errors.New("orderhash:"+rawOrderHashHex+" remainAmountS " + remainAmountS.String() + "error")
