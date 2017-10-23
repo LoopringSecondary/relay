@@ -111,7 +111,8 @@ func (ob *OrderBook) filter(o *types.Order) (bool, error) {
 
 // Start start orderbook as a service
 func (ob *OrderBook) Start() {
-	//ob.recoverOrder()
+	// todo: add after debug
+	// ob.recoverOrder()
 
 	go func() {
 		for {
@@ -149,9 +150,11 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 	state.RawOrder = *ord
 	state.RawOrder.Hash = ord.GenerateHash()
 
+	orderhash := state.RawOrder.Hash.Hex()
+	log.Debugf("ipfs new order hash:%s", orderhash)
+
 	// 之前从未存储过
 	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
-		log.Debugf("ipfs new order hash:%s", state.RawOrder.Hash.Hex())
 		vd := types.VersionData{}
 		vd.RemainedAmountB = state.RawOrder.AmountB
 		vd.RemainedAmountS = state.RawOrder.AmountS
@@ -161,9 +164,21 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 		if bs, err := json.Marshal(state); err != nil {
 			log.Errorf("ipfs order marshal error:%s", err.Error())
 		} else {
-			ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs)
-			ob.whisper.EngineOrderChan <- state
+			if errsv := ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs); err != nil {
+				log.Errorf("ipfs order save error:%s", errsv.Error())
+			} else {
+				// todo: delete after test
+				log.Debugf("protocol:%s", state.RawOrder.Protocol.Hex())
+				log.Debugf("tokenS:%s", state.RawOrder.TokenS.Hex())
+				log.Debugf("tokenB:%s", state.RawOrder.TokenB.Hex())
+				log.Debugf("amounts:%s", state.RawOrder.AmountS.String())
+				log.Debugf("amountb:%s", state.RawOrder.AmountB.String())
+
+				ob.whisper.EngineOrderChan <- state
+			}
 		}
+	} else {
+		log.Errorf("order %s already exist", orderhash)
 	}
 }
 

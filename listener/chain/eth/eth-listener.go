@@ -86,60 +86,62 @@ func (l *EthClientListener) Start() {
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
 
-	for {
-		// get block data
-		inter, err := l.ethClient.BlockIterator(start, end).Next()
-		if err != nil {
-			log.Errorf("get block hash error:%s", err.Error())
-			continue
-		}
-
-		// save block index
-		block := inter.(*eth.BlockWithTxObject)
-		if len(block.Transactions) < 1 {
-			log.Errorf("block transaction empty error")
-		}
-		if err := l.saveBlock(block); err != nil {
-			log.Errorf("get block hash error:%s", err.Error())
-			continue
-		}
-
-		// get transactions with blockhash
-		txs := []types.Hash{}
-		for _, tx := range block.Transactions {
-
-			// 判断合约地址是否合法
-			if !l.judgeContractAddress(tx.To) {
+	// get block data
+	inter, err := l.ethClient.BlockIterator(start, end).Next()
+	if err != nil {
+		log.Errorf("get block hash error:%s", err.Error())
+	} else {
+		for {
+			// save block index
+			block := inter.(*eth.BlockWithTxObject)
+			if len(block.Transactions) < 1 {
+				log.Errorf("block transaction empty error")
+			}
+			if err := l.saveBlock(block); err != nil {
+				log.Errorf("get block hash error:%s", err.Error())
 				continue
 			}
 
-			// 解析method，获得ring内等orders并发送到orderbook保存
-			l.doMethod(tx.Input)
+			// todo: delete after test
+			log.Debugf("eth listener get block:%i", block.Number.Uint64())
 
-			// 解析event,并发送到orderbook
-			var receipt eth.TransactionReceipt
-			err := l.ethClient.GetTransactionReceipt(&receipt, tx)
-			if err != nil {
-				log.Errorf("eth listener get transaction receipt error:%s", err.Error())
-				continue
-			}
-			for _, v := range receipt.Logs {
-				if err := l.doEvent(v); err != nil {
-					log.Errorf("eth listener do event error:%s",  err.Error())
+			// get transactions with blockhash
+			txs := []types.Hash{}
+			for _, tx := range block.Transactions {
+
+				// 判断合约地址是否合法
+				if !l.judgeContractAddress(tx.To) {
+					log.Errorf("contract address %s invalid", tx.To)
+					continue
 				}
+
+				// 解析method，获得ring内等orders并发送到orderbook保存
+				l.doMethod(tx.Input)
+
+				// 解析event,并发送到orderbook
+				var receipt eth.TransactionReceipt
+				err := l.ethClient.GetTransactionReceipt(&receipt, tx)
+				if err != nil {
+					log.Errorf("eth listener get transaction receipt error:%s", err.Error())
+					continue
+				}
+				for _, v := range receipt.Logs {
+					if err := l.doEvent(v); err != nil {
+						log.Errorf("eth listener do event error:%s",  err.Error())
+					}
+				}
+
+				txhash := types.HexToHash(tx.Hash)
+				txs = append(txs, txhash)
 			}
 
-			txhash := types.HexToHash(tx.Hash)
-			txs = append(txs, txhash)
-		}
+			if  err := l.saveTransactions(block.Hash, txs); err != nil {
+				log.Errorf("eth listener save transactions error:%s", err.Error())
+				continue
+			}
 
-		if  err := l.saveTransactions(block.Hash, txs); err != nil {
-			log.Errorf("eth listener save transactions error:%s", err.Error())
-			continue
 		}
-
 	}
-
 }
 
 func (l *EthClientListener) Stop() {
@@ -175,6 +177,10 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 
 	topic := v.Topics[0]
 	data := hexutil.MustDecode(v.Data)
+
+	// todo:delete after test
+	log.Debugf("eth log data:%s", v.Data)
+	log.Debugf("eth log topic:%s", topic)
 
 	switch topic {
 	case impl.OrderFilled.Id():

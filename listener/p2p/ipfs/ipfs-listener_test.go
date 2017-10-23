@@ -27,24 +27,33 @@ import (
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
+	"os"
 )
 
-func TestB(t *testing.T) {
-	globalConfig := config.LoadConfig("../../config/ringminer.toml")
-	log.Initialize(globalConfig.Log)
+const (
+	TokenAddressA   = "0x359bbea6ade5155bce1e95918879903d3e93365f"
+	TokenAddressB   = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+)
 
-	implAddress := globalConfig.Common.LoopringImpAddresses[0]
+func TestNewOrders(t *testing.T) {
+	gopath := os.Getenv("GOPATH")
+	confPath := gopath + "/src/"
+	globalConfig := config.LoadConfig(confPath + "github.com/Loopring/ringminer/config/ringminer.toml")
+	log.Initialize(globalConfig.Log, globalConfig.LogDir)
+
+	addrStr := globalConfig.Common.LoopringImpAddresses[0]
+	implAddress := types.HexToAddress(addrStr)
 
 	sh := shell.NewLocalShell()
 
 	suffix := "0"
 
 	//scheme 1:MarginSplitPercentage = 0
-	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountS1, _ := new(big.Int).SetString("10000"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("100000"+suffix, 0)
 	order1 := test.CreateOrder(
-		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
+		types.HexToAddress(TokenAddressA),
+		types.HexToAddress(TokenAddressB),
 		implAddress,
 		amountS1,
 		amountB1,
@@ -54,11 +63,11 @@ func TestB(t *testing.T) {
 	data1, _ := json.Marshal(order1)
 	pubMessage(sh, string(data1))
 
-	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
-	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("200000"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("10000"+suffix, 0)
 	order2 := test.CreateOrder(
-		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
-		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		types.HexToAddress(TokenAddressA),
+		types.HexToAddress(TokenAddressB),
 		implAddress,
 		amountS2,
 		amountB2,

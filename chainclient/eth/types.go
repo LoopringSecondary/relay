@@ -21,7 +21,6 @@ package eth
 import (
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 )
 
 //todo:need to modify

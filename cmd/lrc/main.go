@@ -65,7 +65,7 @@ func main() {
 		//	panic(err)
 		//}
 
-		logger = log.Initialize(globalConfig.Log)
+		logger = log.Initialize(globalConfig.Log, globalConfig.LogDir)
 		return nil
 	}
 

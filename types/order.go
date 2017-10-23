@@ -83,6 +83,8 @@ func (o *Order) GenerateHash() Hash {
 		buyNoMoreThanAmountB = byte(1)
 	}
 	//todo:check args not empty
+	println("================mark")
+	println(o.Protocol.Hex())
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),

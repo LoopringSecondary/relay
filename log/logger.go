@@ -21,6 +21,7 @@ package log
 import (
 	"encoding/json"
 	"go.uber.org/zap"
+	"github.com/Loopring/ringminer/config"
 )
 
 //todo: I'm not sure whether zap support Rotating
@@ -44,7 +45,8 @@ const logConfig = `{
 	  }
 	}`
 
-func Initialize(cfg zap.Config) *zap.Logger {
+// todo: combine configs
+func Initialize(cfg zap.Config, logDirConf config.LogDirOptions) *zap.Logger {
 	rawJSON := []byte(logConfig)
 
 	var err error
@@ -52,6 +54,9 @@ func Initialize(cfg zap.Config) *zap.Logger {
 	if err = json.Unmarshal(rawJSON, &cfg); err != nil {
 		panic(err)
 	}
+
+	cfg.OutputPaths = logDirConf.LogPath
+	cfg.ErrorOutputPaths = logDirConf.ErrPath
 
 	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	//"callerKey":"C"

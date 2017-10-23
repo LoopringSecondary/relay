@@ -45,6 +45,12 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
+	gopath := os.Getenv("GOPATH")
+	c.BasePath = gopath + "/src/"
+
+	// todo: delete after test
+	println(c.BasePath)
+
 	return c
 }
 
@@ -60,6 +66,8 @@ type GlobalConfig struct {
 	Miner       MinerOptions
 	Orderbook   OrderBookOptions
 	Log         zap.Config
+	LogDir 		LogDirOptions
+	BasePath	string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -96,6 +104,11 @@ type CommonOptions struct {
 	FilterTopics         []string `required:"true"`
 	DefaultBlockNumber   *big.Int `required:"true"`
 	EndBlockNumber		 *big.Int `required:"true"`
+}
+
+type LogDirOptions struct {
+	LogPath []string `required:"true"`
+	ErrPath []string `required:"true"`
 }
 
 type MinerOptions struct {
