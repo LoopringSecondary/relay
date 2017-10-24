@@ -45,7 +45,7 @@ type TestParams struct {
 	TokenRegistryAddress types.Address
 	Accounts             map[string]string
 	TokenAddrs           []string
-	Config 				 *config.GlobalConfig
+	Config               *config.GlobalConfig
 }
 
 var testAccounts = map[string]string{
@@ -202,7 +202,7 @@ func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []
 	}
 }
 
-func (testParams *TestParams) CheckAllowance(tokenAddress,account string) {
+func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
 	var result types.Big
 	token := &chainclient.Erc20Token{}
 	testParams.Client.NewContract(token, tokenAddress, chainclient.Erc20TokenAbiStr)
@@ -212,4 +212,3 @@ func (testParams *TestParams) CheckAllowance(tokenAddress,account string) {
 		println(result.BigInt().String())
 	}
 }
-
