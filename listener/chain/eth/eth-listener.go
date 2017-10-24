@@ -108,7 +108,7 @@ func (l *EthClientListener) Start() {
 			continue
 		}
 
-		log.Debugf("eth listener get block:%i", block.Number.Uint64())
+		log.Debugf("eth listener get block:%d", block.Number.Uint64())
 
 		// get transactions with blockhash
 		txs := []types.Hash{}
@@ -128,11 +128,14 @@ func (l *EthClientListener) Start() {
 
 			// 解析event,并发送到orderbook
 			var receipt eth.TransactionReceipt
-			err := l.ethClient.GetTransactionReceipt(&receipt, tx)
+			err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash)
 			if err != nil {
 				log.Errorf("eth listener get transaction receipt error:%s", err.Error())
 				continue
 			}
+
+			log.Debugf("transaction receipt  event logs number:%d", len(receipt.Logs))
+
 			for _, v := range receipt.Logs {
 				if err := l.doEvent(v); err != nil {
 					log.Errorf("eth listener do event error:%s", err.Error())

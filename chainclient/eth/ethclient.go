@@ -223,6 +223,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		hasNext:
 			for {
 				select {
+				// todo(fk):modify this duration
 				case <-time.After(time.Duration(3 * time.Second)):
 					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil == err1 && nil != block {
 						break hasNext
