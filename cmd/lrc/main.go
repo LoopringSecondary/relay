@@ -29,7 +29,6 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"
-	"reflect"
 	"sort"
 )
 
@@ -77,7 +76,7 @@ func main() {
 		//	panic(err)
 		//}
 
-		logger = log.Initialize(globalConfig.Log)
+		logger = log.Initialize(globalConfig.Log, globalConfig.LogDir)
 		return nil
 	}
 

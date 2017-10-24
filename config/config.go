@@ -45,6 +45,12 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
+	gopath := os.Getenv("GOPATH")
+	c.BasePath = gopath + "/src/"
+
+	// todo: delete after test
+	println(c.BasePath)
+
 	return c
 }
 
@@ -60,6 +66,8 @@ type GlobalConfig struct {
 	Miner       MinerOptions
 	Orderbook   OrderBookOptions
 	Log         zap.Config
+	LogDir      LogDirOptions
+	BasePath    string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -96,6 +104,11 @@ type CommonOptions struct {
 	DefaultBlockNumber   *big.Int `required:"true"`
 	EndBlockNumber       *big.Int `required:"true"`
 	Passphrase           string   `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+}
+
+type LogDirOptions struct {
+	LogPath []string `required:"true"`
+	ErrPath []string `required:"true"`
 }
 
 type MinerOptions struct {

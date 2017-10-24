@@ -111,7 +111,8 @@ func (ob *OrderBook) filter(o *types.Order) (bool, error) {
 
 // Start start orderbook as a service
 func (ob *OrderBook) Start() {
-	//ob.recoverOrder()
+	// todo: add after debug
+	// ob.recoverOrder()
 
 	go func() {
 		for {
@@ -140,18 +141,20 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
+	log.Debugf("orderbook accept data from peer:%s", ord.Protocol.Hex())
 	if valid, err := ob.filter(ord); !valid {
-		log.Errorf("receive order but valid failed:%s", err.Error())
+		log.Errorf("orderbook receive order but valid failed:%s", err.Error())
 	}
 
 	state := &types.OrderState{}
 	state.RawOrder = *ord
 	state.RawOrder.Hash = ord.GenerateHash()
 
+	orderhash := state.RawOrder.Hash.Hex()
+	log.Debugf("orderbook new order hash:%s", orderhash)
+
 	// 之前从未存储过
 	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
-		log.Debugf("ipfs new order hash:%s", state.RawOrder.Hash.Hex())
 		vd := types.VersionData{}
 		vd.RemainedAmountB = state.RawOrder.AmountB
 		vd.RemainedAmountS = state.RawOrder.AmountS
@@ -159,11 +162,23 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 
 		state.States = append(state.States, vd)
 		if bs, err := json.Marshal(state); err != nil {
-			log.Errorf("ipfs order marshal error:%s", err.Error())
+			log.Errorf("orderbook order marshal error:%s", err.Error())
 		} else {
-			ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs)
-			ob.whisper.EngineOrderChan <- state
+			if errsv := ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs); err != nil {
+				log.Errorf("orderbook order save error:%s", errsv.Error())
+			} else {
+				// todo: delete after test
+				log.Debugf("orderbook protocol:%s", state.RawOrder.Protocol.Hex())
+				log.Debugf("orderbook tokenS:%s", state.RawOrder.TokenS.Hex())
+				log.Debugf("orderbook tokenB:%s", state.RawOrder.TokenB.Hex())
+				log.Debugf("orderbook amountS:%s", state.RawOrder.AmountS.String())
+				log.Debugf("orderbook amountB:%s", state.RawOrder.AmountB.String())
+
+				ob.whisper.EngineOrderChan <- state
+			}
 		}
+	} else {
+		log.Errorf("order %s already exist", orderhash)
 	}
 }
 
@@ -180,12 +195,6 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
 
 	if err == nil {
 		log.Debugf("chain order exist in:%s", tn)
-
-		// 该orderState已经添加了types.versionData
-
-		// todo:判断订单状态
-
-		// todo:根据订单状态从部分完成表转移到完全完成表
 		if vd, errvd := ord.LatestVersion(); errvd != nil {
 			switch vd.Status {
 			case types.ORDER_PARTIAL:
@@ -195,6 +204,9 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
 				ob.moveOrder(ord)
 
 			case types.ORDER_CANCEL:
+				ob.moveOrder(ord)
+
+			case types.ORDER_REJECT:
 				ob.moveOrder(ord)
 			}
 		}

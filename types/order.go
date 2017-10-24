@@ -82,7 +82,7 @@ func (o *Order) GenerateHash() Hash {
 	if o.BuyNoMoreThanAmountB {
 		buyNoMoreThanAmountB = byte(1)
 	}
-	//todo:check args not empty
+
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
@@ -199,7 +199,4 @@ func (ord *OrderState) LatestVersion() (VersionData, error) {
 // 放到common package 根据配置决定状态
 func (ord *OrderState) SettleStatus() {
 
-}
-
-type OrderMined struct {
 }

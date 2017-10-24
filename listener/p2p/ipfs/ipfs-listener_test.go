@@ -20,6 +20,7 @@ package ipfs_test
 
 import (
 	"encoding/json"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
@@ -31,10 +32,30 @@ var testParams *test.TestParams
 
 func init() {
 	testParams = test.LoadConfigAndGenerateTestParams()
+	log.Infof("contract address:%s", testParams.ImplAddress.Hex())
+	log.Infof("delegate address:%s", testParams.DelegateAddress.Hex())
+	log.Infof("register address:%s", testParams.TokenRegistryAddress.Hex())
 }
 
-func TestOrdersOfRing(t *testing.T) {
+func TestPrepareAccount(t *testing.T) {
+	testParams.PrepareTestData()
+}
 
+func TestCheckAllowance(t *testing.T) {
+	//testParams.CheckAllowance(test.TokenAddressA, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	//testParams.CheckAllowance(test.TokenAddressA, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	//testParams.CheckAllowance(test.TokenAddressB, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	//testParams.CheckAllowance(test.TokenAddressB, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	testParams.IsTestDataReady()
+}
+
+/*
+fullhash=0x521fe41301c4b567b22212fc8b464396a719786ca559bd659f6f146cef59a546 recipient=0x937Ff659c8a9D85aAC39dfA84c4b49Bb7C9b226E
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0x866d5a7c44a0a12088681734f1724334c4a0c152ed760bc995f59fe1676af310 recipient=0x937Ff659c8a9D85aAC39dfA84c4b49Bb7C9b226E
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0xcd172bda3ab2680e70761d1bd70711694501a3ea463bb514f326aeeacb647ee3 recipient=0x8711aC984e6ce2169a2a6bd83eC15332c366Ee4F
+INFO [10-23|16:31:24] Submitted transaction                    fullhash=0x967ec954d366a6f8200747d18576834bbc30bbcfa37d63943948520d18c0e189 recipient=0x8711aC984e6ce2169a2a6bd83eC15332c366Ee4F
+*/
+func TestOrdersOfRing(t *testing.T) {
 	sh := shell.NewLocalShell()
 
 	suffix := "0"
@@ -43,8 +64,8 @@ func TestOrdersOfRing(t *testing.T) {
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
-		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
+		types.HexToAddress(test.TokenAddressA),
+		types.HexToAddress(test.TokenAddressB),
 		testParams.ImplAddress,
 		amountS1,
 		amountB1,
@@ -57,8 +78,8 @@ func TestOrdersOfRing(t *testing.T) {
 	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
-		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
-		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		types.HexToAddress(test.TokenAddressB),
+		types.HexToAddress(test.TokenAddressA),
 		testParams.ImplAddress,
 		amountS2,
 		amountB2,
@@ -70,7 +91,8 @@ func TestOrdersOfRing(t *testing.T) {
 }
 
 func pubMessage(sh *shell.Shell, data string) {
-	err := sh.PubSubPublish("test_topic", data)
+	topic := testParams.Config.Ipfs.Topic
+	err := sh.PubSubPublish(topic, data)
 	if err != nil {
 		panic(err.Error())
 	}
