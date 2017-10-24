@@ -80,7 +80,7 @@ type Log struct {
 	Address          string    `json:"address"`
 	Data             string    `json:"data"`
 	Topics           []string  `json:"topics"`
-	Removed 		 bool 		`json:"removed"`
+	Removed          bool      `json:"removed"`
 }
 
 type FilterQuery struct {
@@ -95,16 +95,16 @@ type LogParameter struct {
 }
 
 type TransactionReceipt struct {
-	BlockHash         string 		`json:"blockHash"`
-	BlockNumber       types.Big     `json:"blockNumber"`
-	ContractAddress   string 		`json:"contractAddress"`
-	CumulativeGasUsed types.Big     `json:"cumulativeGasUsed"`
-	From 				string 		`json:"from"`
-	GasUsed           types.Big     `json:"gasUsed"`
-	Logs              []Log         `json:"logs"`
-	LogsBloom 			string 		`json:"logsBloom"`
-	Root 				string 		`json:"root"`
-	To 					string 		`json:"to"`
-	TransactionHash   string    	`json:"transactionHash"`
-	TransactionIndex  types.Big     `json:"transactionIndex"`
+	BlockHash         string    `json:"blockHash"`
+	BlockNumber       types.Big `json:"blockNumber"`
+	ContractAddress   string    `json:"contractAddress"`
+	CumulativeGasUsed types.Big `json:"cumulativeGasUsed"`
+	From              string    `json:"from"`
+	GasUsed           types.Big `json:"gasUsed"`
+	Logs              []Log     `json:"logs"`
+	LogsBloom         string    `json:"logsBloom"`
+	Root              string    `json:"root"`
+	To                string    `json:"to"`
+	TransactionHash   string    `json:"transactionHash"`
+	TransactionIndex  types.Big `json:"transactionIndex"`
 }
