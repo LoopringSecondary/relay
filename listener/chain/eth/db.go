@@ -50,7 +50,7 @@ type TransactionIndex struct {
 }
 
 // 存储最近一次使用的blocknumber到db，同时存储blocknumber，blockhash键值对
-func (l *EthClientListener) saveBlock(block *ethch.BlockWithTxObject) error {
+func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 	bi := createBlockIndex(block)
 
 	// 存储最近一次使用的blocknumber
@@ -158,7 +158,7 @@ func bytesToBlockNumber(bs []byte) (*big.Int, error) {
 	return n, nil
 }
 
-func createBlockIndex(block *ethch.BlockWithTxObject) BlockIndex {
+func createBlockIndex(block ethch.BlockWithTxObject) BlockIndex {
 	i := BlockIndex{}
 	i.Number = block.Number.BigInt()
 	i.Hash = block.Hash

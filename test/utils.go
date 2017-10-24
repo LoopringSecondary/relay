@@ -54,9 +54,14 @@ var testAccounts = map[string]string{
 }
 
 const (
-	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
-	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+	TokenAddressA = "0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"
+	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
 )
+
+//const (
+//	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
+//	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+//)
 
 var testTokens = []string{TokenAddressA, TokenAddressB}
 

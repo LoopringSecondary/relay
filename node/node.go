@@ -80,7 +80,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 }
 
 func (n *Node) Start() {
-	//n.chainListener.Start()
+	n.chainListener.Start()
 	n.p2pListener.Start()
 	n.miner.Start()
 	n.orderbook.Start()

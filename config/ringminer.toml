@@ -23,7 +23,7 @@ port = 8080
 topic = "test1_topic"
 
 [chain_client]
-raw_url = "http://127.0.0.1:8545"
+raw_url = "http://10.137.105.46:8545"
 [chain_client.senders]
 "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
 "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
@@ -32,9 +32,9 @@ raw_url = "http://127.0.0.1:8545"
         gas_limit = 10000
 
 [common]
-loopringImpAddresses = ["0xb2eb74ae9f92ef9e281f94f004ca1b53264af812"]
+loopringImpAddresses = ["0xbc887ce07cee5624715f6ff39e1dd6603633c777"]
 filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-default_block_number = 16368
+default_block_number = 4194
 end_block_number = 100000000000000
 
 [miner]
