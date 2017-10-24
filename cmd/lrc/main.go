@@ -19,6 +19,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/Loopring/ringminer/cmd/utils"
 	"github.com/Loopring/ringminer/config"
@@ -28,6 +29,7 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"
+	"reflect"
 	"sort"
 )
 
@@ -59,7 +61,17 @@ func main() {
 		}
 		globalConfig = config.LoadConfig(file)
 
-		//todo:merge flags to config, 区分node
+		if ctx.IsSet("passphrase") {
+			globalConfig.Common.Passphrase = ctx.String("passphrase")
+		} else {
+			//todo:optimize it
+			var err error
+			fmt.Print("enter passphrase：")
+			reader := bufio.NewReader(os.Stdin)
+			if globalConfig.Common.Passphrase, err = reader.ReadString('\n'); err != nil {
+				fmt.Println("read string failed, err:", err)
+			}
+		}
 
 		//if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
 		//	panic(err)

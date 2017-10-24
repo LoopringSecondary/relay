@@ -79,7 +79,7 @@ func NewBucketProxy(ringClient *miner.RingClient, orderStateChan Whisper) miner.
 
 func (bp *BucketProxy) Start() {
 	bp.ringClient.Start()
-	miner.RateProvider.Start()
+	//miner.RateProvider.Start()
 
 	go bp.listenOrderState()
 

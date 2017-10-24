@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 )
@@ -137,17 +136,18 @@ func (ringClient *RingClient) sendRinghashRegistry(ringState *types.RingState) {
 //listen ringhash  accept by chain and then send Ring to block chain
 func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 	var filterId string
-	addresses := []common.Address{}
-	for _, impl := range LoopringInstance.LoopringImpls {
-		addresses = append(addresses, common.HexToAddress(impl.RingHashRegistry.Address))
-	}
 	filterReq := &eth.FilterQuery{}
-	filterReq.Address = addresses
+	filterReq.Address = []types.Address{}
 	filterReq.FromBlock = "latest"
 	filterReq.ToBlock = "latest"
+	topics := []types.Hash{}
 	//todo:topics, eventId
 	//todo:Registry，没有事件发生，无法判断执行情况
-	//filterReq.Topics =
+	for _, impl := range LoopringInstance.LoopringImpls {
+		filterReq.Address = append(filterReq.Address, types.HexToAddress(impl.RingHashRegistry.Address))
+		topics = append(topics, types.HexToHash(impl.RingHashRegistry.SubmitRinghash.MethodId()))
+	}
+
 	if err := LoopringInstance.Client.NewFilter(&filterId, filterReq); nil != err {
 		log.Errorf("error:%s", err.Error())
 	} else {
@@ -230,7 +230,7 @@ func (ringClient *RingClient) recoverRing() {
 			var isRinghashRegistered string
 			//var isSubmitRing bool
 			if canSubmit(ring) {
-				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "pending", common.BytesToHash(ring.RawRing.Hash.Bytes())); err != nil {
+				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "pending", ring.RawRing.Hash); err != nil {
 					log.Errorf("error:%s", err.Error())
 				} else {
 
@@ -258,5 +258,5 @@ func (ringClient *RingClient) recoverRing() {
 
 func (ringClient *RingClient) Start() {
 	//ringClient.recoverRing()
-	go ringClient.listenRinghashRegistrySucessAndSendRing()
+	//go ringClient.listenRinghashRegistrySucessAndSendRing()
 }

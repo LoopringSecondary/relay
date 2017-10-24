@@ -28,8 +28,8 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
-	"sync"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"sync"
 )
 
 /**
@@ -37,7 +37,7 @@ import (
 */
 
 const (
-	BLOCK_HASH_TABLE_NAME = "block_hash_table"
+	BLOCK_HASH_TABLE_NAME       = "block_hash_table"
 	TRANSACTION_HASH_TABLE_NAME = "transaction_hash_table"
 )
 
@@ -53,7 +53,7 @@ type EthClientListener struct {
 	ob             *orderbook.OrderBook
 	db             db.Database
 	blockhashTable db.Database
-	txhashTable 	db.Database
+	txhashTable    db.Database
 	whisper        *Whisper
 	stop           chan struct{}
 	lock           sync.RWMutex
@@ -125,7 +125,7 @@ func (l *EthClientListener) Start() {
 			}
 			for _, v := range receipt.Logs {
 				if err := l.doEvent(v); err != nil {
-					log.Errorf("eth listener do event error:%s",  err.Error())
+					log.Errorf("eth listener do event error:%s", err.Error())
 				}
 			}
 
@@ -133,7 +133,7 @@ func (l *EthClientListener) Start() {
 			txs = append(txs, txhash)
 		}
 
-		if  err := l.saveTransactions(block.Hash, txs); err != nil {
+		if err := l.saveTransactions(block.Hash, txs); err != nil {
 			log.Errorf("eth listener save transactions error:%s", err.Error())
 			continue
 		}
@@ -194,7 +194,7 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 
 	case impl.OrderCancelled.Id():
 		evt := chainclient.OrderCancelledEvent{}
-		if err:= impl.OrderCancelled.Unpack(&evt, data, v.Topics); err != nil {
+		if err := impl.OrderCancelled.Unpack(&evt, data, v.Topics); err != nil {
 			return err
 		}
 

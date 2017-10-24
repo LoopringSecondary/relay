@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -52,15 +51,16 @@ func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, a
 }
 
 type CallArg struct {
-	From     string      `json:"from"`
-	To       string      `json:"to"`
-	Gas      hexutil.Big `json:"gas"`
-	GasPrice hexutil.Big `json:"gasPrice"`
-	Value    hexutil.Big `json:"value"`
-	Data     string      `json:"data"`
+	From     types.Address `json:"from"`
+	To       types.Address `json:"to"`
+	Gas      types.Big     `json:"gas"`
+	GasPrice types.Big     `json:"gasPrice"`
+	Value    types.Big     `json:"value"`
+	Data     string        `json:"data"`
+	Nonce    types.Big     `json:"nonce"`
 }
 
-func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
+func NewChainClient(clientConfig config.ChainClientOptions, passphraseStr string) *EthClient {
 	ethClient := &EthClient{}
 	var err error
 	ethClient.rpcClient, err = rpc.Dial(clientConfig.RawUrl)
@@ -80,7 +80,7 @@ func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
 	ethClient.signer = &ethTypes.HomesteadSigner{}
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(clientConfig.Passphrase))
+	passphrase.SetBytes([]byte(passphraseStr))
 	if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
 		panic(err)
 	} else {

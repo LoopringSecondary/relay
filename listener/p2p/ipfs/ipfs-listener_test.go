@@ -27,7 +27,6 @@ import (
 	"testing"
 )
 
-
 var testParams *test.TestParams
 
 func init() {
@@ -75,4 +74,12 @@ func pubMessage(sh *shell.Shell, data string) {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+func TestIsTestDataReady(t *testing.T) {
+	testParams.IsTestDataReady()
+}
+
+func TestPrepareTestData(t *testing.T) {
+	testParams.PrepareTestData()
 }

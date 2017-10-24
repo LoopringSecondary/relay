@@ -71,7 +71,7 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 	LoopringInstance.LoopringImpls = protocolImps
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(options.Passphrase))
+	passphrase.SetBytes([]byte(commOpts.Passphrase))
 	var err error
 	MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(options.Miner))
 	if nil != err {

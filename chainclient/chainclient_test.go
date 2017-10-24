@@ -28,7 +28,7 @@ import (
 func TestChainClient(t *testing.T) {
 	config := &config.ChainClientOptions{}
 	config.RawUrl = "http://127.0.0.1:8545"
-	ethClient := eth.NewChainClient(*config)
+	ethClient := eth.NewChainClient(*config, "sa")
 
 	var amount types.Big
 	ethClient.GetBalance(&amount, "0xc112a5f1b577ca817cd06be0af13f50aab44821a", "pending")

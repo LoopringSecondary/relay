@@ -53,5 +53,9 @@ func GlobalFlags() []cli.Flag {
 			Name:  "cnf,c",
 			Usage: "config file",
 		},
+		cli.StringFlag{
+			Name:  "passphrase,p",
+			Usage: "passphrase used to encrypt/decrypt private key",
+		},
 	}
 }

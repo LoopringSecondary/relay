@@ -1,8 +1,8 @@
 package chainclient
 
 import (
-	"github.com/Loopring/ringminer/types"
 	"errors"
+	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
 
@@ -11,7 +11,7 @@ func (e *OrderFilledEvent) ConvertDown(r *types.OrderState) error {
 	rawOrderHashHex := r.RawOrder.Hash.Hex()
 	evtOrderHashHex := types.BytesToHash(e.OrderHash).Hex()
 	if rawOrderHashHex != evtOrderHashHex {
-		return errors.New("raw orderhash hex:"+rawOrderHashHex+"not equal event orderhash hex:"+evtOrderHashHex)
+		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
 	}
 
 	// orderState更新时间
@@ -21,10 +21,10 @@ func (e *OrderFilledEvent) ConvertDown(r *types.OrderState) error {
 	remainAmountB := new(big.Int).Sub(r.RawOrder.AmountB, e.AmountB)
 
 	if remainAmountS.Cmp(big.NewInt(0)) < 0 {
-		return errors.New("orderhash:"+rawOrderHashHex+" remainAmountS " + remainAmountS.String() + "error")
+		return errors.New("orderhash:" + rawOrderHashHex + " remainAmountS " + remainAmountS.String() + "error")
 	}
 	if remainAmountB.Cmp(big.NewInt(0)) < 0 {
-		return errors.New("orderhash:"+rawOrderHashHex+" remainAmountB " + remainAmountB.String() + "error")
+		return errors.New("orderhash:" + rawOrderHashHex + " remainAmountB " + remainAmountB.String() + "error")
 	}
 
 	v := types.VersionData{}
@@ -42,7 +42,7 @@ func (e *OrderCancelledEvent) ConvertDown(r *types.OrderState) error {
 	rawOrderHashHex := r.RawOrder.Hash.Hex()
 	evtOrderHashHex := types.BytesToHash(e.OrderHash).Hex()
 	if rawOrderHashHex != evtOrderHashHex {
-		return errors.New("raw orderhash hex:"+rawOrderHashHex+"not equal event orderhash hex:"+evtOrderHashHex)
+		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
 	}
 
 	// orderState更新时间

@@ -20,7 +20,6 @@ package eth
 
 import (
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //todo:need to modify
@@ -81,10 +80,10 @@ type Log struct {
 }
 
 type FilterQuery struct {
-	FromBlock string           `json:"fromBlock"`
-	ToBlock   string           `json:"toBlock"`
-	Address   []common.Address `json:"address"`
-	Topics    [][]common.Hash  `json:"topics"`
+	FromBlock string          `json:"fromBlock"`
+	ToBlock   string          `json:"toBlock"`
+	Address   []types.Address `json:"address"`
+	Topics    [][]types.Hash  `json:"topics"`
 }
 
 type LogParameter struct {
@@ -92,12 +91,12 @@ type LogParameter struct {
 }
 
 type TransactionReceipt struct {
-	TransactionHash 	types.Hash			`json:"transactionHash"`
-	TransactionIndex 	types.Big			`json:"transactionIndex"`
-	BlockHash 			types.Hash			`json:"blockHash"`
-	BlockNumber 		types.Big			`json:"blockNumber"`
-	CumulativeGasUsed	types.Big			`json:"cumulativeGasUsed"`
-	GasUsed				types.Big			`json:"gasUsed"`
-	ContractAddress 	types.Address		`json:"contractAddress"`
-	Logs 				[]Log				`json:"logs"`
+	TransactionHash   types.Hash    `json:"transactionHash"`
+	TransactionIndex  types.Big     `json:"transactionIndex"`
+	BlockHash         types.Hash    `json:"blockHash"`
+	BlockNumber       types.Big     `json:"blockNumber"`
+	CumulativeGasUsed types.Big     `json:"cumulativeGasUsed"`
+	GasUsed           types.Big     `json:"gasUsed"`
+	ContractAddress   types.Address `json:"contractAddress"`
+	Logs              []Log         `json:"logs"`
 }

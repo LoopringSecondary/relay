@@ -142,21 +142,21 @@ func (o *Order) SignerAddress() (Address, error) {
 
 //RateAmountS、FeeSelection 需要提交到contract
 type FilledOrder struct {
-	OrderState       OrderState   `json:"orderState" gencodec:"required"`
-	FeeSelection     uint8        `json:"feeSelection"`     //0 -> lrc
-	RateAmountS      *big.Rat `json:"rateAmountS"`      //提交需要
-	AvailableAmountS *big.Rat     `json:"availableAmountS"` //需要，也是用于计算fee
-	AvailableAmountB *big.Rat     //需要，也是用于计算fee
-	FillAmountS      *big.Rat `json:"fillAmountS"`
-	FillAmountB      *big.Rat `json:"fillAmountB"` //计算需要
-	LrcReward        *big.Rat `json:"lrcReward"`
-	LrcFee           *big.Rat `json:"lrcFee"`
-	FeeS             *big.Rat `json:"feeS"`
+	OrderState       OrderState `json:"orderState" gencodec:"required"`
+	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
+	RateAmountS      *big.Rat   `json:"rateAmountS"`      //提交需要
+	AvailableAmountS *big.Rat   `json:"availableAmountS"` //需要，也是用于计算fee
+	AvailableAmountB *big.Rat   //需要，也是用于计算fee
+	FillAmountS      *big.Rat   `json:"fillAmountS"`
+	FillAmountB      *big.Rat   `json:"fillAmountB"` //计算需要
+	LrcReward        *big.Rat   `json:"lrcReward"`
+	LrcFee           *big.Rat   `json:"lrcFee"`
+	FeeS             *big.Rat   `json:"feeS"`
 	//FeeB             *EnlargedInt
-	LegalFee         *big.Rat `json:"legalFee"` //法币计算的fee
+	LegalFee *big.Rat `json:"legalFee"` //法币计算的fee
 
-	SPrice           *big.Rat `json:"SPrice"`
-	BPrice           *big.Rat `json:"BPrice"`
+	SPrice *big.Rat `json:"SPrice"`
+	BPrice *big.Rat `json:"BPrice"`
 
 	//FullFilled	bool	//this order is fullfilled
 }
