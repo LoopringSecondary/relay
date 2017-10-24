@@ -22,7 +22,6 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 )
@@ -40,9 +39,12 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	filledOrder.AvailableAmountS = new(big.Rat).SetInt(order.AmountS)
 	filledOrder.AvailableAmountB = new(big.Rat).SetInt(order.AmountB)
 
-	LoopringInstance.Tokens[order.TokenS].BalanceOf.Call(balance, "pending", common.BytesToAddress(order.Owner.Bytes()))
-	LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "pending", common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.Protocol.Bytes()))
-
+	LoopringInstance.Tokens[order.TokenS].BalanceOf.Call(balance, "pending", order.Owner)
+	delegateAddress := LoopringInstance.LoopringImpls[order.Protocol].DelegateAddress.Address()
+	err := LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "pending", order.Owner, delegateAddress)
+	if nil != err {
+		println(err.Error())
+	}
 	if balance.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return errors.New("not enough balance")
 	} else if allowance.BigInt().Cmp(big.NewInt(0)) <= 0 {
@@ -58,7 +60,7 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	//订单的剩余金额
 	filledAmount := &types.Big{}
 	//filled buynomorethanb=true保存的为amountb，如果为false保存的为amounts
-	LoopringInstance.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", common.BytesToHash(order.Hash.Bytes()))
+	LoopringInstance.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", order.Hash)
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
 		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))

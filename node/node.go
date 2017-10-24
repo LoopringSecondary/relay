@@ -56,7 +56,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	bucket.RingLength = globalConfig.Miner.RingMaxLength
 
-	ethClient := ethClientLib.NewChainClient(n.globalConfig.ChainClient)
+	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
 	//forkDetectChans := []chan chainclient.ForkedEvent{make(chan chainclient.ForkedEvent, 10)}

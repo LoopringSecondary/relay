@@ -24,23 +24,25 @@ import (
 	types "github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"reflect"
 	"strings"
-	"fmt"
 )
 
 type AbiMethod struct {
 	abi.Method
-	Abi     *abi.ABI
-	Address string
-	Client  *EthClient
+	Abi             *abi.ABI
+	ContractAddress types.Address
+	Client          *EthClient
 }
 
-func (m *AbiMethod) Id() string {
-	return m.Id()
+func (m *AbiMethod) MethodId() string {
+	return types.BytesToHash(m.Id()).Hex()
+}
+
+func (m *AbiMethod) Address() types.Address {
+	return m.ContractAddress
 }
 
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
@@ -51,8 +53,8 @@ func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...inte
 	data := common.ToHex(dataBytes)
 	//when call a contract method，gas,gasPrice and value are not needed.
 	arg := &CallArg{}
-	arg.From = m.Address
-	arg.To = m.Address //when call a contract method this arg is unnecessary.
+	arg.From = m.ContractAddress
+	arg.To = m.ContractAddress //when call a contract method this arg is unnecessary.
 	arg.Data = data
 	//todo:m.Abi.Unpack
 	return m.Client.Call(result, arg, blockParameter)
@@ -66,7 +68,7 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 			break
 		}
 	}
-	var gas, gasPrice *hexutil.Big
+	var gas, gasPrice types.Big
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 
 	if nil != err {
@@ -78,15 +80,15 @@ func (m *AbiMethod) SendTransaction(from types.Address, args ...interface{}) (st
 	}
 
 	callArg := &CallArg{}
-	callArg.From = from.Hex()
-	callArg.To = m.Address
+	callArg.From = from
+	callArg.To = m.ContractAddress
 	callArg.Data = common.ToHex(dataBytes)
-	callArg.GasPrice = *gasPrice
+	callArg.GasPrice = gasPrice
 	if err = m.Client.EstimateGas(&gas, callArg); nil != err {
 		return "", err
 	}
 
-	return m.doSendTransaction(from, gas.ToInt(), gasPrice.ToInt(), dataBytes)
+	return m.doSendTransaction(from, gas.BigInt(), gasPrice.BigInt(), dataBytes)
 }
 
 func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
@@ -107,17 +109,7 @@ func (m *AbiMethod) SendTransactionWithSpecificGas(from types.Address, gas, gasP
 	return m.doSendTransaction(from, gas, gasPrice, dataBytes)
 }
 
-type sendArgs struct {
-	From     common.Address  `json:"from"`
-	To       common.Address `json:"to"`
-	Gas      string   `json:"gas"`
-	GasPrice string `json:"gasPrice"`
-	Value    string    `json:"value"`
-	Data     string   `json:"data"`
-	Nonce    string `json:"nonce"`
-}
-
-func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int, data []byte ) (string,error) {
+func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int, data []byte) (string, error) {
 	var txHash string
 	var err error
 	var nonce types.Big
@@ -125,24 +117,23 @@ func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int
 		return "", err
 	}
 
-	transaction := ethTypes.NewTransaction(nonce.Uint64(),
-		common.HexToAddress(m.Address),
-		big.NewInt(0),
-		gas,
-		gasPrice,
-		data)
-
 	if _, exists := m.Client.senders[from]; exists {
+		transaction := ethTypes.NewTransaction(nonce.Uint64(),
+			common.HexToAddress(m.ContractAddress.Hex()),
+			big.NewInt(0),
+			gas,
+			gasPrice,
+			data)
 		err = m.Client.SignAndSendTransaction(&txHash, from, transaction)
 	} else {
-		args := &sendArgs{
-			From:common.HexToAddress(from.Hex()),
-			To:common.HexToAddress(m.Address),
-			Gas:fmt.Sprintf("%#x", gas),
-			GasPrice:fmt.Sprintf("%#x", gasPrice),
-			Value:fmt.Sprintf("%#x", big.NewInt(int64(0))),
-			Data:common.ToHex(data),
-			Nonce:fmt.Sprintf("%#x", nonce.BigInt()),
+		args := &CallArg{
+			From:     from,
+			To:       m.ContractAddress,
+			Gas:      new(types.Big).SetInt(gas),
+			GasPrice: new(types.Big).SetInt(gasPrice),
+			Value:    new(types.Big).SetInt(big.NewInt(0)),
+			Data:     common.ToHex(data),
+			Nonce:    new(types.Big).SetInt(nonce.BigInt()),
 		}
 		err = m.Client.SendTransaction(&txHash, args)
 	}
@@ -182,7 +173,7 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *E
 		abiMethod := &AbiMethod{}
 		abiMethod.Name = method.Name
 		abiMethod.Abi = cabi
-		abiMethod.Address = address
+		abiMethod.ContractAddress = types.HexToAddress(address)
 		abiMethod.Client = ethClient
 		abiMethod.Method = cabi.Methods[method.Name]
 		field := e.FieldByName(methodName)

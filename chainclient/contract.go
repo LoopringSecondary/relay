@@ -24,6 +24,8 @@ import (
 )
 
 type AbiMethod interface {
+	MethodId() string
+	Address() types.Address
 	Call(result interface{}, blockParameter string, args ...interface{}) error
 	SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error)
 	SendTransaction(from types.Address, args ...interface{}) (string, error)

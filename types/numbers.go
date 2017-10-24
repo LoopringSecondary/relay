@@ -64,3 +64,8 @@ func (h *Big) Uint64() uint64 {
 func (h *Big) BigInt() *big.Int {
 	return (*big.Int)(h)
 }
+
+func (h *Big) SetInt(v *big.Int) Big {
+	(*big.Int)(h).Set(v)
+	return *h
+}

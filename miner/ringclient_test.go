@@ -50,7 +50,7 @@ func init() {
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := eth.NewChainClient(globalConfig.ChainClient)
+	ethClient := eth.NewChainClient(globalConfig.ChainClient, "sa")
 
 	database := db.NewDB(globalConfig.Database)
 	ringClient = miner.NewRingClient(database, ethClient.Client)

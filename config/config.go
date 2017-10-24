@@ -90,10 +90,9 @@ type DbOptions struct {
 }
 
 type ChainClientOptions struct {
-	RawUrl     string            `required:"true"`
-	Senders    map[string]string `required:"true"` //address->encrypted private key, used to send transaction
-	Passphrase string            //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
-	Eth        struct {
+	RawUrl  string            `required:"true"`
+	Senders map[string]string `required:"true"` //address->encrypted private key, used to send transaction
+	Eth     struct {
 		GasPrice int
 		GasLimit int
 	}
@@ -104,6 +103,7 @@ type CommonOptions struct {
 	FilterTopics         []string `required:"true"`
 	DefaultBlockNumber   *big.Int `required:"true"`
 	EndBlockNumber       *big.Int `required:"true"`
+	Passphrase           string   `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 }
 
 type LogDirOptions struct {
@@ -112,7 +112,6 @@ type LogDirOptions struct {
 }
 
 type MinerOptions struct {
-	Passphrase         string //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	RingMaxLength      int    `required:"true"` //recommended value:4
 	Miner              string `required:"true"` //private key, used to sign the ring
 	FeeRecepient       string //address the recepient of fee

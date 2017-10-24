@@ -20,7 +20,6 @@ package eth
 
 import (
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //todo:need to modify
@@ -81,10 +80,10 @@ type Log struct {
 }
 
 type FilterQuery struct {
-	FromBlock string           `json:"fromBlock"`
-	ToBlock   string           `json:"toBlock"`
-	Address   []common.Address `json:"address"`
-	Topics    [][]common.Hash  `json:"topics"`
+	FromBlock string          `json:"fromBlock"`
+	ToBlock   string          `json:"toBlock"`
+	Address   []types.Address `json:"address"`
+	Topics    [][]types.Hash  `json:"topics"`
 }
 
 type LogParameter struct {

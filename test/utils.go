@@ -29,9 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 )
 
 type TestParams struct {
@@ -91,7 +91,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := eth.NewChainClient(globalConfig.ChainClient)
+	ethClient := eth.NewChainClient(globalConfig.ChainClient, "sa")
 	params.Client = ethClient.Client
 	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
 
@@ -114,7 +114,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.TokenRegistryAddress = types.HexToAddress(tokenRegistryAddressHex)
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(globalConfig.Miner.Passphrase))
+	passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
 	var err error
 	params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
 	if nil != err {
@@ -129,8 +129,10 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	return params
 }
 
-func (testParams *TestParams) TestPrepareData() {
+func (testParams *TestParams) PrepareTestData() {
 
+	var err error
+	var hash string
 	accounts := []string{}
 	for k, _ := range testParams.Accounts {
 		accounts = append(accounts, k)
@@ -139,38 +141,61 @@ func (testParams *TestParams) TestPrepareData() {
 	//delegate registry
 	delegateContract := &chainclient.TransferDelegate{}
 	testParams.Client.NewContract(delegateContract, testParams.DelegateAddress.Hex(), chainclient.TransferDelegateAbiStr)
-	delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
 
-	//token registry
+	hash, err = delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
+	if nil != err {
+		println(err.Error())
+	} else {
+		println(hash)
+	}
+	//
+	//tokenregistry
 	tokenRegistry := &chainclient.TokenRegistry{}
 	testParams.Client.NewContract(tokenRegistry, testParams.TokenRegistryAddress.Hex(), chainclient.TokenRegistryAbiStr)
 	for idx, tokenAddr := range testParams.TokenAddrs {
-		if _, err := tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token" + strconv.Itoa(idx)); err != nil {
+		hash, err = tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token"+strconv.Itoa(idx))
+		if nil != err {
 			println(err.Error())
+		} else {
+			println(hash)
 		}
 	}
-	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
+	//testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
+}
+
+func (testParams *TestParams) IsTestDataReady() {
+
+	accounts := []string{}
+	for k, _ := range testParams.Accounts {
+		accounts = append(accounts, k)
+	}
+
+	testParams.allowanceToLoopring(accounts, testParams.TokenAddrs)
+}
+
+func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs []string) {
+	token := &chainclient.Erc20Token{}
+	for _, tokenAddr := range tokenAddrs {
+		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
+		for _, account := range accounts {
+			balance := &types.Big{}
+			token.BalanceOf.Call(balance, "latest", common.HexToAddress(account))
+			log.Infof("balance %s : %s", account, balance.BigInt().String())
+			token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress.Hex())
+			log.Infof("allowance: %s -> %s %s", account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
+		}
+	}
 }
 
 func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []string, amount *big.Int) {
 	token := &chainclient.Erc20Token{}
-
 	for _, tokenAddr := range tokenAddrs {
 		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
-
 		for _, account := range accounts {
-			//balance := &types.Big{}
-			//
-			//token.BalanceOf.Call(balance, "pending", common.HexToAddress(account))
-			//t.Log(balance.BigInt().String())
-			//token.Allowance.Call(balance, "pending", common.HexToAddress(account), common.HexToAddress(implAddress))
-			//
-			//t.Log(balance.BigInt().String())
-
-			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.ImplAddress, amount); nil != err {
-				println(err.Error())
+			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.DelegateAddress, amount); nil != err {
+				log.Error(err.Error())
 			} else {
-				println(txHash)
+				log.Info(txHash)
 			}
 		}
 
@@ -187,3 +212,4 @@ func (testParams *TestParams) CheckAllowance(tokenAddress,account string) {
 		println(result.BigInt().String())
 	}
 }
+

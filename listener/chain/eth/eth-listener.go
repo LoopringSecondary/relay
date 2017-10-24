@@ -129,17 +129,17 @@ func (l *EthClientListener) Start() {
 					if err := l.doEvent(v); err != nil {
 						log.Errorf("eth listener do event error:%s", err.Error())
 					}
+
+					txhash := types.HexToHash(tx.Hash)
+					txs = append(txs, txhash)
 				}
 
-				txhash := types.HexToHash(tx.Hash)
-				txs = append(txs, txhash)
-			}
+				if err := l.saveTransactions(block.Hash, txs); err != nil {
+					log.Errorf("eth listener save transactions error:%s", err.Error())
+					continue
+				}
 
-			if err := l.saveTransactions(block.Hash, txs); err != nil {
-				log.Errorf("eth listener save transactions error:%s", err.Error())
-				continue
 			}
-
 		}
 	}
 }
