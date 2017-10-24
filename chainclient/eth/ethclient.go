@@ -217,14 +217,14 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		return nil, errors.New("finished")
 	}
 	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil != err {
-		//log.Errorf("err:%s", err.Error())
 		return nil, err
 	} else {
 		if nil == block {
 		hasNext:
 			for {
 				select {
-				case <-time.After(time.Duration(5000000000)):
+				// todo(fk):modify this duration
+				case <-time.After(time.Duration(3 * time.Second)):
 					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil == err1 && nil != block {
 						break hasNext
 					}

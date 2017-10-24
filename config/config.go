@@ -25,7 +25,6 @@ import (
 	"math/big"
 	"os"
 	"reflect"
-	"strings"
 )
 
 func LoadConfig(file string) *GlobalConfig {

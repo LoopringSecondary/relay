@@ -58,6 +58,11 @@ const (
 	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
 )
 
+//const (
+//	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
+//	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+//)
+
 var testTokens = []string{TokenAddressA, TokenAddressB}
 
 func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte, owner types.Address) *types.Order {
