@@ -46,12 +46,6 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
-	for idx, path := range c.Log.ZapOpts.OutputPaths {
-		if !strings.HasPrefix(path, "std") && c.Log.ZapOpts.Development {
-			c.Log.ZapOpts.OutputPaths[idx] = strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/" + path
-		}
-	}
-
 	return c
 }
 
