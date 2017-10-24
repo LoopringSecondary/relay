@@ -91,7 +91,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
 	globalConfig := config.LoadConfig(path)
 	params.Config = globalConfig
-	log.Initialize(globalConfig.Log, globalConfig.LogDir)
+	log.Initialize(globalConfig.Log)
 
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
