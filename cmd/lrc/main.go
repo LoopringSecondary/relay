@@ -76,7 +76,7 @@ func main() {
 		//	panic(err)
 		//}
 
-		logger = log.Initialize(globalConfig.Log, globalConfig.LogDir)
+		logger = log.Initialize(globalConfig.Log)
 		return nil
 	}
 

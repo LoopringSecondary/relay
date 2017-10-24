@@ -19,45 +19,25 @@
 package log
 
 import (
-	"encoding/json"
 	"github.com/Loopring/ringminer/config"
 	"go.uber.org/zap"
+	"os"
+	"strings"
 )
 
 //todo: I'm not sure whether zap support Rotating
 var logger *zap.Logger
 var sugaredLogger *zap.SugaredLogger
 
-const logConfig = `{
-	  "level": "debug",
-	  "development": true,
-	  "disableStacktrace": false,
-	  "encoding": "console",
-	  "outputPaths": ["zap.log","stderr"],
-	  "errorOutputPaths": ["err.log"],
-	  "encoderConfig": {
-	    "messageKey": "msg",
-	    "levelKey": "level",
-	    "stacktraceKey":"trace",
-	    "timeKey":"ts",
-	    "levelEncoder": "lowercase",
-	    "timeEncoder":"iso8601"
-	  }
-	}`
-
-// todo: combine configs
-func Initialize(cfg zap.Config, logDirConf config.LogDirOptions) *zap.Logger {
-	rawJSON := []byte(logConfig)
-
+func Initialize(logOpts config.LogOptions) *zap.Logger {
 	var err error
 
-	if err = json.Unmarshal(rawJSON, &cfg); err != nil {
-		panic(err)
+	cfg := logOpts.ZapOpts
+	for idx, path := range cfg.OutputPaths {
+		if !strings.HasPrefix(path, "std") && cfg.Development {
+			cfg.OutputPaths[idx] = strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/" + path
+		}
 	}
-
-	cfg.OutputPaths = logDirConf.LogPath
-	cfg.ErrorOutputPaths = logDirConf.ErrPath
-
 	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	//"callerKey":"C"
 	//cfg.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
