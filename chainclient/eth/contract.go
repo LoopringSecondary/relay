@@ -142,24 +142,24 @@ func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int
 
 type AbiEvent struct {
 	abi.Event
-	Address string
+	ContractAddress types.Address
 	Client  *EthClient
 }
 
-func (e *AbiEvent) Id() string {
+func (e AbiEvent) Id() string {
 	return e.Event.Id().String()
 }
 
-func (e *AbiEvent) Name() string {
+func (e AbiEvent) Name() string {
 	return e.Event.Name
 }
 
 //todo:impl it
-func (e *AbiEvent) Subscribe() {
+func (e AbiEvent) Subscribe() {
 	e.Event.Id().String()
 }
 
-func (e *AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
+func (e AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
 	return UnpackEvent(e.Inputs, v, output, topics)
 }
 
@@ -183,6 +183,23 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethCl
 	}
 }
 
+func applyAbiEvent(e reflect.Value, cabi *abi.ABI, address types.Address, ethClient *EthClient) {
+	for _, event := range cabi.Events {
+		// todo(fuk): process this "Event"
+		eventName := strings.ToUpper(event.Name[0:1]) + event.Name[1:] + "Event"
+		abiEvent := &AbiEvent{}
+		abiEvent.Event = event
+		abiEvent.ContractAddress = address
+		abiEvent.Client = ethClient
+		abiEvent.Event.Name = event.Name
+		field := e.FieldByName(eventName)
+
+		if field.IsValid() {
+			field.Set(reflect.ValueOf(abiEvent))
+		}
+	}
+}
+
 func (ethClient *EthClient) newContract(contract interface{}, addressStr, abiStr string) error {
 	cabi := &abi.ABI{}
 	if err := cabi.UnmarshalJSON([]byte(abiStr)); err != nil {
@@ -196,6 +213,7 @@ func (ethClient *EthClient) newContract(contract interface{}, addressStr, abiStr
 	e.FieldByName("Address").Set(reflect.ValueOf(address))
 
 	applyAbiMethod(e, cabi, address, ethClient)
+	applyAbiEvent(e, cabi, address, ethClient)
 
 	return nil
 }

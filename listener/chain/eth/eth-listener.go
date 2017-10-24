@@ -96,7 +96,8 @@ func (l *EthClientListener) Start() {
 		inter, err := iterator.Next()
 		if err != nil {
 			log.Errorf("eth listener iterator next error:%s", err.Error())
-			continue
+			//continue
+			return
 		}
 		block := inter.(eth.BlockWithTxObject)
 
@@ -136,9 +137,11 @@ func (l *EthClientListener) Start() {
 
 			log.Debugf("transaction receipt  event logs number:%d", len(receipt.Logs))
 
+			contractAddr := types.HexToAddress(receipt.To)
 			for _, v := range receipt.Logs {
-				if err := l.doEvent(v); err != nil {
+				if err := l.doEvent(v, contractAddr); err != nil {
 					log.Errorf("eth listener do event error:%s", err.Error())
+					break
 				}
 
 				txhash := types.HexToHash(tx.Hash)
@@ -178,9 +181,8 @@ func (l *EthClientListener) doMethod(input string) {
 	// l.ethClient
 }
 
-func (l *EthClientListener) doEvent(v eth.Log) error {
-	address := types.HexToAddress(v.Address)
-	impl, ok := miner.LoopringInstance.LoopringImpls[address]
+func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
+	impl, ok := miner.LoopringInstance.LoopringImpls[to]
 	if !ok {
 		return errors.New("eth listener do event contract address do not exsit")
 	}
@@ -191,11 +193,13 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 	// todo:delete after test
 	log.Debugf("eth listener log data:%s", v.Data)
 	log.Debugf("eth listener log topic:%s", topic)
+	log.Debugf("impl order filled id:%s", impl.OrderFilledEvent.Id())
 
 	switch topic {
-	case impl.OrderFilled.Id():
+	case impl.OrderFilledEvent.Id():
 		evt := chainclient.OrderFilledEvent{}
-		if err := impl.OrderFilled.Unpack(&evt, data, v.Topics); err != nil {
+		log.Debugf("eth listener event order filled")
+		if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
 		}
 
@@ -208,9 +212,10 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 		evt.ConvertDown(ord)
 		l.whisper.ChainOrderChan <- ord
 
-	case impl.OrderCancelled.Id():
+	case impl.OrderCancelledEvent.Id():
+		log.Debugf("eth listener event order cancelled")
 		evt := chainclient.OrderCancelledEvent{}
-		if err := impl.OrderCancelled.Unpack(&evt, data, v.Topics); err != nil {
+		if err := impl.OrderCancelledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
 		}
 
@@ -223,8 +228,7 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 		evt.ConvertDown(ord)
 		l.whisper.ChainOrderChan <- ord
 
-	case impl.CutoffTimestampChanged.Id():
-
+		//case impl.CutoffTimestampChangedEvent.Id():
 	}
 
 	return nil
