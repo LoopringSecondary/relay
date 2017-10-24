@@ -105,7 +105,6 @@ func unpack(inputs []abi.Argument, v interface{}, output []byte) error {
 		for j := 0; j < typ.NumField(); j++ {
 			field := typ.Field(j)
 			if field.Tag.Get("alias") == inputs[i].Name {
-				println(inputs[i].Name)
 				if err := set(value.Field(j), reflectValue, inputs[i]); err != nil {
 					return err
 				}
@@ -120,9 +119,6 @@ func set(dst, src reflect.Value, output abi.Argument) error {
 	dstType := dst.Type()
 	srcType := src.Type()
 
-	println(dstType.String())
-	println(srcType.String())
-	println("===========")
 	switch {
 	case dstType.AssignableTo(src.Type()):
 		dst.Set(src)

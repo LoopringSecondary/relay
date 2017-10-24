@@ -143,7 +143,7 @@ func (m *AbiMethod) doSendTransaction(from types.Address, gas, gasPrice *big.Int
 type AbiEvent struct {
 	abi.Event
 	ContractAddress types.Address
-	Client  *EthClient
+	Client          *EthClient
 }
 
 func (e AbiEvent) Id() string {

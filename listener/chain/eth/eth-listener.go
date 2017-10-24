@@ -96,6 +96,7 @@ func (l *EthClientListener) Start() {
 		inter, err := iterator.Next()
 		if err != nil {
 			log.Errorf("eth listener iterator next error:%s", err.Error())
+			// todo(fuk): modify after test
 			//continue
 			return
 		}
@@ -202,6 +203,18 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
 		}
+
+		log.Debugf("eth listener order filled event ringhash -> %s", types.Bytes2Hex(evt.Ringhash))
+		log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
+		log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
+		log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+		log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
+		log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
+		log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
+		log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
+		log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
+		log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
+		log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
 
 		hash := types.BytesToHash(evt.OrderHash)
 		ord, err := l.ob.GetOrder(hash)
