@@ -100,24 +100,22 @@ func (l *EthClientListener) Start() {
 		}
 		block := inter.(eth.BlockWithTxObject)
 
-		// todo delete after test
-		log.Debugf("block hash %s", block.Hash.Hex())
-		log.Debugf("block number %s", block.Number.BigInt().String())
-
 		if len(block.Transactions) < 1 {
-			log.Errorf("eth listener get block transaction empty error")
+			log.Errorf("eth listener get block transaction list empty error")
 		}
 		if err := l.saveBlock(block); err != nil {
-			log.Errorf("eth listener get block hash error:%s", err.Error())
+			log.Errorf("eth listener save block hash error:%s", err.Error())
 			continue
 		}
 
-		// todo: delete after test
 		log.Debugf("eth listener get block:%i", block.Number.Uint64())
 
 		// get transactions with blockhash
 		txs := []types.Hash{}
 		for _, tx := range block.Transactions {
+
+			log.Debugf("eth listener get transaction hash:%s", tx.Hash)
+			log.Debugf("eth listener get transaction input:%s", tx.Input)
 
 			// 判断合约地址是否合法
 			if !l.judgeContractAddress(tx.To) {

@@ -55,17 +55,20 @@ type BlockWithTxHash struct {
 }
 
 type Transaction struct {
-	Hash             string
-	Nonce            types.Big
-	BlockHash        string
-	BlockNumber      types.Big
-	TransactionIndex types.Big
-	From             string
-	To               string
-	Value            types.Big
-	GasPrice         types.Big
-	Gas              types.Big
-	Input            string
+	Hash             string    `json:"hash"`
+	Nonce            types.Big `json:"nonce"`
+	BlockHash        string    `json:"blockHash"`
+	BlockNumber      types.Big `json:"blockNumber"`
+	TransactionIndex types.Big `json:"transactionIndex"`
+	From             string    `json:"from"`
+	To               string    `json:"to"`
+	Value            types.Big `json:"value"`
+	GasPrice         types.Big `json:"gasPrice"`
+	Gas              types.Big `json:"gas"`
+	Input            string    `json:"input"`
+	R                string    `json:"r"`
+	S                string    `json:"s"`
+	V                string    `json:"v"`
 }
 
 type Log struct {

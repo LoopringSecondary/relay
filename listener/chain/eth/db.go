@@ -50,6 +50,7 @@ type TransactionIndex struct {
 }
 
 // 存储最近一次使用的blocknumber到db，同时存储blocknumber，blockhash键值对
+// todo 判断最近存储的blocknumber是否比之前还小等逻辑
 func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 	bi := createBlockIndex(block)
 
