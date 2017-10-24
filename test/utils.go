@@ -31,6 +31,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"strconv"
 )
 
 type TestParams struct {
@@ -44,6 +45,7 @@ type TestParams struct {
 	TokenRegistryAddress types.Address
 	Accounts             map[string]string
 	TokenAddrs           []string
+	Config 				 *config.GlobalConfig
 }
 
 var testAccounts = map[string]string{
@@ -51,7 +53,12 @@ var testAccounts = map[string]string{
 	"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2": "11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446",
 }
 
-var testTokens = []string{"0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"}
+const (
+	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
+	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
+)
+
+var testTokens = []string{TokenAddressA, TokenAddressB}
 
 func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte, owner types.Address) *types.Order {
 	order := &types.Order{}
@@ -78,6 +85,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 
 	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
 	globalConfig := config.LoadConfig(path)
+	params.Config = globalConfig
 	log.Initialize(globalConfig.Log, globalConfig.LogDir)
 
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
@@ -136,8 +144,10 @@ func (testParams *TestParams) TestPrepareData() {
 	//token registry
 	tokenRegistry := &chainclient.TokenRegistry{}
 	testParams.Client.NewContract(tokenRegistry, testParams.TokenRegistryAddress.Hex(), chainclient.TokenRegistryAbiStr)
-	for _, tokenAddr := range testParams.TokenAddrs {
-		tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr))
+	for idx, tokenAddr := range testParams.TokenAddrs {
+		if _, err := tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token" + strconv.Itoa(idx)); err != nil {
+			println(err.Error())
+		}
 	}
 	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
 }
@@ -157,12 +167,23 @@ func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []
 			//
 			//t.Log(balance.BigInt().String())
 
-			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.DelegateAddress, amount); nil != err {
+			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.ImplAddress, amount); nil != err {
 				println(err.Error())
 			} else {
 				println(txHash)
 			}
 		}
 
+	}
+}
+
+func (testParams *TestParams) CheckAllowance(tokenAddress,account string) {
+	var result types.Big
+	token := &chainclient.Erc20Token{}
+	testParams.Client.NewContract(token, tokenAddress, chainclient.Erc20TokenAbiStr)
+	if err := token.Allowance.Call(&result, "pending", types.HexToAddress(account), testParams.DelegateAddress); err != nil {
+		panic(err)
+	} else {
+		println(result.BigInt().String())
 	}
 }

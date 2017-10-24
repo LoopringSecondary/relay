@@ -89,16 +89,16 @@ func (l *EthClientListener) Start() {
 	// get block data
 	inter, err := l.ethClient.BlockIterator(start, end).Next()
 	if err != nil {
-		log.Errorf("get block hash error:%s", err.Error())
+		log.Errorf("eth listener get block hash error:%s", err.Error())
 	} else {
 		for {
 			// save block index
 			block := inter.(*eth.BlockWithTxObject)
 			if len(block.Transactions) < 1 {
-				log.Errorf("block transaction empty error")
+				log.Errorf("eth listener get block transaction empty error")
 			}
 			if err := l.saveBlock(block); err != nil {
-				log.Errorf("get block hash error:%s", err.Error())
+				log.Errorf("eth listener get block hash error:%s", err.Error())
 				continue
 			}
 
@@ -111,7 +111,7 @@ func (l *EthClientListener) Start() {
 
 				// 判断合约地址是否合法
 				if !l.judgeContractAddress(tx.To) {
-					log.Errorf("contract address %s invalid", tx.To)
+					log.Errorf("eth listener received order contract address %s invalid", tx.To)
 					continue
 				}
 
@@ -172,15 +172,15 @@ func (l *EthClientListener) doEvent(v eth.Log) error {
 	address := types.HexToAddress(v.Address)
 	impl, ok := miner.LoopringInstance.LoopringImpls[address]
 	if !ok {
-		return errors.New("contract address do not exsit")
+		return errors.New("eth listener do event contract address do not exsit")
 	}
 
 	topic := v.Topics[0]
 	data := hexutil.MustDecode(v.Data)
 
 	// todo:delete after test
-	log.Debugf("eth log data:%s", v.Data)
-	log.Debugf("eth log topic:%s", topic)
+	log.Debugf("eth listener log data:%s", v.Data)
+	log.Debugf("eth listener log topic:%s", topic)
 
 	switch topic {
 	case impl.OrderFilled.Id():

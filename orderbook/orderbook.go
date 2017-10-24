@@ -141,9 +141,9 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
+	log.Debugf("orderbook accept data from peer:%s", ord.Protocol.Hex())
 	if valid, err := ob.filter(ord); !valid {
-		log.Errorf("receive order but valid failed:%s", err.Error())
+		log.Errorf("orderbook receive order but valid failed:%s", err.Error())
 	}
 
 	state := &types.OrderState{}
@@ -151,7 +151,7 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 	state.RawOrder.Hash = ord.GenerateHash()
 
 	orderhash := state.RawOrder.Hash.Hex()
-	log.Debugf("ipfs new order hash:%s", orderhash)
+	log.Debugf("orderbook new order hash:%s", orderhash)
 
 	// 之前从未存储过
 	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
@@ -162,17 +162,17 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) {
 
 		state.States = append(state.States, vd)
 		if bs, err := json.Marshal(state); err != nil {
-			log.Errorf("ipfs order marshal error:%s", err.Error())
+			log.Errorf("orderbook order marshal error:%s", err.Error())
 		} else {
 			if errsv := ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs); err != nil {
-				log.Errorf("ipfs order save error:%s", errsv.Error())
+				log.Errorf("orderbook order save error:%s", errsv.Error())
 			} else {
 				// todo: delete after test
-				log.Debugf("protocol:%s", state.RawOrder.Protocol.Hex())
-				log.Debugf("tokenS:%s", state.RawOrder.TokenS.Hex())
-				log.Debugf("tokenB:%s", state.RawOrder.TokenB.Hex())
-				log.Debugf("amounts:%s", state.RawOrder.AmountS.String())
-				log.Debugf("amountb:%s", state.RawOrder.AmountB.String())
+				log.Debugf("orderbook protocol:%s", state.RawOrder.Protocol.Hex())
+				log.Debugf("orderbook tokenS:%s", state.RawOrder.TokenS.Hex())
+				log.Debugf("orderbook tokenB:%s", state.RawOrder.TokenB.Hex())
+				log.Debugf("orderbook amountS:%s", state.RawOrder.AmountS.String())
+				log.Debugf("orderbook amountB:%s", state.RawOrder.AmountB.String())
 
 				ob.whisper.EngineOrderChan <- state
 			}

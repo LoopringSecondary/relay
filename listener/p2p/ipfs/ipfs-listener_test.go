@@ -27,10 +27,6 @@ import (
 	"testing"
 )
 
-const (
-	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
-	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
-)
 
 var testParams *test.TestParams
 
@@ -41,6 +37,13 @@ func init() {
 func TestPrepareAccount(t *testing.T) {
 	testParams.TestPrepareData()
 	t.Log("success")
+}
+
+func TestCheckAllowance(t *testing.T) {
+	testParams.CheckAllowance(test.TokenAddressA, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	testParams.CheckAllowance(test.TokenAddressA, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	testParams.CheckAllowance(test.TokenAddressB, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	testParams.CheckAllowance(test.TokenAddressB, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 }
 
 /*
@@ -58,8 +61,8 @@ func TestOrdersOfRing(t *testing.T) {
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
-		types.HexToAddress(TokenAddressA),
-		types.HexToAddress(TokenAddressB),
+		types.HexToAddress(test.TokenAddressA),
+		types.HexToAddress(test.TokenAddressB),
 		testParams.ImplAddress,
 		amountS1,
 		amountB1,
@@ -72,8 +75,8 @@ func TestOrdersOfRing(t *testing.T) {
 	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
-		types.HexToAddress(TokenAddressB),
-		types.HexToAddress(TokenAddressA),
+		types.HexToAddress(test.TokenAddressB),
+		types.HexToAddress(test.TokenAddressA),
 		testParams.ImplAddress,
 		amountS2,
 		amountB2,
@@ -85,7 +88,8 @@ func TestOrdersOfRing(t *testing.T) {
 }
 
 func pubMessage(sh *shell.Shell, data string) {
-	err := sh.PubSubPublish("test_topic", data)
+	topic := testParams.Config.Ipfs.Topic
+	err := sh.PubSubPublish(topic, data)
 	if err != nil {
 		panic(err.Error())
 	}
