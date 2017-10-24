@@ -144,9 +144,9 @@ func (testParams *TestParams) PrepareTestData() {
 
 	hash, err = delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
 	if nil != err {
-		println(err.Error())
+		log.Errorf("delegate add version error:%s", err.Error())
 	} else {
-		println(hash)
+		log.Infof("delegate add version hash:%s", hash)
 	}
 	//
 	//tokenregistry
@@ -155,12 +155,12 @@ func (testParams *TestParams) PrepareTestData() {
 	for idx, tokenAddr := range testParams.TokenAddrs {
 		hash, err = tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token"+strconv.Itoa(idx))
 		if nil != err {
-			println(err.Error())
+			log.Errorf("register token error:%s", err.Error())
 		} else {
-			println(hash)
+			log.Infof("register token hash:%s", hash)
 		}
 	}
-	//testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
+	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
 }
 
 func (testParams *TestParams) IsTestDataReady() {
@@ -181,7 +181,7 @@ func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs 
 			balance := &types.Big{}
 			token.BalanceOf.Call(balance, "latest", common.HexToAddress(account))
 			log.Infof("balance %s : %s", account, balance.BigInt().String())
-			token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress.Hex())
+			token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress)
 			log.Infof("allowance: %s -> %s %s", account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
 		}
 	}

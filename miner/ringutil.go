@@ -41,14 +41,13 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 
 	LoopringInstance.Tokens[order.TokenS].BalanceOf.Call(balance, "pending", order.Owner)
 	delegateAddress := LoopringInstance.LoopringImpls[order.Protocol].DelegateAddress.Address()
-	err := LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "pending", order.Owner, delegateAddress)
-	if nil != err {
-		println(err.Error())
-	}
+	LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "pending", order.Owner, delegateAddress)
+
 	if balance.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return errors.New("not enough balance")
 	} else if allowance.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return errors.New("not enough allowance")
+		// todo delete comment after test
+		//return errors.New("not enough allowance")
 	} else {
 		if filledOrder.AvailableAmountS.Cmp(new(big.Rat).SetInt(balance.BigInt())) > 0 {
 			filledOrder.AvailableAmountS.SetInt(balance.BigInt())

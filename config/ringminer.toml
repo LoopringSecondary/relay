@@ -32,9 +32,9 @@ raw_url = "http://127.0.0.1:8545"
         gas_limit = 10000
 
 [common]
-loopringImpAddresses = ["0x2c9567f1b64F20B8911635bcddF640459Ddf36a9"]
+loopringImpAddresses = ["0xb2eb74ae9f92ef9e281f94f004ca1b53264af812"]
 filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-default_block_number = 15813
+default_block_number = 16368
 end_block_number = 100000000000000
 
 [miner]

@@ -20,6 +20,7 @@ package ipfs_test
 
 import (
 	"encoding/json"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
@@ -31,18 +32,21 @@ var testParams *test.TestParams
 
 func init() {
 	testParams = test.LoadConfigAndGenerateTestParams()
+	log.Infof("contract address:%s", testParams.ImplAddress.Hex())
+	log.Infof("delegate address:%s", testParams.DelegateAddress.Hex())
+	log.Infof("register address:%s", testParams.TokenRegistryAddress.Hex())
 }
 
 func TestPrepareAccount(t *testing.T) {
-	testParams.TestPrepareData()
-	t.Log("success")
+	testParams.PrepareTestData()
 }
 
 func TestCheckAllowance(t *testing.T) {
-	testParams.CheckAllowance(test.TokenAddressA, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
-	testParams.CheckAllowance(test.TokenAddressA, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
-	testParams.CheckAllowance(test.TokenAddressB, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
-	testParams.CheckAllowance(test.TokenAddressB, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	//testParams.CheckAllowance(test.TokenAddressA, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	//testParams.CheckAllowance(test.TokenAddressA, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	//testParams.CheckAllowance(test.TokenAddressB, "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
+	//testParams.CheckAllowance(test.TokenAddressB, "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
+	testParams.IsTestDataReady()
 }
 
 /*
