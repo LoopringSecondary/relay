@@ -47,7 +47,7 @@ raw_url = "http://10.137.105.46:8545"
 loopringImpAddresses = ["0xbc887ce07cee5624715f6ff39e1dd6603633c777"]
 filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
 default_block_number = 4195
-end_block_number = 100000000000000
+end_block_number = 4196
 
 [miner]
     ringMaxLength = 4
