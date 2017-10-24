@@ -144,7 +144,7 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 	//todo:topics, eventId
 	//todo:Registry，没有事件发生，无法判断执行情况
 	for _, impl := range LoopringInstance.LoopringImpls {
-		filterReq.Address = append(filterReq.Address, types.HexToAddress(impl.RingHashRegistry.Address))
+		filterReq.Address = append(filterReq.Address, impl.RingHashRegistry.Address)
 		topics = append(topics, types.HexToHash(impl.RingHashRegistry.SubmitRinghash.MethodId()))
 	}
 

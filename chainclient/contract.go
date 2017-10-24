@@ -41,7 +41,7 @@ type AbiEvent interface {
 //the base info of contract
 type Contract struct {
 	Abi     interface{}
-	Address string
+	Address types.Address
 }
 
 type Erc20Token struct {
@@ -66,7 +66,8 @@ const (
 type LoopringProtocolImpl struct {
 	Contract
 
-	RingHashRegistry *LoopringRinghashRegistry
+	RingHashRegistry      *LoopringRinghashRegistry
+	TokenTransferDelegate *TransferDelegate
 
 	LrcTokenAddress         AbiMethod
 	TokenRegistryAddress    AbiMethod
@@ -118,7 +119,7 @@ type OrderFilledEvent struct {
 	AbiEvent
 	RingIndex     *big.Int `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
 	Time          *big.Int `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber   *big.Int `json:"blockNumber"	alias:"_blocknumber" gencodec:"required"`
+	Blocknumber   *big.Int `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
 	Ringhash      []byte   `json:"ringHash" alias:"_ringhash" gencodec:"required"`
 	PreOrderHash  []byte   `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
 	OrderHash     []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`

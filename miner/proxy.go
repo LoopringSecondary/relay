@@ -54,18 +54,26 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 		addr := types.HexToAddress(implAddress)
 
 		var lrcTokenAddressHex string
-		imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "pending")
+		imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "latest")
 		lrcTokenAddress := types.HexToAddress(lrcTokenAddressHex)
 		lrcToken := &chainclient.Erc20Token{}
 		client.NewContract(lrcToken, lrcTokenAddress.Hex(), chainclient.Erc20TokenAbiStr)
 		LoopringInstance.Tokens[lrcTokenAddress] = lrcToken
 
 		var registryAddressHex string
-		imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
+		imp.RinghashRegistryAddress.Call(&registryAddressHex, "latest")
 		registryAddress := types.HexToAddress(registryAddressHex)
 		registry := &chainclient.LoopringRinghashRegistry{}
 		client.NewContract(registry, registryAddress.Hex(), chainclient.RinghashRegistryAbiStr)
 		imp.RingHashRegistry = registry
+
+		var delegateAddressHex string
+		imp.DelegateAddress.Call(&delegateAddressHex, "latest")
+		delegateAddress := types.HexToAddress(delegateAddressHex)
+		delegate := &chainclient.TransferDelegate{}
+		client.NewContract(delegate, delegateAddress.Hex(), chainclient.TransferDelegateAbiStr)
+		imp.TokenTransferDelegate = delegate
+
 		protocolImps[addr] = imp
 	}
 	LoopringInstance.LoopringImpls = protocolImps

@@ -167,13 +167,13 @@ func (m *AbiMethod) Unpack(v interface{}, hex string) error {
 	return UnpackTransaction(m.Method, v, hex)
 }
 
-func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *EthClient) {
+func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethClient *EthClient) {
 	for _, method := range cabi.Methods {
 		methodName := strings.ToUpper(method.Name[0:1]) + method.Name[1:]
 		abiMethod := &AbiMethod{}
 		abiMethod.Name = method.Name
 		abiMethod.Abi = cabi
-		abiMethod.ContractAddress = types.HexToAddress(address)
+		abiMethod.ContractAddress = address
 		abiMethod.Client = ethClient
 		abiMethod.Method = cabi.Methods[method.Name]
 		field := e.FieldByName(methodName)
@@ -183,7 +183,7 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address string, ethClient *E
 	}
 }
 
-func (ethClient *EthClient) newContract(contract interface{}, address, abiStr string) error {
+func (ethClient *EthClient) newContract(contract interface{}, addressStr, abiStr string) error {
 	cabi := &abi.ABI{}
 	if err := cabi.UnmarshalJSON([]byte(abiStr)); err != nil {
 		log.Fatalf("error:%s", err.Error())
@@ -191,6 +191,7 @@ func (ethClient *EthClient) newContract(contract interface{}, address, abiStr st
 
 	e := reflect.ValueOf(contract).Elem()
 
+	address := types.HexToAddress(addressStr)
 	e.FieldByName("Abi").Set(reflect.ValueOf(cabi))
 	e.FieldByName("Address").Set(reflect.ValueOf(address))
 

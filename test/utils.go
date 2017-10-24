@@ -179,10 +179,16 @@ func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs 
 		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
 		for _, account := range accounts {
 			balance := &types.Big{}
-			token.BalanceOf.Call(balance, "latest", common.HexToAddress(account))
-			log.Infof("balance %s : %s", account, balance.BigInt().String())
-			token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress)
-			log.Infof("allowance: %s -> %s %s", account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
+			if err := token.BalanceOf.Call(balance, "latest", common.HexToAddress(account)); nil != err {
+				log.Error(err.Error())
+			} else {
+				log.Infof("balance %s : %s", account, balance.BigInt().String())
+			}
+			if err := token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress); nil != err {
+				log.Error(err.Error())
+			} else {
+				log.Infof("allowance: %s -> %s %s", account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
+			}
 		}
 	}
 }
