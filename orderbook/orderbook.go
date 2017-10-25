@@ -118,9 +118,13 @@ func (ob *OrderBook) Start() {
 		for {
 			select {
 			case ord := <-ob.whisper.PeerOrderChan:
-				ob.peerOrderHook(ord)
+				if err := ob.peerOrderHook(ord); err != nil {
+					log.Errorf(err.Error())
+				}
 			case ord := <-ob.whisper.ChainOrderChan:
-				ob.chainOrderHook(ord)
+				if err := ob.chainOrderHook(ord); err != nil {
+					log.Errorf(err.Error())
+				}
 			}
 		}
 	}()
@@ -137,86 +141,109 @@ func (ob *OrderBook) Stop() {
 
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
-func (ob *OrderBook) peerOrderHook(ord *types.Order) {
+func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
+	log.Debugf("orderbook accept data from peer:%s", ord.Protocol.Hex())
+
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	log.Debugf("orderbook accept data from peer:%s", ord.Protocol.Hex())
 	if valid, err := ob.filter(ord); !valid {
-		log.Errorf("orderbook receive order but valid failed:%s", err.Error())
+		return err
 	}
 
+	orderhash := ord.GenerateHash()
 	state := &types.OrderState{}
 	state.RawOrder = *ord
-	state.RawOrder.Hash = ord.GenerateHash()
+	state.RawOrder.Hash = orderhash
 
-	orderhash := state.RawOrder.Hash.Hex()
 	log.Debugf("orderbook new order hash:%s", orderhash)
 
 	// 之前从未存储过
-	if _, _, err := ob.getOrder(state.RawOrder.Hash); err != nil {
-		vd := types.VersionData{}
-		vd.RemainedAmountB = state.RawOrder.AmountB
-		vd.RemainedAmountS = state.RawOrder.AmountS
-		vd.Status = types.ORDER_NEW
-
-		state.States = append(state.States, vd)
-		if bs, err := json.Marshal(state); err != nil {
-			log.Errorf("orderbook order marshal error:%s", err.Error())
-		} else {
-			if errsv := ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs); err != nil {
-				log.Errorf("orderbook order save error:%s", errsv.Error())
-			} else {
-				// todo: delete after test
-				log.Debugf("orderbook protocol:%s", state.RawOrder.Protocol.Hex())
-				log.Debugf("orderbook tokenS:%s", state.RawOrder.TokenS.Hex())
-				log.Debugf("orderbook tokenB:%s", state.RawOrder.TokenB.Hex())
-				log.Debugf("orderbook amountS:%s", state.RawOrder.AmountS.String())
-				log.Debugf("orderbook amountB:%s", state.RawOrder.AmountB.String())
-
-				ob.whisper.EngineOrderChan <- state
-			}
-		}
-	} else {
-		log.Errorf("order %s already exist", orderhash)
+	if _, err := ob.GetOrder(orderhash); err == nil {
+		return errors.New("order " + orderhash.Hex() + " already exist")
 	}
+
+	state.AddVersion(types.VersionData{})
+	ob.setOrder(state)
+
+	ob.whisper.EngineOrderChan <- state
+
+	return nil
 }
 
 // 处理来自eth网络的evt/transaction转换后的orderState
 // 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
 // 如果之前已经存储，那么应该直接处理并发送到miner
-func (ob *OrderBook) chainOrderHook(ord *types.OrderState) {
-	log.Debugf("accept data from block chain:%s", ord.RawOrder.Protocol.Hex())
+func (ob *OrderBook) chainOrderHook(ord *types.OrderState) error {
+	log.Debugf("orderbook accept data from block chain:%s", ord.RawOrder.Protocol.Hex())
 
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	ord, tn, err := ob.getOrder(ord.RawOrder.Hash)
+	vd, err := ord.LatestVersion()
+	if err != nil {
+		return err
+	}
 
-	if err == nil {
-		log.Debugf("chain order exist in:%s", tn)
-		if vd, errvd := ord.LatestVersion(); errvd != nil {
-			switch vd.Status {
-			case types.ORDER_PARTIAL:
-				ob.whisper.EngineOrderChan <- ord
-
-			case types.ORDER_FINISHED:
-				ob.moveOrder(ord)
-
-			case types.ORDER_CANCEL:
-				ob.moveOrder(ord)
-
-			case types.ORDER_REJECT:
-				ob.moveOrder(ord)
+	// 如果订单不存在(别的交易所提交的环)并且没有完成/拒绝/退出,则视为新订单发送给miner
+	// 这里要注意的是，该ord是在eth-listener解析method并查询latest block获得到最新的versionData后传过来的
+	state, tn, err := ob.getOrder(ord.RawOrder.Hash)
+	if err != nil {
+		invalidStatus := []types.OrderStatus{types.ORDER_CANCEL, types.ORDER_FINISHED, types.ORDER_FINISHED}
+		for _, v := range invalidStatus {
+			if v == vd.Status {
+				log.Debugf("orderbook get invalid external order,order status %d", v)
+				return nil
 			}
 		}
+		vd.Status = types.ORDER_EXTERNAL
 	}
+	ord.AddVersion(vd)
+
+	log.Debugf("chain order exist in:%s", tn)
+
+	switch vd.Status {
+	case types.ORDER_NEW:
+		if valid, err := ob.filter(&ord.RawOrder); !valid {
+			return err
+		}
+		ob.setOrder(ord)
+		ob.whisper.EngineOrderChan <- ord
+
+	case types.ORDER_PARTIAL:
+		return ob.setOrder(state)
+
+	case types.ORDER_FINISHED:
+		return ob.moveOrder(state)
+
+	case types.ORDER_CANCEL:
+		return ob.moveOrder(state)
+
+	case types.ORDER_REJECT:
+		return ob.moveOrder(state)
+	}
+
+	return nil
 }
 
 // GetOrder get single order with hash
 func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
 	ord, _, err := ob.getOrder(id)
 	return ord, err
+}
+
+func (ob *OrderBook) setOrder(state *types.OrderState) error {
+	bs, err := json.Marshal(state)
+
+	if err != nil {
+		return errors.New("orderbook order" + state.RawOrder.Hash.Hex() + " marshal error")
+	}
+
+	if err := ob.partialTable.Put(state.RawOrder.Hash.Bytes(), bs); err != nil {
+		return errors.New("orderbook order save error")
+	}
+
+	return nil
 }
 
 func (ob *OrderBook) getOrder(id types.Hash) (*types.OrderState, string, error) {
@@ -252,14 +279,20 @@ func (ob *OrderBook) GetOrders() {
 }
 
 // moveOrder move order when partial finished order fully exchanged
-func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
-	key := odw.RawOrder.Hash.Bytes()
-	value, err := json.Marshal(odw)
+func (ob *OrderBook) moveOrder(ord *types.OrderState) error {
+	key := ord.RawOrder.Hash.Bytes()
+	value, err := json.Marshal(ord)
 	if err != nil {
 		return err
 	}
-	ob.partialTable.Delete(key)
-	ob.finishTable.Put(key, value)
+
+	if err := ob.partialTable.Delete(key); err != nil {
+		return err
+	}
+
+	if err := ob.finishTable.Put(key, value); err != nil {
+		return err
+	}
 	return nil
 }
 

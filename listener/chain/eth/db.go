@@ -58,7 +58,8 @@ func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 	// 获取最近一次使用的blockNumber
 	prevBlockNum, err := l.getBlockNumber()
 	if err != nil {
-		return err
+		log.Infof("listener init state,non block number")
+		prevBlockNum = l.commOpts.DefaultBlockNumber
 	}
 
 	if bi.Number.Cmp(prevBlockNum) < 1 {

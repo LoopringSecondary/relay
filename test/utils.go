@@ -27,6 +27,7 @@ import (
 	"github.com/Loopring/ringminer/db"
 	ethChainListener "github.com/Loopring/ringminer/listener/chain/eth"
 	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -239,4 +240,11 @@ func LoadConfigAndGenerateSimpleEthListener() *ethChainListener.EthClientListene
 	db := db.NewDB(c.Database)
 	l := ethChainListener.NewListener(c.ChainClient, c.Common, nil, nil, nil, db)
 	return l
+}
+
+func LoadConfigAndGenerateOrderBook() *orderbook.OrderBook {
+	c := loadConfig()
+	db := db.NewDB(c.Database)
+	ob := orderbook.NewOrderBook(c.Orderbook, c.Common, db, nil)
+	return ob
 }
