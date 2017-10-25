@@ -20,7 +20,9 @@ package eth
 
 import (
 	"encoding/json"
+	//"errors"
 	ethch "github.com/Loopring/ringminer/chainclient/eth"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
@@ -50,9 +52,19 @@ type TransactionIndex struct {
 }
 
 // 存储最近一次使用的blocknumber到db，同时存储blocknumber，blockhash键值对
-// todo 判断最近存储的blocknumber是否比之前还小等逻辑
 func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 	bi := createBlockIndex(block)
+
+	// 获取最近一次使用的blockNumber
+	prevBlockNum, err := l.getBlockNumber()
+	if err != nil {
+		return err
+	}
+
+	if bi.Number.Cmp(prevBlockNum) < 1 {
+		log.Debugf("current block number:%s, prevent block number:%s", bi.Number.String(), prevBlockNum.String())
+		//return errors.New("current block number cmp prevent block number < 1")
+	}
 
 	// 存储最近一次使用的blocknumber
 	if err := l.saveBlockNumber(&bi); err != nil {
@@ -124,6 +136,21 @@ func (l *EthClientListener) saveTransactions(blockhash types.Hash, txhashs []typ
 	}
 
 	return l.txhashTable.Put(blockhash.Bytes(), bs)
+}
+
+// 获取block内的所有txHash
+func (l *EthClientListener) getTransactions(blockhash types.Hash) (*TransactionIndex, error) {
+	txindex := &TransactionIndex{}
+	bs, err := l.txhashTable.Get(blockhash.Bytes())
+	if err != nil {
+		return txindex, err
+	}
+
+	if err := json.Unmarshal(bs, txindex); err != nil {
+		return nil, err
+	}
+
+	return txindex,nil
 }
 
 // 查询block内是否存在某txhash

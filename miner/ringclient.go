@@ -88,7 +88,7 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 	if canSubmit(ringState) {
 		if ringBytes, err := json.Marshal(ringState); err == nil {
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
-			ringData,_ := json.Marshal(ringState)
+			ringData, _ := json.Marshal(ringState)
 			log.Debugf("ringState:%s", string(ringData))
 			if IfRegistryRingHash {
 				ringClient.sendRinghashRegistry(ringState)
@@ -246,7 +246,7 @@ func (ringClient *RingClient) recoverRing() {
 						} else {
 							if canSubmit.Int() > 0 {
 								ringClient.submitRing(ring)
- 							} else {
+							} else {
 
 							}
 						}
