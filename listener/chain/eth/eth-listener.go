@@ -80,7 +80,6 @@ func NewListener(options config.ChainClientOptions,
 	return &l
 }
 
-// TODO(fukun): 这里调试调不通,应当返回channel
 func (l *EthClientListener) Start() {
 	l.stop = make(chan struct{})
 
@@ -88,21 +87,21 @@ func (l *EthClientListener) Start() {
 
 	start, end := l.getBlockNumberRange()
 
-	// get block data
 	go func() {
 		iterator := l.ethClient.BlockIterator(start, end)
 		for {
-			// save block index
 			inter, err := iterator.Next()
 			if err != nil {
-				//log.Errorf("eth listener iterator next error:%s", err.Error())
-				continue
+				log.Fatalf("eth listener iterator next error:%s", err.Error())
 			}
 
 			block := inter.(eth.BlockWithTxObject)
+			log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {
-				log.Errorf("eth listener get block transaction list empty error")
+				log.Debugf("eth listener get none block transaction")
+				continue
 			} else {
 				log.Infof("eth listener get block transaction list length %d", txcnt)
 			}
@@ -113,7 +112,6 @@ func (l *EthClientListener) Start() {
 			}
 
 			if l.commOpts.Develop {
-				log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 				if idx, err := l.getTransactions(block.Hash); err != nil {
 					for _, v := range idx.Txs {
 						log.Debugf("eth listener block transaction %s", v.Hex())
@@ -168,14 +166,15 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 	}
 }
 
-// 解析方法中orders，并发送到orderbook
-// 这些orders，不一定来自ipfs
+// 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
 func (l *EthClientListener) doMethod(input string) {
-	// todo: unpack event
+	// todo: unpack method
 	// input := tx.Input
 	// l.ethClient
 }
 
+// 解析相关事件
+// todo(fuk): how to process approval,transfer,version add/remove...
 func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 	impl, ok := miner.LoopringInstance.LoopringImpls[to]
 	if !ok {
@@ -198,17 +197,19 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 			return err
 		}
 
-		log.Debugf("eth listener order filled event ringhash -> %s", types.Bytes2Hex(evt.Ringhash))
-		log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
-		log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
-		log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-		log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
-		log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
-		log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
-		log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
-		log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
-		log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
-		log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
+		if l.commOpts.Develop {
+			log.Debugf("eth listener order filled event ringhash -> %s", types.Bytes2Hex(evt.Ringhash))
+			log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
+			log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
+			log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+			log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
+			log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
+			log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
+			log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
+			log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
+			log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
+			log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
+		}
 
 		hash := types.BytesToHash(evt.OrderHash)
 		ord, err := l.ob.GetOrder(hash)
@@ -235,10 +236,10 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		evt.ConvertDown(ord)
 		l.whisper.ChainOrderChan <- ord
 
-		//case impl.CutoffTimestampChangedEvent.Id():
+	case impl.CutoffTimestampChangedEvent.Id():
 
 	default:
-		log.Errorf("event id %s not found", topic)
+		//log.Errorf("event id %s not found", topic)
 	}
 
 	return nil

@@ -236,6 +236,7 @@ func applyAbiEvent(e reflect.Value, cabi *abi.ABI, address types.Address, ethCli
 		abiEvent.Event.Name = event.Name
 		field := e.FieldByName(eventName)
 
+		log.Debugf("eth chain client event name and id %s -> %s", eventName, abiEvent.Id())
 		if field.IsValid() {
 			field.Set(reflect.ValueOf(abiEvent))
 		}

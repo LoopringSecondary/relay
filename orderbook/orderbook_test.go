@@ -19,119 +19,40 @@
 package orderbook_test
 
 import (
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
-	"os"
-	"path/filepath"
 	"testing"
 )
 
-const (
-	dbname = "leveldb"
-	topic1 = "OrderFilled"
-	topic2 = "RingMined"
-)
+func TestOrderBook_GetOrder(t *testing.T) {
+	ob := test.LoadConfigAndGenerateOrderBook()
+	orders := []string{
+		"0x67cbd4cc094a2333c56f0020259674004320215b9529d6d42dd775d413876dcf",
+		"0x9d7483b0ae85c7c1f17e75a425c1df2f4a7df6f19e2d41b727081e5cd039b4f9",
+	}
 
-var sep = func() string { return string(filepath.Separator) }
+	orderhash := orders[0]
 
-func file() string {
-	gopath := os.Getenv("GOPATH")
-	proj := "github.com/Loopring/ringminer"
-	return gopath + sep() + "src" + sep() + proj + sep() + dbname
-}
-
-func getOrderBook() *orderbook.OrderBook {
-	database := db.NewDB(config.DbOptions{DataDir: file(), BufferCapacity: 8, CacheCapacity: 4})
-	opts := config.OrderBookOptions{FilterTopics: []string{topic1, topic2}, DefaultBlockNumber: 100}
-
-	peerOrderChan := make(chan *types.Order)
-	chainOrderChan := make(chan *types.OrderMined)
-	engineOrderChan := make(chan *types.OrderState)
-	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
-	ob := orderbook.NewOrderBook(opts, database, whisper)
-
-	ob.RuntimeDataReady()
-	return ob
-}
-
-func TestOrderBook_GetBlockNumber(t *testing.T) {
-	ob := getOrderBook()
-	t.Log(ob.GetBlockNumber())
-}
-
-func TestOrderBook_SetBlockNumber(t *testing.T) {
-	ob := getOrderBook()
-	ob.SetBlockNumber(topic1, 200)
-	num := ob.GetBlockNumber()
-	t.Log("height:", num)
-}
-
-func TestOrderBook_SetTransaction(t *testing.T) {
-	ob := getOrderBook()
-	height := ob.GetBlockNumber()
-	tx := types.HexToHash("0x4f07194d6601954c8de8cec792f1702ed29b61d6f4d8bf3587f113abbce544f2")
-	data := []byte("222")
-	ob.SetTransaction(topic1, height, tx, data)
-
-	data, height, err := ob.GetTransaction(topic1, tx)
+	st, err := ob.GetOrder(types.HexToHash(orderhash))
 	if err != nil {
-		t.Error(err)
-	} else {
-		t.Log("data:", string(data))
-		t.Log("height:", height)
+		t.Fatal(err)
+	}
+
+	t.Logf("protocol:%s", st.RawOrder.Protocol.Hex())
+	t.Logf("orderhash:%s", st.RawOrder.Hash.Hex())
+	t.Logf("tokenS:%s", st.RawOrder.TokenS.Hex())
+	t.Logf("tokenB:%s", st.RawOrder.TokenB.Hex())
+	t.Logf("amountS:%s", st.RawOrder.AmountS.String())
+	t.Logf("amountB:%s", st.RawOrder.AmountB.String())
+
+	if _, err := st.LatestVersion(); err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range st.States {
+		t.Logf("version %d status %d", k, v.Status)
+		t.Logf("version %d block %s", k, v.Block.String())
+		t.Logf("version %d remainS %s", k, v.RemainedAmountS.String())
+		t.Logf("version %d remainB %s", k, v.RemainedAmountB.String())
 	}
 }
-
-//func getOrderWrap() *types.OrderWrap {
-//	var (
-//		ord types.Order
-//		odw types.OrderWrap
-//	)
-//
-//	ord.Id = types.StringToHash("test1")
-//	ord.Protocol = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.Owner = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.OutToken = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.InToken = types.StringToAddress("0xb794f5ea0ba39494ce839613fffba74279579268")
-//	ord.OutAmount = types.IntToBig(20000)
-//	ord.InAmount = types.IntToBig(800)
-//	ord.Expiration = uint64(time.Now().Unix())
-//	ord.Fee = types.IntToBig(30)
-//	ord.SavingShare = types.IntToBig(51)
-//	ord.V = 8
-//	ord.R = types.StringToSign("hhhhhhhh")
-//	ord.S = types.StringToSign("fjalskdf")
-//
-//	odw.RawOrder = &ord
-//	odw.InAmount = types.IntToBig(400)
-//	odw.OutAmount = types.IntToBig(10000)
-//	odw.Fee = types.IntToBig(15)
-//	odw.PeerId = "Qme85LtECPhvx4Px5i7s2Ht2dXdHrgXYpqkDsKvxdpFQP4"
-//
-//	return &odw
-//}
-//
-//func TestNewOrder(t *testing.T) {
-//	conf := &orderbook.OrderBookConfig{DBName: file(), DBCacheCapcity: 12, DBBufferCapcity: 12}
-//	orderbook.InitializeOrderBook(conf)
-//	odw := getOrderWrap()
-//	orderbook.NewOrder(odw)
-//}
-//
-//func TestGetOrder(t *testing.T) {
-//	conf := &orderbook.OrderBookConfig{DBName: file(), DBCacheCapcity: 12, DBBufferCapcity: 12}
-//	orderbook.InitializeOrderBook(conf)
-//
-//	if w, err := orderbook.GetOrder(types.StringToHash("test1")); err != nil {
-//		t.Log(err.Error())
-//	} else {
-//		t.Log(w.RawOrder.Id.Str())
-//		t.Log(w.RawOrder.OutAmount.Uint64())
-//		t.Log(w.RawOrder.InToken.Str())
-//		t.Log(w.RawOrder.OutToken.Str())
-//		t.Log(w.PeerId)
-//		t.Log(w.OutAmount.Uint64())
-//	}
-//}

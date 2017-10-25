@@ -28,7 +28,8 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_NEW OrderStatus = iota
+	ORDER_EXTERNAL OrderStatus = iota
+	ORDER_NEW
 	ORDER_PENDING
 	ORDER_PARTIAL
 	ORDER_FINISHED
@@ -189,11 +190,31 @@ type versionDataMarshaling struct {
 func (ord *OrderState) LatestVersion() (VersionData, error) {
 	length := len(ord.States)
 	if length < 1 {
-		d := VersionData{}
-		return d, errors.New("no version data")
+		return VersionData{}, errors.New("no version data")
 	}
 
 	return ord.States[length-1], nil
+}
+
+// 添加新版本，保证所有版本顺序递增
+func (ord *OrderState) AddVersion(currentVd VersionData) {
+	preventVd, err := ord.LatestVersion()
+
+	if err != nil {
+		vd := VersionData{}
+		vd.RemainedAmountB = ord.RawOrder.AmountB
+		vd.RemainedAmountS = ord.RawOrder.AmountS
+		vd.Status = ORDER_NEW
+		ord.States = append(ord.States, vd)
+	} else if currentVd.Block.Cmp(preventVd.Block) == 1 {
+		ord.States = append(ord.States, currentVd)
+	} else if currentVd.Block.Cmp(preventVd.Block) == 0 && currentVd.Status == ORDER_EXTERNAL {
+		length := len(ord.States)
+		ord.States[length-1].Status = ORDER_EXTERNAL
+		ord.States = append(ord.States, currentVd)
+	} else {
+		// do nothing
+	}
 }
 
 // 放到common package 根据配置决定状态
