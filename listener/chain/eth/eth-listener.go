@@ -112,14 +112,12 @@ func (l *EthClientListener) Start() {
 				continue
 			}
 
-			// todo(fuk): delete after debug
-			log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
-			if idx, err := l.getBlockIndex(block.Hash); err != nil {
-				log.Debugf("eth listener get block index:%s", idx.Hash.Hex())
-			}
-			if idx, err := l.getTransactions(block.Hash); err != nil {
-				for _, v := range idx.Txs {
-					log.Debugf("eth listener block transaction %s", v.Hex())
+			if l.commOpts.Develop {
+				log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+				if idx, err := l.getTransactions(block.Hash); err != nil {
+					for _, v := range idx.Txs {
+						log.Debugf("eth listener block transaction %s", v.Hex())
+					}
 				}
 			}
 

@@ -20,7 +20,7 @@ package eth
 
 import (
 	"encoding/json"
-	//"errors"
+	"errors"
 	ethch "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
@@ -63,7 +63,7 @@ func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 
 	if bi.Number.Cmp(prevBlockNum) < 1 {
 		log.Debugf("current block number:%s, prevent block number:%s", bi.Number.String(), prevBlockNum.String())
-		//return errors.New("current block number cmp prevent block number < 1")
+		return errors.New("current block number cmp prevent block number < 1")
 	}
 
 	// 存储最近一次使用的blocknumber
