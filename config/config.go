@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"os"
 	"reflect"
+	"strings"
 )
 
 func LoadConfig(file string) *GlobalConfig {
@@ -43,6 +44,17 @@ func LoadConfig(file string) *GlobalConfig {
 	c.defaultConfig()
 	if err := toml.NewDecoder(io).Decode(c); err != nil {
 		panic(err)
+	}
+
+	if c.Common.Develop {
+		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/"
+		c.Database.DataDir = basedir + "leveldb"
+
+		for idx, path := range c.Log.ZapOpts.OutputPaths {
+			if !strings.HasPrefix(path, "std") {
+				c.Log.ZapOpts.OutputPaths[idx] = basedir + path
+			}
+		}
 	}
 
 	return c
@@ -96,6 +108,7 @@ type CommonOptions struct {
 	DefaultBlockNumber   *big.Int `required:"true"`
 	EndBlockNumber       *big.Int `required:"true"`
 	Passphrase           string   `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	Develop              bool     `required:"true"`
 }
 
 type LogOptions struct {

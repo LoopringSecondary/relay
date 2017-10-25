@@ -142,11 +142,10 @@ func (l *EthClientListener) Start() {
 			for _, v := range receipt.Logs {
 				if err := l.doEvent(v, contractAddr); err != nil {
 					log.Errorf("eth listener do event error:%s", err.Error())
-					break
+				} else {
+					txhash := types.HexToHash(tx.Hash)
+					txs = append(txs, txhash)
 				}
-
-				txhash := types.HexToHash(tx.Hash)
-				txs = append(txs, txhash)
 			}
 
 			if err := l.saveTransactions(block.Hash, txs); err != nil {
@@ -242,6 +241,9 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		l.whisper.ChainOrderChan <- ord
 
 		//case impl.CutoffTimestampChangedEvent.Id():
+
+	default:
+		log.Errorf("event id %s not found", topic)
 	}
 
 	return nil

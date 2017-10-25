@@ -21,8 +21,6 @@ package log
 import (
 	"github.com/Loopring/ringminer/config"
 	"go.uber.org/zap"
-	"os"
-	"strings"
 )
 
 //todo: I'm not sure whether zap support Rotating
@@ -33,11 +31,7 @@ func Initialize(logOpts config.LogOptions) *zap.Logger {
 	var err error
 
 	cfg := logOpts.ZapOpts
-	for idx, path := range cfg.OutputPaths {
-		if !strings.HasPrefix(path, "std") && cfg.Development {
-			cfg.OutputPaths[idx] = strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/" + path
-		}
-	}
+
 	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	//"callerKey":"C"
 	//cfg.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
