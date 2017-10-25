@@ -45,7 +45,6 @@ type Ring struct {
 }
 
 func (ring *Ring) GenerateHash() Hash {
-	h := &Hash{}
 	vBytes := []byte{byte(ring.Orders[0].OrderState.RawOrder.V)}
 	rBytes := ring.Orders[0].OrderState.RawOrder.R.Bytes()
 	sBytes := ring.Orders[0].OrderState.RawOrder.S.Bytes()
@@ -56,9 +55,8 @@ func (ring *Ring) GenerateHash() Hash {
 			sBytes = Xor(sBytes, order.OrderState.RawOrder.S.Bytes())
 		}
 	}
-	hashBytes := crypto.CryptoInstance.GenerateHash(ring.Miner.Bytes(), vBytes, rBytes, sBytes)
-	h.SetBytes(hashBytes)
-	return *h
+	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
+	return BytesToHash(hashBytes)
 }
 
 func (ring *Ring) GenerateAndSetSignature(pkBytes []byte) error {
@@ -126,10 +124,8 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
 		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R.Bytes())
 		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S.Bytes())
 	}
-	//if ringSubmitArgs.Ringminer {
 	ringminer, _ := ring.SignerAddress()
 	ringSubmitArgs.Ringminer = ringminer
-	//}
 	return ringSubmitArgs
 }
 

@@ -24,10 +24,12 @@ import (
 	types "github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type AbiMethod struct {
@@ -155,8 +157,48 @@ func (e AbiEvent) Name() string {
 }
 
 //todo:impl it
-func (e AbiEvent) Subscribe() {
-	e.Event.Id().String()
+func (e AbiEvent) Subscribe(eventChan reflect.Value, fromBlock, toBlock string) {
+	var filterId string
+	filterReq := &FilterQuery{}
+	filterReq.Address = []types.Address{}
+	filterReq.FromBlock = fromBlock
+	filterReq.ToBlock = toBlock
+	topics := []types.Hash{}
+	filterReq.Address = append(filterReq.Address, e.ContractAddress)
+	topics = append(topics, types.HexToHash(e.Id()))
+
+	defer func() {
+		var res string
+		e.Client.UninstallFilter(&res, filterId)
+		log.Infof("stop the filter:%s res:%s", filterId, res)
+	}()
+
+	if err := e.Client.NewFilter(&filterId, filterReq); nil != err {
+		log.Errorf("error:%s", err.Error())
+	} else {
+		for {
+			select {
+			case <-time.Tick(1000000000):
+				eventType := eventChan.Type().Elem()
+				event := reflect.New(eventType)
+				logs := make([]Log, 0)
+				if err := e.Client.GetFilterChanges(&logs, filterId); nil != err {
+					log.Errorf("error:%s", err.Error())
+					break
+				} else {
+					for _, log1 := range logs {
+						data := hexutil.MustDecode(log1.Data)
+						if err := e.Unpack(&event, data, log1.Topics); err != nil {
+							log.Errorf("error:%s", err.Error())
+							break
+						} else {
+							eventChan.Send(event.Elem())
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 func (e AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
@@ -204,6 +246,7 @@ func (ethClient *EthClient) newContract(contract interface{}, addressStr, abiStr
 	cabi := &abi.ABI{}
 	if err := cabi.UnmarshalJSON([]byte(abiStr)); err != nil {
 		log.Fatalf("error:%s", err.Error())
+		return err
 	}
 
 	e := reflect.ValueOf(contract).Elem()

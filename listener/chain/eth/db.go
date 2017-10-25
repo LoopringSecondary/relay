@@ -150,7 +150,7 @@ func (l *EthClientListener) getTransactions(blockhash types.Hash) (*TransactionI
 		return nil, err
 	}
 
-	return txindex,nil
+	return txindex, nil
 }
 
 // 查询block内是否存在某txhash
