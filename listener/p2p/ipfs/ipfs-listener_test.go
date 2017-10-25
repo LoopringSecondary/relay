@@ -103,5 +103,16 @@ func TestIsTestDataReady(t *testing.T) {
 }
 
 func TestPrepareTestData(t *testing.T) {
-	testParams.PrepareTestData()
+	//testParams.PrepareTestData()
+	//var res string
+	//testParams.Registry.CanSubmit.Call(&res, "pending", types.HexToHash("0x6114f07229a87ae4cd4c61d1888c34f3c45266b25f2136f3a0068e6b0ccd52d4"), types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"))
+	//println(res)
+	sh := shell.NewLocalShell()
+
+	order1 := `{"protocol":"0x29d4178372d890e3127d35c3f49ee5ee215d6fe8","tokenS":"0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f","tokenB":"0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e","amountS":"0xc8","amountB":"0xa","timestamp":"0x59ef0cc8","ttl":"0x2710","salt":"0x3e8","lrcFee":"0x64","buyNoMoreThanAmountB":false,"marginSplitPercentage":0,"v":27,"r":"0xecdfe5d96346e1a4fffce7a63fe0c8ff6111b13c3c387a296cdc6d9a10599fb0","s":"0x18640bbb9ccc6b667a05abcd349531b58211084b33fbb73270f1eb1861d6559a","owner":"0x48ff2269e58a373120ffdbbdee3fbcea854ac30a","hash":"0x9b7857b006236a148e70e8b07adf6347610a7d1beb88328810528d98f20496e8"}`
+	order2 := `{"protocol":"0x29d4178372d890e3127d35c3f49ee5ee215d6fe8","tokenS":"0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e","tokenB":"0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f","amountS":"0xa","amountB":"0x64","timestamp":"0x59ef0cc8","ttl":"0x2710","salt":"0x3e8","lrcFee":"0x64","buyNoMoreThanAmountB":false,"marginSplitPercentage":0,"v":27,"r":"0xe4c79971b1949223b185101e3bd890f5b5d236d0f6c067bb1e3f36fa3784e79c","s":"0x0512ac6bd868bb92a5e4270ba3cfd3856d21ed5092d4b23b54f5b854fb0777df","owner":"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2","hash":"0xdf2d02d7533d4c2faea71588df3e41f8199853cd97ea5eeb29ee0a5c643dd953"}`
+
+	pubMessage(sh, order1)
+	pubMessage(sh, order2)
+
 }

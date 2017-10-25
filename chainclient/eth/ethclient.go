@@ -97,20 +97,19 @@ func (ethClient *EthClient) signAndSendTransaction(result interface{}, from type
 	} else {
 		signer := &ethTypes.HomesteadSigner{}
 
-		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
-
-		log.Debugf("hash:%s, sig:%s, value%s, gas:%s, gasPrice:%s", signer.Hash(transaction).Hex(), common.ToHex(signature), transaction.Value().String(), transaction.Gas().String(), transaction.GasPrice().String())
-		if nil != err {
-			return err
-		}
-		if transaction, err = transaction.WithSignature(signer, signature); nil != err {
+		if signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey); nil != err {
 			return err
 		} else {
-			if txData, err := rlp.EncodeToBytes(transaction); nil != err {
+			if transaction, err = transaction.WithSignature(signer, signature); nil != err {
 				return err
 			} else {
-				err = ethClient.SendRawTransaction(result, common.ToHex(txData))
-				return err
+				if txData, err := rlp.EncodeToBytes(transaction); nil != err {
+					return err
+				} else {
+					log.Debugf("txhash:%s, sig:%s, value:%s, gas:%s, gasPrice:%s", transaction.Hash().Hex(), common.ToHex(signature), transaction.Value().String(), transaction.Gas().String(), transaction.GasPrice().String())
+					err = ethClient.SendRawTransaction(result, common.ToHex(txData))
+					return err
+				}
 			}
 		}
 	}
