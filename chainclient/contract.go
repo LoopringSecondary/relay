@@ -20,9 +20,9 @@ package chainclient
 
 import (
 	"github.com/Loopring/ringminer/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"reflect"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type AbiMethod interface {
@@ -34,10 +34,10 @@ type AbiMethod interface {
 }
 
 type AbiEvent interface {
-	Id() string                                                 //返回事件id
-	Name() string                                               //返回事件名
-	Subscribe(eventChan reflect.Value, fromBlock, toBlock string)                                                 //对事件进行订阅
-	Unpack(v interface{}, output []byte, topics []string) error //事件解析
+	Id() string                                                   //返回事件id
+	Name() string                                                 //返回事件名
+	Subscribe(eventChan reflect.Value, fromBlock, toBlock string) //对事件进行订阅
+	Unpack(v interface{}, output []byte, topics []string) error   //事件解析
 }
 
 //the base info of contract
@@ -174,18 +174,18 @@ type cutoffTimestampChangedEventtMarshaling struct {
 
 type LoopringRinghashRegistry struct {
 	Contract
-	SubmitRinghash         AbiMethod
-	CanSubmit              AbiMethod
-	RinghashFound          AbiMethod
-	BlocksToLive           AbiMethod
-	CalculateRinghash      AbiMethod
+	SubmitRinghash    AbiMethod
+	CanSubmit         AbiMethod
+	RinghashFound     AbiMethod
+	BlocksToLive      AbiMethod
+	CalculateRinghash AbiMethod
 
 	RinghashSubmittedEvent AbiEvent
 }
 
 type RinghashSubmitted struct {
 	AbiEvent
-	RingHash  []byte `alias:"_ringhash"`
+	RingHash  []byte         `alias:"_ringhash"`
 	RingMiner common.Address `alias:"_ringminer"`
 }
 

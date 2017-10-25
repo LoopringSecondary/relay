@@ -25,9 +25,9 @@ import (
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"sync"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
@@ -86,7 +86,7 @@ func (ringClient *RingClient) NewRing(ringState *types.RingState) {
 	if canSubmit(ringState) {
 		if ringBytes, err := json.Marshal(ringState); err == nil {
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
-			ringData,_ := json.Marshal(ringState)
+			ringData, _ := json.Marshal(ringState)
 			log.Debugf("ringState:%s", string(ringData))
 			if IfRegistryRingHash {
 				ringClient.sendRinghashRegistry(ringState)
@@ -171,7 +171,7 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 					evt := chainclient.RinghashSubmitted{}
 					address := types.HexToAddress(log1.Address)
 					var ringHashRegistry *chainclient.LoopringRinghashRegistry
-					for _,implTmp := range LoopringInstance.LoopringImpls {
+					for _, implTmp := range LoopringInstance.LoopringImpls {
 						if implTmp.RingHashRegistry.Address == address {
 							ringHashRegistry = implTmp.RingHashRegistry
 						}
@@ -258,7 +258,7 @@ func (ringClient *RingClient) recoverRing() {
 						} else {
 							if canSubmit.Int() > 0 {
 								ringClient.submitRing(ring)
- 							} else {
+							} else {
 
 							}
 						}

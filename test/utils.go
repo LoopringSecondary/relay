@@ -24,6 +24,8 @@ import (
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
 	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
+	"github.com/Loopring/ringminer/db"
+	ethChainListener "github.com/Loopring/ringminer/listener/chain/eth"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -48,11 +50,6 @@ type TestParams struct {
 	Config               *config.GlobalConfig
 }
 
-var testAccounts = map[string]string{
-	"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A": "07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e",
-	"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2": "11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446",
-}
-
 const (
 	TokenAddressA = "0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"
 	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
@@ -63,7 +60,14 @@ const (
 //	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
 //)
 
-var testTokens = []string{TokenAddressA, TokenAddressB}
+var (
+	testAccounts = map[string]string{
+		"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A": "07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e",
+		"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2": "11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446",
+	}
+
+	testTokens = []string{TokenAddressA, TokenAddressB}
+)
 
 func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte, owner types.Address) *types.Order {
 	order := &types.Order{}
@@ -88,10 +92,8 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.Accounts = testAccounts
 	params.TokenAddrs = testTokens
 
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
-	globalConfig := config.LoadConfig(path)
+	globalConfig := loadConfig()
 	params.Config = globalConfig
-	log.Initialize(globalConfig.Log)
 
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
@@ -222,4 +224,19 @@ func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
 	} else {
 		println(result.BigInt().String())
 	}
+}
+
+func loadConfig() *config.GlobalConfig {
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	c := config.LoadConfig(path)
+	log.Initialize(c.Log)
+
+	return c
+}
+
+func LoadConfigAndGenerateSimpleEthListener() *ethChainListener.EthClientListener {
+	c := loadConfig()
+	db := db.NewDB(c.Database)
+	l := ethChainListener.NewListener(c.ChainClient, c.Common, nil, nil, nil, db)
+	return l
 }
