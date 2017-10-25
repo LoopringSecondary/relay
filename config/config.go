@@ -96,6 +96,7 @@ type CommonOptions struct {
 	DefaultBlockNumber   *big.Int `required:"true"`
 	EndBlockNumber       *big.Int `required:"true"`
 	Passphrase           string   `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	OrderMinAmounts map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }
 
 type LogOptions struct {
@@ -130,8 +131,6 @@ type OrderBookOptions struct {
 			Denied []string
 		}
 	}
-
-	OrderMinAmounts map[string]string //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }
 
 func Validator(cv reflect.Value) (bool, error) {

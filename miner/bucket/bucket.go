@@ -97,14 +97,13 @@ func convertOrderStateToFilledOrder(order *types.OrderState) *types.FilledOrder 
 	return filledOrder
 }
 
-func (b *Bucket) generateRing(order *types.OrderState) {
+func (b *Bucket) generateRing(orderState *types.OrderState) {
 	var ring *types.RingState
 	for _, semiRing := range b.semiRings {
 		lastOrder := semiRing.orders[len(semiRing.orders)-1]
 
 		//是否与最后一个订单匹配，匹配则可成环
-		if lastOrder.RawOrder.TokenB == order.RawOrder.TokenS {
-
+		if lastOrder.RawOrder.TokenB == orderState.RawOrder.TokenS && lastOrder.RawOrder.Protocol == orderState.RawOrder.Protocol {
 			ringTmp := &types.RingState{}
 			ringTmp.RawRing = &types.Ring{}
 
@@ -113,7 +112,7 @@ func (b *Bucket) generateRing(order *types.OrderState) {
 			for _, o := range semiRing.orders {
 				ringTmp.RawRing.Orders = append(ringTmp.RawRing.Orders, convertOrderStateToFilledOrder(&o.OrderState))
 			}
-			ringTmp.RawRing.Orders = append(ringTmp.RawRing.Orders, convertOrderStateToFilledOrder(order))
+			ringTmp.RawRing.Orders = append(ringTmp.RawRing.Orders, convertOrderStateToFilledOrder(orderState))
 			//兑换率是否匹配
 			if miner.PriceValid(ringTmp) {
 				//计算兑换的费用、折扣率等，便于计算收益，选择最大环
@@ -140,9 +139,9 @@ func (b *Bucket) generateRing(order *types.OrderState) {
 
 }
 
-func (b *Bucket) generateSemiRing(order *types.OrderState) {
+func (b *Bucket) generateSemiRing(orderState *types.OrderState) {
 	orderWithPos := &OrderWithPos{}
-	orderWithPos.OrderState = *order
+	orderWithPos.OrderState = *orderState
 
 	//首先生成包含自己的semiRing
 	selfSemiRing := &SemiRing{}
@@ -161,8 +160,7 @@ func (b *Bucket) generateSemiRing(order *types.OrderState) {
 		//兑换率判断
 		lastOrder := semiRing.orders[len(semiRing.orders)-1]
 
-		if lastOrder.RawOrder.TokenS == order.RawOrder.TokenB {
-
+		if lastOrder.RawOrder.TokenS == orderState.RawOrder.TokenB && lastOrder.RawOrder.Protocol == orderState.RawOrder.Protocol {
 			semiRingNew := &SemiRing{}
 			semiRingNew.orders = append(selfSemiRing.orders, semiRing.orders[1:]...)
 			semiRingNew.hash = semiRingNew.generateHash()
@@ -177,22 +175,22 @@ func (b *Bucket) generateSemiRing(order *types.OrderState) {
 		}
 	}
 
-	for k, v := range semiRingMap {
-		b.semiRings[k] = v
+	if len(semiRingMap) > 0 {
+		for k, v := range semiRingMap {
+			b.semiRings[k] = v
+		}
 	}
 }
 
-func (b *Bucket) appendToSemiRing(order *types.OrderState) {
+func (b *Bucket) appendToSemiRing(orderState *types.OrderState) {
 	semiRingMap := make(map[types.Hash]*SemiRing)
 
 	//第二层以下，只检测最后的token 即可
 	for _, semiRing := range b.semiRings {
 		lastOrder := semiRing.orders[len(semiRing.orders)-1]
-
-		if (len(semiRing.orders) < RingLength) && lastOrder.RawOrder.TokenB == order.RawOrder.TokenS {
-
+		if (len(semiRing.orders) < RingLength) && lastOrder.RawOrder.TokenB == orderState.RawOrder.TokenS && lastOrder.RawOrder.Protocol == orderState.RawOrder.Protocol {
 			orderWithPos := &OrderWithPos{}
-			orderWithPos.OrderState = *order
+			orderWithPos.OrderState = *orderState
 			orderWithPos.postions = []*semiRingPos{}
 			b.orders[orderWithPos.RawOrder.Hash] = orderWithPos
 
@@ -202,13 +200,15 @@ func (b *Bucket) appendToSemiRing(order *types.OrderState) {
 
 			semiRingMap[semiRingNew.hash] = semiRingNew
 
-			for idx, o1 := range semiRingNew.orders {
-				o1.postions = append(o1.postions, &semiRingPos{semiRingKey: semiRingNew.hash, index: idx})
+			for idx, o := range semiRingNew.orders {
+				o.postions = append(o.postions, &semiRingPos{semiRingKey: semiRingNew.hash, index: idx})
 			}
 		}
 	}
-	for k, v := range semiRingMap {
-		b.semiRings[k] = v
+	if len(semiRingMap) > 0 {
+		for k, v := range semiRingMap {
+			b.semiRings[k] = v
+		}
 	}
 }
 
@@ -218,16 +218,16 @@ func (b *Bucket) NewOrder(ord types.OrderState) {
 	b.newOrderWithoutLock(ord)
 }
 
-func (b *Bucket) DeleteOrder(ord types.OrderState) {
+func (b *Bucket) DeleteOrder(orderState types.OrderState) {
 	//delete the order
 	b.mtx.RLock()
 	defer b.mtx.RUnlock()
 
-	if o, ok := b.orders[ord.RawOrder.Hash]; ok {
+	if o, ok := b.orders[orderState.RawOrder.Hash]; ok {
 		for _, pos := range o.postions {
 			delete(b.semiRings, pos.semiRingKey)
 		}
-		delete(b.orders, ord.RawOrder.Hash)
+		delete(b.orders, orderState.RawOrder.Hash)
 	}
 
 }

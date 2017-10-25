@@ -27,6 +27,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
@@ -38,9 +39,7 @@ type RingClient struct {
 
 	unSubmitedRingsStore db.Database
 
-	ringhashRegistryStore db.Database
-
-	ringhashRegistryChan chan *chainclient.RinghashRegistryEvent
+	ringhashRegistryChan chan *chainclient.RinghashSubmitted
 
 	//ring 的失败包括：提交失败，ring的合约执行时失败，执行时包括：gas不足，以及其他失败
 	ringSubmitFailedChans []RingSubmitFailedChan
@@ -56,7 +55,6 @@ func NewRingClient(database db.Database, client *chainclient.Client) *RingClient
 	ringClient.store = database
 	ringClient.unSubmitedRingsStore = db.NewTable(ringClient.store, "unsubmited")
 	ringClient.submitedRingsStore = db.NewTable(ringClient.store, "submited")
-	ringClient.ringhashRegistryStore = db.NewTable(ringClient.store, "registry")
 	ringClient.mtx = &sync.RWMutex{}
 	ringClient.ringSubmitFailedChans = make([]RingSubmitFailedChan, 0)
 	return ringClient
@@ -131,7 +129,6 @@ func (ringClient *RingClient) sendRinghashRegistry(ringState *types.RingState) {
 			log.Error(err.Error())
 		} else {
 			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
-			ringClient.ringhashRegistryStore.Put(ringState.RegistryTxHash.Bytes(), ringBytes)
 		}
 	}
 }
@@ -171,9 +168,24 @@ func (ringClient *RingClient) listenRinghashRegistrySucessAndSendRing() {
 			select {
 			case logs := <-logChan:
 				for _, log1 := range logs {
-					ringHash := types.HexToHash(log1.TransactionHash)
-					log.Debugf("ringState txHash:%s", log1.TransactionHash)
-					ringData, _ := ringClient.ringhashRegistryStore.Get(ringHash.Bytes())
+					evt := chainclient.RinghashSubmitted{}
+					address := types.HexToAddress(log1.Address)
+					var ringHashRegistry *chainclient.LoopringRinghashRegistry
+					for _,implTmp := range LoopringInstance.LoopringImpls {
+						if implTmp.RingHashRegistry.Address == address {
+							ringHashRegistry = implTmp.RingHashRegistry
+						}
+					}
+					if nil == ringHashRegistry {
+						log.Errorf("no such ringhashRegistry with address :%s", log1.Address)
+					}
+					data := hexutil.MustDecode(log1.Data)
+					if err := ringHashRegistry.RinghashSubmittedEvent.Unpack(&evt, data, log1.Topics); err != nil {
+						log.Errorf("err :%s", err.Error())
+					}
+					ringHash := types.BytesToHash(evt.RingHash)
+					log.Debugf("ringState txHash:%s, eventHash:%s", log1.TransactionHash, ringHash.Hex())
+					ringData, _ := ringClient.unSubmitedRingsStore.Get(ringHash.Bytes())
 					if nil != ringData {
 						ring := &types.RingState{}
 						if err := json.Unmarshal(ringData, ring); nil != err {

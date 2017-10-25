@@ -264,7 +264,7 @@ func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
 }
 
 // isFinished judge order state
-func isFinished(odw *types.OrderState) bool {
+func (ob *OrderBook) isFullFilled(odw *types.OrderState) bool {
 	//if odw.RawOrder.
 	return true
 }
