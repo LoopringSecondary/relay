@@ -217,7 +217,7 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		}
 
 		if l.commOpts.Develop {
-			log.Debugf("eth listener order filled event ringhash -> %s", types.Bytes2Hex(evt.Ringhash))
+			log.Debugf("eth listener order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
 			log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
 			log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
 			log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
@@ -246,6 +246,13 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		evt := chainclient.OrderCancelledEvent{}
 		if err := impl.OrderCancelledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
+		}
+
+		if l.commOpts.Develop {
+			log.Debugf("eth listener order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+			log.Debugf("eth listener order cancelled event time -> %s", evt.Time.String())
+			log.Debugf("eth listener order cancelled event block -> %s", evt.Blocknumber.String())
+			log.Debugf("eth listener order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
 		}
 
 		hash := types.BytesToHash(evt.OrderHash)
