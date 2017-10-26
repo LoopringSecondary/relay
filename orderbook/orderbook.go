@@ -202,14 +202,17 @@ func (ob *OrderBook) chainOrderHook(ord *types.OrderState) error {
 
 	case types.ORDER_FINISHED:
 		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.whisper.EngineOrderChan <- state
 		return ob.moveOrder(state)
 
 	case types.ORDER_CANCEL:
 		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.whisper.EngineOrderChan <- state
 		return ob.moveOrder(state)
 
 	case types.ORDER_REJECT:
 		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.whisper.EngineOrderChan <- state
 		return ob.moveOrder(state)
 
 	default:
