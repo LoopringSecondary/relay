@@ -17,24 +17,30 @@ func (e *OrderFilledEvent) ConvertDown(r *types.OrderState) error {
 	// orderState更新时间
 	r.RawOrder.Timestamp = e.Time
 
-	remainAmountS := new(big.Int).Sub(r.RawOrder.AmountS, e.AmountS)
-	remainAmountB := new(big.Int).Sub(r.RawOrder.AmountB, e.AmountB)
-
-	if remainAmountS.Cmp(big.NewInt(0)) < 0 {
-		return errors.New("orderhash:" + rawOrderHashHex + " remainAmountS " + remainAmountS.String() + "error")
-	}
-	if remainAmountB.Cmp(big.NewInt(0)) < 0 {
-		return errors.New("orderhash:" + rawOrderHashHex + " remainAmountB " + remainAmountB.String() + "error")
+	latestVd, err := r.LatestVersion()
+	if err != nil {
+		return err
 	}
 
-	v := types.VersionData{}
-	v.Block = e.Blocknumber
-	v.RemainedAmountS = remainAmountS
-	v.RemainedAmountB = remainAmountB
-	v.Status = types.ORDER_PARTIAL
-	// todo: judge whether finished
+	v := types.VersionData{
+		Block:           e.Blocknumber,
+		Status:          types.ORDER_PENDING,
+		RemainedAmountS: new(big.Int).Sub(latestVd.RemainedAmountS, e.AmountS),
+		RemainedAmountB: new(big.Int).Add(latestVd.RemainedAmountB, e.AmountB),
+	}
 
-	r.States = append(r.States, v)
+	// 只要全部卖完s，不管什么情况都当他已经完成
+	if v.RemainedAmountS.Cmp(big.NewInt(0)) < 1 {
+		v.Status = types.ORDER_FINISHED
+		v.RemainedAmountS = big.NewInt(0)
+	}
+
+	if r.RawOrder.BuyNoMoreThanAmountB {
+		v.Status = types.ORDER_FINISHED
+	}
+
+	r.AddVersion(v)
+
 	return nil
 }
 
@@ -48,20 +54,31 @@ func (e *OrderCancelledEvent) ConvertDown(r *types.OrderState) error {
 	// orderState更新时间
 	r.RawOrder.Timestamp = e.Time
 
-	// todo: calculate remain amount s or b
-	//rawAmountS := types.NewEnlargedInt(r.RawOrder.AmountS)
-	//rawAmountB := types.NewEnlargedInt(r.RawOrder.AmountB)
-	//cancelAmount := types.NewEnlargedInt(e.AmountCancelled)
+	latestVd, err := r.LatestVersion()
+	if err != nil {
+		return err
+	}
 
 	v := types.VersionData{}
 	v.Status = types.ORDER_CANCEL
 	v.Block = e.Blocknumber
 
-	// todo
-	//v.RemainedAmountS =
-	//v.RemainedAmountB =
+	if r.RawOrder.BuyNoMoreThanAmountB {
+		remainAmountB := new(big.Int).Sub(latestVd.RemainedAmountB, e.AmountCancelled)
+		if remainAmountB.Cmp(big.NewInt(0)) < 0 {
+			return errors.New("order:" + rawOrderHashHex + " cancel amountB->" + e.AmountCancelled.String() + " error")
+		}
+		v.RemainedAmountB = remainAmountB
+	} else {
+		remainAmountS := new(big.Int).Sub(latestVd.RemainedAmountS, e.AmountCancelled)
+		if remainAmountS.Cmp(big.NewInt(0)) < 0 {
+			return errors.New("order:" + rawOrderHashHex + " cancel amountS->" + e.AmountCancelled.String() + " error")
+		}
+		v.RemainedAmountS = remainAmountS
+	}
 
-	r.States = append(r.States, v)
+	r.AddVersion(v)
+
 	return nil
 }
 
