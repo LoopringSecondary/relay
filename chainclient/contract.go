@@ -36,6 +36,7 @@ type AbiMethod interface {
 type AbiEvent interface {
 	Id() string                                                   //返回事件id
 	Name() string                                                 //返回事件名
+	Address() types.Address                                       //事件地址
 	Subscribe(eventChan reflect.Value, fromBlock, toBlock string) //对事件进行订阅
 	Unpack(v interface{}, output []byte, topics []string) error   //事件解析
 }
@@ -91,10 +92,10 @@ type LoopringProtocolImpl struct {
 	GetOrderCancelled      AbiMethod
 
 	//event
-	RingMinedEvent              AbiEvent
-	OrderFilledEvent            AbiEvent
-	OrderCancelledEvent         AbiEvent
-	CutoffTimestampChangedEvent AbiEvent
+	RingMinedEvent              RingMinedEvent
+	OrderFilledEvent            OrderFilledEvent
+	OrderCancelledEvent         OrderCancelledEvent
+	CutoffTimestampChangedEvent CutoffTimestampChangedEvent
 }
 
 // todo(fk): []byte to hash
@@ -180,7 +181,7 @@ type LoopringRinghashRegistry struct {
 	BlocksToLive      AbiMethod
 	CalculateRinghash AbiMethod
 
-	RinghashSubmittedEvent AbiEvent
+	RinghashSubmittedEvent RinghashSubmitted
 }
 
 type RinghashSubmitted struct {

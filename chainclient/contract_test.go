@@ -219,7 +219,7 @@ func TestRingHashRegistry(t *testing.T) {
 	ring.Miner = types.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2")
 
 	ring.Hash = ring.GenerateHash()
-	ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient = false
+	ring.ThrowIfLrcIsInsuffcient = false
 
 	t.Logf("ring.Hash:%x", ring.Hash)
 	ringSubmitArgs := ring.GenerateSubmitArgs(testParams.MinerPrivateKey)
@@ -287,7 +287,7 @@ func TestSubmitRing(t *testing.T) {
 	ring.Orders = append(ring.Orders, fOrder2)
 	ring.Miner = types.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2")
 	ring.Hash = ring.GenerateHash()
-	ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient = false
+	ring.ThrowIfLrcIsInsuffcient = false
 
 	t.Logf("ring.Hash:%x", ring.Hash)
 

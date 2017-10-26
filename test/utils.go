@@ -80,7 +80,7 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(10000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(100)
+	order.LrcFee = big.NewInt(1000)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
@@ -190,12 +190,12 @@ func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs 
 			if err := token.BalanceOf.Call(balance, "latest", common.HexToAddress(account)); nil != err {
 				log.Error(err.Error())
 			} else {
-				log.Infof("balance %s : %s", account, balance.BigInt().String())
+				log.Infof("token: %s, balance %s : %s", tokenAddr, account, balance.BigInt().String())
 			}
 			if err := token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress); nil != err {
 				log.Error(err.Error())
 			} else {
-				log.Infof("allowance: %s -> %s %s", account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
+				log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr, account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
 			}
 		}
 	}

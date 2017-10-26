@@ -156,6 +156,10 @@ func (e AbiEvent) Name() string {
 	return e.Event.Name
 }
 
+func (e AbiEvent) Address() types.Address {
+	return e.ContractAddress
+}
+
 //todo:impl it
 func (e AbiEvent) Subscribe(eventChan reflect.Value, fromBlock, toBlock string) {
 	var filterId string
@@ -238,7 +242,9 @@ func applyAbiEvent(e reflect.Value, cabi *abi.ABI, address types.Address, ethCli
 
 		log.Debugf("eth chain client event name and id %s -> %s", eventName, abiEvent.Id())
 		if field.IsValid() {
-			field.Set(reflect.ValueOf(abiEvent))
+			v := reflect.New(field.Type()).Elem()
+			v.FieldByName("AbiEvent").Set(reflect.ValueOf(abiEvent))
+			field.Set(v)
 		}
 	}
 }

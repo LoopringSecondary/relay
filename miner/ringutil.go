@@ -224,54 +224,54 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 		}
 	}
 
-	for _, order := range ringState.RawRing.Orders {
+	for _, filledOrder := range ringState.RawRing.Orders {
 		lrcAddress := &types.Address{}
 
 		lrcAddress.SetBytes([]byte(RateProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)
-		if order.OrderState.RawOrder.BuyNoMoreThanAmountB {
-			amountS := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS)
-			amountB := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountB)
+		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
+			amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
+			amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 			sPrice := new(big.Rat)
 			sPrice.Quo(amountS, amountB)
 			savingAmount := new(big.Rat)
-			savingAmount.Mul(order.FillAmountB, sPrice)
-			savingAmount.Sub(savingAmount, order.FillAmountS)
-			order.FeeS = savingAmount
-			legalAmountOfSaving.Mul(order.FeeS, RateProvider.GetLegalRate(order.OrderState.RawOrder.TokenS))
+			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
+			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
+			filledOrder.FeeS = savingAmount
+			legalAmountOfSaving.Mul(filledOrder.FeeS, RateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenS))
 			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
 		} else {
-			savingAmount := new(big.Rat).Set(order.FillAmountB)
+			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
-			savingAmount.Sub(order.FillAmountB, savingAmount)
-			order.FeeS = savingAmount
+			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
+			filledOrder.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(order.FeeS, RateProvider.GetLegalRate(order.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, RateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenB))
 		}
 
 		//compute lrcFee
-		rate := new(big.Rat).Quo(order.AvailableAmountS, new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS))
-		order.LrcFee = new(big.Rat).SetInt(order.OrderState.RawOrder.LrcFee)
-		order.LrcFee.Mul(order.LrcFee, rate)
+		rate := new(big.Rat).Quo(filledOrder.AvailableAmountS, new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS))
+		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
+		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(RateProvider.GetLegalRate(*lrcAddress), order.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(RateProvider.GetLegalRate(*lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
-			order.FeeSelection = 0
-			order.LegalFee = legalAmountOfLrc
+			filledOrder.FeeSelection = 0
+			filledOrder.LegalFee = legalAmountOfLrc
 		} else {
-			order.FeeSelection = 1
+			filledOrder.FeeSelection = 1
 			legalAmountOfSaving.Mul(legalAmountOfSaving, minShareRate)
-			order.LegalFee = legalAmountOfSaving
+			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
 			lrcReward.Quo(lrcReward, RateProvider.GetLegalRate(*lrcAddress))
-			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), order.LegalFee.FloatString(10))
-			order.LrcReward = lrcReward
+			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+			filledOrder.LrcReward = lrcReward
 		}
-		ringState.LegalFee.Add(ringState.LegalFee, order.LegalFee)
+		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
 	}
 }
 

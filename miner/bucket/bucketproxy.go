@@ -88,15 +88,16 @@ func (bp *BucketProxy) Start() {
 		for {
 			select {
 			case orderRing := <-bp.ringChan:
-				bp.ringClient.NewRing(orderRing)
-				for _, b := range bp.buckets {
+				if err := bp.ringClient.NewRing(orderRing); nil != err {
+					log.Errorf("err:%s", err.Error())
+				} else {
 					//this should call deleteOrder if the order was fullfilled, and do nothing else.
 					for _, order := range orderRing.RawRing.Orders {
+						//不应该调用orderbook而是加上当前已经被匹配过后的金额
 						if order.IsFullFilled() {
-							b.DeleteOrder(order.OrderState)
+							bp.deleteOrder(&order.OrderState)
 						}
 					}
-					log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", b.token.Hex(), len(b.orders), len(b.semiRings))
 				}
 			}
 		}
@@ -116,15 +117,15 @@ func (bp *BucketProxy) Stop() {
 func (bp *BucketProxy) listenOrderState() {
 	for {
 		select {
-		case order := <-bp.OrderStateChan.OrderStateChan:
-			vd, _ := order.LatestVersion()
+		case orderState := <-bp.OrderStateChan.OrderStateChan:
+			vd, _ := orderState.LatestVersion()
 			if types.ORDER_NEW == vd.Status {
-				miner.LoopringInstance.AddToken(order.RawOrder.TokenS)
-				miner.LoopringInstance.AddToken(order.RawOrder.TokenB)
-				bp.newOrder(order)
+				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenS)
+				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenB)
+				bp.newOrder(orderState)
 			} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
 				//todo:process the case of cancel partable
-				bp.deleteOrder(order)
+				bp.deleteOrder(orderState)
 			}
 		}
 	}
@@ -153,6 +154,7 @@ func (bp *BucketProxy) newOrder(order *types.OrderState) {
 func (bp *BucketProxy) deleteOrder(order *types.OrderState) {
 	for _, bucket := range bp.buckets {
 		bucket.DeleteOrder(*order)
+		log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", bucket.token.Hex(), len(bucket.orders), len(bucket.semiRings))
 	}
 } //订单的更新
 

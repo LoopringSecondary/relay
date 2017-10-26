@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
@@ -36,31 +37,37 @@ type forkDetect struct {
 }
 
 //fork detect
-func (ethClient *EthClient) startForkDetect(observers []chan chainclient.ForkedEvent, database db.Database) error {
-	if nil == observers || len(observers) == 0 {
-		panic(errors.New("observers can't be empty when start ForkDetect"))
-	} else {
-		detectedEventChan := make(chan chainclient.ForkedEvent)
-		observers = append(observers, detectedEventChan)
-		go func() {
-		L:
-			go ethClient.forkDetect(observers, database)
-			for {
-				select {
-				case event := <-detectedEventChan:
-					log.Debugf("forked:%s , checked:%s", event.ForkHash.Hex(), event.DetectedHash.Hex())
-					goto L
-				}
+func (ethClient *EthClient) startForkDetect(database db.Database) error {
+
+	detectedEventChan := make(chan chainclient.ForkedEvent)
+
+	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: func(eventData eventemitter.EventData) error {
+		event := eventData.(chainclient.ForkedEvent)
+		log.Debugf("forked:%s , checked:%s", event.ForkHash.Hex(), event.DetectedHash.Hex())
+		detectedEventChan <- event
+		return nil
+	}}
+	eventemitter.On(eventemitter.Fork.Name(), forkWatcher)
+
+	go func() {
+	L:
+		go ethClient.forkDetect(database)
+		for {
+			select {
+			case event := <-detectedEventChan:
+				log.Debugf("forked:%s , checked:%s", event.ForkHash.Hex(), event.DetectedHash.Hex())
+				goto L
 			}
-		}()
-	}
+		}
+	}()
 	return nil
 }
 
-func (ethClient *EthClient) forkDetect(observers []chan chainclient.ForkedEvent, database db.Database) error {
+
+//todo:move to eth-listener
+func (ethClient *EthClient) forkDetect(database db.Database) error {
 	detect := &forkDetect{}
 	detect.hashStore = db.NewTable(database, "fork_")
-	detect.observers = observers
 	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
 	detect.startedNumber = new(big.Int).SetBytes(startedNumberBs)
 	iterator := ethClient.BlockIterator(detect.startedNumber, nil)
@@ -81,18 +88,14 @@ func (ethClient *EthClient) forkDetect(observers []chan chainclient.ForkedEvent,
 				if forkedNumber, forkedHash, err := getForkedBlock(parentNumber, detect.hashStore, ethClient); nil != err {
 					panic(err)
 				} else {
-					forkedEvent := &chainclient.ForkedEvent{
+					forkedEvent := chainclient.ForkedEvent{
 						DetectedBlock: block.Number.BigInt(),
 						DetectedHash:  block.Hash,
 						ForkBlock:     forkedNumber,
 						ForkHash:      forkedHash,
 					}
 					detect.hashStore.Put([]byte("latest"), forkedNumber.Bytes())
-					for _, observer := range observers {
-						go func() {
-							observer <- *forkedEvent
-						}()
-					}
+					eventemitter.Emit(eventemitter.Fork.Name(), forkedEvent)
 					break
 				}
 			}

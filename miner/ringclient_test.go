@@ -141,7 +141,7 @@ func TestRingClient_NewRing(t *testing.T) {
 	ring.Orders = append(ring.Orders, fOrder1)
 	ring.Orders = append(ring.Orders, fOrder2)
 	ring.Hash = ring.GenerateHash()
-	ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient = false
+	ring.ThrowIfLrcIsInsuffcient = false
 
 	t.Logf("ring.Hash:%x", ring.Hash)
 

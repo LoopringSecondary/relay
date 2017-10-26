@@ -47,7 +47,7 @@ type Client struct {
 	BlockIterator          func(startNumber, endNumber *big.Int) BlockIterator
 	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
-	StartForkDetect        func(observers []chan ForkedEvent, database db.Database) error
+	StartForkDetect        func(database db.Database) error
 
 	//rpc method:
 	ClientVersion                       RpcMethod `methodName:"clientVersion"`

@@ -33,7 +33,7 @@ var LoopringInstance *chainclient.Loopring
 
 var MinerPrivateKey []byte     //used to sign the ring
 var FeeRecepient types.Address //used to receive fee
-var IfRegistryRingHash bool
+var IfRegistryRingHash, ThrowIfLrcIsInsuffcient bool
 
 type Proxy interface {
 	Start()
@@ -91,4 +91,6 @@ func Initialize(options config.MinerOptions, commOpts config.CommonOptions, clie
 	RateProvider = NewExchangeRateProvider(options)
 
 	RateRatioCVSThreshold = options.RateRatioCVSThreshold
+
+	ThrowIfLrcIsInsuffcient = options.ThrowIfLrcIsInsuffcient
 }

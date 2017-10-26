@@ -80,7 +80,11 @@ func combine(inputs []abi.Argument, output []byte, topics []string) []byte {
 
 func unpack(inputs []abi.Argument, v interface{}, output []byte) error {
 	// make sure the passed value is a pointer
-	valueOf := reflect.ValueOf(v)
+	var valueOf reflect.Value
+	var ok bool
+	if valueOf, ok = v.(reflect.Value); !ok {
+		valueOf = reflect.ValueOf(v)
+	}
 	if reflect.Ptr != valueOf.Kind() {
 		return fmt.Errorf("abi: Unpack(non-pointer %T)", v)
 	}

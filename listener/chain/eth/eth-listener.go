@@ -24,12 +24,14 @@ import (
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
+	"reflect"
 	"sync"
 )
 
@@ -58,6 +60,9 @@ type EthClientListener struct {
 	whisper        *Whisper
 	stop           chan struct{}
 	lock           sync.RWMutex
+
+	contractEvents map[types.Address][]chainclient.AbiEvent
+	txEvents       map[types.Address]bool
 }
 
 func NewListener(options config.ChainClientOptions,
@@ -77,10 +82,22 @@ func NewListener(options config.ChainClientOptions,
 	l.blockhashTable = db.NewTable(l.db, BLOCK_HASH_TABLE_NAME)
 	l.txhashTable = db.NewTable(l.db, TRANSACTION_HASH_TABLE_NAME)
 
+	//todo:for test
+	l.contractEvents = make(map[types.Address][]chainclient.AbiEvent)
+	l.txEvents = make(map[types.Address]bool)
+	for _, imp := range miner.LoopringInstance.LoopringImpls {
+		event := imp.RingHashRegistry.RinghashSubmittedEvent
+		l.AddContractEvent(event)
+		l.AddTxEvent(imp.Address)
+	}
+
+	methodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.doMethod}
+	eventemitter.On(eventemitter.Transaction.Name(), methodWatcher)
+
 	return &l
 }
 
-func (l *EthClientListener) Start() {
+func (l *EthClientListener) StartOld() {
 	l.stop = make(chan struct{})
 
 	log.Info("eth listener start...")
@@ -167,10 +184,13 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 }
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
-func (l *EthClientListener) doMethod(input string) {
+func (l *EthClientListener) doMethod(input eventemitter.EventData) error {
+	println("doMethoddoMethoddoMethoddoMethoddoMethoddoMethod")
+	//println(input.(string))
 	// todo: unpack method
 	// input := tx.Input
 	// l.ethClient
+	return nil
 }
 
 // 解析相关事件
@@ -285,4 +305,57 @@ func (l *EthClientListener) judgeContractAddress(addr string) bool {
 		}
 	}
 	return false
+}
+
+func (l *EthClientListener) AddContractEvent(event chainclient.AbiEvent) {
+	if _, ok := l.contractEvents[event.Address()]; !ok {
+		l.contractEvents[event.Address()] = make([]chainclient.AbiEvent, 0)
+	}
+	l.contractEvents[event.Address()] = append(l.contractEvents[event.Address()], event)
+}
+
+func (l *EthClientListener) AddTxEvent(address types.Address) {
+	if _, ok := l.txEvents[address]; !ok {
+		l.txEvents[address] = true
+	}
+}
+
+func (l *EthClientListener) Start() {
+	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
+	go func() {
+		for {
+			blockInter, _ := iterator.Next()
+			block := blockInter.(eth.BlockWithTxObject)
+			for _, tx := range block.Transactions {
+				//process tx doMethod, 处理后的之前需要保证该事件处理完成
+				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
+					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
+				}
+				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
+					var receipt eth.TransactionReceipt
+					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
+						if len(receipt.Logs) == 0 {
+							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+								topic := v.Address().Hex() + v.Id()
+								//todo:不应该发送nil，需要重新考虑，
+								eventemitter.Emit(topic, nil)
+							}
+						} else {
+							for _, log1 := range receipt.Logs {
+								data := hexutil.MustDecode(log1.Data)
+								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+									topic := v.Address().Hex() + v.Id()
+									evt := reflect.New(reflect.TypeOf(v))
+									if err := v.Unpack(evt, data, log1.Topics); nil != err {
+										log.Errorf("err :%s", err.Error())
+									}
+									eventemitter.Emit(topic, evt.Elem().Interface().(chainclient.AbiEvent))
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}()
 }

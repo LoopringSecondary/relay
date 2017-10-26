@@ -53,8 +53,6 @@ type SemiRing struct {
 }
 
 func (ring *SemiRing) generateHash() types.Hash {
-	h := &types.Hash{}
-
 	vBytes := []byte{byte(ring.orders[0].RawOrder.V)}
 	rBytes := ring.orders[0].RawOrder.R.Bytes()
 	sBytes := ring.orders[0].RawOrder.S.Bytes()
@@ -67,9 +65,8 @@ func (ring *SemiRing) generateHash() types.Hash {
 	}
 
 	hashBytes := crypto.CryptoInstance.GenerateHash(vBytes, rBytes, sBytes)
-	h.SetBytes(hashBytes)
 
-	return *h
+	return types.BytesToHash(hashBytes)
 }
 
 type Bucket struct {

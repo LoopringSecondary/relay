@@ -44,22 +44,22 @@ raw_url = "http://10.137.106.214:8545"
         gas_limit = 10000
 
 [common]
-loopringImpAddresses = ["0xbc887ce07cee5624715f6ff39e1dd6603633c777"]
-filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-default_block_number = 4655
-end_block_number = 10000
-develop = true
+    loopringImpAddresses = ["0xd02d3e40cde61c267a3886f5828e03aa4914073d"]
+    filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
+    default_block_number = 4000
+    end_block_number = 100000000000000
 
 [miner]
     ringMaxLength = 4
-    feeRecepient = ""
+    feeRecepient = "0xe1D2a6B89dABEfC032bF03b239a38aDe2972240E" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
     miner = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
-    ifRegistryRingHash = false
+    ifRegistryRingHash = true
+    throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
 
-[miner.rate_provider]
-    lrc_address = "0x5132a8ce9a61b13b9cAEcd2261abF95323056423"
-    base_url = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
-    currency = "USD"
-        [miner.rate_provider.currencies_map]
-        "0x5132a8ce9a61b13b9cAEcd2261abF95323056423" = "Loopring"
+    [miner.rate_provider]
+        lrc_address = "0x5132a8ce9a61b13b9cAEcd2261abF95323056423"
+        base_url = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
+        currency = "USD"
+            [miner.rate_provider.currencies_map]
+            "0x5132a8ce9a61b13b9cAEcd2261abF95323056423" = "Loopring"

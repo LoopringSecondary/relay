@@ -117,11 +117,12 @@ type LogOptions struct {
 }
 
 type MinerOptions struct {
-	RingMaxLength      int    `required:"true"` //recommended value:4
-	Miner              string `required:"true"` //private key, used to sign the ring
-	FeeRecepient       string //address the recepient of fee
-	IfRegistryRingHash bool
-	RateProvider       struct {
+	RingMaxLength           int    `required:"true"` //recommended value:4
+	Miner                   string `required:"true"` //private key, used to sign the ring
+	FeeRecepient            string //address the recepient of fee
+	IfRegistryRingHash      bool
+	ThrowIfLrcIsInsuffcient bool
+	RateProvider            struct {
 		LrcAddress    string
 		BaseUrl       string
 		Currency      string
