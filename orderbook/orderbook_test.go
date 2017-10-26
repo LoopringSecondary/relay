@@ -27,32 +27,33 @@ import (
 func TestOrderBook_GetOrder(t *testing.T) {
 	ob := test.LoadConfigAndGenerateOrderBook()
 	orders := []string{
-		"0x67cbd4cc094a2333c56f0020259674004320215b9529d6d42dd775d413876dcf",
-		"0x9d7483b0ae85c7c1f17e75a425c1df2f4a7df6f19e2d41b727081e5cd039b4f9",
+		"0x3ef9e3ecf36e5082a4beff7aff2b868355ae3abdf890b53178bd0306acac10cb",
+		"0xcec4c4c2baa64e8464e9f1fa74d9ebde0f836bd3caa77d5a070ae54e12d090cb",
 	}
 
-	orderhash := orders[0]
+	for _, orderhash := range orders {
+		st, err := ob.GetOrder(types.HexToHash(orderhash))
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	st, err := ob.GetOrder(types.HexToHash(orderhash))
-	if err != nil {
-		t.Fatal(err)
-	}
+		t.Logf("protocol:%s", st.RawOrder.Protocol.Hex())
+		t.Logf("orderhash:%s", st.RawOrder.Hash.Hex())
+		t.Logf("tokenS:%s", st.RawOrder.TokenS.Hex())
+		t.Logf("tokenB:%s", st.RawOrder.TokenB.Hex())
+		t.Logf("amountS:%s", st.RawOrder.AmountS.String())
+		t.Logf("amountB:%s", st.RawOrder.AmountB.String())
 
-	t.Logf("protocol:%s", st.RawOrder.Protocol.Hex())
-	t.Logf("orderhash:%s", st.RawOrder.Hash.Hex())
-	t.Logf("tokenS:%s", st.RawOrder.TokenS.Hex())
-	t.Logf("tokenB:%s", st.RawOrder.TokenB.Hex())
-	t.Logf("amountS:%s", st.RawOrder.AmountS.String())
-	t.Logf("amountB:%s", st.RawOrder.AmountB.String())
+		if _, err := st.LatestVersion(); err != nil {
+			t.Fatal(err)
+		}
 
-	if _, err := st.LatestVersion(); err != nil {
-		t.Fatal(err)
-	}
-
-	for k, v := range st.States {
-		t.Logf("version %d status %d", k, v.Status)
-		t.Logf("version %d block %s", k, v.Block.String())
-		t.Logf("version %d remainS %s", k, v.RemainedAmountS.String())
-		t.Logf("version %d remainB %s", k, v.RemainedAmountB.String())
+		for k, v := range st.States {
+			t.Logf("version %d status %d", k, v.Status)
+			t.Logf("version %d block %s", k, v.Block.String())
+			t.Logf("version %d remainS %s", k, v.RemainedAmountS.String())
+			t.Logf("version %d remainB %s", k, v.RemainedAmountB.String())
+		}
+		t.Log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 	}
 }

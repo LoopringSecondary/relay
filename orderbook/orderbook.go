@@ -39,7 +39,7 @@ todo:
 
 const (
 	FINISH_TABLE_NAME  = "finished"
-	PARTIAL_TABLE_NAME = "partial"
+	PENDING_TABLE_NAME = "pending"
 )
 
 type Whisper struct {
@@ -67,7 +67,7 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	ob.commOpts = commOpts
 	ob.db = database
 	ob.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
-	ob.partialTable = db.NewTable(database, PARTIAL_TABLE_NAME)
+	ob.partialTable = db.NewTable(database, PENDING_TABLE_NAME)
 	ob.whisper = whisper
 
 	//todo:filters init
@@ -142,8 +142,6 @@ func (ob *OrderBook) Stop() {
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
 func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
-	log.Debugf("orderbook accept data from peer:%s", ord.Protocol.Hex())
-
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
@@ -156,7 +154,9 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 	state.RawOrder = *ord
 	state.RawOrder.Hash = orderhash
 
-	log.Debugf("orderbook new order hash:%s", orderhash)
+	log.Debugf("orderbook accept new order hash:%s", orderhash.Hex())
+	log.Debugf("orderbook accept new order amountS:%s", ord.AmountS.String())
+	log.Debugf("orderbook accept new order amountB:%s", ord.AmountB.String())
 
 	// 之前从未存储过
 	if _, err := ob.GetOrder(orderhash); err == nil {
@@ -172,55 +172,48 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 }
 
 // 处理来自eth网络的evt/transaction转换后的orderState
+// 订单必须存在，如果不存在则不处理
 // 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
 // 如果之前已经存储，那么应该直接处理并发送到miner
 func (ob *OrderBook) chainOrderHook(ord *types.OrderState) error {
-	log.Debugf("orderbook accept data from block chain:%s", ord.RawOrder.Protocol.Hex())
-
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
+
+	if valid, err := ob.filter(&ord.RawOrder); !valid {
+		return err
+	}
 
 	vd, err := ord.LatestVersion()
 	if err != nil {
 		return err
 	}
 
-	// 如果订单不存在(别的交易所提交的环)并且没有完成/拒绝/退出,则视为新订单发送给miner
-	// 这里要注意的是，该ord是在eth-listener解析method并查询latest block获得到最新的versionData后传过来的
-	state, tn, err := ob.getOrder(ord.RawOrder.Hash)
-	if err != nil {
-		invalidStatus := []types.OrderStatus{types.ORDER_CANCEL, types.ORDER_FINISHED, types.ORDER_FINISHED}
-		for _, v := range invalidStatus {
-			if v == vd.Status {
-				log.Debugf("orderbook get invalid external order,order status %d", v)
-				return nil
-			}
-		}
-		vd.Status = types.ORDER_EXTERNAL
-	}
-	ord.AddVersion(vd)
-
-	log.Debugf("chain order exist in:%s", tn)
+	state := ord
 
 	switch vd.Status {
 	case types.ORDER_NEW:
-		if valid, err := ob.filter(&ord.RawOrder); !valid {
-			return err
-		}
-		ob.setOrder(ord)
-		ob.whisper.EngineOrderChan <- ord
+		log.Debugf("orderbook accept new order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.setOrder(state)
+		ob.whisper.EngineOrderChan <- state
 
-	case types.ORDER_PARTIAL:
+	case types.ORDER_PENDING:
+		log.Debugf("orderbook accept pending order from chain:%s", state.RawOrder.Hash.Hex())
 		return ob.setOrder(state)
 
 	case types.ORDER_FINISHED:
+		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
 		return ob.moveOrder(state)
 
 	case types.ORDER_CANCEL:
+		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
 		return ob.moveOrder(state)
 
 	case types.ORDER_REJECT:
+		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
 		return ob.moveOrder(state)
+
+	default:
+		log.Errorf("orderbook version data status error:%s", state.RawOrder.Hash.Hex())
 	}
 
 	return nil
@@ -262,7 +255,7 @@ func (ob *OrderBook) getOrder(id types.Hash) (*types.OrderState, string, error) 
 			tn = FINISH_TABLE_NAME
 		}
 	} else {
-		tn = PARTIAL_TABLE_NAME
+		tn = PENDING_TABLE_NAME
 	}
 
 	err = json.Unmarshal(value, &ord)

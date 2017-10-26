@@ -31,7 +31,6 @@ const (
 	ORDER_EXTERNAL OrderStatus = iota
 	ORDER_NEW
 	ORDER_PENDING
-	ORDER_PARTIAL
 	ORDER_FINISHED
 	ORDER_CANCEL
 	ORDER_REJECT
@@ -197,24 +196,29 @@ func (ord *OrderState) LatestVersion() (VersionData, error) {
 }
 
 // 添加新版本，保证所有版本顺序递增
-func (ord *OrderState) AddVersion(currentVd VersionData) {
+// 这里不考虑外部订单，外部订单到本地订单的转换在doMethod完成
+func (ord *OrderState) AddVersion(currentVd VersionData) error {
 	preventVd, err := ord.LatestVersion()
 
 	if err != nil {
 		vd := VersionData{}
-		vd.RemainedAmountB = ord.RawOrder.AmountB
+		vd.RemainedAmountB = big.NewInt(0)
 		vd.RemainedAmountS = ord.RawOrder.AmountS
+		vd.Block = big.NewInt(0)
 		vd.Status = ORDER_NEW
 		ord.States = append(ord.States, vd)
-	} else if currentVd.Block.Cmp(preventVd.Block) == 1 {
-		ord.States = append(ord.States, currentVd)
-	} else if currentVd.Block.Cmp(preventVd.Block) == 0 && currentVd.Status == ORDER_EXTERNAL {
-		length := len(ord.States)
-		ord.States[length-1].Status = ORDER_EXTERNAL
-		ord.States = append(ord.States, currentVd)
-	} else {
-		// do nothing
+
+		log.Debugf("ipfs new order add version data:%s", ord.RawOrder.Hash.Hex())
+		return nil
 	}
+
+	if currentVd.Block.Cmp(preventVd.Block) < 0 {
+		return nil
+	}
+
+	ord.States = append(ord.States, currentVd)
+	log.Debugf("chain order add version data %s->%d", ord.RawOrder.Hash.Hex(), currentVd.Status)
+	return nil
 }
 
 // 放到common package 根据配置决定状态

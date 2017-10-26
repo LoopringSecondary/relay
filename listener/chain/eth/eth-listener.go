@@ -187,12 +187,11 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 	// todo:delete after test
 	log.Debugf("eth listener log data:%s", v.Data)
 	log.Debugf("eth listener log topic:%s", topic)
-	log.Debugf("impl order filled id:%s", impl.OrderFilledEvent.Id())
 
 	switch topic {
 	case impl.OrderFilledEvent.Id():
 		evt := chainclient.OrderFilledEvent{}
-		log.Debugf("eth listener event order filled")
+		log.Debugf("eth listener log event:orderFilled")
 		if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
 		}
@@ -216,12 +215,14 @@ func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
 		if err != nil {
 			return err
 		}
+		if err := evt.ConvertDown(ord); err != nil {
+			return err
+		}
 
-		evt.ConvertDown(ord)
 		l.whisper.ChainOrderChan <- ord
 
 	case impl.OrderCancelledEvent.Id():
-		log.Debugf("eth listener event order cancelled")
+		log.Debugf("eth listener log event:orderCancelled")
 		evt := chainclient.OrderCancelledEvent{}
 		if err := impl.OrderCancelledEvent.Unpack(&evt, data, v.Topics); err != nil {
 			return err
