@@ -27,8 +27,8 @@ import (
 func TestOrderBook_GetOrder(t *testing.T) {
 	ob := test.LoadConfigAndGenerateOrderBook()
 	orders := []string{
-		"0x3ef9e3ecf36e5082a4beff7aff2b868355ae3abdf890b53178bd0306acac10cb",
-		"0xcec4c4c2baa64e8464e9f1fa74d9ebde0f836bd3caa77d5a070ae54e12d090cb",
+		"0x26de2b6fffebcb5e88e930cc8e03d7f991add424c02c9678ac019c310be0600b",
+		"0x5ace4d91fded46d318b3741689ba73282626bc87fcf8be75d770bb729af74710",
 	}
 
 	for _, orderhash := range orders {
@@ -38,7 +38,9 @@ func TestOrderBook_GetOrder(t *testing.T) {
 		}
 
 		t.Logf("protocol:%s", st.RawOrder.Protocol.Hex())
+		t.Logf("owner:%s", st.RawOrder.Owner.Hex())
 		t.Logf("orderhash:%s", st.RawOrder.Hash.Hex())
+		t.Logf("buyNoMoreThanB:%d", st.RawOrder.BuyNoMoreThanAmountB)
 		t.Logf("tokenS:%s", st.RawOrder.TokenS.Hex())
 		t.Logf("tokenB:%s", st.RawOrder.TokenB.Hex())
 		t.Logf("amountS:%s", st.RawOrder.AmountS.String())
