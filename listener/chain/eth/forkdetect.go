@@ -22,12 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
+	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"github.com/Loopring/ringminer/chainclient/eth"
 )
 
 type forkDetect struct {

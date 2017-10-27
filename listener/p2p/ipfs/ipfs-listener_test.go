@@ -120,13 +120,13 @@ func TestCancelOrder(t *testing.T) {
 	valueList := []*big.Int{ord.AmountS, ord.AmountB, ord.Timestamp, ord.Ttl, ord.Salt, ord.LrcFee, cancelAmountS}
 
 	ret, err := testParams.Imp.CancelOrder.SendTransaction(ord.Owner,
-															addressList,
-															valueList,
-															ord.BuyNoMoreThanAmountB,
-															ord.MarginSplitPercentage,
-															ord.V,
-															ord.R,
-															ord.S)
+		addressList,
+		valueList,
+		ord.BuyNoMoreThanAmountB,
+		ord.MarginSplitPercentage,
+		ord.V,
+		ord.R,
+		ord.S)
 	if err != nil {
 		t.Errorf(err.Error())
 	} else {

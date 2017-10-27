@@ -31,6 +31,7 @@ type AbiMethod interface {
 	Call(result interface{}, blockParameter string, args ...interface{}) error
 	SendTransactionWithSpecificGas(from types.Address, gas, gasPrice *big.Int, args ...interface{}) (string, error)
 	SendTransaction(from types.Address, args ...interface{}) (string, error)
+	WatcherTopic() string		  									//watch topic
 }
 
 type AbiEvent interface {
@@ -39,6 +40,7 @@ type AbiEvent interface {
 	Address() types.Address                                       //事件地址
 	Subscribe(eventChan reflect.Value, fromBlock, toBlock string) //对事件进行订阅
 	Unpack(v interface{}, output []byte, topics []string) error   //事件解析
+	WatcherTopic() string		  									//watch topic
 }
 
 //the base info of contract
@@ -100,7 +102,7 @@ type LoopringProtocolImpl struct {
 
 type SubmitRingMethod struct {
 	AbiMethod
-	Inputs types.RingSubmitInputs
+	Inputs  types.RingSubmitInputs
 	Outputs types.RingSubmitOuts
 }
 
@@ -230,6 +232,6 @@ func (loopring *Loopring) AddToken(tokenAddress types.Address) {
 
 type ContractData struct {
 	Address types.Address
-	Method AbiMethod
-	Event  AbiEvent
+	Method  AbiMethod
+	Event   AbiEvent
 }

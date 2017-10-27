@@ -46,8 +46,8 @@ name = "Loopring corporation"
 [common]
     loopringImpAddresses = ["0xd02d3e40cde61c267a3886f5828e03aa4914073d"]
     filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-    default_block_number = 4000
-    end_block_number = 100000000000000
+    default_block_number = 4662
+    end_block_number = 10000
 
 [miner]
     ringMaxLength = 4

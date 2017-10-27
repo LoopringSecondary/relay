@@ -29,9 +29,9 @@ import (
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"sort"
 	"strings"
-	"runtime/pprof"
 )
 
 var (
@@ -48,7 +48,7 @@ func main() {
 		println(err.Error())
 	}
 	// 开启 CPU profiling
-	if err := pprof.StartCPUProfile(f);nil != err {
+	if err := pprof.StartCPUProfile(f); nil != err {
 		println(err.Error())
 	}
 	defer func() {
