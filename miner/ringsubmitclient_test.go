@@ -42,7 +42,7 @@ var client *chainclient.Client
 var imp *chainclient.LoopringProtocolImpl = &chainclient.LoopringProtocolImpl{}
 var implAddress string = "0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"
 var registry *chainclient.LoopringRinghashRegistry = &chainclient.LoopringRinghashRegistry{}
-var ringClient *miner.RingClient
+var ringClient *miner.RingSubmitClient
 
 func init() {
 	globalConfig := config.LoadConfig("../config/ringminer.toml")
@@ -53,7 +53,7 @@ func init() {
 	ethClient := eth.NewChainClient(globalConfig.ChainClient, "sa")
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient = miner.NewRingClient(database, ethClient.Client)
+	ringClient = miner.NewRingSubmitClient(database, ethClient.Client)
 	//
 	miner.Initialize(globalConfig.Miner, config.CommonOptions{}, ringClient.Chainclient)
 
@@ -137,7 +137,7 @@ func TestRingClient_NewRing(t *testing.T) {
 	miner.LoopringInstance.Tokens[types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7")] = cTest1
 
 	miner.AvailableAmountS(fOrder1)
-	t.Log(fOrder1.AvailableAmountS.Int64())
+	//t.Log(fOrder1.AvailableAmountS.Int64())
 	ring.Orders = append(ring.Orders, fOrder1)
 	ring.Orders = append(ring.Orders, fOrder2)
 	ring.Hash = ring.GenerateHash()

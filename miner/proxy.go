@@ -27,8 +27,6 @@ import (
 
 //代理，控制整个match流程，其中会提供几种实现，如bucket、realtime，etc。
 
-type RingSubmitFailedChan chan *types.RingState
-
 var LoopringInstance *chainclient.Loopring
 
 var MinerPrivateKey []byte     //used to sign the ring

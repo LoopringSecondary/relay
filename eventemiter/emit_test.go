@@ -43,8 +43,8 @@ func TestEmit(t *testing.T) {
 		t.Log("dsfioewuoriuowieuoirw" + e.Name)
 		return nil
 	}}
-	eventemitter.On(eventemitter.Fork.Name(), watcher)
-	eventemitter.On(eventemitter.Fork.Name(), watcher1)
+	eventemitter.On(eventemitter.Fork, watcher)
+	eventemitter.On(eventemitter.Fork, watcher1)
 	eventData := ForkEvent{Name: "nnnnnn"}
 	eventemitter.Emit("Fork", eventData)
 

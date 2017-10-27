@@ -59,7 +59,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient := miner.NewRingClient(database, ethClient.Client)
+	ringClient := miner.NewRingSubmitClient(database, ethClient.Client)
 
 	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
 
@@ -69,7 +69,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	n.registerP2PListener(peerOrderChan)
 	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
-	n.registerMiner(ringClient, engineOrderChan)
+	n.registerMiner(ringClient)
 	n.registerEthListener(ethClient, database, chainOrderChan)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
@@ -125,7 +125,6 @@ func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types
 	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database, whisper)
 }
 
-func (n *Node) registerMiner(ringClient *miner.RingClient, orderStateChan chan *types.OrderState) {
-	whisper := bucket.Whisper{orderStateChan}
-	n.miner = bucket.NewBucketProxy(ringClient, whisper)
+func (n *Node) registerMiner(ringClient *miner.RingSubmitClient) {
+	n.miner = bucket.NewBucketProxy(ringClient)
 }

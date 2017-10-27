@@ -59,7 +59,7 @@ func newOrder(outToken string, inToken string, outAmount, inAmount int64, buyFir
 
 func TestBucket_GenerateRing(t *testing.T) {
 	log.Initialize()
-	ringClient := miner.NewRingClient()
+	ringClient := miner.NewRingSubmitClient()
 	//ringClient.Start()
 	c := &config.MinerOptions{}
 	proxy := bucket.NewBucketProxy(*c, ringClient)

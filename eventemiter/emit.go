@@ -22,40 +22,18 @@ import (
 	"sync"
 )
 
-type Topic int
-
-func (t Topic) Name() string {
-	switch t {
-	case RingMined:
-		return "RingMined"
-	case OrderCanceled:
-		return "OrderCanceled"
-	case OrderFilled:
-		return "OrderFilled"
-	case Fork:
-		return "Fork"
-	case RingSubmitFailed:
-		return "RingSubmitFailed"
-	case Transaction:
-		return "Transaction"
-	case OrderBookPeer:
-		return "OrderBookPeer"
-	case OrderBookChain:
-		return "OrderBookChain"
-	default:
-		return "EventEmit"
-	}
-}
+type Topic string
 
 const (
-	RingMined Topic = iota
-	OrderCanceled
-	OrderFilled
-	Fork
-	RingSubmitFailed
-	Transaction
-	OrderBookPeer
-	OrderBookChain
+	RingMined Topic = "RingMined"
+	OrderCanceled = "OrderCanceled"
+	OrderFilled = "OrderFilled"
+	Fork = "Fork"
+	RingSubmitFailed = "RingSubmitFailed"
+	Transaction = "Transaction"
+	OrderBookPeer = "OrderBookPeer"
+	OrderBookChain = "OrderBookChain"
+	MinedOrderState = "MinedOrderState"
 )
 
 var watchers map[string][]*Watcher

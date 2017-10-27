@@ -69,7 +69,7 @@ func (l *IPFSListener) Start() {
 					log.Errorf("failed to accept data %s", err.Error())
 				} else {
 					log.Debugf("accept data from ipfs %s", string(data))
-					eventemitter.Emit(eventemitter.OrderBookPeer.Name(), ord)
+					eventemitter.Emit(eventemitter.OrderBookPeer, ord)
 				}
 			}
 		}

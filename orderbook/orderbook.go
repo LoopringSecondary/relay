@@ -118,8 +118,8 @@ func (ob *OrderBook) Start() {
 	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handlePeerOrder}
 	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleChainOrder}
 
-	eventemitter.On(eventemitter.OrderBookPeer.Name(), peerOrderWatcher)
-	eventemitter.On(eventemitter.OrderBookChain.Name(), chainOrderWatcher)
+	eventemitter.On(eventemitter.OrderBookPeer, peerOrderWatcher)
+	eventemitter.On(eventemitter.OrderBookChain, chainOrderWatcher)
 }
 
 func (ob *OrderBook) Stop() {

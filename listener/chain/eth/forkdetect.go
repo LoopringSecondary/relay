@@ -48,11 +48,11 @@ func (l *EthClientListener) StartForkDetect() error {
 		detectedEventChan <- event
 		return nil
 	}}
-	eventemitter.On(eventemitter.Fork.Name(), forkWatcher)
+	eventemitter.On(eventemitter.Fork, forkWatcher)
 
 	go func() {
 	L:
-		go l.forkDetect(l.db)
+		go l.forkDetect(l.rds.db)
 		for {
 			select {
 			case event := <-detectedEventChan:
@@ -95,7 +95,7 @@ func (l *EthClientListener) forkDetect(database db.Database) error {
 						ForkHash:      forkedHash,
 					}
 					detect.hashStore.Put([]byte("latest"), forkedNumber.Bytes())
-					eventemitter.Emit(eventemitter.Fork.Name(), forkedEvent)
+					eventemitter.Emit(eventemitter.Fork, forkedEvent)
 					break
 				}
 			}

@@ -250,7 +250,7 @@ func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData)
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
+	eventemitter.Emit(eventemitter.OrderBookChain, evt)
 
 	return nil
 }
@@ -274,7 +274,7 @@ func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventDa
 	}
 
 	evt.ConvertDown(ord)
-	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
+	eventemitter.Emit(eventemitter.OrderBookChain, evt)
 
 	return nil
 }

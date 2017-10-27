@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
 	"sync"
+	"github.com/Loopring/ringminer/eventemiter"
 )
 
 /**
@@ -43,52 +44,48 @@ todo：此时环路的撮合驱动是由新订单的到来进行驱动，但是�
 该处负责接受neworder, cancleorder等事件，并把事件广播给所有的bucket，同时调用client将已形成的环路发送至区块链，发送时需要再次查询订单的最新状态，保证无错，一旦出错需要更改ring的各种数据，如交易量、费用分成等
 */
 
-type Whisper struct {
-	OrderStateChan chan *types.OrderState
-}
-
 type BucketProxy struct {
 	ringChan             chan *types.RingState
-	OrderStateChan       Whisper
+	orderStateChan       chan *types.OrderState
 	buckets              map[types.Address]Bucket
-	ringClient           *miner.RingClient
-	ringSubmitFailedChan miner.RingSubmitFailedChan
+	submitClient         *miner.RingSubmitClient
+	ringSubmitFailedChan chan *types.RingState
 	mtx                  *sync.RWMutex
 	options              config.MinerOptions
 }
 
-func NewBucketProxy(ringClient *miner.RingClient, orderStateChan Whisper) miner.Proxy {
+func NewBucketProxy(submitClient *miner.RingSubmitClient) miner.Proxy {
 	var proxy miner.Proxy
 	bp := &BucketProxy{}
 
-	ringChan := make(chan *types.RingState, 1000)
-	bp.ringChan = ringChan
+	bp.ringChan = make(chan *types.RingState, 1000)
 
-	ringSubmitFailedChan := make(miner.RingSubmitFailedChan)
-	bp.ringSubmitFailedChan = ringSubmitFailedChan
-	ringClient.AddRingSubmitFailedChan(bp.ringSubmitFailedChan)
+	bp.ringSubmitFailedChan = make(chan *types.RingState, 1000)
 
-	bp.OrderStateChan = orderStateChan
+	bp.orderStateChan = make(chan *types.OrderState, 1000)
 
 	bp.mtx = &sync.RWMutex{}
+
 	bp.buckets = make(map[types.Address]Bucket)
-	bp.ringClient = ringClient
+	bp.submitClient = submitClient
 	proxy = bp
 	return proxy
 }
 
 func (bp *BucketProxy) Start() {
-	bp.ringClient.Start()
+	bp.submitClient.Start()
 
 	//miner.RateProvider.Start()
 
 	go bp.listenOrderState()
 
+	//go bp.listenRingSubmit()
+
 	go func() {
 		for {
 			select {
 			case orderRing := <-bp.ringChan:
-				if err := bp.ringClient.NewRing(orderRing); nil != err {
+				if err := bp.submitClient.NewRing(orderRing); nil != err {
 					log.Errorf("err:%s", err.Error())
 				} else {
 					//this should call deleteOrder if the order was fullfilled, and do nothing else.
@@ -107,27 +104,10 @@ func (bp *BucketProxy) Start() {
 
 func (bp *BucketProxy) Stop() {
 	close(bp.ringChan)
-	close(bp.OrderStateChan.OrderStateChan)
-	bp.ringClient.DeleteRingSubmitFailedChan(bp.ringSubmitFailedChan)
+	close(bp.orderStateChan)
+	close(bp.ringSubmitFailedChan)
 	for _, bucket := range bp.buckets {
 		bucket.Stop()
-	}
-}
-
-func (bp *BucketProxy) listenOrderState() {
-	for {
-		select {
-		case orderState := <-bp.OrderStateChan.OrderStateChan:
-			vd, _ := orderState.LatestVersion()
-			if types.ORDER_NEW == vd.Status {
-				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenS)
-				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenB)
-				bp.newOrder(orderState)
-			} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
-				//todo:process the case of cancel partable
-				bp.deleteOrder(orderState)
-			}
-		}
 	}
 }
 
@@ -163,21 +143,56 @@ func (bp *BucketProxy) AddFilter() {
 }
 
 func (bp *BucketProxy) listenRingSubmit() {
+	watcher := &eventemitter.Watcher{
+		Concurrent:false,
+		Handle:func (e eventemitter.EventData) error {
+			submitFailed := e.(*miner.RingSubmitFailed)
+			bp.ringSubmitFailedChan <- submitFailed.RingState
+			return nil
+		},
+	}
+	eventemitter.On(eventemitter.RingSubmitFailed, watcher)
+
 	for {
 		select {
-		case ring := <-bp.ringSubmitFailedChan:
-			bp.submitFailed(ring)
+		case ringState,isClose := <-bp.ringSubmitFailedChan:
+			if isClose {
+				break
+			}
+			for _, order := range ringState.RawRing.Orders {
+				//todo:查询orderbook获取最新值, 是否已被匹配过
+				if true {
+					bp.orderStateChan <- &order.OrderState
+				}
+			}
 		}
 	}
 }
 
-//todo:需要ringclient在提交失败后通知到该proxy，估计使用chan
-func (bp *BucketProxy) submitFailed(ring *types.RingState) {
-	//for _, order := range ring.RawRing.Orders {
-	//todo:查询orderbook获取最新值, 是否已被匹配过
-	//if () {
-	//	bp.OrderStateChan <- order.OrderState
-	//}
-	//bucket.NewOrder(order.OrderState)
-	//}
+func (bp *BucketProxy) listenOrderState() {
+	watcher := &eventemitter.Watcher{
+		Concurrent:false,
+		Handle:func (e eventemitter.EventData) error {
+			orderState := e.(*types.OrderState)
+			bp.orderStateChan <- orderState
+			return nil
+		},
+	}
+	//todo:topic
+	eventemitter.On("", watcher)
+
+	for {
+		select {
+		case orderState := <-bp.orderStateChan:
+			vd, _ := orderState.LatestVersion()
+			if types.ORDER_NEW == vd.Status {
+				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenS)
+				miner.LoopringInstance.AddToken(orderState.RawOrder.TokenB)
+				bp.newOrder(orderState)
+			} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
+				//todo:process the case of cancel partable
+				bp.deleteOrder(orderState)
+			}
+		}
+	}
 }
