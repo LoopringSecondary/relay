@@ -30,7 +30,6 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/miner/bucket"
 	"github.com/Loopring/ringminer/orderbook"
-	"github.com/Loopring/ringminer/types"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -63,14 +62,10 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
 
-	peerOrderChan := make(chan *types.Order)
-	chainOrderChan := make(chan *types.OrderState)
-	engineOrderChan := make(chan *types.OrderState)
-
-	n.registerP2PListener(peerOrderChan)
-	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
+	n.registerP2PListener()
+	n.registerOrderBook(database)
 	n.registerMiner(ringClient)
-	n.registerEthListener(ethClient, database, chainOrderChan)
+	n.registerEthListener(ethClient, database)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
@@ -112,17 +107,16 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database, chainOrderChan chan *types.OrderState) {
+func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database) {
 	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.orderbook, database)
 }
 
-func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
+func (n *Node) registerP2PListener() {
 	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs)
 }
 
-func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderState, engineOrderChan chan *types.OrderState) {
-	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
-	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database, whisper)
+func (n *Node) registerOrderBook(database db.Database) {
+	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database)
 }
 
 func (n *Node) registerMiner(ringClient *miner.RingSubmitClient) {

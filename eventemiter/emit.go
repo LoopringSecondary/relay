@@ -25,15 +25,15 @@ import (
 type Topic string
 
 const (
-	RingMined Topic = "RingMined"
-	OrderCanceled = "OrderCanceled"
-	OrderFilled = "OrderFilled"
-	Fork = "Fork" //chain forked
-	RingSubmitFailed = "RingSubmitFailed" //submit ring failed
-	Transaction = "Transaction"
-	OrderBookPeer = "OrderBookPeer"
-	OrderBookChain = "OrderBookChain"
-	MinedOrderState = "MinedOrderState" //orderbook send orderstate to miner
+	RingMined        Topic = "RingMined"
+	OrderCanceled          = "OrderCanceled"
+	OrderFilled            = "OrderFilled"
+	Fork                   = "Fork"             //chain forked
+	RingSubmitFailed       = "RingSubmitFailed" //submit ring failed
+	Transaction            = "Transaction"
+	OrderBookPeer          = "OrderBookPeer"
+	OrderBookChain         = "OrderBookChain"
+	MinedOrderState        = "MinedOrderState" //orderbook send orderstate to miner
 )
 
 var watchers map[string][]*Watcher

@@ -39,10 +39,6 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-type Whisper struct {
-	ChainOrderChan chan *types.OrderState
-}
-
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type EthClientListener struct {
 	options         config.ChainClientOptions
@@ -250,7 +246,7 @@ func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData)
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.OrderBookChain, evt)
+	eventemitter.Emit(eventemitter.OrderBookChain, ord)
 
 	return nil
 }
@@ -274,7 +270,7 @@ func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventDa
 	}
 
 	evt.ConvertDown(ord)
-	eventemitter.Emit(eventemitter.OrderBookChain, evt)
+	eventemitter.Emit(eventemitter.OrderBookChain, ord)
 
 	return nil
 }

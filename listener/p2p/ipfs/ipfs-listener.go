@@ -28,10 +28,6 @@ import (
 	"sync"
 )
 
-type Whisper struct {
-	PeerOrderChan chan *types.Order
-}
-
 type IPFSListener struct {
 	options config.IpfsOptions
 	sh      *shell.Shell

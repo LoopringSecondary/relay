@@ -43,12 +43,6 @@ const (
 	PENDING_TABLE_NAME = "pending"
 )
 
-type Whisper struct {
-	PeerOrderChan   chan *types.Order
-	EngineOrderChan chan *types.OrderState
-	ChainOrderChan  chan *types.OrderState
-}
-
 type OrderBook struct {
 	options      config.OrderBookOptions
 	commOpts     config.CommonOptions
@@ -56,12 +50,11 @@ type OrderBook struct {
 	db           db.Database
 	finishTable  db.Database
 	partialTable db.Database
-	whisper      *Whisper
 	lock         sync.RWMutex
 	minAmount    *big.Int
 }
 
-func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database, whisper *Whisper) *OrderBook {
+func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database) *OrderBook {
 	ob := &OrderBook{}
 
 	ob.options = options
@@ -69,7 +62,6 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	ob.db = database
 	ob.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
 	ob.partialTable = db.NewTable(database, PENDING_TABLE_NAME)
-	ob.whisper = whisper
 
 	//todo:filters init
 	filters := []Filter{}
@@ -92,7 +84,7 @@ func (ob *OrderBook) recoverOrder() error {
 		if err := json.Unmarshal(dataBytes, state); nil != err {
 			log.Errorf("err:%s", err.Error())
 		} else {
-			ob.whisper.EngineOrderChan <- state
+			sendOrderToMiner(state)
 		}
 	}
 	return nil
@@ -160,7 +152,7 @@ func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {
 	state.AddVersion(types.VersionData{})
 	ob.setOrder(state)
 
-	ob.whisper.EngineOrderChan <- state
+	sendOrderToMiner(state)
 
 	return nil
 }
@@ -190,7 +182,7 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	case types.ORDER_NEW:
 		log.Debugf("orderbook accept new order from chain:%s", state.RawOrder.Hash.Hex())
 		ob.setOrder(state)
-		ob.whisper.EngineOrderChan <- state
+		sendOrderToMiner(state)
 
 	case types.ORDER_PENDING:
 		log.Debugf("orderbook accept pending order from chain:%s", state.RawOrder.Hash.Hex())
@@ -198,17 +190,17 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 
 	case types.ORDER_FINISHED:
 		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
-		ob.whisper.EngineOrderChan <- state
+		sendOrderToMiner(state)
 		return ob.moveOrder(state)
 
 	case types.ORDER_CANCEL:
 		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
-		ob.whisper.EngineOrderChan <- state
+		sendOrderToMiner(state)
 		return ob.moveOrder(state)
 
 	case types.ORDER_REJECT:
 		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
-		ob.whisper.EngineOrderChan <- state
+		sendOrderToMiner(state)
 		return ob.moveOrder(state)
 
 	default:
@@ -216,6 +208,11 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	}
 
 	return nil
+}
+
+// sendOrderToMiner send order state to miner
+func sendOrderToMiner(state *types.OrderState) {
+	eventemitter.Emit(eventemitter.MinedOrderState, state)
 }
 
 // GetOrder get single order with hash
