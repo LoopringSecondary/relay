@@ -46,7 +46,7 @@ name = "Loopring corporation"
 [common]
     loopringImpAddresses = ["0xd02d3e40cde61c267a3886f5828e03aa4914073d"]
     filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-    default_block_number = 4662
+    default_block_number = 4692
     end_block_number = 100000000000000
     develop = true
 
@@ -54,7 +54,7 @@ name = "Loopring corporation"
     ringMaxLength = 4
     feeRecepient = "0xe1D2a6B89dABEfC032bF03b239a38aDe2972240E" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
     miner = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
-    ifRegistryRingHash = true
+    ifRegistryRingHash = false
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
 

@@ -141,12 +141,6 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 	txhashs := []types.Hash{}
 
 	for _, tx := range block.Transactions {
-		// 判断合约地址是否合法
-		if !l.judgeContractAddress(tx.To) {
-			log.Errorf("eth listener received order contract address %s invalid", tx.To)
-			continue
-		}
-
 		log.Debugf("eth listener get transaction hash:%s", tx.Hash)
 		log.Debugf("eth listener get transaction input:%s", tx.Input)
 
@@ -303,14 +297,16 @@ func (l *EthClientListener) getBlockNumberRange() (*big.Int, *big.Int) {
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
 
-	// todo: free comment
-	//currentBlockNumber, err:= l.getBlockNumber()
-	//if err != nil {
-	//	panic(err)
-	//} else {
-	//	log.Debugf("eth block number :%s", currentBlockNumber.String())
-	//}
-	//start = currentBlockNumber
+	currentBlockNumber, err := l.rds.GetBlockNumber()
+	if err != nil {
+		return start, end
+	}
+
+	if currentBlockNumber.Cmp(start) == 1 {
+		start = currentBlockNumber
+	}
+
+	log.Debugf("eth started block number :%s", start.String())
 
 	return start, end
 }

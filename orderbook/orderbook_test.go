@@ -27,8 +27,8 @@ import (
 func TestOrderBook_GetOrder(t *testing.T) {
 	ob := test.LoadConfigAndGenerateOrderBook()
 	orders := []string{
-		"0x26de2b6fffebcb5e88e930cc8e03d7f991add424c02c9678ac019c310be0600b",
-		"0x5ace4d91fded46d318b3741689ba73282626bc87fcf8be75d770bb729af74710",
+		"0x3c8349ad863985584a9f4c1e246e37bc249b350957e45508660caa4324b72b6f",
+		"0xedf856825ae791c38bb535b64e5d3130ea0c878b0ffb172063d280e90ca710cb",
 	}
 
 	for _, orderhash := range orders {

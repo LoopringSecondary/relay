@@ -34,7 +34,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type TestParams struct {
@@ -77,7 +76,7 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(time.Now().Unix())
+	order.Timestamp = big.NewInt(1) //big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(10000)
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = big.NewInt(1000)
@@ -238,13 +237,13 @@ func loadConfig() *config.GlobalConfig {
 func LoadConfigAndGenerateSimpleEthListener() *ethChainListener.EthClientListener {
 	c := loadConfig()
 	db := db.NewDB(c.Database)
-	l := ethChainListener.NewListener(c.ChainClient, c.Common, nil, nil, nil, db)
+	l := ethChainListener.NewListener(c.ChainClient, c.Common, nil, nil, db)
 	return l
 }
 
 func LoadConfigAndGenerateOrderBook() *orderbook.OrderBook {
 	c := loadConfig()
 	db := db.NewDB(c.Database)
-	ob := orderbook.NewOrderBook(c.Orderbook, c.Common, db, nil)
+	ob := orderbook.NewOrderBook(c.Orderbook, c.Common, db)
 	return ob
 }
