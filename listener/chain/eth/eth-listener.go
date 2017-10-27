@@ -97,46 +97,6 @@ func NewListener(options config.ChainClientOptions,
 	return &l
 }
 
-func (l *EthClientListener) Start() {
-	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
-	go func() {
-		for {
-			blockInter, _ := iterator.Next()
-			block := blockInter.(eth.BlockWithTxObject)
-			for _, tx := range block.Transactions {
-				//process tx doMethod, 处理后的之前需要保证该事件处理完成
-				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
-					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
-				}
-				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
-					var receipt eth.TransactionReceipt
-					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
-						if len(receipt.Logs) == 0 {
-							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-								topic := v.Address().Hex() + v.Id()
-								//todo:不应该发送nil，需要重新考虑，
-								eventemitter.Emit(topic, nil)
-							}
-						} else {
-							for _, log1 := range receipt.Logs {
-								data := hexutil.MustDecode(log1.Data)
-								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-									topic := v.Address().Hex() + v.Id()
-									evt := reflect.New(reflect.TypeOf(v))
-									if err := v.Unpack(evt, data, log1.Topics); nil != err {
-										log.Errorf("err :%s", err.Error())
-									}
-									eventemitter.Emit(topic, evt.Elem().Interface().(chainclient.AbiEvent))
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}()
-}
-
 func (l *EthClientListener) StartOld() {
 	l.stop = make(chan struct{})
 
@@ -365,3 +325,50 @@ func (l *EthClientListener) AddTxEvent(address types.Address) {
 	}
 }
 
+func (l *EthClientListener) Start() {
+	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
+	go func() {
+		for {
+			blockInter, _ := iterator.Next()
+			block := blockInter.(eth.BlockWithTxObject)
+			for _, tx := range block.Transactions {
+				var contractMethodEvent chainclient.AbiMethod
+				//process tx doMethod, 处理后的之前需要保证该事件处理完成
+				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
+					//todo:类似contractEvent，解析出AbiMethod
+					//contractMethodEvent = nil
+					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
+				}
+				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
+					var receipt eth.TransactionReceipt
+					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
+						if len(receipt.Logs) == 0 {
+							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+								topic := v.Address().Hex() + v.Id()
+								event := chainclient.ContractEventData{ContractMethodEvent:contractMethodEvent}
+								//todo:不应该发送nil，需要重新考虑，
+								eventemitter.Emit(topic, event)
+							}
+						} else {
+							for _, log1 := range receipt.Logs {
+								data := hexutil.MustDecode(log1.Data)
+								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+									topic := v.Address().Hex() + v.Id()
+									evt := reflect.New(reflect.TypeOf(v))
+									if err := v.Unpack(evt, data, log1.Topics); nil != err {
+										log.Errorf("err :%s", err.Error())
+									}
+									event := chainclient.ContractEventData{
+										ContractMethodEvent:contractMethodEvent,
+										ContractEvent:evt.Elem().Interface().(chainclient.AbiEvent),
+									}
+									eventemitter.Emit(topic, event)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}()
+}

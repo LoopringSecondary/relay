@@ -224,7 +224,13 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethCl
 		abiMethod.Method = cabi.Methods[method.Name]
 		field := e.FieldByName(methodName)
 		if field.IsValid() {
-			field.Set(reflect.ValueOf(abiMethod))
+			if field.Type().String() == "chainclient.SubmitRingMethod"{
+				v := reflect.New(field.Type()).Elem()
+				v.FieldByName("AbiMethod").Set(reflect.ValueOf(abiMethod))
+				field.Set(v)
+			} else {
+				field.Set(reflect.ValueOf(abiMethod))
+			}
 		}
 	}
 }

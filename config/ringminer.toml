@@ -32,16 +32,16 @@ name = "Loopring corporation"
 [ipfs]
     server = "localhost"
     port = 8080
-    topic = "test1_topic"
+    topic = "test1_topic_hongyu"
 
 [chain_client]
-raw_url = "http://10.137.110.150:8545"
-[chain_client.senders]
-    "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
-    "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
-    [chain_client.eth]
-        gas_price = 10000
-        gas_limit = 10000
+    raw_url = "http://10.137.110.150:8545"
+    [chain_client.senders]
+        "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
+        "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
+        [chain_client.eth]
+            gas_price = 10000
+            gas_limit = 10000
 
 [common]
     loopringImpAddresses = ["0xd02d3e40cde61c267a3886f5828e03aa4914073d"]
