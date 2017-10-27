@@ -97,7 +97,7 @@ func (ring *Ring) SignerAddress() (Address, error) {
 	}
 }
 
-func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitArgs {
+func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitInputs {
 	ringSubmitArgs := emptyRingSubmitArgs()
 
 	for _, filledOrder := range ring.Orders {
@@ -145,7 +145,7 @@ type RingState struct {
 	RegistryTxHash Hash     `json:"registryTxHash"`
 }
 
-type RingSubmitArgs struct {
+type RingSubmitInputs struct {
 	AddressList              [][2]Address  `alias:"addressList"`
 	UintArgsList             [][7]*big.Int `alias:"uintArgsList"`
 	Uint8ArgsList            [][2]uint8    `alias:"uint8ArgsList"`
@@ -158,8 +158,8 @@ type RingSubmitArgs struct {
 	ThrowIfLRCIsInsuffcient  bool          `alias:"throwIfLRCIsInsuffcient"`
 }
 
-func emptyRingSubmitArgs() *RingSubmitArgs {
-	return &RingSubmitArgs{
+func emptyRingSubmitArgs() *RingSubmitInputs {
+	return &RingSubmitInputs{
 		AddressList:              [][2]Address{},
 		UintArgsList:             [][7]*big.Int{},
 		Uint8ArgsList:            [][2]uint8{},
@@ -168,4 +168,8 @@ func emptyRingSubmitArgs() *RingSubmitArgs {
 		RList: [][]byte{},
 		SList: [][]byte{},
 	}
+}
+
+type RingSubmitOuts struct {
+
 }

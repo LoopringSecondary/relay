@@ -100,8 +100,9 @@ type LoopringProtocolImpl struct {
 
 type SubmitRingMethod struct {
 	AbiMethod
+	Inputs types.RingSubmitInputs
+	Outputs types.RingSubmitOuts
 }
-
 
 // todo(fk): []byte to hash
 //go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
