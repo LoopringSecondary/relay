@@ -51,7 +51,7 @@ type RingSubmitClient struct {
 
 type RingSubmitFailed struct {
 	RingState *types.RingState
-	err	error
+	err       error
 }
 
 func NewRingSubmitClient(database db.Database, client *chainclient.Client) *RingSubmitClient {
@@ -197,7 +197,7 @@ func (submitClient *RingSubmitClient) recoverRing() {
 					}
 				}
 			} else {
-				failedEvent := &RingSubmitFailed{RingState:ring, err:errors.New("submit ring failed")}
+				failedEvent := &RingSubmitFailed{RingState: ring, err: errors.New("submit ring failed")}
 				eventemitter.Emit(eventemitter.RingSubmitFailed, failedEvent)
 			}
 		}
@@ -220,10 +220,10 @@ func (submitClient *RingSubmitClient) submitFailed(txHash types.Hash) {
 	ringHashBytes, _ := submitClient.txToRingHashIndexStore.Get(txHash.Bytes())
 	if nil != ringHashBytes && len(ringHashBytes) > 0 {
 		if ringData, _ := submitClient.unSubmitedRingsStore.Get(ringHashBytes); nil == ringData || len(ringData) == 0 {
-			if ringData,_ = submitClient.submitedRingsStore.Get(ringHashBytes); nil != ringData || len(ringData) > 0 {
+			if ringData, _ = submitClient.submitedRingsStore.Get(ringHashBytes); nil != ringData || len(ringData) > 0 {
 				var ringState *types.RingState
 				if err := json.Unmarshal(ringData, ringState); nil == err {
-					failedEvent := &RingSubmitFailed{RingState:ringState, err:errors.New("execute ring failed")}
+					failedEvent := &RingSubmitFailed{RingState: ringState, err: errors.New("execute ring failed")}
 					eventemitter.Emit(eventemitter.RingSubmitFailed, failedEvent)
 				}
 			}

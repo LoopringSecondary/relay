@@ -20,11 +20,11 @@ package bucket
 
 import (
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
 	"sync"
-	"github.com/Loopring/ringminer/eventemiter"
 )
 
 /**
@@ -144,8 +144,8 @@ func (bp *BucketProxy) AddFilter() {
 
 func (bp *BucketProxy) listenRingSubmit() {
 	watcher := &eventemitter.Watcher{
-		Concurrent:false,
-		Handle:func (e eventemitter.EventData) error {
+		Concurrent: false,
+		Handle: func(e eventemitter.EventData) error {
 			submitFailed := e.(*miner.RingSubmitFailed)
 			bp.ringSubmitFailedChan <- submitFailed.RingState
 			return nil
@@ -155,7 +155,7 @@ func (bp *BucketProxy) listenRingSubmit() {
 
 	for {
 		select {
-		case ringState,isClose := <-bp.ringSubmitFailedChan:
+		case ringState, isClose := <-bp.ringSubmitFailedChan:
 			if isClose {
 				break
 			}
@@ -171,8 +171,8 @@ func (bp *BucketProxy) listenRingSubmit() {
 
 func (bp *BucketProxy) listenOrderState() {
 	watcher := &eventemitter.Watcher{
-		Concurrent:false,
-		Handle:func (e eventemitter.EventData) error {
+		Concurrent: false,
+		Handle: func(e eventemitter.EventData) error {
 			orderState := e.(*types.OrderState)
 			bp.orderStateChan <- orderState
 			return nil

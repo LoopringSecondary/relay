@@ -20,7 +20,6 @@ package eth
 
 import (
 	"encoding/json"
-	"errors"
 	ethch "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
@@ -87,7 +86,7 @@ func (r *Rds) SaveBlock(block ethch.BlockWithTxObject) error {
 	if bi.Number.Cmp(prevBlockNum) < 1 {
 		log.Debugf("current block number:%s, prevent block number:%s", bi.Number.String(), prevBlockNum.String())
 		// todo free comment after test
-		return errors.New("current block number cmp prevent block number < 1")
+		//return errors.New("current block number cmp prevent block number < 1")
 	}
 
 	// 存储最近一次使用的blocknumber
