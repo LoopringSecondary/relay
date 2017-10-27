@@ -235,8 +235,8 @@ func (ringClient *RingClient) processRegistryEvent(e eventemitter.EventData) err
 		//	failedChan <- nil
 		//}
 	} else {
-		contractEventData := e.(chainclient.ContractEventData)
-		event := contractEventData.ContractEvent.(chainclient.RinghashSubmitted)
+		contractEventData := e.(chainclient.ContractData)
+		event := contractEventData.Event.(chainclient.RinghashSubmitted)
 		ringHash := types.BytesToHash(event.RingHash)
 		println("ringHash.HexringHash.Hex", ringHash.Hex())
 		ringData, _ := ringClient.unSubmitedRingsStore.Get(ringHash.Bytes())

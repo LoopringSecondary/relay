@@ -227,8 +227,8 @@ func (loopring *Loopring) AddToken(tokenAddress types.Address) {
 	}
 }
 
-
-type ContractEventData struct {
-	ContractMethodEvent AbiMethod
-	ContractEvent AbiEvent
+type ContractData struct {
+	Address types.Address
+	Method AbiMethod
+	Event  AbiEvent
 }
