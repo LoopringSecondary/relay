@@ -20,7 +20,6 @@ package eventemitter
 
 import (
 	"sync"
-	"github.com/Loopring/ringminer/chainclient"
 )
 
 type Topic int
@@ -58,10 +57,6 @@ var mtx *sync.Mutex
 
 type EventData interface{}
 
-type ContractEventData struct {
-	ContractMethodEvent chainclient.AbiMethod
-	ContractEvent chainclient.AbiEvent
-}
 
 type Watcher struct {
 	Concurrent bool

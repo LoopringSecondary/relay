@@ -347,7 +347,7 @@ func (l *EthClientListener) Start() {
 						if len(receipt.Logs) == 0 {
 							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
 								topic := v.Address().Hex() + v.Id()
-								event := eventemitter.ContractEventData{ContractMethodEvent:contractMethodEvent}
+								event := chainclient.ContractEventData{ContractMethodEvent:contractMethodEvent}
 								//todo:不应该发送nil，需要重新考虑，
 								eventemitter.Emit(topic, event)
 							}
@@ -360,7 +360,7 @@ func (l *EthClientListener) Start() {
 									if err := v.Unpack(evt, data, log1.Topics); nil != err {
 										log.Errorf("err :%s", err.Error())
 									}
-									event := eventemitter.ContractEventData{
+									event := chainclient.ContractEventData{
 										ContractMethodEvent:contractMethodEvent,
 										ContractEvent:evt.Elem().Interface().(chainclient.AbiEvent),
 									}
