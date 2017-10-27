@@ -23,6 +23,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
@@ -114,20 +115,11 @@ func (ob *OrderBook) Start() {
 	// todo: add after debug
 	// ob.recoverOrder()
 
-	go func() {
-		for {
-			select {
-			case ord := <-ob.whisper.PeerOrderChan:
-				if err := ob.peerOrderHook(ord); err != nil {
-					log.Errorf(err.Error())
-				}
-			case ord := <-ob.whisper.ChainOrderChan:
-				if err := ob.chainOrderHook(ord); err != nil {
-					log.Errorf(err.Error())
-				}
-			}
-		}
-	}()
+	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handlePeerOrder}
+	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleChainOrder}
+
+	eventemitter.On(eventemitter.OrderBookPeer.Name(), peerOrderWatcher)
+	eventemitter.On(eventemitter.OrderBookChain.Name(), chainOrderWatcher)
 }
 
 func (ob *OrderBook) Stop() {
@@ -141,9 +133,11 @@ func (ob *OrderBook) Stop() {
 
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
-func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
+func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
+
+	ord := input.(*types.Order)
 
 	if valid, err := ob.filter(ord); !valid {
 		return err
@@ -175,9 +169,11 @@ func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
 // 订单必须存在，如果不存在则不处理
 // 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
 // 如果之前已经存储，那么应该直接处理并发送到miner
-func (ob *OrderBook) chainOrderHook(ord *types.OrderState) error {
+func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
+
+	ord := input.(*types.OrderState)
 
 	if valid, err := ob.filter(&ord.RawOrder); !valid {
 		return err

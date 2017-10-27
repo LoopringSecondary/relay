@@ -251,7 +251,7 @@ func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData)
 		return err
 	}
 
-	l.whisper.ChainOrderChan <- ord
+	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
 
 	return nil
 }
