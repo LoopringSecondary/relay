@@ -67,19 +67,19 @@ func NewRingSubmitClient(database db.Database, client *chainclient.Client) *Ring
 	return submitClient
 }
 
-func (ringClient *RingSubmitClient) NewRing(ringState *types.RingState) error {
-	ringClient.mtx.Lock()
-	defer ringClient.mtx.Unlock()
+func (submitClient *RingSubmitClient) NewRing(ringState *types.RingState) error {
+	submitClient.mtx.Lock()
+	defer submitClient.mtx.Unlock()
 
-	if err := ringClient.canSubmit(ringState); nil == err {
+	if err := submitClient.canSubmit(ringState); nil == err {
 		if ringBytes, err := json.Marshal(ringState); err == nil {
-			ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
+			submitClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
 			ringData, _ := json.Marshal(ringState)
 			log.Debugf("ringState:%x", ringData)
 			if IfRegistryRingHash {
-				return ringClient.sendRinghashRegistry(ringState)
+				return submitClient.sendRinghashRegistry(ringState)
 			} else {
-				return ringClient.submitRing(ringState)
+				return submitClient.submitRing(ringState)
 			}
 		} else {
 			return err
@@ -95,10 +95,10 @@ func isOrdersRemined(ring *types.RingState) bool {
 }
 
 //todo: 不在submit中的才会提交
-func (ringClient *RingSubmitClient) canSubmit(ringState *types.RingState) error {
-	ringData, _ := ringClient.unSubmitedRingsStore.Get(ringState.RawRing.Hash.Bytes())
+func (submitClient *RingSubmitClient) canSubmit(ringState *types.RingState) error {
+	ringData, _ := submitClient.unSubmitedRingsStore.Get(ringState.RawRing.Hash.Bytes())
 	if nil == ringData || len(ringData) == 0 {
-		ringData, _ = ringClient.submitedRingsStore.Get(ringState.RawRing.Hash.Bytes())
+		ringData, _ = submitClient.submitedRingsStore.Get(ringState.RawRing.Hash.Bytes())
 		if nil == ringData || len(ringData) == 0 {
 			return nil
 		}
@@ -107,7 +107,7 @@ func (ringClient *RingSubmitClient) canSubmit(ringState *types.RingState) error 
 }
 
 //send Fingerprint to block chain
-func (ringClient *RingSubmitClient) sendRinghashRegistry(ringState *types.RingState) error {
+func (submitClient *RingSubmitClient) sendRinghashRegistry(ringState *types.RingState) error {
 	ring := ringState.RawRing
 	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
 	ringRegistryArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
@@ -125,7 +125,7 @@ func (ringClient *RingSubmitClient) sendRinghashRegistry(ringState *types.RingSt
 		if ringBytes, err := json.Marshal(ringState); nil != err {
 			return err
 		} else {
-			return ringClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
+			return submitClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
 		}
 	}
 }
@@ -165,10 +165,10 @@ func (ringClient *RingSubmitClient) submitRing(ringSate *types.RingState) error 
 }
 
 //recover after restart
-func (ringClient *RingSubmitClient) recoverRing() {
+func (submitClient *RingSubmitClient) recoverRing() {
 
 	//Traversal the uncompelete rings
-	iterator := ringClient.unSubmitedRingsStore.NewIterator(nil, nil)
+	iterator := submitClient.unSubmitedRingsStore.NewIterator(nil, nil)
 	for iterator.Next() {
 		dataBytes := iterator.Value()
 		ring := &types.RingState{}
@@ -187,13 +187,13 @@ func (ringClient *RingSubmitClient) recoverRing() {
 							log.Errorf("error:%s", err.Error())
 						} else {
 							if canSubmit.Int() > 0 {
-								ringClient.submitRing(ring)
+								submitClient.submitRing(ring)
 							} else {
 
 							}
 						}
 					} else {
-						ringClient.NewRing(ring)
+						submitClient.NewRing(ring)
 					}
 				}
 			} else {
@@ -204,23 +204,23 @@ func (ringClient *RingSubmitClient) recoverRing() {
 	}
 }
 
-func (ringClient *RingSubmitClient) handleSubmitRingEvent(e eventemitter.EventData) error {
+func (submitClient *RingSubmitClient) handleSubmitRingEvent(e eventemitter.EventData) error {
 	if nil != e {
 		contractEventData := e.(chainclient.ContractData)
 		event := contractEventData.Event
 		//excute ring failed
 		if nil == event {
-			ringClient.submitFailed(contractEventData.TxHash)
+			submitClient.submitFailed(contractEventData.TxHash)
 		}
 	}
 	return nil
 }
 
-func (ringClient *RingSubmitClient) submitFailed(txHash types.Hash) {
-	ringHashBytes, _ := ringClient.txToRingHashIndexStore.Get(txHash.Bytes())
+func (submitClient *RingSubmitClient) submitFailed(txHash types.Hash) {
+	ringHashBytes, _ := submitClient.txToRingHashIndexStore.Get(txHash.Bytes())
 	if nil != ringHashBytes && len(ringHashBytes) > 0 {
-		if ringData, _ := ringClient.unSubmitedRingsStore.Get(ringHashBytes); nil == ringData || len(ringData) == 0 {
-			if ringData,_ = ringClient.submitedRingsStore.Get(ringHashBytes); nil != ringData || len(ringData) > 0 {
+		if ringData, _ := submitClient.unSubmitedRingsStore.Get(ringHashBytes); nil == ringData || len(ringData) == 0 {
+			if ringData,_ = submitClient.submitedRingsStore.Get(ringHashBytes); nil != ringData || len(ringData) > 0 {
 				var ringState *types.RingState
 				if err := json.Unmarshal(ringData, ringState); nil == err {
 					failedEvent := &RingSubmitFailed{RingState:ringState, err:errors.New("execute ring failed")}
@@ -232,18 +232,18 @@ func (ringClient *RingSubmitClient) submitFailed(txHash types.Hash) {
 	}
 }
 
-func (ringClient *RingSubmitClient) handleRegistryEvent(e eventemitter.EventData) error {
+func (submitClient *RingSubmitClient) handleRegistryEvent(e eventemitter.EventData) error {
 
 	if nil != e {
 		contractEventData := e.(chainclient.ContractData)
 		//registry failed
 		if nil == contractEventData.Event {
-			ringClient.submitFailed(contractEventData.TxHash)
+			submitClient.submitFailed(contractEventData.TxHash)
 		} else {
 			event := contractEventData.Event.(chainclient.RinghashSubmitted)
 			ringHash := types.BytesToHash(event.RingHash)
 			println("ringHash.HexringHash.Hex", ringHash.Hex())
-			ringData, _ := ringClient.unSubmitedRingsStore.Get(ringHash.Bytes())
+			ringData, _ := submitClient.unSubmitedRingsStore.Get(ringHash.Bytes())
 			if nil != ringData {
 				ring := &types.RingState{}
 				if err := json.Unmarshal(ringData, ring); nil != err {
@@ -251,7 +251,7 @@ func (ringClient *RingSubmitClient) handleRegistryEvent(e eventemitter.EventData
 				} else {
 					log.Debugf("ringhashRegistry:%s", string(ringData))
 					//todo:need pre condition
-					if err := ringClient.submitRing(ring); nil != err {
+					if err := submitClient.submitRing(ring); nil != err {
 						log.Errorf("error:%s", err.Error())
 					}
 				}
@@ -262,10 +262,10 @@ func (ringClient *RingSubmitClient) handleRegistryEvent(e eventemitter.EventData
 	return nil
 }
 
-func (ringClient *RingSubmitClient) Start() {
+func (submitClient *RingSubmitClient) Start() {
 	//ringClient.recoverRing()
 
-	watcher := &eventemitter.Watcher{Concurrent: false, Handle: ringClient.handleRegistryEvent}
+	watcher := &eventemitter.Watcher{Concurrent: false, Handle: submitClient.handleRegistryEvent}
 	for _, imp := range LoopringInstance.LoopringImpls {
 		e := imp.RingHashRegistry.RinghashSubmittedEvent
 		topic := e.Address().Hex() + e.Id()

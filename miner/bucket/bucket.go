@@ -215,7 +215,7 @@ func (b *Bucket) NewOrder(ord types.OrderState) {
 	b.newOrderWithoutLock(ord)
 }
 
-func (b *Bucket) DeleteOrder(orderState types.OrderState) {
+func (b *Bucket) deleteOrder(orderState types.OrderState) {
 	//delete the order
 	b.mtx.RLock()
 	defer b.mtx.RUnlock()

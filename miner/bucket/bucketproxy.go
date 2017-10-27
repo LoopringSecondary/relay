@@ -47,9 +47,9 @@ todo：此时环路的撮合驱动是由新订单的到来进行驱动，但是�
 type BucketProxy struct {
 	ringChan             chan *types.RingState
 	orderStateChan       chan *types.OrderState
+	ringSubmitFailedChan chan *types.RingState
 	buckets              map[types.Address]Bucket
 	submitClient         *miner.RingSubmitClient
-	ringSubmitFailedChan chan *types.RingState
 	mtx                  *sync.RWMutex
 	options              config.MinerOptions
 }
@@ -58,11 +58,11 @@ func NewBucketProxy(submitClient *miner.RingSubmitClient) miner.Proxy {
 	var proxy miner.Proxy
 	bp := &BucketProxy{}
 
-	bp.ringChan = make(chan *types.RingState, 1000)
+	bp.ringChan = make(chan *types.RingState, 100)
 
-	bp.ringSubmitFailedChan = make(chan *types.RingState, 1000)
+	bp.ringSubmitFailedChan = make(chan *types.RingState, 100)
 
-	bp.orderStateChan = make(chan *types.OrderState, 1000)
+	bp.orderStateChan = make(chan *types.OrderState, 100)
 
 	bp.mtx = &sync.RWMutex{}
 
@@ -133,10 +133,10 @@ func (bp *BucketProxy) newOrder(order *types.OrderState) {
 
 func (bp *BucketProxy) deleteOrder(order *types.OrderState) {
 	for _, bucket := range bp.buckets {
-		bucket.DeleteOrder(*order)
+		bucket.deleteOrder(*order)
 		log.Debugf("tokenS:%s, order len:%d, semiRing len:%d", bucket.token.Hex(), len(bucket.orders), len(bucket.semiRings))
 	}
-} //订单的更新
+}
 
 func (bp *BucketProxy) AddFilter() {
 
@@ -179,7 +179,7 @@ func (bp *BucketProxy) listenOrderState() {
 		},
 	}
 	//todo:topic
-	eventemitter.On("", watcher)
+	eventemitter.On(eventemitter.MinedOrderState, watcher)
 
 	for {
 		select {
