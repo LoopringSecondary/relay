@@ -63,6 +63,7 @@ type EthClientListener struct {
 
 	contractEvents map[types.Address][]chainclient.AbiEvent
 	txEvents       map[types.Address]bool
+	contracts 		map[types.Address]chainclient.ContractData
 }
 
 func NewListener(options config.ChainClientOptions,
@@ -82,10 +83,17 @@ func NewListener(options config.ChainClientOptions,
 	l.blockhashTable = db.NewTable(l.db, BLOCK_HASH_TABLE_NAME)
 	l.txhashTable = db.NewTable(l.db, TRANSACTION_HASH_TABLE_NAME)
 
+	l.loadContract()
+
+	return &l
+}
+
+func (l *EthClientListener) loadContract() {
 	//todo:for test
 	l.contractEvents = make(map[types.Address][]chainclient.AbiEvent)
 	l.txEvents = make(map[types.Address]bool)
 	for _, imp := range miner.LoopringInstance.LoopringImpls {
+
 		event := imp.RingHashRegistry.RinghashSubmittedEvent
 		l.AddContractEvent(event)
 		l.AddTxEvent(imp.Address)
@@ -93,19 +101,65 @@ func NewListener(options config.ChainClientOptions,
 
 	methodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.doMethod}
 	eventemitter.On(eventemitter.Transaction.Name(), methodWatcher)
+}
 
-	return &l
+
+func (l *EthClientListener) Start() {
+	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
+	go func() {
+		for {
+			blockInter, _ := iterator.Next()
+			block := blockInter.(eth.BlockWithTxObject)
+			for _, tx := range block.Transactions {
+				var contractMethodEvent chainclient.AbiMethod
+				//process tx doMethod, 处理后的之前需要保证该事件处理完成
+				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
+					//todo:类似contractEvent，解析出AbiMethod
+					//contractMethodEvent = nil
+					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
+				}
+
+				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
+					var receipt eth.TransactionReceipt
+					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
+						if len(receipt.Logs) == 0 {
+							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+								topic := v.Address().Hex() + v.Id()
+								event := chainclient.ContractData{Method:contractMethodEvent}
+								//todo:不应该发送nil，需要重新考虑，
+								eventemitter.Emit(topic, event)
+							}
+						} else {
+							for _, log1 := range receipt.Logs {
+								data := hexutil.MustDecode(log1.Data)
+								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
+									topic := v.Address().Hex() + v.Id()
+									evt := reflect.New(reflect.TypeOf(v))
+									if err := v.Unpack(evt, data, log1.Topics); nil != err {
+										log.Errorf("err :%s", err.Error())
+									}
+									event := chainclient.ContractData{
+										Method: contractMethodEvent,
+										Event:  evt.Elem().Interface().(chainclient.AbiEvent),
+									}
+									eventemitter.Emit(topic, event)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}()
 }
 
 func (l *EthClientListener) StartOld() {
 	l.stop = make(chan struct{})
 
 	log.Info("eth listener start...")
-
-	start, end := l.getBlockNumberRange()
+	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
 
 	go func() {
-		iterator := l.ethClient.BlockIterator(start, end)
 		for {
 			inter, err := iterator.Next()
 			if err != nil {
@@ -190,6 +244,40 @@ func (l *EthClientListener) doMethod(input eventemitter.EventData) error {
 	// todo: unpack method
 	// input := tx.Input
 	// l.ethClient
+	return nil
+}
+
+func (l *EthClientListener) handleOrderFilledEvent() error {
+	evt := chainclient.OrderFilledEvent{}
+	log.Debugf("eth listener log event:orderFilled")
+	if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
+		return err
+	}
+
+	if l.commOpts.Develop {
+		log.Debugf("eth listener order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
+		log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
+		log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
+		log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+		log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
+		log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
+		log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
+		log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
+		log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
+		log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
+		log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
+	}
+
+	hash := types.BytesToHash(evt.OrderHash)
+	ord, err := l.ob.GetOrder(hash)
+	if err != nil {
+		return err
+	}
+	if err := evt.ConvertDown(ord); err != nil {
+		return err
+	}
+
+	l.whisper.ChainOrderChan <- ord
 	return nil
 }
 
@@ -327,50 +415,3 @@ func (l *EthClientListener) AddTxEvent(address types.Address) {
 	}
 }
 
-func (l *EthClientListener) Start() {
-	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
-	go func() {
-		for {
-			blockInter, _ := iterator.Next()
-			block := blockInter.(eth.BlockWithTxObject)
-			for _, tx := range block.Transactions {
-				var contractMethodEvent chainclient.AbiMethod
-				//process tx doMethod, 处理后的之前需要保证该事件处理完成
-				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
-					//todo:类似contractEvent，解析出AbiMethod
-					//contractMethodEvent = nil
-					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
-				}
-				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
-					var receipt eth.TransactionReceipt
-					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
-						if len(receipt.Logs) == 0 {
-							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-								topic := v.Address().Hex() + v.Id()
-								event := chainclient.ContractEventData{ContractMethodEvent:contractMethodEvent}
-								//todo:不应该发送nil，需要重新考虑，
-								eventemitter.Emit(topic, event)
-							}
-						} else {
-							for _, log1 := range receipt.Logs {
-								data := hexutil.MustDecode(log1.Data)
-								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-									topic := v.Address().Hex() + v.Id()
-									evt := reflect.New(reflect.TypeOf(v))
-									if err := v.Unpack(evt, data, log1.Topics); nil != err {
-										log.Errorf("err :%s", err.Error())
-									}
-									event := chainclient.ContractEventData{
-										ContractMethodEvent:contractMethodEvent,
-										ContractEvent:evt.Elem().Interface().(chainclient.AbiEvent),
-									}
-									eventemitter.Emit(topic, event)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}()
-}
