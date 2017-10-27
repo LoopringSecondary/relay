@@ -231,7 +231,7 @@ func (loopring *Loopring) AddToken(tokenAddress types.Address) {
 }
 
 type ContractData struct {
-	Address types.Address
-	Method  AbiMethod
-	Event   AbiEvent
+	Method AbiMethod
+	Event  AbiEvent
+	TxHash types.Hash
 }
