@@ -39,11 +39,6 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-const (
-	BLOCK_HASH_TABLE_NAME       = "block_hash_table"
-	TRANSACTION_HASH_TABLE_NAME = "transaction_hash_table"
-)
-
 type Whisper struct {
 	ChainOrderChan chan *types.OrderState
 }
@@ -54,10 +49,8 @@ type EthClientListener struct {
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
 	ob              *orderbook.OrderBook
-	db              db.Database
-	blockhashTable  db.Database
-	txhashTable     db.Database
 	whisper         *Whisper
+	rds 			*Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
 	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
@@ -72,17 +65,14 @@ func NewListener(options config.ChainClientOptions,
 	database db.Database) *EthClientListener {
 	var l EthClientListener
 
+	l.rds = NewRds(database, commonOpts)
 	l.options = options
 	l.commOpts = commonOpts
 	l.whisper = whisper
 	l.ethClient = ethClient
 	l.ob = ob
-	l.db = database
-	l.blockhashTable = db.NewTable(l.db, BLOCK_HASH_TABLE_NAME)
-	l.txhashTable = db.NewTable(l.db, TRANSACTION_HASH_TABLE_NAME)
 
 	l.loadContract()
-
 	return &l
 }
 
@@ -142,7 +132,7 @@ func (l *EthClientListener) Start() {
 				log.Infof("eth listener get block transaction list length %d", txcnt)
 			}
 
-			if err := l.saveBlock(*block); err != nil {
+			if err := l.rds.SaveBlock(*block); err != nil {
 				log.Errorf("eth listener save block hash error:%s", err.Error())
 				continue
 			}
@@ -214,7 +204,7 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 	}
 
 	// 存储block内所有transaction hash
-	if err := l.saveTransactions(block.Hash, txhashs); err != nil {
+	if err := l.rds.SaveTransactions(block.Hash, txhashs); err != nil {
 		log.Errorf("eth listener save transactions error:%s", err.Error())
 	}
 }
