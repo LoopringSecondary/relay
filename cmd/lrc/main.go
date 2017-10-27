@@ -30,6 +30,8 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
+	"runtime/pprof"
 )
 
 var (
@@ -40,6 +42,23 @@ var (
 )
 
 func main() {
+
+	f, err := os.Create("my.prof")
+	if err != nil {
+		println(err.Error())
+	}
+	// 开启 CPU profiling
+	if err := pprof.StartCPUProfile(f);nil != err {
+		println(err.Error())
+	}
+	defer func() {
+		pprof.StopCPUProfile()
+		f.Close()
+	}()
+	goroot := os.Getenv("GOPATH")
+	goroot = strings.TrimSuffix(goroot, "/")
+	println(goroot)
+
 	app = utils.NewApp()
 	app.Action = minerNode
 	app.HideVersion = true // we have a command to print the version
@@ -105,6 +124,8 @@ func minerNode(c *cli.Context) error {
 		for {
 			select {
 			case sig := <-signalChan:
+				pprof.StopCPUProfile()
+
 				log.Infof("captured %s, exiting...\n", sig.String())
 				if nil != n {
 					n.Stop()

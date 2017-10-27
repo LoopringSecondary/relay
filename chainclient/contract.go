@@ -83,7 +83,7 @@ type LoopringProtocolImpl struct {
 	Canceled AbiMethod
 	Cutoffs  AbiMethod
 
-	SubmitRing             AbiMethod
+	SubmitRing             SubmitRingMethod
 	CancelOrder            AbiMethod
 	SetCutoff              AbiMethod
 	VerifyTokensRegistered AbiMethod
@@ -97,6 +97,11 @@ type LoopringProtocolImpl struct {
 	OrderCancelledEvent         OrderCancelledEvent
 	CutoffTimestampChangedEvent CutoffTimestampChangedEvent
 }
+
+type SubmitRingMethod struct {
+	AbiMethod
+}
+
 
 // todo(fk): []byte to hash
 //go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
