@@ -51,6 +51,10 @@ func (m *AbiMethod) WatcherTopic() string {
 	return m.Address().Hex() + "-" + m.MethodId()
 }
 
+func (m *AbiMethod) Unpack(v interface{}, hex string) error {
+	return UnpackTransaction(m.Method, v, hex)
+}
+
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 	if nil != err {
@@ -215,10 +219,6 @@ func (e AbiEvent) Subscribe(eventChan reflect.Value, fromBlock, toBlock string) 
 
 func (e AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
 	return UnpackEvent(e.Inputs, v, output, topics)
-}
-
-func (m *AbiMethod) Unpack(v interface{}, hex string) error {
-	return UnpackTransaction(m.Method, v, hex)
 }
 
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethClient *EthClient) {

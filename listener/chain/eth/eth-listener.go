@@ -58,7 +58,6 @@ type EthClientListener struct {
 
 func NewListener(options config.ChainClientOptions,
 	commonOpts config.CommonOptions,
-	whisper *Whisper,
 	ethClient *eth.EthClient,
 	ob *orderbook.OrderBook,
 	database db.Database) *EthClientListener {
