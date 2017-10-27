@@ -19,7 +19,6 @@
 package eventemitter_test
 
 import (
-	"fmt"
 	"github.com/Loopring/ringminer/eventemiter"
 	"reflect"
 	"testing"
@@ -32,25 +31,25 @@ type ForkEvent struct {
 
 func TestEmit(t *testing.T) {
 	watcher := &eventemitter.Watcher{Concurrent: true, Handle: func(event eventemitter.EventData) error {
-		fmt.Printf("==========%#v\n", event)
+		t.Logf("==========%#v\n", event)
 		e := event.(ForkEvent)
-		println(e.Name)
+		t.Log(e.Name)
 
 		return nil
 	}}
 	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: func(event eventemitter.EventData) error {
-		fmt.Printf("%#v\n", event)
+		t.Logf("%#v\n", event)
 		e := event.(ForkEvent)
-		println("dsfioewuoriuowieuoirw" + e.Name)
+		t.Log("dsfioewuoriuowieuoirw" + e.Name)
 		return nil
 	}}
 	eventemitter.On(eventemitter.Fork.Name(), watcher)
 	eventemitter.On(eventemitter.Fork.Name(), watcher1)
-	//eventData := ForkEvent{Name:"nnnnnn"}
-	eventemitter.Emit("Fork", nil)
+	eventData := ForkEvent{Name:"nnnnnn"}
+	eventemitter.Emit("Fork", eventData)
 
 	t1 := eventemitter.Fork
-	println(reflect.TypeOf(t1).String())
-	fmt.Printf("\n%#v\n", t1)
+	t.Log(reflect.TypeOf(t1).String())
+	t.Logf("\n%#v\n", t1)
 	time.Sleep(time.Duration(100000000))
 }
