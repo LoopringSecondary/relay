@@ -36,12 +36,11 @@ type IPFSListener struct {
 	options config.IpfsOptions
 	sh      *shell.Shell
 	sub     *shell.PubSubSubscription
-	whisper *Whisper
 	stop    chan struct{}
 	lock    sync.RWMutex
 }
 
-func NewListener(options config.IpfsOptions, whisper *Whisper) *IPFSListener {
+func NewListener(options config.IpfsOptions) *IPFSListener {
 	l := &IPFSListener{}
 
 	l.options = options
@@ -52,7 +51,6 @@ func NewListener(options config.IpfsOptions, whisper *Whisper) *IPFSListener {
 		panic(err.Error())
 	}
 	l.sub = sub
-	l.whisper = whisper
 
 	return l
 }

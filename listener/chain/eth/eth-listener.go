@@ -49,7 +49,6 @@ type EthClientListener struct {
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
 	ob              *orderbook.OrderBook
-	whisper         *Whisper
 	rds             *Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
@@ -68,7 +67,6 @@ func NewListener(options config.ChainClientOptions,
 	l.rds = NewRds(database, commonOpts)
 	l.options = options
 	l.commOpts = commonOpts
-	l.whisper = whisper
 	l.ethClient = ethClient
 	l.ob = ob
 
@@ -277,7 +275,7 @@ func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventDa
 	}
 
 	evt.ConvertDown(ord)
-	l.whisper.ChainOrderChan <- ord
+	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
 
 	return nil
 }
