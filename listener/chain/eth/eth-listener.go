@@ -50,7 +50,7 @@ type EthClientListener struct {
 	ethClient       *eth.EthClient
 	ob              *orderbook.OrderBook
 	whisper         *Whisper
-	rds 			*Rds
+	rds             *Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
 	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
@@ -81,9 +81,9 @@ func (l *EthClientListener) loadContract() {
 	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
 
 	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleRinghashSubmitEvent}
-	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderFilledEvent}
-	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderCancelledEvent}
+	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
+	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
+	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 	//cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleCutoffTimestampEvent}
 
 	for _, impl := range miner.LoopringInstance.LoopringImpls {
@@ -194,7 +194,7 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 
 			// 处理事件
 			event := chainclient.ContractData{
-				Event:  dstEvt.Elem().Interface().(chainclient.AbiEvent),
+				Event: dstEvt.Elem().Interface().(chainclient.AbiEvent),
 			}
 			eventemitter.Emit(contractEvt.WatcherTopic(), event)
 

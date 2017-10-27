@@ -20,13 +20,13 @@ package eth
 
 import (
 	"encoding/json"
+	"errors"
 	ethch "github.com/Loopring/ringminer/chainclient/eth"
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/config"
-	"errors"
 )
 
 /*
@@ -37,16 +37,16 @@ import (
 */
 
 const (
-	LATEST_BLOCK_NUM = "latestBlockNumber"
+	LATEST_BLOCK_NUM            = "latestBlockNumber"
 	BLOCK_HASH_TABLE_NAME       = "block_hash_table"
 	TRANSACTION_HASH_TABLE_NAME = "transaction_hash_table"
 )
 
 type Rds struct {
-	db              db.Database
-	blockhashTable  db.Database
-	txhashTable     db.Database
-	options 		config.CommonOptions
+	db             db.Database
+	blockhashTable db.Database
+	txhashTable    db.Database
+	options        config.CommonOptions
 }
 
 //go:generate gencodec -type BlockIndex -field-override blockIndexMarshaling -out gen_blockindex_json.go
