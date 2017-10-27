@@ -64,13 +64,13 @@ func (l *EthClientListener) StartForkDetect() error {
 	return nil
 }
 
-//todo:can be optimized
+//todo:should be optimized， 启动点等需要重新考虑，获取分叉点等的问题
 func (l *EthClientListener) forkDetect(database db.Database) error {
 	detect := &forkDetect{}
 	detect.hashStore = db.NewTable(database, "fork_")
 	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
 	detect.startedNumber = new(big.Int).SetBytes(startedNumberBs)
-	iterator := l.ethClient.BlockIterator(detect.startedNumber, nil, false)
+	iterator := l.ethClient.BlockIterator(detect.startedNumber, nil, false, uint64(0))
 	for {
 		b, err := iterator.Next()
 		if nil != err {

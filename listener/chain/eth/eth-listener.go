@@ -73,6 +73,8 @@ func NewListener(options config.ChainClientOptions,
 	l.ob = ob
 
 	l.loadContract()
+
+	//l.StartForkDetect()
 	return &l
 }
 
@@ -112,7 +114,7 @@ func (l *EthClientListener) Start() {
 
 	log.Info("eth listener start...")
 	start, end := l.getBlockNumberRange()
-	iterator := l.ethClient.BlockIterator(start, end, true)
+	iterator := l.ethClient.BlockIterator(start, end, true, uint64(0))
 
 	go func() {
 		for {

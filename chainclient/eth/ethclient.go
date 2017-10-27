@@ -208,6 +208,7 @@ type BlockIterator struct {
 	currentNumber *big.Int
 	ethClient     *EthClient
 	withTxData    bool
+	confirms uint64
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
@@ -220,21 +221,29 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
 		return nil, errors.New("finished")
 	}
-	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+
+	var blockNumber types.Big
+	if err := iterator.ethClient.BlockNumber(&blockNumber); nil != err {
 		return nil, err
 	} else {
-		if nil == block {
-		hasNext:
+		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
+		if blockNumber.Uint64() < confirmNumber {
+			hasNext:
 			for {
 				select {
 				// todo(fk):modify this duration
 				case <-time.After(time.Duration(5 * time.Second)):
-					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil == err1 && nil != block {
+					if err1 := iterator.ethClient.BlockNumber(&blockNumber); nil == err1 && blockNumber.Uint64() >= confirmNumber {
 						break hasNext
 					}
 				}
 			}
 		}
+	}
+
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+		return nil, err
+	} else {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
 		return block, nil
 	}
@@ -262,13 +271,14 @@ func (iterator *BlockIterator) Prev() (interface{}, error) {
 	}
 }
 
-func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withTxData bool) chainclient.BlockIterator {
+func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) chainclient.BlockIterator {
 	iterator := &BlockIterator{
 		startNumber:   new(big.Int).Set(startNumber),
 		endNumber:     endNumber,
 		currentNumber: new(big.Int).Set(startNumber),
 		ethClient:     ethClient,
 		withTxData:    withTxData,
+		confirms: confirms,
 	}
 	return iterator
 }

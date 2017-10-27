@@ -43,7 +43,7 @@ type Client struct {
 	//the first arg must be filterId in eth
 	//Subscribe              func(callback func(args ...interface{}) error, filterArgs ...interface{}) error
 	Subscribe              func(result interface{}, filterId string) error
-	BlockIterator          func(startNumber, endNumber *big.Int, withTxData bool) BlockIterator
+	BlockIterator          func(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) BlockIterator
 	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
 
