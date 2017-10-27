@@ -21,6 +21,7 @@ package ipfs
 import (
 	"encoding/json"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
@@ -35,12 +36,11 @@ type IPFSListener struct {
 	options config.IpfsOptions
 	sh      *shell.Shell
 	sub     *shell.PubSubSubscription
-	whisper *Whisper
 	stop    chan struct{}
 	lock    sync.RWMutex
 }
 
-func NewListener(options config.IpfsOptions, whisper *Whisper) *IPFSListener {
+func NewListener(options config.IpfsOptions) *IPFSListener {
 	l := &IPFSListener{}
 
 	l.options = options
@@ -51,7 +51,6 @@ func NewListener(options config.IpfsOptions, whisper *Whisper) *IPFSListener {
 		panic(err.Error())
 	}
 	l.sub = sub
-	l.whisper = whisper
 
 	return l
 }
@@ -67,10 +66,10 @@ func (l *IPFSListener) Start() {
 				ord := &types.Order{}
 				err := json.Unmarshal(data, ord)
 				if err != nil {
-					log.Errorf(log.ERROR_P2P_LISTEN_ACCEPT, err.Error())
+					log.Errorf("failed to accept data %s", err.Error())
 				} else {
-					log.Debugf(log.LOG_P2P_ACCEPT, string(data))
-					l.whisper.PeerOrderChan <- ord
+					log.Debugf("accept data from ipfs %s", string(data))
+					eventemitter.Emit(eventemitter.OrderBookPeer.Name(), ord)
 				}
 			}
 		}

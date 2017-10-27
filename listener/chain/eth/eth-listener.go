@@ -49,8 +49,7 @@ type EthClientListener struct {
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
 	ob              *orderbook.OrderBook
-	whisper         *Whisper
-	rds 			*Rds
+	rds             *Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
 	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
@@ -59,7 +58,6 @@ type EthClientListener struct {
 
 func NewListener(options config.ChainClientOptions,
 	commonOpts config.CommonOptions,
-	whisper *Whisper,
 	ethClient *eth.EthClient,
 	ob *orderbook.OrderBook,
 	database db.Database) *EthClientListener {
@@ -68,7 +66,6 @@ func NewListener(options config.ChainClientOptions,
 	l.rds = NewRds(database, commonOpts)
 	l.options = options
 	l.commOpts = commonOpts
-	l.whisper = whisper
 	l.ethClient = ethClient
 	l.ob = ob
 
@@ -83,9 +80,9 @@ func (l *EthClientListener) loadContract() {
 	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
 
 	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleRinghashSubmitEvent}
-	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderFilledEvent}
-	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderCancelledEvent}
+	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
+	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
+	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 	//cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleCutoffTimestampEvent}
 
 	for _, impl := range miner.LoopringInstance.LoopringImpls {
@@ -196,7 +193,7 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 
 			// 处理事件
 			event := chainclient.ContractData{
-				Event:  dstEvt.Elem().Interface().(chainclient.AbiEvent),
+				Event: dstEvt.Elem().Interface().(chainclient.AbiEvent),
 			}
 			eventemitter.Emit(contractEvt.WatcherTopic(), event)
 
@@ -253,7 +250,7 @@ func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData)
 		return err
 	}
 
-	l.whisper.ChainOrderChan <- ord
+	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
 
 	return nil
 }
@@ -277,7 +274,7 @@ func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventDa
 	}
 
 	evt.ConvertDown(ord)
-	l.whisper.ChainOrderChan <- ord
+	eventemitter.Emit(eventemitter.OrderBookChain.Name(), evt)
 
 	return nil
 }

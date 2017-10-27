@@ -38,6 +38,10 @@ func (t Topic) Name() string {
 		return "RingSubmitFailed"
 	case Transaction:
 		return "Transaction"
+	case OrderBookPeer:
+		return "OrderBookPeer"
+	case OrderBookChain:
+		return "OrderBookChain"
 	default:
 		return "EventEmit"
 	}
@@ -50,6 +54,8 @@ const (
 	Fork
 	RingSubmitFailed
 	Transaction
+	OrderBookPeer
+	OrderBookChain
 )
 
 var watchers map[string][]*Watcher

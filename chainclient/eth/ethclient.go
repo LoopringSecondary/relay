@@ -208,7 +208,7 @@ type BlockIterator struct {
 	currentNumber *big.Int
 	ethClient     *EthClient
 	withTxData    bool
-	confirms uint64
+	confirms      uint64
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
@@ -228,7 +228,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
 		if blockNumber.Uint64() < confirmNumber {
-			hasNext:
+		hasNext:
 			for {
 				select {
 				// todo(fk):modify this duration
@@ -278,7 +278,7 @@ func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withT
 		currentNumber: new(big.Int).Set(startNumber),
 		ethClient:     ethClient,
 		withTxData:    withTxData,
-		confirms: confirms,
+		confirms:      confirms,
 	}
 	return iterator
 }
