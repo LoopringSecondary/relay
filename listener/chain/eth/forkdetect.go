@@ -70,7 +70,6 @@ func (l *EthClientListener) forkDetect(database db.Database) error {
 	detect.hashStore = db.NewTable(database, "fork_")
 	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
 	detect.startedNumber = new(big.Int).SetBytes(startedNumberBs)
-	detect.startedNumber = big.NewInt(4000)
 	iterator := l.ethClient.BlockIterator(detect.startedNumber, nil, false)
 	for {
 		b, err := iterator.Next()

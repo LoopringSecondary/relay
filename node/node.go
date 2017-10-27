@@ -114,9 +114,7 @@ func (n *Node) Stop() {
 
 func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database, chainOrderChan chan *types.OrderState) {
 	whisper := &ethListenerLib.Whisper{chainOrderChan}
-	ethListener := ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook, database)
-	n.chainListener = ethListener
-	ethListener.StartForkDetect()
+	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook, database)
 }
 
 func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
