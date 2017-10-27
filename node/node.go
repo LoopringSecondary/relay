@@ -59,8 +59,6 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
-	//forkDetectChans := []chan chainclient.ForkedEvent{make(chan chainclient.ForkedEvent, 10)}
-	//ethClient.StartForkDetect(forkDetectChans, database)
 	ringClient := miner.NewRingClient(database, ethClient.Client)
 
 	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
@@ -116,7 +114,9 @@ func (n *Node) Stop() {
 
 func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database, chainOrderChan chan *types.OrderState) {
 	whisper := &ethListenerLib.Whisper{chainOrderChan}
-	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook, database)
+	ethListener := ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, whisper, client, n.orderbook, database)
+	n.chainListener = ethListener
+	ethListener.StartForkDetect()
 }
 
 func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {

@@ -63,7 +63,6 @@ type EthClientListener struct {
 
 	contractEvents map[types.Address][]chainclient.AbiEvent
 	txEvents       map[types.Address]bool
-	contracts 		map[types.Address]chainclient.ContractData
 }
 
 func NewListener(options config.ChainClientOptions,
@@ -104,12 +103,14 @@ func (l *EthClientListener) loadContract() {
 }
 
 
+
 func (l *EthClientListener) Start() {
-	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
+	start,end := l.getBlockNumberRange()
+	iterator := l.ethClient.BlockIterator(start, end, true)
 	go func() {
 		for {
 			blockInter, _ := iterator.Next()
-			block := blockInter.(eth.BlockWithTxObject)
+			block := blockInter.(*eth.BlockWithTxObject)
 			for _, tx := range block.Transactions {
 				var contractMethodEvent chainclient.AbiMethod
 				//process tx doMethod, 处理后的之前需要保证该事件处理完成
@@ -118,7 +119,6 @@ func (l *EthClientListener) Start() {
 					//contractMethodEvent = nil
 					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
 				}
-
 				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
 					var receipt eth.TransactionReceipt
 					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
@@ -139,8 +139,8 @@ func (l *EthClientListener) Start() {
 										log.Errorf("err :%s", err.Error())
 									}
 									event := chainclient.ContractData{
-										Method: contractMethodEvent,
-										Event:  evt.Elem().Interface().(chainclient.AbiEvent),
+										Method:contractMethodEvent,
+										Event:evt.Elem().Interface().(chainclient.AbiEvent),
 									}
 									eventemitter.Emit(topic, event)
 								}
@@ -153,11 +153,14 @@ func (l *EthClientListener) Start() {
 	}()
 }
 
+
+
 func (l *EthClientListener) StartOld() {
 	l.stop = make(chan struct{})
 
 	log.Info("eth listener start...")
-	iterator := l.ethClient.BlockIterator(l.getBlockNumberRange())
+	start, end := l.getBlockNumberRange()
+	iterator := l.ethClient.BlockIterator(start, end, true)
 
 	go func() {
 		for {
@@ -166,7 +169,7 @@ func (l *EthClientListener) StartOld() {
 				log.Fatalf("eth listener iterator next error:%s", err.Error())
 			}
 
-			block := inter.(eth.BlockWithTxObject)
+			block := inter.(*eth.BlockWithTxObject)
 			log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
 			txcnt := len(block.Transactions)
@@ -177,7 +180,7 @@ func (l *EthClientListener) StartOld() {
 				log.Infof("eth listener get block transaction list length %d", txcnt)
 			}
 
-			if err := l.saveBlock(block); err != nil {
+			if err := l.saveBlock(*block); err != nil {
 				log.Errorf("eth listener save block hash error:%s", err.Error())
 				continue
 			}
@@ -190,7 +193,7 @@ func (l *EthClientListener) StartOld() {
 				}
 			}
 
-			l.doBlock(block)
+			l.doBlock(*block)
 		}
 	}()
 }
@@ -414,4 +417,3 @@ func (l *EthClientListener) AddTxEvent(address types.Address) {
 		l.txEvents[address] = true
 	}
 }
-

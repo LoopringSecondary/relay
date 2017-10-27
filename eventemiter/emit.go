@@ -64,6 +64,8 @@ type Watcher struct {
 }
 
 func Un(topic string, watcher *Watcher) {
+	mtx.Lock()
+	defer mtx.Unlock()
 	watchersTmp := []*Watcher{}
 	for _, w := range watchers[topic] {
 		if w != watcher {

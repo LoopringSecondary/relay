@@ -366,7 +366,7 @@ func TestFilter(t *testing.T) {
 }
 
 func TestClient_BlockIterator(t *testing.T) {
-	iterator := testParams.Client.BlockIterator(big.NewInt(4069), big.NewInt(4080))
+	iterator := testParams.Client.BlockIterator(big.NewInt(4069), big.NewInt(4080), false)
 	for {
 		_, err := iterator.Next()
 		if nil != err {

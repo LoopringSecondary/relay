@@ -74,7 +74,6 @@ func NewChainClient(clientConfig config.ChainClientOptions, passphraseStr string
 	ethClient.Subscribe = ethClient.subscribe
 	ethClient.SignAndSendTransaction = ethClient.signAndSendTransaction
 	ethClient.NewContract = ethClient.newContract
-	ethClient.StartForkDetect = ethClient.startForkDetect
 	ethClient.BlockIterator = ethClient.blockIterator
 
 	ethClient.signer = &ethTypes.HomesteadSigner{}
@@ -208,14 +207,20 @@ type BlockIterator struct {
 	endNumber     *big.Int
 	currentNumber *big.Int
 	ethClient     *EthClient
+	withTxData	bool
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
-	block := &BlockWithTxObject{}
+	var block interface{}
+	if iterator.withTxData {
+		block = &BlockWithTxObject{}
+	} else {
+		block = &BlockWithTxHash{}
+	}
 	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
 		return nil, errors.New("finished")
 	}
-	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil != err {
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		if nil == block {
@@ -224,40 +229,46 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 				select {
 				// todo(fk):modify this duration
 				case <-time.After(time.Duration(5 * time.Second)):
-					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), true); nil == err1 && nil != block {
+					if err1 := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil == err1 && nil != block {
 						break hasNext
 					}
 				}
 			}
 		}
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
-		return *block, nil
+		return block, nil
 	}
 }
 
 func (iterator *BlockIterator) Prev() (interface{}, error) {
-	block := &Block{}
+	var block interface{}
+	if iterator.withTxData {
+		block = &BlockWithTxObject{}
+	} else {
+		block = &BlockWithTxHash{}
+	}
 	if nil != iterator.startNumber && iterator.startNumber.Cmp(big.NewInt(0)) > 0 && iterator.startNumber.Cmp(iterator.currentNumber) > 0 {
 		return nil, errors.New("finished")
 	}
 	prevNumber := new(big.Int).Sub(iterator.currentNumber, big.NewInt(1))
-	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", prevNumber), false); nil != err {
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		if nil == block {
 			return nil, errors.New("there isn't a block with number:" + prevNumber.String())
 		}
 		iterator.currentNumber.Sub(iterator.currentNumber, big.NewInt(1))
-		return *block, nil
+		return block, nil
 	}
 }
 
-func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int) chainclient.BlockIterator {
+func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withTxData bool) chainclient.BlockIterator {
 	iterator := &BlockIterator{
 		startNumber:   new(big.Int).Set(startNumber),
 		endNumber:     endNumber,
 		currentNumber: new(big.Int).Set(startNumber),
 		ethClient:     ethClient,
+		withTxData:withTxData,
 	}
 	return iterator
 }

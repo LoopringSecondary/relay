@@ -27,6 +27,7 @@ import (
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"github.com/Loopring/ringminer/chainclient/eth"
 )
 
 type forkDetect struct {
@@ -37,7 +38,7 @@ type forkDetect struct {
 }
 
 //fork detect
-func (ethClient *EthClient) startForkDetect(database db.Database) error {
+func (l *EthClientListener) StartForkDetect() error {
 
 	detectedEventChan := make(chan chainclient.ForkedEvent)
 
@@ -51,7 +52,7 @@ func (ethClient *EthClient) startForkDetect(database db.Database) error {
 
 	go func() {
 	L:
-		go ethClient.forkDetect(database)
+		go l.forkDetect(l.db)
 		for {
 			select {
 			case event := <-detectedEventChan:
@@ -63,21 +64,21 @@ func (ethClient *EthClient) startForkDetect(database db.Database) error {
 	return nil
 }
 
-
-//todo:move to eth-listener
-func (ethClient *EthClient) forkDetect(database db.Database) error {
+//todo:can be optimized
+func (l *EthClientListener) forkDetect(database db.Database) error {
 	detect := &forkDetect{}
 	detect.hashStore = db.NewTable(database, "fork_")
 	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
 	detect.startedNumber = new(big.Int).SetBytes(startedNumberBs)
-	iterator := ethClient.BlockIterator(detect.startedNumber, nil)
+	detect.startedNumber = big.NewInt(4000)
+	iterator := l.ethClient.BlockIterator(detect.startedNumber, nil, false)
 	for {
 		b, err := iterator.Next()
 		if nil != err {
 			log.Errorf("err:%s", err.Error())
 			panic(err)
 		} else {
-			block := b.(Block)
+			block := b.(*eth.BlockWithTxHash)
 			if block.ParentHash == detect.parentHash || detect.parentHash.IsZero() {
 				detect.hashStore.Put(block.Number.BigInt().Bytes(), block.Hash.Bytes())
 				detect.parentHash = block.Hash
@@ -85,7 +86,7 @@ func (ethClient *EthClient) forkDetect(database db.Database) error {
 			} else {
 				parentNumber := new(big.Int).Set(block.Number.BigInt())
 				parentNumber.Sub(parentNumber, big.NewInt(1))
-				if forkedNumber, forkedHash, err := getForkedBlock(parentNumber, detect.hashStore, ethClient); nil != err {
+				if forkedNumber, forkedHash, err := l.getForkedBlock(parentNumber, detect.hashStore); nil != err {
 					panic(err)
 				} else {
 					forkedEvent := chainclient.ForkedEvent{
@@ -104,7 +105,7 @@ func (ethClient *EthClient) forkDetect(database db.Database) error {
 	return nil
 }
 
-func getForkedBlock(parentNumber *big.Int, hashStore db.Database, ethClient *EthClient) (*big.Int, types.Hash, error) {
+func (l *EthClientListener) getForkedBlock(parentNumber *big.Int, hashStore db.Database) (*big.Int, types.Hash, error) {
 	bs, _ := hashStore.Get(parentNumber.Bytes())
 	parentStoredHash := types.BytesToHash(bs)
 	if parentStoredHash.IsZero() {
@@ -112,12 +113,12 @@ func getForkedBlock(parentNumber *big.Int, hashStore db.Database, ethClient *Eth
 	} else if parentNumber.Cmp(big.NewInt(0)) < 0 {
 		return nil, types.HexToHash("0x"), errors.New("detected fork ,but not found forked block")
 	}
-	var parentBlock Block
-	ethClient.GetBlockByNumber(&parentBlock, fmt.Sprintf("%#x", parentNumber), false)
+	var parentBlock eth.Block
+	l.ethClient.GetBlockByNumber(&parentBlock, fmt.Sprintf("%#x", parentNumber), false)
 
 	if parentBlock.Hash == parentStoredHash {
 		return parentNumber, parentStoredHash, nil
 	} else {
-		return getForkedBlock(parentNumber.Sub(parentNumber, big.NewInt(1)), hashStore, ethClient)
+		return l.getForkedBlock(parentNumber.Sub(parentNumber, big.NewInt(1)), hashStore)
 	}
 }

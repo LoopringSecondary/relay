@@ -32,7 +32,7 @@ name = "Loopring corporation"
 [ipfs]
     server = "localhost"
     port = 8080
-    topic = "test1_topic_hongyu"
+    topic = "test1_topic"
 
 [chain_client]
     raw_url = "http://10.137.110.150:8545"

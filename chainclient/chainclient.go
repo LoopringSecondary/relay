@@ -19,7 +19,6 @@
 package chainclient
 
 import (
-	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
@@ -44,10 +43,9 @@ type Client struct {
 	//the first arg must be filterId in eth
 	//Subscribe              func(callback func(args ...interface{}) error, filterArgs ...interface{}) error
 	Subscribe              func(result interface{}, filterId string) error
-	BlockIterator          func(startNumber, endNumber *big.Int) BlockIterator
+	BlockIterator          func(startNumber, endNumber *big.Int, withTxData bool) BlockIterator
 	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
-	StartForkDetect        func(database db.Database) error
 
 	//rpc method:
 	ClientVersion                       RpcMethod `methodName:"clientVersion"`
