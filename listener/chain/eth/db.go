@@ -24,6 +24,9 @@ import (
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/config"
+	"errors"
 )
 
 /*
@@ -33,7 +36,18 @@ import (
 3.保存transaction key:blockhash,value:[]txhash
 */
 
-const LATEST_BLOCK_NUM = "latestBlockNumber"
+const (
+	LATEST_BLOCK_NUM = "latestBlockNumber"
+	BLOCK_HASH_TABLE_NAME       = "block_hash_table"
+	TRANSACTION_HASH_TABLE_NAME = "transaction_hash_table"
+)
+
+type Rds struct {
+	db              db.Database
+	blockhashTable  db.Database
+	txhashTable     db.Database
+	options 		config.CommonOptions
+}
 
 //go:generate gencodec -type BlockIndex -field-override blockIndexMarshaling -out gen_blockindex_json.go
 type BlockIndex struct {
@@ -50,30 +64,39 @@ type TransactionIndex struct {
 	Txs []types.Hash `json:"txs"	gencodec:"required"`
 }
 
+func NewRds(database db.Database, options config.CommonOptions) *Rds {
+	r := &Rds{}
+	r.db = database
+	r.blockhashTable = db.NewTable(r.db, BLOCK_HASH_TABLE_NAME)
+	r.txhashTable = db.NewTable(r.db, TRANSACTION_HASH_TABLE_NAME)
+	r.options = options
+	return r
+}
+
 // 存储最近一次使用的blocknumber到db，同时存储blocknumber，blockhash键值对
-func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
+func (r *Rds) SaveBlock(block ethch.BlockWithTxObject) error {
 	bi := createBlockIndex(block)
 
 	// 获取最近一次使用的blockNumber
-	prevBlockNum, err := l.getBlockNumber()
+	prevBlockNum, err := r.GetBlockNumber()
 	if err != nil {
 		log.Infof("listener init state,non block number")
-		prevBlockNum = l.commOpts.DefaultBlockNumber
+		prevBlockNum = r.options.DefaultBlockNumber
 	}
 
 	if bi.Number.Cmp(prevBlockNum) < 1 {
 		log.Debugf("current block number:%s, prevent block number:%s", bi.Number.String(), prevBlockNum.String())
 		// todo free comment after test
-		// return errors.New("current block number cmp prevent block number < 1")
+		return errors.New("current block number cmp prevent block number < 1")
 	}
 
 	// 存储最近一次使用的blocknumber
-	if err := l.saveBlockNumber(&bi); err != nil {
+	if err := r.SaveBlockNumber(&bi); err != nil {
 		return err
 	}
 
 	// 存储blockIndex
-	if err := l.saveBlockIndex(bi); err != nil {
+	if err := r.SaveBlockIndex(bi); err != nil {
 		return err
 	}
 
@@ -81,18 +104,18 @@ func (l *EthClientListener) saveBlock(block ethch.BlockWithTxObject) error {
 }
 
 // 将最近一次使用的blockNumber存储到key LATEST_BLOCK_NUM
-func (l *EthClientListener) saveBlockNumber(bi *BlockIndex) error {
+func (r *Rds) SaveBlockNumber(bi *BlockIndex) error {
 	value, err := blockNumberToBytes(bi)
 	if err != nil {
 		return err
 	}
 
-	return l.db.Put([]byte(LATEST_BLOCK_NUM), value)
+	return r.db.Put([]byte(LATEST_BLOCK_NUM), value)
 }
 
 // 查询最近一次使用的blockNumber
-func (l *EthClientListener) getBlockNumber() (*big.Int, error) {
-	bs, err := l.db.Get([]byte(LATEST_BLOCK_NUM))
+func (r *Rds) GetBlockNumber() (*big.Int, error) {
+	bs, err := r.db.Get([]byte(LATEST_BLOCK_NUM))
 	if err != nil {
 		return nil, err
 	}
@@ -102,20 +125,20 @@ func (l *EthClientListener) getBlockNumber() (*big.Int, error) {
 // 将某个blockHash及对应的blockIndex以键值对的形式存储起来，
 // 方便查询parentHash，如果另一个block的parentHash在该表找不到
 // 就意味着已分叉,
-func (l *EthClientListener) saveBlockIndex(bi BlockIndex) error {
+func (r *Rds) SaveBlockIndex(bi BlockIndex) error {
 	key := bi.Hash.Bytes()
 	value, err := bi.MarshalJSON()
 	if err != nil {
 		return err
 	}
 
-	return l.blockhashTable.Put(key, value)
+	return r.blockhashTable.Put(key, value)
 }
 
 // 根据hash查询blockIndex信息
-func (l *EthClientListener) getBlockIndex(key types.Hash) (*BlockIndex, error) {
+func (r *Rds) GetBlockIndex(key types.Hash) (*BlockIndex, error) {
 	ret := &BlockIndex{}
-	bs, err := l.blockhashTable.Get(key.Bytes())
+	bs, err := r.blockhashTable.Get(key.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +151,7 @@ func (l *EthClientListener) getBlockIndex(key types.Hash) (*BlockIndex, error) {
 }
 
 // 保存block内的所有txHash
-func (l *EthClientListener) saveTransactions(blockhash types.Hash, txhashs []types.Hash) error {
+func (r *Rds) SaveTransactions(blockhash types.Hash, txhashs []types.Hash) error {
 	txindex := TransactionIndex{}
 	txindex.Txs = txhashs
 	bs, err := json.Marshal(txindex)
@@ -136,13 +159,13 @@ func (l *EthClientListener) saveTransactions(blockhash types.Hash, txhashs []typ
 		return err
 	}
 
-	return l.txhashTable.Put(blockhash.Bytes(), bs)
+	return r.txhashTable.Put(blockhash.Bytes(), bs)
 }
 
 // 获取block内的所有txHash
-func (l *EthClientListener) getTransactions(blockhash types.Hash) (*TransactionIndex, error) {
+func (r *Rds) GetTransactions(blockhash types.Hash) (*TransactionIndex, error) {
 	txindex := &TransactionIndex{}
-	bs, err := l.txhashTable.Get(blockhash.Bytes())
+	bs, err := r.txhashTable.Get(blockhash.Bytes())
 	if err != nil {
 		return txindex, err
 	}
@@ -155,8 +178,8 @@ func (l *EthClientListener) getTransactions(blockhash types.Hash) (*TransactionI
 }
 
 // 查询block内是否存在某txhash
-func (l *EthClientListener) findTransaction(blockhash, txhash types.Hash) (bool, error) {
-	bs, err := l.txhashTable.Get(blockhash.Bytes())
+func (r *Rds) FindTransaction(blockhash, txhash types.Hash) (bool, error) {
+	bs, err := r.txhashTable.Get(blockhash.Bytes())
 	if err != nil {
 		return false, err
 	}
