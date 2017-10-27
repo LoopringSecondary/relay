@@ -171,5 +171,4 @@ func emptyRingSubmitArgs() *RingSubmitInputs {
 }
 
 type RingSubmitOuts struct {
-
 }

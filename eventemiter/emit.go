@@ -57,7 +57,6 @@ var mtx *sync.Mutex
 
 type EventData interface{}
 
-
 type Watcher struct {
 	Concurrent bool
 	Handle     func(eventData EventData) error
@@ -98,5 +97,3 @@ func init() {
 	watchers = make(map[string][]*Watcher)
 	mtx = &sync.Mutex{}
 }
-
-

@@ -207,7 +207,7 @@ type BlockIterator struct {
 	endNumber     *big.Int
 	currentNumber *big.Int
 	ethClient     *EthClient
-	withTxData	bool
+	withTxData    bool
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
@@ -268,7 +268,7 @@ func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withT
 		endNumber:     endNumber,
 		currentNumber: new(big.Int).Set(startNumber),
 		ethClient:     ethClient,
-		withTxData:withTxData,
+		withTxData:    withTxData,
 	}
 	return iterator
 }

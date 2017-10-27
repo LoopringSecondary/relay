@@ -50,19 +50,18 @@ type Whisper struct {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type EthClientListener struct {
-	options        config.ChainClientOptions
-	commOpts       config.CommonOptions
-	ethClient      *eth.EthClient
-	ob             *orderbook.OrderBook
-	db             db.Database
-	blockhashTable db.Database
-	txhashTable    db.Database
-	whisper        *Whisper
-	stop           chan struct{}
-	lock           sync.RWMutex
-
-	contractEvents map[types.Address][]chainclient.AbiEvent
-	txEvents       map[types.Address]bool
+	options         config.ChainClientOptions
+	commOpts        config.CommonOptions
+	ethClient       *eth.EthClient
+	ob              *orderbook.OrderBook
+	db              db.Database
+	blockhashTable  db.Database
+	txhashTable     db.Database
+	whisper         *Whisper
+	stop            chan struct{}
+	lock            sync.RWMutex
+	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
+	contractEvents  map[types.Address]map[types.Hash]chainclient.AbiEvent
 }
 
 func NewListener(options config.ChainClientOptions,
@@ -88,74 +87,37 @@ func NewListener(options config.ChainClientOptions,
 }
 
 func (l *EthClientListener) loadContract() {
-	//todo:for test
-	l.contractEvents = make(map[types.Address][]chainclient.AbiEvent)
-	l.txEvents = make(map[types.Address]bool)
-	for _, imp := range miner.LoopringInstance.LoopringImpls {
+	l.contractEvents = make(map[types.Address]map[types.Hash]chainclient.AbiEvent)
+	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
 
-		event := imp.RingHashRegistry.RinghashSubmittedEvent
-		l.AddContractEvent(event)
-		l.AddTxEvent(imp.Address)
+	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
+	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleRinghashSubmitEvent}
+	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderFilledEvent}
+	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleOrderCancelledEvent}
+	//cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleCutoffTimestampEvent}
+
+	for _, impl := range miner.LoopringInstance.LoopringImpls {
+		submitRingMtd := impl.SubmitRing
+		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
+		orderFilledEvt := impl.OrderFilledEvent
+		orderCancelledEvt := impl.OrderCancelledEvent
+		//cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
+
+		l.addContractMethod(submitRingMtd)
+		l.addContractEvent(ringhashSubmittedEvt)
+		l.addContractEvent(orderFilledEvt)
+		l.addContractEvent(orderCancelledEvt)
+		//l.addContractEvent(cutoffTimestampEvt)
+
+		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
+		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
+		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
+		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
+		//eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
 	}
-
-	methodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.doMethod}
-	eventemitter.On(eventemitter.Transaction.Name(), methodWatcher)
 }
-
-
 
 func (l *EthClientListener) Start() {
-	start,end := l.getBlockNumberRange()
-	iterator := l.ethClient.BlockIterator(start, end, true)
-	go func() {
-		for {
-			blockInter, _ := iterator.Next()
-			block := blockInter.(*eth.BlockWithTxObject)
-			for _, tx := range block.Transactions {
-				var contractMethodEvent chainclient.AbiMethod
-				//process tx doMethod, 处理后的之前需要保证该事件处理完成
-				if _, ok := l.txEvents[types.HexToAddress(tx.To)]; ok {
-					//todo:类似contractEvent，解析出AbiMethod
-					//contractMethodEvent = nil
-					eventemitter.Emit(eventemitter.Transaction.Name(), tx.Input)
-				}
-				if _, ok := l.contractEvents[types.HexToAddress(tx.To)]; ok {
-					var receipt eth.TransactionReceipt
-					if err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash); nil == err {
-						if len(receipt.Logs) == 0 {
-							for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-								topic := v.Address().Hex() + v.Id()
-								event := chainclient.ContractData{Method:contractMethodEvent}
-								//todo:不应该发送nil，需要重新考虑，
-								eventemitter.Emit(topic, event)
-							}
-						} else {
-							for _, log1 := range receipt.Logs {
-								data := hexutil.MustDecode(log1.Data)
-								for _, v := range l.contractEvents[types.HexToAddress(tx.To)] {
-									topic := v.Address().Hex() + v.Id()
-									evt := reflect.New(reflect.TypeOf(v))
-									if err := v.Unpack(evt, data, log1.Topics); nil != err {
-										log.Errorf("err :%s", err.Error())
-									}
-									event := chainclient.ContractData{
-										Method:contractMethodEvent,
-										Event:evt.Elem().Interface().(chainclient.AbiEvent),
-									}
-									eventemitter.Emit(topic, event)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}()
-}
-
-
-
-func (l *EthClientListener) StartOld() {
 	l.stop = make(chan struct{})
 
 	log.Info("eth listener start...")
@@ -185,21 +147,13 @@ func (l *EthClientListener) StartOld() {
 				continue
 			}
 
-			if l.commOpts.Develop {
-				if idx, err := l.getTransactions(block.Hash); err != nil {
-					for _, v := range idx.Txs {
-						log.Debugf("eth listener block transaction %s", v.Hex())
-					}
-				}
-			}
-
 			l.doBlock(*block)
 		}
 	}()
 }
 
 func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
-	txs := []types.Hash{}
+	txhashs := []types.Hash{}
 
 	for _, tx := range block.Transactions {
 		// 判断合约地址是否合法
@@ -214,7 +168,7 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 		// 解析method，获得ring内等orders并发送到orderbook保存
 		l.doMethod(tx.Input)
 
-		// 解析event,并发送到orderbook
+		// 获取transaction内所有event logs
 		var receipt eth.TransactionReceipt
 		err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash)
 		if err != nil {
@@ -222,26 +176,55 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 			continue
 		}
 
+		if len(receipt.Logs) == 0 {
+			// todo
+		}
+
 		log.Debugf("transaction receipt  event logs number:%d", len(receipt.Logs))
 
 		contractAddr := types.HexToAddress(receipt.To)
-		for _, v := range receipt.Logs {
-			if err := l.doEvent(v, contractAddr); err != nil {
-				log.Errorf("eth listener do event error:%s", err.Error())
-			} else {
-				txhash := types.HexToHash(tx.Hash)
-				txs = append(txs, txhash)
+		txhash := types.HexToHash(tx.Hash)
+
+		for _, evtLog := range receipt.Logs {
+			data := hexutil.MustDecode(evtLog.Data)
+
+			// 寻找合约事件
+			contractEvt, err := l.getContractEvent(contractAddr, types.HexToHash(evtLog.Topics[0]))
+			if err != nil {
+				log.Errorf("%s", err.Error())
+				continue
 			}
+
+			// 解析事件
+			dstEvt := reflect.New(reflect.TypeOf(contractEvt))
+			if err := contractEvt.Unpack(dstEvt, data, evtLog.Topics); nil != err {
+				log.Errorf("err :%s", err.Error())
+				continue
+			}
+
+			// 处理事件
+			event := chainclient.ContractData{
+				Event:  dstEvt.Elem().Interface().(chainclient.AbiEvent),
+			}
+			eventemitter.Emit(contractEvt.WatcherTopic(), event)
+
+			// 最后存储
+			txhashs = append(txhashs, txhash)
 		}
 	}
 
-	if err := l.saveTransactions(block.Hash, txs); err != nil {
+	// 存储block内所有transaction hash
+	if err := l.saveTransactions(block.Hash, txhashs); err != nil {
 		log.Errorf("eth listener save transactions error:%s", err.Error())
 	}
 }
 
+func (l *EthClientListener) doMethod(input string) error {
+	return nil
+}
+
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
-func (l *EthClientListener) doMethod(input eventemitter.EventData) error {
+func (l *EthClientListener) handleSubmitRingMethod(input eventemitter.EventData) error {
 	println("doMethoddoMethoddoMethoddoMethoddoMethoddoMethod")
 	//println(input.(string))
 	// todo: unpack method
@@ -250,12 +233,10 @@ func (l *EthClientListener) doMethod(input eventemitter.EventData) error {
 	return nil
 }
 
-func (l *EthClientListener) handleOrderFilledEvent() error {
-	evt := chainclient.OrderFilledEvent{}
+func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData) error {
 	log.Debugf("eth listener log event:orderFilled")
-	if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
-		return err
-	}
+
+	evt := input.(chainclient.ContractData).Event.(chainclient.OrderFilledEvent)
 
 	if l.commOpts.Develop {
 		log.Debugf("eth listener order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
@@ -281,86 +262,39 @@ func (l *EthClientListener) handleOrderFilledEvent() error {
 	}
 
 	l.whisper.ChainOrderChan <- ord
+
 	return nil
 }
 
-// 解析相关事件
-// todo(fuk): how to process approval,transfer,version add/remove...
-func (l *EthClientListener) doEvent(v eth.Log, to types.Address) error {
-	impl, ok := miner.LoopringInstance.LoopringImpls[to]
-	if !ok {
-		return errors.New("eth listener do event contract address do not exsit")
+func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventData) error {
+	log.Debugf("eth listener log event:orderCancelled")
+
+	evt := input.(chainclient.ContractData).Event.(chainclient.OrderCancelledEvent)
+
+	if l.commOpts.Develop {
+		log.Debugf("eth listener order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+		log.Debugf("eth listener order cancelled event time -> %s", evt.Time.String())
+		log.Debugf("eth listener order cancelled event block -> %s", evt.Blocknumber.String())
+		log.Debugf("eth listener order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
 	}
 
-	topic := v.Topics[0]
-	data := hexutil.MustDecode(v.Data)
-
-	// todo:delete after test
-	log.Debugf("eth listener log data:%s", v.Data)
-	log.Debugf("eth listener log topic:%s", topic)
-
-	switch topic {
-	case impl.OrderFilledEvent.Id():
-		evt := chainclient.OrderFilledEvent{}
-		log.Debugf("eth listener log event:orderFilled")
-		if err := impl.OrderFilledEvent.Unpack(&evt, data, v.Topics); err != nil {
-			return err
-		}
-
-		if l.commOpts.Develop {
-			log.Debugf("eth listener order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
-			log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
-			log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
-			log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-			log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
-			log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
-			log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
-			log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
-			log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
-			log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
-			log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
-		}
-
-		hash := types.BytesToHash(evt.OrderHash)
-		ord, err := l.ob.GetOrder(hash)
-		if err != nil {
-			return err
-		}
-		if err := evt.ConvertDown(ord); err != nil {
-			return err
-		}
-
-		l.whisper.ChainOrderChan <- ord
-
-	case impl.OrderCancelledEvent.Id():
-		log.Debugf("eth listener log event:orderCancelled")
-		evt := chainclient.OrderCancelledEvent{}
-		if err := impl.OrderCancelledEvent.Unpack(&evt, data, v.Topics); err != nil {
-			return err
-		}
-
-		if l.commOpts.Develop {
-			log.Debugf("eth listener order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-			log.Debugf("eth listener order cancelled event time -> %s", evt.Time.String())
-			log.Debugf("eth listener order cancelled event block -> %s", evt.Blocknumber.String())
-			log.Debugf("eth listener order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
-		}
-
-		hash := types.BytesToHash(evt.OrderHash)
-		ord, err := l.ob.GetOrder(hash)
-		if err != nil {
-			return err
-		}
-
-		evt.ConvertDown(ord)
-		l.whisper.ChainOrderChan <- ord
-
-	case impl.CutoffTimestampChangedEvent.Id():
-
-	default:
-		//log.Errorf("event id %s not found", topic)
+	hash := types.BytesToHash(evt.OrderHash)
+	ord, err := l.ob.GetOrder(hash)
+	if err != nil {
+		return err
 	}
 
+	evt.ConvertDown(ord)
+	l.whisper.ChainOrderChan <- ord
+
+	return nil
+}
+
+func (l *EthClientListener) handleCutoffTimestampEvent(input eventemitter.EventData) error {
+	return nil
+}
+
+func (l *EthClientListener) handleRinghashSubmitEvent(input eventemitter.EventData) error {
 	return nil
 }
 
@@ -405,15 +339,59 @@ func (l *EthClientListener) judgeContractAddress(addr string) bool {
 	return false
 }
 
-func (l *EthClientListener) AddContractEvent(event chainclient.AbiEvent) {
-	if _, ok := l.contractEvents[event.Address()]; !ok {
-		l.contractEvents[event.Address()] = make([]chainclient.AbiEvent, 0)
+func (l *EthClientListener) addContractEvent(event chainclient.AbiEvent) {
+	id := types.HexToHash(event.Id())
+	addr := event.Address()
+
+	log.Infof("addContractEvent address:%s", addr.Hex())
+	if _, ok := l.contractEvents[addr]; !ok {
+		l.contractEvents[addr] = make(map[types.Hash]chainclient.AbiEvent)
 	}
-	l.contractEvents[event.Address()] = append(l.contractEvents[event.Address()], event)
+
+	log.Infof("addContractEvent id:%s", id.Hex())
+	l.contractEvents[addr][id] = event
 }
 
-func (l *EthClientListener) AddTxEvent(address types.Address) {
-	if _, ok := l.txEvents[address]; !ok {
-		l.txEvents[address] = true
+func (l *EthClientListener) addContractMethod(method chainclient.AbiMethod) {
+	id := types.HexToHash(method.MethodId())
+	addr := method.Address()
+
+	if _, ok := l.contractMethods[addr]; !ok {
+		l.contractMethods[addr] = make(map[types.Hash]chainclient.AbiMethod)
 	}
+
+	l.contractMethods[addr][id] = method
+}
+
+func (l *EthClientListener) getContractEvent(addr types.Address, id types.Hash) (chainclient.AbiEvent, error) {
+	var (
+		impl  map[types.Hash]chainclient.AbiEvent
+		event chainclient.AbiEvent
+		ok    bool
+	)
+	if impl, ok = l.contractEvents[addr]; !ok {
+		return nil, errors.New("eth listener getContractEvent cann't find contract impl:" + addr.Hex())
+	}
+	if event, ok = impl[id]; !ok {
+		return nil, errors.New("eth listener getContractEvent cann't find contract event:" + id.Hex())
+	}
+
+	return event, nil
+}
+
+func (l *EthClientListener) getContractMethod(addr types.Address, id types.Hash) (chainclient.AbiMethod, error) {
+	var (
+		impl   map[types.Hash]chainclient.AbiMethod
+		method chainclient.AbiMethod
+		ok     bool
+	)
+
+	if impl, ok = l.contractMethods[addr]; !ok {
+		return nil, errors.New("eth listener getContractMethod cann't find contract impl")
+	}
+	if method, ok = impl[id]; !ok {
+		return nil, errors.New("eth listener getContractMethod cann't find contract method")
+	}
+
+	return method, nil
 }

@@ -47,6 +47,10 @@ func (m *AbiMethod) Address() types.Address {
 	return m.ContractAddress
 }
 
+func (m *AbiMethod) WatcherTopic() string {
+	return m.Address().Hex() + "-" + m.MethodId()
+}
+
 func (m *AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
 	dataBytes, err := m.Abi.Pack(m.Name, args...)
 	if nil != err {
@@ -160,6 +164,10 @@ func (e AbiEvent) Address() types.Address {
 	return e.ContractAddress
 }
 
+func (e AbiEvent) WatcherTopic() string {
+	return e.Address().Hex() + "-" + e.Id()
+}
+
 //todo:impl it
 func (e AbiEvent) Subscribe(eventChan reflect.Value, fromBlock, toBlock string) {
 	var filterId string
@@ -224,7 +232,7 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethCl
 		abiMethod.Method = cabi.Methods[method.Name]
 		field := e.FieldByName(methodName)
 		if field.IsValid() {
-			if field.Type().String() == "chainclient.SubmitRingMethod"{
+			if field.Type().String() == "chainclient.SubmitRingMethod" {
 				v := reflect.New(field.Type()).Elem()
 				v.FieldByName("AbiMethod").Set(reflect.ValueOf(abiMethod))
 				field.Set(v)
