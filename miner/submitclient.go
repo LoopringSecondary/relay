@@ -22,6 +22,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Loopring/ringminer/chainclient"
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
@@ -41,8 +43,9 @@ type RingSubmitClient struct {
 
 	txToRingHashIndexStore db.Database
 
-	//ring 的失败包括：提交失败，ring的合约执行时失败，执行时包括：gas不足，以及其他失败
-	//ringSubmitFailedChans []RingSubmitFailedChan
+	MinerPrivateKey                             []byte        //used to sign the ring
+	feeRecepient                                types.Address //used to receive fee
+	ifRegistryRingHash, throwIfLrcIsInsuffcient bool
 
 	stopChan chan bool
 
@@ -54,7 +57,7 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewRingSubmitClient(database db.Database, client *chainclient.Client) *RingSubmitClient {
+func NewRingSubmitClient(options config.MinerOptions, commOpts config.CommonOptions, database db.Database, client *chainclient.Client) *RingSubmitClient {
 	submitClient := &RingSubmitClient{}
 	submitClient.Chainclient = client
 	submitClient.store = database
@@ -63,7 +66,18 @@ func NewRingSubmitClient(database db.Database, client *chainclient.Client) *Ring
 
 	submitClient.txToRingHashIndexStore = db.NewTable(submitClient.store, "txToRing")
 	submitClient.mtx = &sync.RWMutex{}
-	//ringClient.ringSubmitFailedChans = make([]RingSubmitFailedChan, 0)
+
+	passphrase := &types.Passphrase{}
+	passphrase.SetBytes([]byte(commOpts.Passphrase))
+	var err error
+	submitClient.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(options.Miner))
+	if nil != err {
+		panic(err)
+	}
+	submitClient.feeRecepient = types.HexToAddress(options.FeeRecepient)
+	submitClient.ifRegistryRingHash = options.IfRegistryRingHash
+	submitClient.throwIfLrcIsInsuffcient = options.ThrowIfLrcIsInsuffcient
+
 	return submitClient
 }
 
@@ -75,8 +89,8 @@ func (submitClient *RingSubmitClient) NewRing(ringState *types.RingState) error 
 		if ringBytes, err := json.Marshal(ringState); err == nil {
 			submitClient.unSubmitedRingsStore.Put(ringState.RawRing.Hash.Bytes(), ringBytes)
 			ringData, _ := json.Marshal(ringState)
-			log.Debugf("ringState:%x", ringData)
-			if IfRegistryRingHash {
+			log.Debugf("ringState:%s", string(ringData))
+			if submitClient.ifRegistryRingHash {
 				return submitClient.sendRinghashRegistry(ringState)
 			} else {
 				return submitClient.submitRing(ringState)
@@ -110,9 +124,9 @@ func (submitClient *RingSubmitClient) canSubmit(ringState *types.RingState) erro
 func (submitClient *RingSubmitClient) sendRinghashRegistry(ringState *types.RingState) error {
 	ring := ringState.RawRing
 	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
-	ringRegistryArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
+	ringRegistryArgs := ring.GenerateSubmitArgs(submitClient.MinerPrivateKey)
 
-	if txHash, err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.SubmitRinghash.SendTransaction(types.HexToAddress("0x"),
+	if txHash, err := MinerInstance.Loopring.LoopringImpls[contractAddress].RingHashRegistry.SubmitRinghash.SendTransaction(types.HexToAddress("0x"),
 		big.NewInt(int64(len(ring.Orders))),
 		ringRegistryArgs.Ringminer,
 		ringRegistryArgs.VList,
@@ -130,14 +144,14 @@ func (submitClient *RingSubmitClient) sendRinghashRegistry(ringState *types.Ring
 	}
 }
 
-func (ringClient *RingSubmitClient) submitRing(ringSate *types.RingState) error {
+func (submitClient *RingSubmitClient) submitRing(ringSate *types.RingState) error {
 	ring := ringSate.RawRing
-	ring.ThrowIfLrcIsInsuffcient = ThrowIfLrcIsInsuffcient
-	ring.FeeRecepient = FeeRecepient
+	ring.ThrowIfLrcIsInsuffcient = submitClient.throwIfLrcIsInsuffcient
+	ring.FeeRecepient = submitClient.feeRecepient
 	contractAddress := ring.Orders[0].OrderState.RawOrder.Protocol
 	log.Debugf("submitRing ringState lrcFee:%s", ringSate.LegalFee)
-	ringSubmitArgs := ring.GenerateSubmitArgs(MinerPrivateKey)
-	if txHash, err := LoopringInstance.LoopringImpls[contractAddress].SubmitRing.SendTransaction(types.HexToAddress("0x"),
+	ringSubmitArgs := ring.GenerateSubmitArgs(submitClient.MinerPrivateKey)
+	if txHash, err := MinerInstance.Loopring.LoopringImpls[contractAddress].SubmitRing.SendTransaction(types.HexToAddress("0x"),
 		ringSubmitArgs.AddressList,
 		ringSubmitArgs.UintArgsList,
 		ringSubmitArgs.Uint8ArgsList,
@@ -152,14 +166,14 @@ func (ringClient *RingSubmitClient) submitRing(ringSate *types.RingState) error 
 		return err
 	} else {
 		//标记为已删除,迁移到已完成的列表中
-		if err := ringClient.unSubmitedRingsStore.Delete(ring.Hash.Bytes()); nil != err {
+		if err := submitClient.unSubmitedRingsStore.Delete(ring.Hash.Bytes()); nil != err {
 			return err
 		}
 		ringSate.SubmitTxHash = types.HexToHash(txHash)
 		if data, err := json.Marshal(ringSate); nil != err {
 			return err
 		} else {
-			return ringClient.submitedRingsStore.Put(ring.Hash.Bytes(), data)
+			return submitClient.submitedRingsStore.Put(ring.Hash.Bytes(), data)
 		}
 	}
 }
@@ -178,12 +192,12 @@ func (submitClient *RingSubmitClient) recoverRing() {
 			contractAddress := ring.RawRing.Orders[0].OrderState.RawOrder.Protocol
 			var isRinghashRegistered types.Big
 			if isOrdersRemined(ring) {
-				if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "latest", ring.RawRing.Hash); err != nil {
+				if err := MinerInstance.Loopring.LoopringImpls[contractAddress].RingHashRegistry.RinghashFound.Call(&isRinghashRegistered, "latest", ring.RawRing.Hash); err != nil {
 					log.Errorf("error:%s", err.Error())
 				} else {
 					if isRinghashRegistered.Int() > 0 {
 						var canSubmit types.Big
-						if err := LoopringInstance.LoopringImpls[contractAddress].RingHashRegistry.CanSubmit.Call(&canSubmit, "latest", ring.RawRing.Hash, ring.RawRing.Miner); err != nil {
+						if err := MinerInstance.Loopring.LoopringImpls[contractAddress].RingHashRegistry.CanSubmit.Call(&canSubmit, "latest", ring.RawRing.Hash, ring.RawRing.Miner); err != nil {
 							log.Errorf("error:%s", err.Error())
 						} else {
 							if canSubmit.Int() > 0 {
@@ -262,11 +276,15 @@ func (submitClient *RingSubmitClient) handleRegistryEvent(e eventemitter.EventDa
 	return nil
 }
 
-func (submitClient *RingSubmitClient) Start() {
+func (submitClient *RingSubmitClient) stop() {
+	//todp
+}
+
+func (submitClient *RingSubmitClient) start() {
 	//ringClient.recoverRing()
 
 	watcher := &eventemitter.Watcher{Concurrent: false, Handle: submitClient.handleRegistryEvent}
-	for _, imp := range LoopringInstance.LoopringImpls {
+	for _, imp := range MinerInstance.Loopring.LoopringImpls {
 		e := imp.RingHashRegistry.RinghashSubmittedEvent
 		topic := e.Address().Hex() + e.Id()
 		eventemitter.On(topic, watcher)

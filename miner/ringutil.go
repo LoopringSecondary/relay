@@ -26,11 +26,6 @@ import (
 	"math/big"
 )
 
-var (
-	RateRatioCVSThreshold int64
-	RateProvider          *ExchangeRateProvider
-)
-
 //compute availableAmountS of order
 func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	order := filledOrder.OrderState.RawOrder
@@ -40,11 +35,11 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	filledOrder.AvailableAmountB = new(big.Rat).SetInt(order.AmountB)
 
 	var err error
-	if err = LoopringInstance.Tokens[order.TokenS].BalanceOf.Call(balance, "latest", order.Owner); nil != err {
+	if err = MinerInstance.Loopring.Tokens[order.TokenS].BalanceOf.Call(balance, "latest", order.Owner); nil != err {
 		return err
 	}
 
-	if err = LoopringInstance.Tokens[order.TokenS].Allowance.Call(allowance, "latest", order.Owner, LoopringInstance.LoopringImpls[order.Protocol].TokenTransferDelegate.Address); nil != err {
+	if err = MinerInstance.Loopring.Tokens[order.TokenS].Allowance.Call(allowance, "latest", order.Owner, MinerInstance.Loopring.LoopringImpls[order.Protocol].TokenTransferDelegate.Address); nil != err {
 		return err
 	}
 	if balance.BigInt().Cmp(big.NewInt(0)) <= 0 {
@@ -62,7 +57,7 @@ func AvailableAmountS(filledOrder *types.FilledOrder) error {
 	//订单的剩余金额
 	filledAmount := &types.Big{}
 	//filled buynomorethanb=true保存的为amountb，如果为false保存的为amounts
-	LoopringInstance.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", order.Hash)
+	MinerInstance.Loopring.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", order.Hash)
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
 		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))
@@ -205,7 +200,7 @@ func ComputeRing(ringState *types.RingState) error {
 		return err
 	} else {
 		log.Debugf("ringState.length:%d ,  cvs:%s", len(ringState.RawRing.Orders), cvs.String())
-		if cvs.Int64() <= RateRatioCVSThreshold {
+		if cvs.Int64() <= MinerInstance.rateRatioCVSThreshold {
 			return nil
 		} else {
 			return errors.New("cvs must less than RateRatioCVSThreshold")
@@ -227,7 +222,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 	for _, filledOrder := range ringState.RawRing.Orders {
 		lrcAddress := &types.Address{}
 
-		lrcAddress.SetBytes([]byte(RateProvider.LRC_ADDRESS))
+		lrcAddress.SetBytes([]byte(MinerInstance.legalRateProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)
 		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -239,7 +234,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving.Mul(filledOrder.FeeS, RateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenS))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.legalRateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenS))
 			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
@@ -247,7 +242,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(filledOrder.FeeS, RateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.legalRateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenB))
 		}
 
 		//compute lrcFee
@@ -255,7 +250,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(RateProvider.GetLegalRate(*lrcAddress), filledOrder.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(MinerInstance.legalRateProvider.GetLegalRate(*lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -267,7 +262,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, RateProvider.GetLegalRate(*lrcAddress))
+			lrcReward.Quo(lrcReward, MinerInstance.legalRateProvider.GetLegalRate(*lrcAddress))
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}

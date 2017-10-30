@@ -81,7 +81,7 @@ func (l *EthClientListener) loadContract() {
 	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 	//cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleCutoffTimestampEvent}
 
-	for _, impl := range miner.LoopringInstance.LoopringImpls {
+	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
 		submitRingMtd := impl.SubmitRing
 		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
 		orderFilledEvt := impl.OrderFilledEvent

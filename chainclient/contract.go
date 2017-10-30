@@ -19,6 +19,7 @@
 package chainclient
 
 import (
+	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -211,13 +212,50 @@ type TransferDelegate struct {
 	AddVersion AbiMethod
 }
 
-//todo:need perfect name
-type LoopringProtocolImplMap map[types.Address]*LoopringProtocolImpl
-
 type Loopring struct {
 	Client        *Client
 	Tokens        map[types.Address]*Erc20Token
-	LoopringImpls LoopringProtocolImplMap
+	LoopringImpls map[types.Address]*LoopringProtocolImpl
+}
+
+func NewLoopringInstance(commOpts config.CommonOptions, client *Client) *Loopring {
+	loopringInstance := &Loopring{}
+	loopringInstance.Client = client
+	loopringInstance.Tokens = make(map[types.Address]*Erc20Token)
+
+	protocolImps := make(map[types.Address]*LoopringProtocolImpl)
+
+	for _, implAddress := range commOpts.LoopringImpAddresses {
+		imp := &LoopringProtocolImpl{}
+		client.NewContract(imp, implAddress, ImplAbiStr)
+		addr := types.HexToAddress(implAddress)
+
+		var lrcTokenAddressHex string
+		imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "latest")
+		lrcTokenAddress := types.HexToAddress(lrcTokenAddressHex)
+		lrcToken := &Erc20Token{}
+		client.NewContract(lrcToken, lrcTokenAddress.Hex(), Erc20TokenAbiStr)
+		loopringInstance.Tokens[lrcTokenAddress] = lrcToken
+
+		var registryAddressHex string
+		imp.RinghashRegistryAddress.Call(&registryAddressHex, "latest")
+		registryAddress := types.HexToAddress(registryAddressHex)
+		registry := &LoopringRinghashRegistry{}
+		client.NewContract(registry, registryAddress.Hex(), RinghashRegistryAbiStr)
+		imp.RingHashRegistry = registry
+
+		var delegateAddressHex string
+		imp.DelegateAddress.Call(&delegateAddressHex, "latest")
+		delegateAddress := types.HexToAddress(delegateAddressHex)
+		delegate := &TransferDelegate{}
+		client.NewContract(delegate, delegateAddress.Hex(), TransferDelegateAbiStr)
+		imp.TokenTransferDelegate = delegate
+
+		protocolImps[addr] = imp
+	}
+	loopringInstance.LoopringImpls = protocolImps
+
+	return loopringInstance
 }
 
 func (loopring *Loopring) AddToken(tokenAddress types.Address) {

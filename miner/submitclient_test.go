@@ -133,8 +133,8 @@ func TestRingClient_NewRing(t *testing.T) {
 	cTest1 := &chainclient.Erc20Token{}
 	client.NewContract(cTest1, "0x96124db0972e3522a9b3910578b3f2e1a50159c7", chainclient.Erc20TokenAbiStr)
 
-	miner.LoopringInstance.Tokens[types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511")] = cTest
-	miner.LoopringInstance.Tokens[types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7")] = cTest1
+	miner.MinerInstance.Loopring.Tokens[types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511")] = cTest
+	miner.MinerInstance.Loopring.Tokens[types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7")] = cTest1
 
 	miner.AvailableAmountS(fOrder1)
 	//t.Log(fOrder1.AvailableAmountS.Int64())

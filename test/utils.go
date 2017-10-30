@@ -34,6 +34,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type TestParams struct {
@@ -76,7 +77,7 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(1) //big.NewInt(time.Now().Unix())
+	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(10000)
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = big.NewInt(1000)
