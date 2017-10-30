@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
+	"time"
 )
 
 /**
@@ -39,12 +40,14 @@ todo:
 */
 
 type OrderBook struct {
-	options   config.OrderBookOptions
-	commOpts  config.CommonOptions
-	filters   []Filter
-	rdbs      *Rdbs
-	lock      sync.RWMutex
-	minAmount *big.Int
+	options     config.OrderBookOptions
+	commOpts    config.CommonOptions
+	filters     []Filter
+	rdbs        *Rdbs
+	ordTimeList *OrderTimestampList
+	lock        sync.RWMutex
+	minAmount   *big.Int
+	ticker      *time.Ticker
 }
 
 func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database) *OrderBook {
@@ -54,6 +57,10 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	ob.commOpts = commOpts
 	ob.rdbs = NewRdbs(database)
 
+	// todo: use config
+	ob.ticker = time.NewTicker(1 * time.Second)
+	ob.ordTimeList = &OrderTimestampList{}
+	
 	//todo:filters init
 	filters := []Filter{}
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
@@ -89,6 +96,15 @@ func (ob *OrderBook) Start() {
 
 	eventemitter.On(eventemitter.OrderBookPeer, peerOrderWatcher)
 	eventemitter.On(eventemitter.OrderBookChain, chainOrderWatcher)
+
+	go func() {
+		for {
+			select {
+			case <-ob.ticker.C:
+				ob.sendOrderToMiner()
+			}
+		}
+	}()
 }
 
 func (ob *OrderBook) Stop() {
@@ -97,6 +113,7 @@ func (ob *OrderBook) Stop() {
 
 	// todo
 	ob.rdbs.Close()
+	ob.ticker.Stop()
 }
 
 func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
@@ -130,9 +147,7 @@ func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {
 	}
 
 	state.AddVersion(types.VersionData{})
-	ob.rdbs.SetOrder(state)
-
-	sendOrderToMiner(state)
+	ob.beforeSendOrderToMiner(state)
 
 	return nil
 }
@@ -161,27 +176,23 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	switch vd.Status {
 	case types.ORDER_NEW:
 		log.Debugf("orderbook accept new order from chain:%s", state.RawOrder.Hash.Hex())
-		ob.rdbs.SetOrder(state)
-		sendOrderToMiner(state)
+		ob.beforeSendOrderToMiner(state)
 
 	case types.ORDER_PENDING:
 		log.Debugf("orderbook accept pending order from chain:%s", state.RawOrder.Hash.Hex())
-		return ob.rdbs.SetOrder(state)
+		ob.afterSendOrderToMiner(state)
 
 	case types.ORDER_FINISHED:
 		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
-		sendOrderToMiner(state)
-		return ob.rdbs.MoveOrder(state)
+		ob.afterSendOrderToMiner(state)
 
 	case types.ORDER_CANCEL:
 		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
-		sendOrderToMiner(state)
-		return ob.rdbs.MoveOrder(state)
+		ob.afterSendOrderToMiner(state)
 
 	case types.ORDER_REJECT:
 		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
-		sendOrderToMiner(state)
-		return ob.rdbs.MoveOrder(state)
+		ob.afterSendOrderToMiner(state)
 
 	default:
 		log.Errorf("orderbook version data status error:%s", state.RawOrder.Hash.Hex())
@@ -190,11 +201,45 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	return nil
 }
 
-// sendOrderToMiner send order state to miner
-func sendOrderToMiner(state *types.OrderState) {
+// beforeSendOrderToMiner push order state index to rdbs sliceOrderIndex
+func (ob *OrderBook) beforeSendOrderToMiner(state *types.OrderState) {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
 
-	println("dsjflsdkjroiuewiopjflkjsdlf", state.RawOrder.Hash.Hex())
+	ob.rdbs.SetOrder(state)
+	ob.ordTimeList.Push(state.RawOrder.Hash, state.RawOrder.Timestamp)
+}
+
+func (ob *OrderBook) sendOrderToMiner() error {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+
+	hash, err := ob.ordTimeList.Pop()
+	if err != nil {
+		return nil
+	}
+
+	state, err := ob.rdbs.GetOrder(hash)
+	if err != nil {
+		return err
+	}
+
+	expiretime := big.NewInt(0).Add(state.RawOrder.Timestamp, state.RawOrder.Ttl)
+	nowtime := big.NewInt(time.Now().Unix())
+	if nowtime.Cmp(expiretime) > 0 {
+		return errors.New("orderbook order:" + state.RawOrder.Hash.Hex() + " ready to send is expired")
+	}
+
 	eventemitter.Emit(eventemitter.MinedOrderState, state)
+
+	return nil
+}
+
+func (ob *OrderBook) afterSendOrderToMiner(state *types.OrderState) error {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+
+	return ob.rdbs.MoveOrder(state)
 }
 
 // isFinished judge order state

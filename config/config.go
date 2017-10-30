@@ -132,7 +132,8 @@ type MinerOptions struct {
 }
 
 type OrderBookOptions struct {
-	Filters struct {
+	TickerDuration int
+	Filters        struct {
 		BaseFilter struct {
 			MinLrcFee int64
 		}
