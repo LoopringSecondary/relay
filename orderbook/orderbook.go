@@ -45,6 +45,7 @@ type OrderBook struct {
 	filters     []Filter
 	rdbs        *Rdbs
 	ordTimeList *OrderTimestampList
+	cutoffcache *CutoffIndexCache
 	lock        sync.RWMutex
 	minAmount   *big.Int
 	ticker      *time.Ticker
@@ -60,7 +61,8 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	// todo: use config
 	ob.ticker = time.NewTicker(1 * time.Second)
 	ob.ordTimeList = &OrderTimestampList{}
-	
+	ob.cutoffcache = NewCutoffIndexCache(database)
+
 	//todo:filters init
 	filters := []Filter{}
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
@@ -114,10 +116,6 @@ func (ob *OrderBook) Stop() {
 	// todo
 	ob.rdbs.Close()
 	ob.ticker.Stop()
-}
-
-func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
-	return ob.rdbs.GetOrder(id)
 }
 
 // 来自ipfs的新订单
@@ -203,17 +201,11 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 
 // beforeSendOrderToMiner push order state index to rdbs sliceOrderIndex
 func (ob *OrderBook) beforeSendOrderToMiner(state *types.OrderState) {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-
 	ob.rdbs.SetOrder(state)
 	ob.ordTimeList.Push(state.RawOrder.Hash, state.RawOrder.Timestamp)
 }
 
 func (ob *OrderBook) sendOrderToMiner() error {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-
 	hash, err := ob.ordTimeList.Pop()
 	if err != nil {
 		return nil
@@ -227,6 +219,7 @@ func (ob *OrderBook) sendOrderToMiner() error {
 	expiretime := big.NewInt(0).Add(state.RawOrder.Timestamp, state.RawOrder.Ttl)
 	nowtime := big.NewInt(time.Now().Unix())
 	if nowtime.Cmp(expiretime) > 0 {
+		ob.rdbs.MoveOrder(state)
 		return errors.New("orderbook order:" + state.RawOrder.Hash.Hex() + " ready to send is expired")
 	}
 
@@ -236,9 +229,6 @@ func (ob *OrderBook) sendOrderToMiner() error {
 }
 
 func (ob *OrderBook) afterSendOrderToMiner(state *types.OrderState) error {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-
 	return ob.rdbs.MoveOrder(state)
 }
 
@@ -246,4 +236,14 @@ func (ob *OrderBook) afterSendOrderToMiner(state *types.OrderState) error {
 func (ob *OrderBook) isFullFilled(odw *types.OrderState) bool {
 	//if odw.RawOrder.
 	return true
+}
+
+//////////////////////////////////////////////////////////////
+//
+// 调用内部方法实现
+//
+//////////////////////////////////////////////////////////////
+func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) { return ob.rdbs.GetOrder(id) }
+func (ob *OrderBook) AddCutoffEvent(address types.Address, timestamp, cutoff, blocknumber *big.Int) error {
+	return ob.cutoffcache.Add(address, timestamp, cutoff, blocknumber)
 }
