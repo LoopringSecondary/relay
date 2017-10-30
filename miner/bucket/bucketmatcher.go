@@ -49,13 +49,13 @@ type BucketMatcher struct {
 	orderStateChan       chan *types.OrderState
 	ringSubmitFailedChan chan *types.RingState
 	buckets              map[types.Address]Bucket
-	submitClient         *miner.RingSubmitClient
+	submitter            *miner.RingSubmitter
 	mtx                  *sync.RWMutex
 	ringLength           int
 	options              config.MinerOptions
 }
 
-func NewBucketMatcher(submitClient *miner.RingSubmitClient, ringLength int) miner.Matcher {
+func NewBucketMatcher(submitter *miner.RingSubmitter, ringLength int) miner.Matcher {
 	var matcher miner.Matcher
 	bp := &BucketMatcher{}
 
@@ -69,7 +69,7 @@ func NewBucketMatcher(submitClient *miner.RingSubmitClient, ringLength int) mine
 
 	bp.buckets = make(map[types.Address]Bucket)
 	bp.ringLength = ringLength
-	bp.submitClient = submitClient
+	bp.submitter = submitter
 	matcher = bp
 	return matcher
 }
@@ -98,7 +98,7 @@ func (bp *BucketMatcher) listenNewRing() {
 		for {
 			select {
 			case ringState := <-bp.newRingChan:
-				if err := bp.submitClient.NewRing(ringState); nil != err {
+				if err := bp.submitter.NewRing(ringState); nil != err {
 					log.Errorf("err:%s", err.Error())
 				} else {
 					//this should call deleteOrder if the order was fullfilled, and do nothing else.

@@ -28,28 +28,27 @@ var MinerInstance *Miner
 type Miner struct {
 	Loopring              *chainclient.Loopring
 	matcher               Matcher
-	submitClient          *RingSubmitClient
+	submitter             *RingSubmitter
 	rateRatioCVSThreshold int64
 	legalRateProvider     *LegalRateProvider
 }
 
 func (minerInstance *Miner) Start() {
 	minerInstance.matcher.Start()
-	minerInstance.submitClient.start()
+	minerInstance.submitter.start()
 	minerInstance.legalRateProvider.start()
 }
 
 func (minerInstance *Miner) Stop() {
 	minerInstance.matcher.Stop()
-	minerInstance.submitClient.stop()
+	minerInstance.submitter.stop()
 	minerInstance.legalRateProvider.stop()
 }
 
-func NewMiner(options config.MinerOptions, submitClient *RingSubmitClient, matcher Matcher, loopringInstance *chainclient.Loopring, rateProvider *LegalRateProvider) *Miner {
-
+func NewMiner(options config.MinerOptions, submitClient *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, rateProvider *LegalRateProvider) *Miner {
 	rateRatioCVSThreshold := options.RateRatioCVSThreshold
 	return &Miner{legalRateProvider: rateProvider,
-		submitClient:          submitClient,
+		submitter:          submitClient,
 		matcher:               matcher,
 		rateRatioCVSThreshold: rateRatioCVSThreshold,
 		Loopring:              loopringInstance,

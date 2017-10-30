@@ -17,7 +17,7 @@ name = "Loopring corporation"
 	    message_key = "msg"
 	    level_key = "level"
 	    stacktrace_key = "trace"
-	    time_key = "ts11111"
+	    time_key = "ts"
 	    encode_level = "lowercase"
 	    encode_time = "iso8601"
 
