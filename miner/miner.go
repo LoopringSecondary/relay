@@ -45,10 +45,10 @@ func (minerInstance *Miner) Stop() {
 	minerInstance.legalRateProvider.stop()
 }
 
-func NewMiner(options config.MinerOptions, submitClient *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, rateProvider *LegalRateProvider) *Miner {
+func NewMiner(options config.MinerOptions, submitter *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, rateProvider *LegalRateProvider) *Miner {
 	rateRatioCVSThreshold := options.RateRatioCVSThreshold
 	return &Miner{legalRateProvider: rateProvider,
-		submitter:          submitClient,
+		submitter:             submitter,
 		matcher:               matcher,
 		rateRatioCVSThreshold: rateRatioCVSThreshold,
 		Loopring:              loopringInstance,

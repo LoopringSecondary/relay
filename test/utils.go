@@ -122,7 +122,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.TokenRegistryAddress = types.HexToAddress(tokenRegistryAddressHex)
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
+	passphrase.SetBytes(globalConfig.Common.Passphrase)
 	var err error
 	params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
 	if nil != err {

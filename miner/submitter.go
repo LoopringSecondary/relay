@@ -68,7 +68,7 @@ func NewSubmitter(options config.MinerOptions, commOpts config.CommonOptions, da
 	submitter.mtx = &sync.RWMutex{}
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(commOpts.Passphrase))
+	passphrase.SetBytes(commOpts.Passphrase)
 	var err error
 	submitter.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(options.Miner))
 	if nil != err {

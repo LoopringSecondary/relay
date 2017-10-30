@@ -16,21 +16,21 @@
 
 */
 
-package utils
+package realtime
 
 import (
-	"github.com/Loopring/ringminer/params"
-	"gopkg.in/urfave/cli.v1"
-	"os"
-	"path/filepath"
+	"github.com/Loopring/ringminer/types"
+	"sync"
 )
 
-func NewApp() *cli.App {
-	app := cli.NewApp()
-	app.Name = filepath.Base(os.Args[0])
-	app.Version = params.Version
-	app.Usage = "the Loopring/ringminer command line interface"
-	app.Author = ""
-	app.Email = ""
-	return app
+/**
+todo：功能完整性上，必须要实现的部分
+实时计算最小环，有效的算法
+*/
+//todo:9月22日前完成
+type RealtimeMatcher struct {
+	mtx sync.RWMutex
+
+	OrderChangeChan chan *types.Order //订单改变的channel，在匹配过程中，订单改变可以及时终止或更改当前匹配
+
 }

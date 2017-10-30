@@ -60,7 +60,7 @@ type CallArg struct {
 	Nonce    types.Big     `json:"nonce"`
 }
 
-func NewChainClient(clientConfig config.ChainClientOptions, passphraseStr string) *EthClient {
+func NewChainClient(clientConfig config.ChainClientOptions, passphraseBytes []byte) *EthClient {
 	ethClient := &EthClient{}
 	var err error
 	ethClient.rpcClient, err = rpc.Dial(clientConfig.RawUrl)
@@ -79,7 +79,7 @@ func NewChainClient(clientConfig config.ChainClientOptions, passphraseStr string
 	ethClient.signer = &ethTypes.HomesteadSigner{}
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(passphraseStr))
+	passphrase.SetBytes(passphraseBytes)
 	if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
 		panic(err)
 	} else {
