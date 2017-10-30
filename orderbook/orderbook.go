@@ -99,6 +99,10 @@ func (ob *OrderBook) Stop() {
 	ob.rdbs.Close()
 }
 
+func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
+	return ob.rdbs.GetOrder(id)
+}
+
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
 func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {

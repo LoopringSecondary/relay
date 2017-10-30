@@ -6,6 +6,8 @@ import (
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"math/big"
+	//"sort"
 )
 
 const (
@@ -17,6 +19,12 @@ type Rdbs struct {
 	db           db.Database
 	finishTable  db.Database
 	partialTable db.Database
+	sortedMap 	 map[types.Hash]*big.Int
+}
+
+//type
+func (r *Rdbs) sortByTime() {
+	//sort.Sort()
 }
 
 func NewRdbs(database db.Database) *Rdbs {
