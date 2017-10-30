@@ -1,3 +1,21 @@
+/*
+
+  Copyright 2017 Loopring Project Ltd (Loopring Foundation).
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+*/
+
 package orderbook
 
 import (
@@ -6,10 +24,6 @@ import (
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
-	"math/big"
-	//"sort"
-	"sort"
-	"sync"
 )
 
 const (
@@ -21,8 +35,7 @@ type Rdbs struct {
 	db           db.Database
 	finishTable  db.Database
 	partialTable db.Database
-	idxs         SliceOrderIndex
-	mtx          sync.Mutex
+	idxs         SliceOrderTimestampIndex
 }
 
 func NewRdbs(database db.Database) *Rdbs {
@@ -46,7 +59,7 @@ func (r *Rdbs) Scan() error {
 		if err := json.Unmarshal(dataBytes, state); nil != err {
 			log.Errorf("err:%s", err.Error())
 		} else {
-			sendOrderToMiner(state)
+			//sendOrderToMiner(state)
 		}
 	}
 	return nil
@@ -120,56 +133,4 @@ func (r *Rdbs) MoveOrder(ord *types.OrderState) error {
 		return err
 	}
 	return nil
-}
-
-type OrderIndex struct {
-	hash      types.Hash
-	timestamp *big.Int
-}
-
-type SliceOrderIndex []*OrderIndex
-
-func (s SliceOrderIndex) Len() int {
-	return len(s)
-}
-
-func (s SliceOrderIndex) Swap(i, j int) {
-	tmp := s[i]
-	s[i] = s[j]
-	s[j] = tmp
-}
-
-// asc
-func (s SliceOrderIndex) Less(i, j int) bool {
-	if s[i].timestamp.Cmp(s[j].timestamp) < 0 {
-		return true
-	}
-	return false
-}
-
-func (r *Rdbs) load() {
-
-}
-
-func (r *Rdbs) push(hash types.Hash, timestamp *big.Int) {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
-	idx := &OrderIndex{}
-	idx.hash = hash
-	idx.timestamp = timestamp
-
-	r.idxs = append(r.idxs, idx)
-	sort.Sort(r.idxs)
-}
-
-func (r *Rdbs) pop() (*OrderIndex, error) {
-	r.mtx.Lock()
-	defer r.mtx.Unlock()
-
-	if len(r.idxs) < 1 {
-		return nil, errors.New("orderbook orderIndex slice is empty")
-	}
-
-	return r.idxs[0], nil
 }

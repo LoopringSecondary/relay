@@ -4,6 +4,7 @@ title = "Loopring TOML"
 name = "Loopring corporation"
 
 [order_book]
+ticker_duration = 1
 
 [log]
     [log.zap_opts]
