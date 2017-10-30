@@ -52,7 +52,7 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 
 	ob.options = options
 	ob.commOpts = commOpts
-	ob.rdbs = NewRdbs(db)
+	ob.rdbs = NewRdbs(database)
 
 	//todo:filters init
 	filters := []Filter{}
