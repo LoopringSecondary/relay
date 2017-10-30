@@ -19,6 +19,7 @@
 package node
 
 import (
+	"github.com/Loopring/ringminer/chainclient"
 	ethClientLib "github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
@@ -40,7 +41,7 @@ type Node struct {
 	p2pListener   listener.Listener
 	chainListener listener.Listener
 	orderbook     *orderbook.OrderBook
-	miner         miner.Proxy
+	miner         *miner.Miner
 	stop          chan struct{}
 	lock          sync.RWMutex
 	logger        *zap.Logger
@@ -53,21 +54,14 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	bucket.RingLength = globalConfig.Miner.RingMaxLength
-
 	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient := miner.NewRingSubmitClient(database, ethClient.Client)
-
-	miner.Initialize(n.globalConfig.Miner, n.globalConfig.Common, ringClient.Chainclient)
 
 	n.registerP2PListener()
 	n.registerOrderBook(database)
-	n.registerMiner(ringClient)
+	n.registerMiner(ethClient.Client, database)
 	n.registerEthListener(ethClient, database)
-
-	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
 	return n
 }
@@ -79,7 +73,6 @@ func (n *Node) Start() {
 	n.miner.Start()
 
 	n.orderbook.Start()
-
 }
 
 func (n *Node) Wait() {
@@ -119,6 +112,13 @@ func (n *Node) registerOrderBook(database db.Database) {
 	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database)
 }
 
-func (n *Node) registerMiner(ringClient *miner.RingSubmitClient) {
-	n.miner = bucket.NewBucketProxy(ringClient)
+func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
+	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
+	submitClient := miner.NewRingSubmitClient(n.globalConfig.Miner, n.globalConfig.Common, database, client)
+	rateProvider := miner.NewLegalRateProvider(n.globalConfig.Miner)
+	matcher := bucket.NewBucketMatcher(submitClient, n.globalConfig.Miner.RingMaxLength)
+	minerInstance := miner.NewMiner(n.globalConfig.Miner, submitClient, matcher, loopringInstance, rateProvider)
+	miner.Initialize(minerInstance)
+
+	n.miner = minerInstance
 }

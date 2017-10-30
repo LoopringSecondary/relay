@@ -192,6 +192,8 @@ func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 
 // sendOrderToMiner send order state to miner
 func sendOrderToMiner(state *types.OrderState) {
+
+	println("dsjflsdkjroiuewiopjflkjsdlf", state.RawOrder.Hash.Hex())
 	eventemitter.Emit(eventemitter.MinedOrderState, state)
 }
 

@@ -19,8 +19,11 @@
 package types_test
 
 import (
+	"fmt"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ipfs/go-ipfs-util"
+	"github.com/lydy/go-ethereum/common/bitutil"
 	"math/big"
 	"testing"
 )
@@ -72,4 +75,6 @@ func TestAddress(t *testing.T) {
 	//addr := &types.Address{}
 	//addr.SetBytes(types.Hex2Bytes(s))
 	t.Log(addr.Hex())
+	bi := big.NewInt(10)
+	println(fmt.Sprintf("%#x", bi.Bits()))
 }

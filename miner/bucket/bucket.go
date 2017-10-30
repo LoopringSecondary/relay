@@ -20,6 +20,7 @@ package bucket
 
 import (
 	"github.com/Loopring/ringminer/crypto"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
@@ -32,8 +33,6 @@ import (
 //订单开始的coin为对应的bucket的标号时，查询订单结尾的coin的bucket，并进行对应的链接
 //同时会监听proxy发送过来的订单环，及时进行订单的删除与修改
 //应当尝试更改为node，提高内存的利用率
-
-var RingLength int
 
 type OrderWithPos struct {
 	types.OrderState
@@ -70,21 +69,26 @@ func (ring *SemiRing) generateHash() types.Hash {
 }
 
 type Bucket struct {
-	ringChan  chan *types.RingState
-	token     types.Address                //开始的地址
-	semiRings map[types.Hash]*SemiRing     //每个semiRing都给定一个key
-	orders    map[types.Hash]*OrderWithPos //order hash -> order
-	mtx       *sync.RWMutex
+	deleteOrderChan chan *types.OrderState
+	newOrderChan    chan *types.OrderState
+	token           types.Address                //开始的地址
+	semiRings       map[types.Hash]*SemiRing     //每个semiRing都给定一个key
+	orders          map[types.Hash]*OrderWithPos //order hash -> order
+	ringLength      int
+	mtx             *sync.RWMutex
 }
 
 //新bucket
-func NewBucket(token types.Address, ringChan chan *types.RingState) *Bucket {
+func NewBucketAndStart(token types.Address, ringLength int) *Bucket {
 	bucket := &Bucket{}
 	bucket.token = token
-	bucket.ringChan = ringChan
+	bucket.deleteOrderChan = make(chan *types.OrderState, 100)
+	bucket.newOrderChan = make(chan *types.OrderState, 100)
 	bucket.orders = make(map[types.Hash]*OrderWithPos)
 	bucket.semiRings = make(map[types.Hash]*SemiRing)
 	bucket.mtx = &sync.RWMutex{}
+	bucket.ringLength = ringLength
+	bucket.start()
 	return bucket
 }
 
@@ -131,7 +135,7 @@ func (b *Bucket) generateRing(orderState *types.OrderState) {
 	//todo：生成新环后，需要proxy将新环对应的各个订单的状态发送给每个bucket，便于修改，, 还有一些过滤条件
 	//删除对应的semiRing，转到等待proxy通知，但是会暂时标记该半环
 	if ring != nil {
-		b.ringChan <- ring
+		eventemitter.Emit(eventemitter.Miner_NewRing, ring)
 	}
 
 }
@@ -185,7 +189,7 @@ func (b *Bucket) appendToSemiRing(orderState *types.OrderState) {
 	//第二层以下，只检测最后的token 即可
 	for _, semiRing := range b.semiRings {
 		lastOrder := semiRing.orders[len(semiRing.orders)-1]
-		if (len(semiRing.orders) < RingLength) && lastOrder.RawOrder.TokenB == orderState.RawOrder.TokenS && lastOrder.RawOrder.Protocol == orderState.RawOrder.Protocol {
+		if (len(semiRing.orders) < b.ringLength) && lastOrder.RawOrder.TokenB == orderState.RawOrder.TokenS && lastOrder.RawOrder.Protocol == orderState.RawOrder.Protocol {
 			orderWithPos := &OrderWithPos{}
 			orderWithPos.OrderState = *orderState
 			orderWithPos.postions = []*semiRingPos{}
@@ -209,16 +213,78 @@ func (b *Bucket) appendToSemiRing(orderState *types.OrderState) {
 	}
 }
 
-func (b *Bucket) NewOrder(ord types.OrderState) {
+func (b *Bucket) newOrder(orderState *types.OrderState) {
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
-	b.newOrderWithoutLock(ord)
+
+	//if orders contains this order, there are nothing to do
+	if _, ok := b.orders[orderState.RawOrder.Hash]; !ok {
+		//最后一个token为当前token，则可以组成环，匹配出最大环，并发送到proxy
+		if orderState.RawOrder.TokenB == b.token {
+			log.Debugf("bucket receive order:%s", orderState.RawOrder.Hash.Hex())
+			b.generateRing(orderState)
+		} else if orderState.RawOrder.TokenS == b.token {
+			//卖出的token为当前token时，需要将所有的买入semiRing加入进来
+			b.generateSemiRing(orderState)
+		} else {
+			//其他情况
+			b.appendToSemiRing(orderState)
+		}
+	}
 }
 
-func (b *Bucket) deleteOrder(orderState types.OrderState) {
-	//delete the order
-	b.mtx.RLock()
-	defer b.mtx.RUnlock()
+func (b *Bucket) listenNewOrder() {
+	watcher := &eventemitter.Watcher{
+		Concurrent: false,
+		Handle: func(e eventemitter.EventData) error {
+			orderState := e.(*types.OrderState)
+			log.Debugf("listenNewOrder, b.token:%s, order.tokens:%s, order.tokenB:%s", b.token.Hex(), orderState.RawOrder.TokenS.Hex(), orderState.RawOrder.TokenB.Hex())
+			b.newOrderChan <- orderState
+			return nil
+		},
+	}
+	eventemitter.On(eventemitter.Miner_NewOrderState, watcher)
+	go func() {
+		for {
+			select {
+			case orderState, isClose := <-b.newOrderChan:
+				if !isClose {
+					break
+				}
+				log.Debugf("listenNewOrder, b.token:%s, order.tokens:%s, order.tokenB:%s", b.token.Hex(), orderState.RawOrder.TokenS.Hex(), orderState.RawOrder.TokenB.Hex())
+				b.newOrder(orderState)
+			}
+		}
+	}()
+}
+
+func (b *Bucket) listenDeleteOrder() {
+	watcher := &eventemitter.Watcher{
+		Concurrent: true,
+		Handle: func(e eventemitter.EventData) error {
+			orderState := e.(*types.OrderState)
+			b.deleteOrderChan <- orderState
+			return nil
+		},
+	}
+	eventemitter.On(eventemitter.Miner_DeleteOrderState, watcher)
+
+	go func() {
+		for {
+			select {
+			case orderState, isClose := <-b.deleteOrderChan:
+				if !isClose {
+					break
+				}
+				b.deleteOrder(orderState)
+			}
+		}
+	}()
+}
+
+func (b *Bucket) deleteOrder(orderState *types.OrderState) {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
 
 	if o, ok := b.orders[orderState.RawOrder.Hash]; ok {
 		for _, pos := range o.postions {
@@ -226,32 +292,14 @@ func (b *Bucket) deleteOrder(orderState types.OrderState) {
 		}
 		delete(b.orders, orderState.RawOrder.Hash)
 	}
-
 }
 
-func (b *Bucket) Start() {
-
+func (b *Bucket) start() {
+	b.listenNewOrder()
+	b.listenDeleteOrder()
 }
 
-func (b *Bucket) Stop() {
-
-}
-
-//this fun should not be called without mtx.lock()
-func (b *Bucket) newOrderWithoutLock(ord types.OrderState) {
-	//if orders contains this order, there are nothing to do
-	if _, ok := b.orders[ord.RawOrder.Hash]; !ok {
-		//最后一个token为当前token，则可以组成环，匹配出最大环，并发送到proxy
-		if ord.RawOrder.TokenB == b.token {
-			log.Debugf("bucket receive order:%s", ord.RawOrder.Hash.Hex())
-
-			b.generateRing(&ord)
-		} else if ord.RawOrder.TokenS == b.token {
-			//卖出的token为当前token时，需要将所有的买入semiRing加入进来
-			b.generateSemiRing(&ord)
-		} else {
-			//其他情况
-			b.appendToSemiRing(&ord)
-		}
-	}
+func (b *Bucket) stop() {
+	close(b.deleteOrderChan)
+	close(b.newOrderChan)
 }

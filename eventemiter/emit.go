@@ -22,6 +22,8 @@ import (
 	"sync"
 )
 
+//todo:more stronger if it has cache, but, the more the nearer to eventsourcing
+
 type Topic string
 
 const (
@@ -34,6 +36,11 @@ const (
 	OrderBookPeer          = "OrderBookPeer"
 	OrderBookChain         = "OrderBookChain"
 	MinedOrderState        = "MinedOrderState" //orderbook send orderstate to miner
+
+	//Miner
+	Miner_DeleteOrderState = "Miner_DeleteOrderState"
+	Miner_NewOrderState    = "Miner_NewOrderState"
+	Miner_NewRing          = "Miner_NewRing"
 )
 
 var watchers map[string][]*Watcher
@@ -68,13 +75,23 @@ func On(topic string, watcher *Watcher) {
 }
 
 func Emit(topic string, eventData EventData) {
+	//should limit the count of watchers
+	var wg sync.WaitGroup
 	for _, ob := range watchers[topic] {
 		if ob.Concurrent {
 			go ob.Handle(eventData)
 		} else {
-			ob.Handle(eventData)
+			wg.Add(1)
+			go func(ob *Watcher) {
+				//
+				defer func() {
+					wg.Add(-1)
+				}()
+				ob.Handle(eventData)
+			}(ob)
 		}
 	}
+	wg.Wait()
 }
 
 func init() {
