@@ -81,7 +81,7 @@ func (c *GlobalConfig) defaultConfig() {
 type IpfsOptions struct {
 	Server string
 	Port   int
-	Topic  string
+	Topics []string
 }
 
 type DbOptions struct {

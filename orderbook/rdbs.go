@@ -19,7 +19,7 @@ type Rdbs struct {
 	db           db.Database
 	finishTable  db.Database
 	partialTable db.Database
-	sortedMap 	 map[types.Hash]*big.Int
+	sortedMap    map[types.Hash]*big.Int
 }
 
 //type

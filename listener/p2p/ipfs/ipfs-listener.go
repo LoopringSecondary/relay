@@ -31,7 +31,7 @@ import (
 type IPFSListener struct {
 	options config.IpfsOptions
 	sh      *shell.Shell
-	sub     *shell.PubSubSubscription
+	subs    []*shell.PubSubSubscription
 	stop    chan struct{}
 	lock    sync.RWMutex
 }
@@ -42,34 +42,39 @@ func NewListener(options config.IpfsOptions) *IPFSListener {
 	l.options = options
 
 	l.sh = shell.NewLocalShell()
-	sub, err := l.sh.PubSubSubscribe(options.Topic)
-	if err != nil {
-		panic(err.Error())
+	for _, topic := range options.Topics {
+		sub, err := l.sh.PubSubSubscribe(topic)
+		if err != nil {
+			log.Fatalf("ipfs listener create sub scribe error:%s", err.Error())
+		}
+		l.subs = append(l.subs, sub)
 	}
-	l.sub = sub
 
 	return l
 }
 
 func (l *IPFSListener) Start() {
 	l.stop = make(chan struct{})
-	go func() {
-		for {
-			if record, err := l.sub.Next(); nil != err {
-				log.Errorf("err:%s", err.Error())
-			} else {
-				data := record.Data()
-				ord := &types.Order{}
-				err := json.Unmarshal(data, ord)
-				if err != nil {
-					log.Errorf("failed to accept data %s", err.Error())
+
+	for i := 0; i < len(l.subs); i++ {
+		go func(i int) {
+			for {
+				if record, err := l.subs[i].Next(); nil != err {
+					log.Errorf("err:%s", err.Error())
 				} else {
-					log.Debugf("accept data from ipfs %s", string(data))
-					eventemitter.Emit(eventemitter.OrderBookPeer, ord)
+					data := record.Data()
+					ord := &types.Order{}
+					err := json.Unmarshal(data, ord)
+					if err != nil {
+						log.Errorf("failed to accept data %s", err.Error())
+					} else {
+						log.Debugf("accept data from ipfs %s", string(data))
+						eventemitter.Emit(eventemitter.OrderBookPeer, ord)
+					}
 				}
 			}
-		}
-	}()
+		}(i)
+	}
 }
 
 func (listener *IPFSListener) Stop() {
