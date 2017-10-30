@@ -114,7 +114,7 @@ func (n *Node) registerOrderBook(database db.Database) {
 
 func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
 	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
-	submitter := miner.NewRingSubmitClient(n.globalConfig.Miner, n.globalConfig.Common, database, client)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, database, client)
 	rateProvider := miner.NewLegalRateProvider(n.globalConfig.Miner)
 	matcher := bucket.NewBucketMatcher(submitter, n.globalConfig.Miner.RingMaxLength)
 	minerInstance := miner.NewMiner(n.globalConfig.Miner, submitter, matcher, loopringInstance, rateProvider)

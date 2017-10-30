@@ -53,7 +53,7 @@ func init() {
 	ethClient := eth.NewChainClient(globalConfig.ChainClient, "sa")
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient = miner.NewRingSubmitClient(database, ethClient.Client)
+	ringClient = miner.NewSubmitter(database, ethClient.Client)
 	//
 	miner.Initialize(globalConfig.Miner, config.CommonOptions{}, ringClient.Chainclient)
 

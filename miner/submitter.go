@@ -57,7 +57,7 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewRingSubmitClient(options config.MinerOptions, commOpts config.CommonOptions, database db.Database, client *chainclient.Client) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, commOpts config.CommonOptions, database db.Database, client *chainclient.Client) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.Chainclient = client
 	submitter.store = database
