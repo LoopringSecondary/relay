@@ -111,7 +111,7 @@ func (ob *OrderBook) Start() {
 
 func (ob *OrderBook) recover() {
 	for {
-		state := <- ob.rdbs.orderChan
+		state := <-ob.rdbs.orderChan
 		ob.beforeSendOrderToMiner(state)
 	}
 }

@@ -37,7 +37,7 @@ type Rdbs struct {
 	db                  db.Database
 	finishTable         db.Database
 	pendingTable        db.Database
-	orderChan			chan *types.OrderState
+	orderChan           chan *types.OrderState
 	orderhashIndexTable map[types.Hash]*orderhashIndex
 	mtx                 sync.RWMutex
 }
