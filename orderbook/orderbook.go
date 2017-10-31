@@ -67,7 +67,7 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
 	tokenSFilter := &TokenSFilter{}
 	tokenBFilter := &TokenBFilter{}
-	cutoffFilter := &CutoffFilter{}
+	cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
 
 	filters = append(filters, baseFilter)
 	filters = append(filters, tokenSFilter)
@@ -91,8 +91,7 @@ func (ob *OrderBook) filter(o *types.Order) (bool, error) {
 
 // Start start orderbook as a service
 func (ob *OrderBook) Start() {
-	// todo: add after debug
-	// ob.recoverOrder()
+	ob.recover()
 
 	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handlePeerOrder}
 	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleChainOrder}
@@ -108,6 +107,13 @@ func (ob *OrderBook) Start() {
 			}
 		}
 	}()
+}
+
+func (ob *OrderBook) recover() {
+	for {
+		state := <-ob.rdbs.orderChan
+		ob.beforeSendOrderToMiner(state)
+	}
 }
 
 func (ob *OrderBook) Stop() {
