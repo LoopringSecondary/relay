@@ -19,7 +19,6 @@
 package orderbook
 
 import (
-	//"encoding/json"
 	"errors"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
@@ -66,12 +65,14 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	//todo:filters init
 	filters := []Filter{}
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
-	filters = append(filters, baseFilter)
 	tokenSFilter := &TokenSFilter{}
 	tokenBFilter := &TokenBFilter{}
+	cutoffFilter := &CutoffFilter{}
 
+	filters = append(filters, baseFilter)
 	filters = append(filters, tokenSFilter)
 	filters = append(filters, tokenBFilter)
+	filters = append(filters, cutoffFilter)
 
 	return ob
 }

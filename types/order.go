@@ -28,7 +28,7 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_EXTERNAL OrderStatus = iota
+	ORDER_UNKNOWN OrderStatus = iota
 	ORDER_NEW
 	ORDER_PENDING
 	ORDER_FINISHED
