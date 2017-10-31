@@ -99,7 +99,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := eth.NewChainClient(globalConfig.ChainClient, "sa")
+	ethClient := eth.NewChainClient(globalConfig.ChainClient, []byte("sa"))
 	params.Client = ethClient.Client
 	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
 
@@ -122,7 +122,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.TokenRegistryAddress = types.HexToAddress(tokenRegistryAddressHex)
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes(globalConfig.Common.Passphrase)
+	passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
 	var err error
 	params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
 	if nil != err {

@@ -74,6 +74,7 @@ type Bucket struct {
 	token           types.Address                //开始的地址
 	semiRings       map[types.Hash]*SemiRing     //每个semiRing都给定一个key
 	orders          map[types.Hash]*OrderWithPos //order hash -> order
+	storedOrders    []*types.OrderState          //没有被链接到semiring的order
 	ringLength      int
 	mtx             *sync.RWMutex
 }
@@ -88,6 +89,7 @@ func NewBucketAndStart(token types.Address, ringLength int) *Bucket {
 	bucket.semiRings = make(map[types.Hash]*SemiRing)
 	bucket.mtx = &sync.RWMutex{}
 	bucket.ringLength = ringLength
+	bucket.storedOrders = make([]*types.OrderState, 0)
 	bucket.start()
 	return bucket
 }
@@ -224,6 +226,7 @@ func (b *Bucket) newOrder(orderState *types.OrderState) {
 			log.Debugf("bucket receive order:%s", orderState.RawOrder.Hash.Hex())
 			b.generateRing(orderState)
 		} else if orderState.RawOrder.TokenS == b.token {
+			b.storedOrders = append(b.storedOrders, orderState)
 			//卖出的token为当前token时，需要将所有的买入semiRing加入进来
 			b.generateSemiRing(orderState)
 		} else {
@@ -238,7 +241,6 @@ func (b *Bucket) listenNewOrder() {
 		Concurrent: false,
 		Handle: func(e eventemitter.EventData) error {
 			orderState := e.(*types.OrderState)
-			log.Debugf("listenNewOrder, b.token:%s, order.tokens:%s, order.tokenB:%s", b.token.Hex(), orderState.RawOrder.TokenS.Hex(), orderState.RawOrder.TokenB.Hex())
 			b.newOrderChan <- orderState
 			return nil
 		},

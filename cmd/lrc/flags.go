@@ -19,12 +19,12 @@
 package main
 
 import (
+	"fmt"
+	"github.com/Loopring/ringminer/config"
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/urfave/cli.v1"
 	"reflect"
-	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
-	"github.com/Loopring/ringminer/config"
 )
 
 func GlobalFlags() []cli.Flag {

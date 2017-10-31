@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
 	"sync"
+	"time"
 )
 
 /**
@@ -48,64 +49,67 @@ type BucketMatcher struct {
 	newRingChan          chan *types.RingState
 	orderStateChan       chan *types.OrderState
 	ringSubmitFailedChan chan *types.RingState
-	buckets              map[types.Address]Bucket
+	buckets              map[types.Address]*Bucket
 	submitter            *miner.RingSubmitter
 	mtx                  *sync.RWMutex
 	ringLength           int
 	options              config.MinerOptions
 }
 
+
 func NewBucketMatcher(submitter *miner.RingSubmitter, ringLength int) miner.Matcher {
 	var matcher miner.Matcher
-	bp := &BucketMatcher{}
+	bucketMatcher := &BucketMatcher{}
 
-	bp.newRingChan = make(chan *types.RingState, 100)
+	bucketMatcher.newRingChan = make(chan *types.RingState, 100)
 
-	bp.ringSubmitFailedChan = make(chan *types.RingState, 100)
+	bucketMatcher.ringSubmitFailedChan = make(chan *types.RingState, 100)
 
-	bp.orderStateChan = make(chan *types.OrderState)
+	bucketMatcher.orderStateChan = make(chan *types.OrderState)
 
-	bp.mtx = &sync.RWMutex{}
+	bucketMatcher.mtx = &sync.RWMutex{}
 
-	bp.buckets = make(map[types.Address]Bucket)
-	bp.ringLength = ringLength
-	bp.submitter = submitter
-	matcher = bp
+	bucketMatcher.buckets = make(map[types.Address]*Bucket)
+	bucketMatcher.ringLength = ringLength
+	bucketMatcher.submitter = submitter
+	matcher = bucketMatcher
 	return matcher
 }
 
-func (bp *BucketMatcher) Start() {
+func (matcher *BucketMatcher) Start() {
 
-	bp.listenOrderState()
+	matcher.listenOrderState()
 
 	//go bp.listenRingSubmit()
 
-	bp.listenNewRing()
+	matcher.listenNewRing()
+
+	go matcher.compensate()
 
 }
 
-func (bp *BucketMatcher) Stop() {
-	close(bp.newRingChan)
-	close(bp.orderStateChan)
-	close(bp.ringSubmitFailedChan)
-	for _, bucket := range bp.buckets {
+func (matcher *BucketMatcher) Stop() {
+	close(matcher.newRingChan)
+	close(matcher.orderStateChan)
+	close(matcher.ringSubmitFailedChan)
+	for _, bucket := range matcher.buckets {
 		bucket.stop()
 	}
 }
 
-func (bp *BucketMatcher) listenNewRing() {
+func (matcher *BucketMatcher) listenNewRing() {
 	go func() {
 		for {
 			select {
-			case ringState := <-bp.newRingChan:
-				if err := bp.submitter.NewRing(ringState); nil != err {
+			case ringState := <-matcher.newRingChan:
+				if err := matcher.submitter.NewRing(ringState); nil != err {
 					log.Errorf("err:%s", err.Error())
 				} else {
 					//this should call deleteOrder if the order was fullfilled, and do nothing else.
 					for _, order := range ringState.RawRing.Orders {
 						//不应该调用orderbook而是加上当前已经被匹配过后的金额
 						if order.IsFullFilled() {
-							bp.deleteOrder(&order.OrderState)
+							matcher.deleteOrder(&order.OrderState)
 						}
 					}
 				}
@@ -117,51 +121,51 @@ func (bp *BucketMatcher) listenNewRing() {
 		Concurrent: false,
 		Handle: func(e eventemitter.EventData) error {
 			ringState := e.(*types.RingState)
-			bp.newRingChan <- ringState
+			matcher.newRingChan <- ringState
 			return nil
 		},
 	}
 	eventemitter.On(eventemitter.Miner_NewRing, watcher)
 }
 
-func (bp *BucketMatcher) newOrder(orderState *types.OrderState) {
-	bp.mtx.RLock()
-	defer bp.mtx.RUnlock()
+func (matcher *BucketMatcher) newOrder(orderState *types.OrderState) {
+	matcher.mtx.RLock()
+	defer matcher.mtx.RUnlock()
 
 	miner.MinerInstance.Loopring.AddToken(orderState.RawOrder.TokenS)
 	miner.MinerInstance.Loopring.AddToken(orderState.RawOrder.TokenB)
 
 	//if bp.buckets doesn't contains the bucket named by tokenS, create it.
-	if _, ok := bp.buckets[orderState.RawOrder.TokenS]; !ok {
-		bucket := NewBucketAndStart(orderState.RawOrder.TokenS, bp.ringLength)
-		bp.buckets[orderState.RawOrder.TokenS] = *bucket
+	if _, ok := matcher.buckets[orderState.RawOrder.TokenS]; !ok {
+		bucket := NewBucketAndStart(orderState.RawOrder.TokenS, matcher.ringLength)
+		matcher.buckets[orderState.RawOrder.TokenS] = bucket
 	}
 
 	//it is unnecessary actually
-	if _, ok := bp.buckets[orderState.RawOrder.TokenB]; !ok {
-		bucket := NewBucketAndStart(orderState.RawOrder.TokenB, bp.ringLength)
-		bp.buckets[orderState.RawOrder.TokenB] = *bucket
+	if _, ok := matcher.buckets[orderState.RawOrder.TokenB]; !ok {
+		bucket := NewBucketAndStart(orderState.RawOrder.TokenB, matcher.ringLength)
+		matcher.buckets[orderState.RawOrder.TokenB] = bucket
 	}
 
 	eventemitter.Emit(eventemitter.Miner_NewOrderState, orderState)
 }
 
-func (bp *BucketMatcher) deleteOrder(orderState *types.OrderState) {
+func (matcher *BucketMatcher) deleteOrder(orderState *types.OrderState) {
 	eventemitter.Emit(eventemitter.Miner_DeleteOrderState, orderState)
 }
 
-func (bp *BucketMatcher) listenRingSubmit() {
+func (matcher *BucketMatcher) listenRingSubmit() {
 	go func() {
 		for {
 			select {
-			case ringState, isClose := <-bp.ringSubmitFailedChan:
+			case ringState, isClose := <-matcher.ringSubmitFailedChan:
 				if !isClose {
 					break
 				}
 				for _, order := range ringState.RawRing.Orders {
 					//todo:查询orderbook获取最新值, 是否已被匹配过
 					if true {
-						bp.orderStateChan <- &order.OrderState
+						matcher.orderStateChan <- &order.OrderState
 					}
 				}
 			}
@@ -172,7 +176,7 @@ func (bp *BucketMatcher) listenRingSubmit() {
 		Concurrent: false,
 		Handle: func(e eventemitter.EventData) error {
 			submitFailed := e.(*miner.RingSubmitFailed)
-			bp.ringSubmitFailedChan <- submitFailed.RingState
+			matcher.ringSubmitFailedChan <- submitFailed.RingState
 			return nil
 		},
 	}
@@ -180,12 +184,12 @@ func (bp *BucketMatcher) listenRingSubmit() {
 
 }
 
-func (bp *BucketMatcher) listenOrderState() {
+func (matcher *BucketMatcher) listenOrderState() {
 
 	go func() {
 		for {
 			select {
-			case orderState, isClose := <-bp.orderStateChan:
+			case orderState, isClose := <-matcher.orderStateChan:
 
 				if !isClose {
 					log.Debugf("bp.orderStateChan closed")
@@ -193,10 +197,10 @@ func (bp *BucketMatcher) listenOrderState() {
 				}
 				vd, _ := orderState.LatestVersion()
 				if types.ORDER_NEW == vd.Status {
-					bp.newOrder(orderState)
+					matcher.newOrder(orderState)
 				} else if types.ORDER_CANCEL == vd.Status || types.ORDER_FINISHED == vd.Status {
 					//todo:process the case of cancel partable
-					bp.deleteOrder(orderState)
+					matcher.deleteOrder(orderState)
 				}
 
 			}
@@ -207,10 +211,25 @@ func (bp *BucketMatcher) listenOrderState() {
 		Concurrent: false,
 		Handle: func(e eventemitter.EventData) error {
 			orderState := e.(*types.OrderState)
-			bp.orderStateChan <- orderState
+			matcher.orderStateChan <- orderState
 			return nil
 		},
 	}
 	eventemitter.On(eventemitter.MinedOrderState, watcher)
 
+}
+
+
+func (matcher *BucketMatcher) compensate() {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			for _, bucket := range matcher.buckets {
+				for _, orderState := range bucket.storedOrders {
+					eventemitter.Emit(eventemitter.Miner_NewOrderState, orderState)
+				}
+			}
+		}
+	}
 }

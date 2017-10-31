@@ -20,12 +20,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/Loopring/ringminer/params"
 	"gopkg.in/urfave/cli.v1"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
-	"path/filepath"
-	"github.com/Loopring/ringminer/params"
 )
 
 func main() {

@@ -55,6 +55,6 @@ func NewMiner(options config.MinerOptions, submitter *RingSubmitter, matcher Mat
 	}
 }
 
-func Initialize(minerInstanceTmp *Miner) {
-	MinerInstance = minerInstanceTmp
+func Initialize(minerInstance *Miner) {
+	MinerInstance = minerInstance
 }
