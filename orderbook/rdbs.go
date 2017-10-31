@@ -37,6 +37,7 @@ type Rdbs struct {
 	db                  db.Database
 	finishTable         db.Database
 	pendingTable        db.Database
+	orderChan			chan *types.OrderState
 	orderhashIndexTable map[types.Hash]*orderhashIndex
 	mtx                 sync.RWMutex
 }
@@ -53,6 +54,7 @@ func NewRdbs(database db.Database) *Rdbs {
 	r.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
 	r.pendingTable = db.NewTable(database, PENDING_TABLE_NAME)
 	r.orderhashIndexTable = make(map[types.Hash]*orderhashIndex)
+	r.orderChan = make(chan *types.OrderState)
 	return r
 }
 
@@ -64,21 +66,46 @@ func (r *Rdbs) Close() {
 	r.finishTable.Close()
 }
 
-func (r *Rdbs) Scan() error {
-	r.mtx.RLock()
-	defer r.mtx.RUnlock()
+func (r *Rdbs) Reload() error {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
 
-	iterator := r.pendingTable.NewIterator(nil, nil)
-	for iterator.Next() {
-		dataBytes := iterator.Value()
-		state := &types.OrderState{}
-		if err := json.Unmarshal(dataBytes, state); nil != err {
-			log.Errorf("err:%s", err.Error())
-		} else {
-			//sendOrderToMiner(state)
+	iterator1 := r.pendingTable.NewIterator(nil, nil)
+	for iterator1.Next() {
+		state, err := r.reloadOrderState(iterator1.Value())
+		if err != nil {
+			log.Errorf("orderbook rdbs pending table reload error %s", err.Error())
+			continue
+		}
+		r.orderChan <- state
+	}
+
+	iterator2 := r.finishTable.NewIterator(nil, nil)
+	for iterator2.Next() {
+		_, err := r.reloadOrderState(iterator2.Value())
+		if err != nil {
+			log.Errorf("orderbook rdbs finish table reload error %s", err.Error())
+			continue
 		}
 	}
 	return nil
+}
+
+func (r *Rdbs) reloadOrderState(bs []byte) (*types.OrderState, error) {
+	var state types.OrderState
+
+	if err := json.Unmarshal(bs, &state); nil != err {
+		return nil, err
+	}
+
+	version, err := state.LatestVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	r.setOrderhashIndex(state.RawOrder.Hash, state.RawOrder.Owner, version.Status)
+
+	return &state, nil
 }
 
 // GetOrder get single order with hash
