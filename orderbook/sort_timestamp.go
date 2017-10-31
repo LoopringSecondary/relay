@@ -79,6 +79,7 @@ func (l *OrderTimestampList) Pop() (types.Hash, error) {
 	defer l.mtx.Unlock()
 
 	n := types.HexToHash("")
+
 	if len(l.list) < 1 {
 		return n, errors.New("orderbook orderIndex slice is empty")
 	}

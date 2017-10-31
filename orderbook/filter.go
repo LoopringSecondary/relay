@@ -82,3 +82,21 @@ func (f *TokenBFilter) filter(o *types.Order) (bool, error) {
 	_, deniedExits := f.DeniedTokens[o.TokenS]
 	return !allowExists && deniedExits, nil
 }
+
+type CutoffFilter struct {
+	Cache *CutoffIndexCache
+}
+
+// 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
+func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
+	idx, ok := f.Cache.indexMap[o.Owner]
+	if !ok {
+		return true, nil
+	}
+
+	if o.Timestamp.Cmp(idx.Cutoff) < 0 {
+		return false, errors.New("")
+	}
+
+	return true, nil
+}
