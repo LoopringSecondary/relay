@@ -197,7 +197,7 @@ func (c *ChainConfig) GasTable(num *big.Int) GasTable {
 	case c.IsEIP158(num):
 		return GasTableEIP158
 	case c.IsEIP150(num):
-		return GasTableEIP150
+		return GasTableHomesteadGasRepriceFork
 	default:
 		return GasTableHomestead
 	}
