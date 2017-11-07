@@ -56,7 +56,6 @@ type BucketMatcher struct {
 	options              config.MinerOptions
 }
 
-
 func NewBucketMatcher(submitter *miner.RingSubmitter, ringLength int) miner.Matcher {
 	var matcher miner.Matcher
 	bucketMatcher := &BucketMatcher{}
@@ -218,7 +217,6 @@ func (matcher *BucketMatcher) listenOrderState() {
 	eventemitter.On(eventemitter.MinedOrderState, watcher)
 
 }
-
 
 func (matcher *BucketMatcher) compensate() {
 	ticker := time.NewTicker(5 * time.Second)
