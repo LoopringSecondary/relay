@@ -20,29 +20,28 @@ package eth
 
 import (
 	"github.com/Loopring/ringminer/types"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //todo:need to modify
 
 type Block struct {
-	Number           types.Big
-	Hash             types.Hash
-	ParentHash       string
-	Nonce            string
-	Sha3Uncles       string
-	LogsBloom        string
-	TransactionsRoot string
-	ReceiptsRoot     string
-	Miner            string
-	Difficulty       types.Big
-	TotalDifficulty  types.Big
-	ExtraData        string
-	Size             types.Big
-	GasLimit         types.Big
-	GasUsed          types.Big
-	Timestamp        types.Big
-	Uncles           []string
+	Number           types.Big  `json:"number"`
+	Hash             types.Hash `json:"hash"`
+	ParentHash       types.Hash `json:"parentHash"`
+	Nonce            string     `json:"nonce"`
+	Sha3Uncles       string     `json:"sha3Uncles"`
+	LogsBloom        string     `json:"logsBloom"`
+	TransactionsRoot string     `json:"transactionsRoot"`
+	ReceiptsRoot     string     `json:"stateRoot"`
+	Miner            string     `json:"miner"`
+	Difficulty       types.Big  `json:"difficulty"`
+	TotalDifficulty  types.Big  `json:"totalDifficulty"`
+	ExtraData        string     `json:"extraData"`
+	Size             types.Big  `json:"size"`
+	GasLimit         types.Big  `json:"gasLimit"`
+	GasUsed          types.Big  `json:"gasUsed"`
+	Timestamp        types.Big  `json:"timestamp"`
+	Uncles           []string   `json:"uncles"`
 }
 
 type BlockWithTxObject struct {
@@ -56,17 +55,20 @@ type BlockWithTxHash struct {
 }
 
 type Transaction struct {
-	Hash             string
-	Nonce            types.Big
-	BlockHash        string
-	BlockNumber      types.Big
-	TransactionIndex types.Big
-	From             string
-	To               string
-	Value            types.Big
-	GasPrice         types.Big
-	Gas              types.Big
-	Input            string
+	Hash             string    `json:"hash"`
+	Nonce            types.Big `json:"nonce"`
+	BlockHash        string    `json:"blockHash"`
+	BlockNumber      types.Big `json:"blockNumber"`
+	TransactionIndex types.Big `json:"transactionIndex"`
+	From             string    `json:"from"`
+	To               string    `json:"to"`
+	Value            types.Big `json:"value"`
+	GasPrice         types.Big `json:"gasPrice"`
+	Gas              types.Big `json:"gas"`
+	Input            string    `json:"input"`
+	R                string    `json:"r"`
+	S                string    `json:"s"`
+	V                string    `json:"v"`
 }
 
 type Log struct {
@@ -78,15 +80,31 @@ type Log struct {
 	Address          string    `json:"address"`
 	Data             string    `json:"data"`
 	Topics           []string  `json:"topics"`
+	Removed          bool      `json:"removed"`
 }
 
 type FilterQuery struct {
-	FromBlock string           `json:"fromBlock"`
-	ToBlock   string           `json:"toBlock"`
-	Address   []common.Address `json:"address"`
-	Topics    [][]common.Hash  `json:"topics"`
+	FromBlock string          `json:"fromBlock"`
+	ToBlock   string          `json:"toBlock"`
+	Address   []types.Address `json:"address"`
+	Topics    [][]types.Hash  `json:"topics"`
 }
 
 type LogParameter struct {
 	Topics []string
+}
+
+type TransactionReceipt struct {
+	BlockHash         string    `json:"blockHash"`
+	BlockNumber       types.Big `json:"blockNumber"`
+	ContractAddress   string    `json:"contractAddress"`
+	CumulativeGasUsed types.Big `json:"cumulativeGasUsed"`
+	From              string    `json:"from"`
+	GasUsed           types.Big `json:"gasUsed"`
+	Logs              []Log     `json:"logs"`
+	LogsBloom         string    `json:"logsBloom"`
+	Root              string    `json:"root"`
+	To                string    `json:"to"`
+	TransactionHash   string    `json:"transactionHash"`
+	TransactionIndex  types.Big `json:"transactionIndex"`
 }

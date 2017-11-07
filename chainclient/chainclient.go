@@ -18,15 +18,32 @@
 
 package chainclient
 
-import "github.com/Loopring/ringminer/types"
+import (
+	"github.com/Loopring/ringminer/types"
+	"math/big"
+)
 
 //similar to web3
 type RpcMethod func(result interface{}, args ...interface{}) error
 
+type ForkedEvent struct {
+	DetectedBlock *big.Int
+	DetectedHash  types.Hash
+	ForkBlock     *big.Int
+	ForkHash      types.Hash
+}
+
+type BlockIterator interface {
+	Next() (interface{}, error)
+	Prev() (interface{}, error)
+}
+
 type Client struct {
 	//subscribe, signAndSendTransaction and NewContract are customed
 	//the first arg must be filterId in eth
-	Subscribe              RpcMethod `methodName:"subscribe"`
+	//Subscribe              func(callback func(args ...interface{}) error, filterArgs ...interface{}) error
+	Subscribe              func(result interface{}, filterId string) error
+	BlockIterator          func(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) BlockIterator
 	SignAndSendTransaction func(result interface{}, from types.Address, transaction interface{}) error
 	NewContract            func(result interface{}, address, abiStr string) error
 

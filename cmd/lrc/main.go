@@ -20,30 +20,24 @@ package main
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/cmd/utils"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/node"
-	"go.uber.org/zap"
+	"github.com/Loopring/ringminer/params"
 	"gopkg.in/urfave/cli.v1"
 	"os"
-	"os/signal"
+	"path/filepath"
+	"runtime"
 	"sort"
 )
 
-var (
-	app          *cli.App
-	configFile   string
-	globalConfig *config.GlobalConfig
-	logger       *zap.Logger
-)
-
 func main() {
-	app = utils.NewApp()
+	app := newApp()
 	app.Action = minerNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2017 The Loopring Authors"
-	app.Flags = utils.GlobalFlags()
+	globalFlags := GlobalFlags()
+	minerFlags := MinerFlags()
+	//todo:need to group flags
+	app.Flags = append(app.Flags, globalFlags...)
+	app.Flags = append(app.Flags, minerFlags...)
 
 	app.Commands = []cli.Command{
 		accountCommands(),
@@ -52,20 +46,7 @@ func main() {
 	sort.Sort(cli.CommandsByName(app.Commands))
 
 	app.Before = func(ctx *cli.Context) error {
-		//runtime.GOMAXPROCS(runtime.NumCPU())
-		file := ""
-		if ctx.IsSet(configFile) {
-			file = ctx.String("conf")
-		}
-		globalConfig = config.LoadConfig(file)
-
-		//todo:merge flags to config, 区分node
-
-		//if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
-		//	panic(err)
-		//}
-
-		logger = log.Initialize(globalConfig.Log)
+		runtime.GOMAXPROCS(runtime.NumCPU())
 		return nil
 	}
 
@@ -78,38 +59,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	defer func() {
-		if nil != logger {
-			logger.Sync()
-		}
-	}()
 }
 
-func minerNode(c *cli.Context) error {
-	var n *node.Node
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	signal.Notify(signalChan, os.Kill)
-	go func() {
-		for {
-			select {
-			case sig := <-signalChan:
-				log.Infof("captured %s, exiting...\n", sig.String())
-				if nil != n {
-					n.Stop()
-				}
-				os.Exit(1)
-			}
-		}
-	}()
-
-	//todo：设置flag到config中
-	n = node.NewEthNode(logger, globalConfig)
-	n.Start()
-
-	log.Info("started")
-	//captiure stop signal
-
-	n.Wait()
-	return nil
+func newApp() *cli.App {
+	app := cli.NewApp()
+	app.Name = filepath.Base(os.Args[0])
+	app.Version = params.Version
+	app.Usage = "the Loopring/ringminer command line interface"
+	app.Author = ""
+	app.Email = ""
+	return app
 }

@@ -19,7 +19,7 @@
 package log
 
 import (
-	"encoding/json"
+	"github.com/Loopring/ringminer/config"
 	"go.uber.org/zap"
 )
 
@@ -27,31 +27,10 @@ import (
 var logger *zap.Logger
 var sugaredLogger *zap.SugaredLogger
 
-const logConfig = `{
-	  "level": "debug",
-	  "development": true,
-	  "disableStacktrace": false,
-	  "encoding": "console",
-	  "outputPaths": ["zap.log","stderr"],
-	  "errorOutputPaths": ["err.log"],
-	  "encoderConfig": {
-	    "messageKey": "msg",
-	    "levelKey": "level",
-	    "stacktraceKey":"trace",
-	    "timeKey":"ts",
-	    "levelEncoder": "lowercase",
-	    "timeEncoder":"iso8601"
-	  }
-	}`
-
-func Initialize(cfg zap.Config) *zap.Logger {
-	rawJSON := []byte(logConfig)
-
+func Initialize(logOpts config.LogOptions) *zap.Logger {
 	var err error
 
-	if err = json.Unmarshal(rawJSON, &cfg); err != nil {
-		panic(err)
-	}
+	cfg := logOpts.ZapOpts
 
 	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	//"callerKey":"C"

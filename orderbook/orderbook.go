@@ -19,13 +19,15 @@
 package orderbook
 
 import (
-	"encoding/json"
+	"errors"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
+	"time"
 )
 
 /**
@@ -36,63 +38,43 @@ todo:
 4. 订单完成的标志，以及需要发送到miner
 */
 
-const (
-	FINISH_TABLE_NAME  = "finished"
-	PARTIAL_TABLE_NAME = "partial"
-)
-
-type Whisper struct {
-	PeerOrderChan   chan *types.Order
-	EngineOrderChan chan *types.OrderState
-	ChainOrderChan  chan *types.OrderMined
-}
-
 type OrderBook struct {
-	options       config.OrderBookOptions
-	filters       []Filter
-	db            db.Database
-	finishTable   db.Database
-	partialTable  db.Database
-	runtimeTables map[string]db.Database
-	whisper       *Whisper
-	lock          sync.RWMutex
-	minAmount     *big.Int
+	options     config.OrderBookOptions
+	commOpts    config.CommonOptions
+	filters     []Filter
+	rdbs        *Rdbs
+	ordTimeList *OrderTimestampList
+	cutoffcache *CutoffIndexCache
+	lock        sync.RWMutex
+	minAmount   *big.Int
+	ticker      *time.Ticker
 }
 
-func NewOrderBook(options config.OrderBookOptions, database db.Database, whisper *Whisper) *OrderBook {
+func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions, database db.Database) *OrderBook {
 	ob := &OrderBook{}
 
 	ob.options = options
-	ob.db = database
-	ob.finishTable = db.NewTable(database, FINISH_TABLE_NAME)
-	ob.partialTable = db.NewTable(database, PARTIAL_TABLE_NAME)
-	ob.whisper = whisper
+	ob.commOpts = commOpts
+	ob.rdbs = NewRdbs(database)
+
+	// todo: use config
+	ob.ticker = time.NewTicker(1 * time.Second)
+	ob.ordTimeList = &OrderTimestampList{}
+	ob.cutoffcache = NewCutoffIndexCache(database)
 
 	//todo:filters init
 	filters := []Filter{}
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
-	filters = append(filters, baseFilter)
 	tokenSFilter := &TokenSFilter{}
 	tokenBFilter := &TokenBFilter{}
+	cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
 
+	filters = append(filters, baseFilter)
 	filters = append(filters, tokenSFilter)
 	filters = append(filters, tokenBFilter)
+	filters = append(filters, cutoffFilter)
 
 	return ob
-}
-
-func (ob *OrderBook) recoverOrder() error {
-	iterator := ob.partialTable.NewIterator(nil, nil)
-	for iterator.Next() {
-		dataBytes := iterator.Value()
-		state := &types.OrderState{}
-		if err := json.Unmarshal(dataBytes, state); nil != err {
-			log.Errorf("err:%s", err.Error())
-		} else {
-			ob.whisper.EngineOrderChan <- state
-		}
-	}
-	return nil
 }
 
 func (ob *OrderBook) filter(o *types.Order) (bool, error) {
@@ -109,133 +91,166 @@ func (ob *OrderBook) filter(o *types.Order) (bool, error) {
 
 // Start start orderbook as a service
 func (ob *OrderBook) Start() {
-	ob.recoverOrder()
+	ob.recover()
+
+	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handlePeerOrder}
+	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleChainOrder}
+
+	eventemitter.On(eventemitter.OrderBookPeer, peerOrderWatcher)
+	eventemitter.On(eventemitter.OrderBookChain, chainOrderWatcher)
 
 	go func() {
 		for {
 			select {
-			case ord := <-ob.whisper.PeerOrderChan:
-				log.Debugf("accept data from peer:%s", ord.Protocol.Hex())
-				if valid, err := ob.filter(ord); valid {
-					if err := ob.peerOrderHook(ord); nil != err {
-						log.Errorf("err:", err.Error())
-					}
-				} else {
-					log.Errorf("receive order but valid failed:%s", err.Error())
-				}
-			case ord := <-ob.whisper.ChainOrderChan:
-				ob.chainOrderHook(ord)
+			case <-ob.ticker.C:
+				ob.sendOrderToMiner()
 			}
 		}
 	}()
+}
+
+func (ob *OrderBook) recover() {
+	for {
+		state := <-ob.rdbs.orderChan
+		ob.beforeSendOrderToMiner(state)
+	}
 }
 
 func (ob *OrderBook) Stop() {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	ob.finishTable.Close()
-	ob.partialTable.Close()
-	//ob.db.Close()
+	// todo
+	ob.rdbs.Close()
+	ob.ticker.Stop()
 }
 
-func (ob *OrderBook) peerOrderHook(ord *types.Order) error {
-
+// 来自ipfs的新订单
+// 所有来自ipfs的订单都是新订单
+func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	// TODO(fk): order filtering
+	ord := input.(*types.Order)
 
+	if valid, err := ob.filter(ord); !valid {
+		return err
+	}
+
+	orderhash := ord.GenerateHash()
 	state := &types.OrderState{}
 	state.RawOrder = *ord
-	state.RawOrder.Hash = ord.GenerateHash()
+	state.RawOrder.Hash = orderhash
 
-	//todo:it should not query db everytime.
-	if input, err := ob.partialTable.Get(state.RawOrder.Hash.Bytes()); err != nil {
-		panic(err)
-	} else if len(input) == 0 {
-		if inpupt1, err1 := ob.finishTable.Get(state.RawOrder.Hash.Bytes()); nil != err1 {
-			panic(err1)
-		} else if len(inpupt1) == 0 {
-			state.Status = types.ORDER_NEW
-			state.RemainedAmountS = state.RawOrder.AmountS
-			state.RemainedAmountB = state.RawOrder.AmountB
-		} else {
-			state.Status = types.ORDER_FINISHED
-		}
-	} else {
-		state.Status = types.ORDER_PARTIAL
+	log.Debugf("orderbook accept new order hash:%s", orderhash.Hex())
+	log.Debugf("orderbook accept new order amountS:%s", ord.AmountS.String())
+	log.Debugf("orderbook accept new order amountB:%s", ord.AmountB.String())
+
+	// 之前从未存储过
+	if _, err := ob.rdbs.GetOrder(orderhash); err == nil {
+		return errors.New("order " + orderhash.Hex() + " already exist")
 	}
 
-	//do nothing when types.ORDER_NEW != state.Status
-	if types.ORDER_NEW == state.Status {
-
-		log.Debugf("state hash:%s", state.RawOrder.Hash.Hex())
-
-		//save to db
-		dataBytes, err := json.Marshal(state)
-		if err != nil {
-			return err
-		}
-		ob.partialTable.Put(state.RawOrder.Hash.Bytes(), dataBytes)
-
-		//send to miner
-		ob.whisper.EngineOrderChan <- state
-	}
+	state.AddVersion(types.VersionData{})
+	ob.beforeSendOrderToMiner(state)
 
 	return nil
 }
 
-func (ob *OrderBook) chainOrderHook(ord *types.OrderMined) error {
+// 处理来自eth网络的evt/transaction转换后的orderState
+// 订单必须存在，如果不存在则不处理
+// 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
+// 如果之前已经存储，那么应该直接处理并发送到miner
+func (ob *OrderBook) handleChainOrder(input eventemitter.EventData) error {
 	ob.lock.Lock()
 	defer ob.lock.Unlock()
 
-	return nil
-}
+	ord := input.(*types.OrderState)
 
-// GetOrder get single order with hash
-func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) {
-	var (
-		value []byte
-		err   error
-		ord   types.OrderState
-	)
-
-	if value, err = ob.partialTable.Get(id.Bytes()); err != nil {
-		value, err = ob.finishTable.Get(id.Bytes())
+	if valid, err := ob.filter(&ord.RawOrder); !valid {
+		return err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(value, &ord)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ord, nil
-}
-
-// GetOrders get orders from persistence database
-func (ob *OrderBook) GetOrders() {
-
-}
-
-// moveOrder move order when partial finished order fully exchanged
-func (ob *OrderBook) moveOrder(odw *types.OrderState) error {
-	key := odw.RawOrder.Hash.Bytes()
-	value, err := json.Marshal(odw)
+	vd, err := ord.LatestVersion()
 	if err != nil {
 		return err
 	}
-	ob.partialTable.Delete(key)
-	ob.finishTable.Put(key, value)
+
+	state := ord
+
+	switch vd.Status {
+	case types.ORDER_NEW:
+		log.Debugf("orderbook accept new order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.beforeSendOrderToMiner(state)
+
+	case types.ORDER_PENDING:
+		log.Debugf("orderbook accept pending order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.afterSendOrderToMiner(state)
+
+	case types.ORDER_FINISHED:
+		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.afterSendOrderToMiner(state)
+
+	case types.ORDER_CANCEL:
+		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.afterSendOrderToMiner(state)
+
+	case types.ORDER_REJECT:
+		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
+		ob.afterSendOrderToMiner(state)
+
+	default:
+		log.Errorf("orderbook version data status error:%s", state.RawOrder.Hash.Hex())
+	}
+
 	return nil
 }
 
+// beforeSendOrderToMiner push order state index to rdbs sliceOrderIndex
+func (ob *OrderBook) beforeSendOrderToMiner(state *types.OrderState) {
+	ob.rdbs.SetOrder(state)
+	ob.ordTimeList.Push(state.RawOrder.Hash, state.RawOrder.Timestamp)
+}
+
+func (ob *OrderBook) sendOrderToMiner() error {
+	hash, err := ob.ordTimeList.Pop()
+	if err != nil {
+		return nil
+	}
+
+	state, err := ob.rdbs.GetOrder(hash)
+	if err != nil {
+		return err
+	}
+
+	expiretime := big.NewInt(0).Add(state.RawOrder.Timestamp, state.RawOrder.Ttl)
+	nowtime := big.NewInt(time.Now().Unix())
+	if nowtime.Cmp(expiretime) > 0 {
+		ob.rdbs.MoveOrder(state)
+		return errors.New("orderbook order:" + state.RawOrder.Hash.Hex() + " ready to send is expired")
+	}
+
+	eventemitter.Emit(eventemitter.MinedOrderState, state)
+
+	return nil
+}
+
+func (ob *OrderBook) afterSendOrderToMiner(state *types.OrderState) error {
+	return ob.rdbs.MoveOrder(state)
+}
+
 // isFinished judge order state
-func isFinished(odw *types.OrderState) bool {
+func (ob *OrderBook) isFullFilled(odw *types.OrderState) bool {
 	//if odw.RawOrder.
 	return true
+}
+
+//////////////////////////////////////////////////////////////
+//
+// 调用内部方法实现
+//
+//////////////////////////////////////////////////////////////
+func (ob *OrderBook) GetOrder(id types.Hash) (*types.OrderState, error) { return ob.rdbs.GetOrder(id) }
+func (ob *OrderBook) AddCutoffEvent(address types.Address, timestamp, cutoff, blocknumber *big.Int) error {
+	return ob.cutoffcache.Add(address, timestamp, cutoff, blocknumber)
 }

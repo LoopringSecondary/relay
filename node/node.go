@@ -31,7 +31,6 @@ import (
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/miner/bucket"
 	"github.com/Loopring/ringminer/orderbook"
-	"github.com/Loopring/ringminer/types"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -42,13 +41,12 @@ type Node struct {
 	p2pListener   listener.Listener
 	chainListener listener.Listener
 	orderbook     *orderbook.OrderBook
-	miner         miner.Proxy
+	miner         *miner.Miner
 	stop          chan struct{}
 	lock          sync.RWMutex
 	logger        *zap.Logger
 }
 
-// TODO(fk): inject whisper
 func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
@@ -56,37 +54,25 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	bucket.RingLength = globalConfig.Miner.RingMaxLength
-
-	ethClient := ethClientLib.NewChainClient(n.globalConfig.ChainClient)
+	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
-	ringClient := miner.NewRingClient(database, ethClient.Client)
-	//
-	miner.Initialize(n.globalConfig.Miner, ringClient.Chainclient)
-	//
-	peerOrderChan := make(chan *types.Order)
-	chainOrderChan := make(chan *types.OrderMined)
-	engineOrderChan := make(chan *types.OrderState)
-	//
-	n.registerP2PListener(peerOrderChan)
-	//n.registerEthListener(chainOrderChan)
-	//
-	n.registerOrderBook(database, peerOrderChan, chainOrderChan, engineOrderChan)
-	n.registerMiner(ringClient, engineOrderChan)
 
-	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
+	n.registerP2PListener()
+	n.registerOrderBook(database)
+	n.registerMiner(ethClient.Client, database)
+	n.registerEthListener(ethClient, database)
 
 	return n
 }
 
 func (n *Node) Start() {
-	//n.chainListener.Start()
+
+	n.chainListener.Start()
 	n.p2pListener.Start()
-	//
+	n.miner.Start()
 
 	n.orderbook.Start()
-	n.miner.Start()
 }
 
 func (n *Node) Wait() {
@@ -114,22 +100,25 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(client *chainclient.Client, chainOrderChan chan *types.OrderMined) {
-	whisper := &ethListenerLib.Whisper{chainOrderChan}
-	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, whisper, client)
+func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database) {
+	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.orderbook, database)
 }
 
-func (n *Node) registerP2PListener(peerOrderChan chan *types.Order) {
-	whisper := &ipfsListenerLib.Whisper{peerOrderChan}
-	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs, whisper)
+func (n *Node) registerP2PListener() {
+	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs)
 }
 
-func (n *Node) registerOrderBook(database db.Database, peerOrderChan chan *types.Order, chainOrderChan chan *types.OrderMined, engineOrderChan chan *types.OrderState) {
-	whisper := &orderbook.Whisper{PeerOrderChan: peerOrderChan, EngineOrderChan: engineOrderChan, ChainOrderChan: chainOrderChan}
-	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, database, whisper)
+func (n *Node) registerOrderBook(database db.Database) {
+	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database)
 }
 
-func (n *Node) registerMiner(ringClient *miner.RingClient, orderStateChan chan *types.OrderState) {
-	whisper := bucket.Whisper{orderStateChan}
-	n.miner = bucket.NewBucketProxy(ringClient, whisper)
+func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
+	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, database, client)
+	rateProvider := miner.NewLegalRateProvider(n.globalConfig.Miner)
+	matcher := bucket.NewBucketMatcher(submitter, n.globalConfig.Miner.RingMaxLength)
+	minerInstance := miner.NewMiner(n.globalConfig.Miner, submitter, matcher, loopringInstance, rateProvider)
+	miner.Initialize(minerInstance)
+
+	n.miner = minerInstance
 }

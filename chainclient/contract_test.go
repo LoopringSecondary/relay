@@ -23,84 +23,49 @@ import (
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
-	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
 	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/ringminer/test"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
-	"time"
 )
 
-var client *chainclient.Client
-var imp *chainclient.LoopringProtocolImpl = &chainclient.LoopringProtocolImpl{}
-var implAddress string = "0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"
-var registry *chainclient.LoopringRinghashRegistry = &chainclient.LoopringRinghashRegistry{}
+var testParams *test.TestParams
 
 func init() {
-	globalConfig := config.LoadConfig("../config/ringminer.toml")
-	log.Initialize(globalConfig.Log)
-
-	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
-
-	ethClient := eth.NewChainClient(globalConfig.ChainClient)
-	client = ethClient.Client
-	client.NewContract(imp, implAddress, chainclient.CurrentImplAbiStr)
-
-	var lrcTokenAddressHex string
-	imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "pending")
-	lrcTokenAddress := types.HexToAddress(lrcTokenAddressHex)
-	lrcToken := &chainclient.Erc20Token{}
-	client.NewContract(lrcToken, lrcTokenAddress.Hex(), chainclient.Erc20TokenAbiStr)
-
-	var registryAddressHex string
-	imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
-	registryAddress := types.HexToAddress(registryAddressHex)
-	client.NewContract(registry, registryAddress.Hex(), chainclient.CurrentRinghashRegistryAbiStr)
-}
-
-func createOrder(tokenS, tokenB types.Address, amountS, amountB *big.Int, pkBytes []byte) *types.Order {
-	order := &types.Order{}
-	order.Protocol = types.HexToAddress(implAddress)
-	order.TokenS = tokenS
-	order.TokenB = tokenB
-	order.AmountS = amountS
-	order.AmountB = amountB
-	order.Timestamp = big.NewInt(time.Now().Unix())
-	order.Ttl = big.NewInt(10000)
-	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(100)
-	order.BuyNoMoreThanAmountB = false
-	order.MarginSplitPercentage = 0
-	order.GenerateHash()
-	//order.GenerateAndSetSignature(types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"))
-	order.GenerateAndSetSignature(pkBytes)
-	return order
+	testParams = test.LoadConfigAndGenerateTestParams()
 }
 
 func TestLoopringRingHash(t *testing.T) {
 
-	order1 := createOrder(
+	order1 := test.CreateOrder(
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
+		testParams.ImplAddress,
 		big.NewInt(1000),
 		big.NewInt(100000),
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
 
-	order2 := createOrder(
+	order2 := test.CreateOrder(
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
+		testParams.ImplAddress,
 		big.NewInt(100000),
 		big.NewInt(1000),
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
 
 	var res1 string
-	vList := []uint8{order1.V, order2.V, order1.V}
+	t.Log(order1.V)
+	t.Log(order2.V)
+	vList := []uint8{order1.V - 27, order2.V - 27, order1.V - 27}
 	rList := [][]byte{order1.R.Bytes(), order2.R.Bytes(), order1.R.Bytes()}
 	sList := [][]byte{order1.S.Bytes(), order2.S.Bytes(), order1.S.Bytes()}
-	err := registry.CalculateRinghash.Call(&res1, "pending", big.NewInt(2), vList, rList, sList)
+	err := testParams.Registry.CalculateRinghash.Call(&res1, "pending", big.NewInt(2), vList, rList, sList)
 	if nil != err {
 		t.Error(err.Error())
 	}
@@ -115,6 +80,7 @@ func TestLoopringRingHash(t *testing.T) {
 	fOrder2.OrderState.RawOrder = *order2
 	ring.Orders = append(ring.Orders, fOrder1)
 	ring.Orders = append(ring.Orders, fOrder2)
+	ring.Miner = types.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2")
 	t.Log(ring.GenerateHash().Hex())
 }
 
@@ -145,16 +111,18 @@ func TestLoopringSigerToAddress(t *testing.T) {
 		CalculateHashUint8     chainclient.AbiMethod
 		CalculateHashUint      chainclient.AbiMethod
 	}
-	order := createOrder(
+	order := test.CreateOrder(
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
+		testParams.ImplAddress,
 		big.NewInt(1000),
 		big.NewInt(100000),
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
 
 	vTest := &VTest{}
-	client.NewContract(vTest, "0x75472d53ed6624cfa81a61b09175a32b2886ce58", `[{"constant":true,"inputs":[{"name":"i","type":"uint8"}],"name":"calculateHashUint8","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"hash","type":"bytes32"},{"name":"v","type":"uint8"},{"name":"r","type":"bytes32"},{"name":"s","type":"bytes32"}],"name":"calculateSignerAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"calculateHashAddress","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"i","type":"uint256"}],"name":"calculateHashUint","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"b","type":"bool"}],"name":"calculateHashBool","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"}]`)
+	testParams.Client.NewContract(vTest, "0x75472d53ed6624cfa81a61b09175a32b2886ce58", `[{"constant":true,"inputs":[{"name":"i","type":"uint8"}],"name":"calculateHashUint8","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"hash","type":"bytes32"},{"name":"v","type":"uint8"},{"name":"r","type":"bytes32"},{"name":"s","type":"bytes32"}],"name":"calculateSignerAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"calculateHashAddress","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"i","type":"uint256"}],"name":"calculateHashUint","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"b","type":"bool"}],"name":"calculateHashBool","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"}]`)
 	var err error
 	bs, _ := crypto.CryptoInstance.VRSToSig(byte(order.V), order.R.Bytes(), order.S.Bytes())
 	addrBytes, err1 := crypto.CryptoInstance.SigToAddress(order.Hash.Bytes(), bs)
@@ -196,7 +164,7 @@ func TestNewContract(t *testing.T) {
 	abiStr := `[{"constant":true,"inputs":[{"name":"i","type":"uint8"}],"name":"calculateHashUint8","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"hash","type":"bytes32"},{"name":"v","type":"uint8"},{"name":"r","type":"bytes32"},{"name":"s","type":"bytes32"}],"name":"calculateSignerAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"calculateHashAddress","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"i","type":"uint256"}],"name":"calculateHashUint","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"b","type":"bool"}],"name":"calculateHashBool","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"}]`
 	config1 := &config.ChainClientOptions{}
 	config1.RawUrl = "http://127.0.0.1:8545"
-	ethClient := eth.NewChainClient(*config1)
+	ethClient := eth.NewChainClient(*config1, "sa")
 	//var c *chainclient.Contract
 	c := &CTest{}
 	ethClient.NewContract(c, "0x75472d53ed6624cfa81a61b09175a32b2886ce58", abiStr)
@@ -210,21 +178,25 @@ func TestNewContract(t *testing.T) {
 }
 
 func TestRingHashRegistry(t *testing.T) {
-	order1 := createOrder(
+	order1 := test.CreateOrder(
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
+		testParams.ImplAddress,
 		big.NewInt(100),
 		big.NewInt(1000),
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
 	order1.Owner = types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
 
-	order2 := createOrder(
+	order2 := test.CreateOrder(
 		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
 		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
+		testParams.ImplAddress,
 		big.NewInt(1000),
 		big.NewInt(100),
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
 	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 
@@ -233,36 +205,42 @@ func TestRingHashRegistry(t *testing.T) {
 	fOrder1 := &types.FilledOrder{}
 	fOrder1.OrderState = types.OrderState{}
 	fOrder1.OrderState.RawOrder = *order1
-	fOrder1.RateAmountS = order1.AmountS
+	fOrder1.RateAmountS = new(big.Rat).SetInt(order1.AmountS)
 	fOrder1.FeeSelection = uint8(0)
 	fOrder2 := &types.FilledOrder{}
 	fOrder2.OrderState = types.OrderState{}
 	fOrder2.OrderState.RawOrder = *order2
-	fOrder2.RateAmountS = order2.AmountS
+	fOrder2.RateAmountS = new(big.Rat).SetInt(order2.AmountS)
+	fOrder1.FeeSelection = uint8(0)
 	fOrder2.FeeSelection = uint8(0)
 
 	ring.Orders = append(ring.Orders, fOrder1)
 	ring.Orders = append(ring.Orders, fOrder2)
+	ring.Miner = types.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2")
+
 	ring.Hash = ring.GenerateHash()
-	ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient = false
+	ring.ThrowIfLrcIsInsuffcient = false
 
 	t.Logf("ring.Hash:%x", ring.Hash)
-	_, _, _, _, vList, rList, sList, _, _, _ := generateAddressList(ring)
+	ringSubmitArgs := ring.GenerateSubmitArgs(testParams.MinerPrivateKey)
 
-	vList = append(vList, ring.V)
-	rList = append(rList, ring.R.Bytes())
-	sList = append(sList, ring.S.Bytes())
 	var res string
 
-	//res, err := registry.SubmitRinghash.SendTransaction(types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-	//	big.NewInt(2),
-	//	types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-	//	vList,
-	//	rList,
-	//	sList,
-	//)
-	err := registry.RinghashFound.Call(&res, "pending", common.HexToHash("0x02b5c83d5df78a1c4e52c542ae263e865c8d06b6d390bdab330c5e109aea92f4"))
+	t.Logf("order1.V:%d,order1.R:%s, order1.V1:%d, order1.R1:%s", order1.V, order2.R.Hex(), ringSubmitArgs.VList[2],
+		types.BytesToSign(ringSubmitArgs.RList[2]).Hex(),
+	)
+	//vList := []uint8{ringSubmitArgs.VList[0]-27, ringSubmitArgs.VList[1]-27, ringSubmitArgs.VList[2]-27}
 
+	t.Log(ringSubmitArgs.Ringminer.Hex())
+	err := testParams.Registry.CalculateRinghash.Call(&res, "pending",
+		ringSubmitArgs.Ringminer,
+		big.NewInt(2),
+		ringSubmitArgs.VList,
+		ringSubmitArgs.RList,
+		ringSubmitArgs.SList,
+	)
+	//err := registry.RinghashFound.Call(&res, "pending", common.HexToHash("0x02b5c83d5df78a1c4e52c542ae263e865c8d06b6d390bdab330c5e109aea92f4"))
+	//
 	if nil != err {
 		t.Error(err)
 	} else {
@@ -271,162 +249,87 @@ func TestRingHashRegistry(t *testing.T) {
 }
 
 func TestSubmitRing(t *testing.T) {
-	order1 := createOrder(
-		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
-		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
+	order1 := test.CreateOrder(
+		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
+		testParams.ImplAddress,
 		big.NewInt(100),
 		big.NewInt(1000),
 		types.Hex2Bytes("11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446"),
+		types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 	)
-	order1.Owner = types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
 
-	order2 := createOrder(
-		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
-		types.HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
+	order2 := test.CreateOrder(
+		types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"),
+		types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		testParams.ImplAddress,
 		big.NewInt(1000),
 		big.NewInt(100),
 		types.Hex2Bytes("07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e"),
+		types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
 	)
-	order2.Owner = types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A")
 
 	ring := &types.Ring{}
 	ring.Orders = make([]*types.FilledOrder, 0)
 	fOrder1 := &types.FilledOrder{}
 	fOrder1.OrderState = types.OrderState{}
 	fOrder1.OrderState.RawOrder = *order1
-	fOrder1.RateAmountS = order1.AmountS
+	fOrder1.RateAmountS = new(big.Rat).SetInt(order1.AmountS)
 	fOrder1.FeeSelection = uint8(0)
+	t.Logf("order1.h : %s, order2.h : %s", order1.Hash.Hex(), order2.R.Hex())
 	fOrder2 := &types.FilledOrder{}
 	fOrder2.OrderState = types.OrderState{}
 	fOrder2.OrderState.RawOrder = *order2
-	fOrder2.RateAmountS = order2.AmountS
+	fOrder2.RateAmountS = new(big.Rat).SetInt(order2.AmountS)
 	fOrder2.FeeSelection = uint8(0)
 
 	ring.Orders = append(ring.Orders, fOrder1)
 	ring.Orders = append(ring.Orders, fOrder2)
+	ring.Miner = types.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2")
 	ring.Hash = ring.GenerateHash()
-	ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient = false
+	ring.ThrowIfLrcIsInsuffcient = false
 
 	t.Logf("ring.Hash:%x", ring.Hash)
-	addressList, uintArgsList, uint8ArgsList, buyNoMoreThanAmountBList, vList, rList, sList, ringminer, feeRecepient, throwIfLRCIsInsuffcient := generateAddressList(ring)
 
-	vList = append(vList, ring.V)
-	rList = append(rList, ring.R.Bytes())
-	sList = append(sList, ring.S.Bytes())
 	var res string
-
-	res, err := imp.SubmitRing.SendTransaction(types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-		addressList,
-		uintArgsList,
-		uint8ArgsList,
-		buyNoMoreThanAmountBList,
-		vList,
-		rList,
-		sList,
-		ringminer,
-		feeRecepient,
-		throwIfLRCIsInsuffcient,
+	var err error
+	ringSubmitArgs := ring.GenerateSubmitArgs(testParams.MinerPrivateKey)
+	//
+	//err = imp.GetSpendable.Call(&res, "pending", common.HexToAddress(order1.TokenS.Hex()), common.HexToAddress(order1.Owner.Hex()))
+	//if nil != err {
+	//	t.Error(err)
+	//} else {
+	//	t.Log(res)
+	//}
+	res, err = testParams.Imp.SubmitRing.SendTransaction(types.HexToAddress("0x"),
+		ringSubmitArgs.AddressList,
+		ringSubmitArgs.UintArgsList,
+		ringSubmitArgs.Uint8ArgsList,
+		ringSubmitArgs.BuyNoMoreThanAmountBList,
+		ringSubmitArgs.VList,
+		ringSubmitArgs.RList,
+		ringSubmitArgs.SList,
+		ringSubmitArgs.Ringminer,
+		ringSubmitArgs.FeeRecepient,
+		ringSubmitArgs.ThrowIfLRCIsInsuffcient,
 	)
 	if nil != err {
 		t.Error(err)
 	} else {
 		t.Log(res)
 	}
-}
-
-func generateAddressList(ring *types.Ring) (addressList [][2]common.Address,
-	uintArgsList [][7]*big.Int,
-	uint8ArgsList [][2]uint8,
-	buyNoMoreThanAmountBList []bool,
-	vList []uint8,
-	rList, sList [][]byte,
-	ringminer common.Address,
-	feeRecepient common.Address,
-	throwIfLRCIsInsuffcient bool,
-) {
-	addressList = [][2]common.Address{}
-	uintArgsList = [][7]*big.Int{}
-	uint8ArgsList = [][2]uint8{}
-	buyNoMoreThanAmountBList = make([]bool, 0)
-	vList = make([]uint8, 0)
-	rList = make([][]byte, 0)
-	sList = make([][]byte, 0)
-
-	for _, filledOrder := range ring.Orders {
-		order := filledOrder.OrderState.RawOrder
-		addressList = append(addressList, [2]common.Address{common.BytesToAddress(order.Owner.Bytes()), common.BytesToAddress(order.TokenS.Bytes())})
-
-		uintArgsList = append(uintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, filledOrder.RateAmountS})
-
-		uint8ArgsList = append(uint8ArgsList, [2]uint8{order.MarginSplitPercentage, filledOrder.FeeSelection})
-
-		buyNoMoreThanAmountBList = append(buyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)
-
-		vList = append(vList, order.V)
-		rList = append(rList, order.R.Bytes())
-		sList = append(sList, order.S.Bytes())
-
-		ringminer = common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
-		feeRecepient = common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")
-		throwIfLRCIsInsuffcient = ring.ThrowIfTokenAllowanceOrBalanceIsInsuffcient
-
-	}
-
-	return addressList, uintArgsList, uint8ArgsList, buyNoMoreThanAmountBList, vList, rList, sList, ringminer, feeRecepient, throwIfLRCIsInsuffcient
-}
-
-func TestA1(t *testing.T) {
-	//fullTypeRegex := regexp.MustCompile(`(\[([0-9]*)\])?((?:(?:\[[0-9]*\])*)[a-zA-Z0-9]+)`)
-	////fullTypeRegex := regexp.MustCompile(`([a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
-	//s := "address[34][56]"
-	//res := fullTypeRegex.FindAllStringSubmatch(s, -1)[0]
-	//println("s0", res[0],"s1", res[1],"s2", res[2],"s3", res[3])
-	//
-	//res = fullTypeRegex.FindAllStringSubmatch(res[3], -1)[0]
-	//println("s0", res[0],"s1", res[1],"s2", res[2],"s3", res[3])
-	//
-	//res = fullTypeRegex.FindAllStringSubmatch(res[3], -1)[0]
-	//println("s0", res[0],"s1", res[1],"s2", res[2],"s3", res[3])
-
-	//uintArgsList := [2][]*big.Int{}
-	//
-	//for i:=0;i<=2;i++ {
-	//	uintArgsList[0] = append(uintArgsList[0], big.NewInt(int64(i)))
-	//	uintArgsList[1] = append(uintArgsList[1], big.NewInt(int64(i*100)))
+	//err = registry.CalculateRinghash.Call(&res, "pending",
+	//	ringSubmitArgs.Ringminer,
+	//	big.NewInt(2),
+	//	ringSubmitArgs.VList,
+	//	ringSubmitArgs.RList,
+	//	ringSubmitArgs.SList,
+	//)
+	//if nil != err {
+	//	t.Error(err)
+	//} else {
+	//	t.Log(res)
 	//}
-	//for _,a := range uintArgsList {
-	//	for _,b := range a {
-	//		println(b.Int64())
-	//	}
-	//}
-
-	var res string
-	if err := client.GetTransactionReceipt(&res, "0x71aa2e2d4137b1c4b8e847f04bba8877005f212dec451f89ada3eb220477da56"); nil != err {
-		println(err.Error())
-	} else {
-		println(res)
-	}
-}
-
-func TestB(t *testing.T) {
-	type CTest struct {
-		chainclient.Contract
-		MutilAddress chainclient.AbiMethod
-	}
-
-	cTest := &CTest{}
-	client.NewContract(cTest, "0x23bbc1ca3bb70c609122cb8f86fc7c4f106fb962", `[{"constant":true,"inputs":[{"name":"addressList","type":"address[2][]"}],"name":"mutilAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"}]`)
-	addressList := [][2]common.Address{}
-	addressList = append(addressList, [2]common.Address{common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")})
-	var err error
-	var res string
-	err = cTest.MutilAddress.Call(&res, "pending", addressList)
-	if nil != err {
-		t.Error(err)
-	} else {
-		t.Log(res)
-	}
-
 }
 
 func TestFilter(t *testing.T) {
@@ -441,12 +344,12 @@ func TestFilter(t *testing.T) {
 	filterReq.ToBlock = "latest"
 	//todo:topics, eventId
 	//filterReq.Topics =
-	if err := client.NewFilter(&filterId, filterReq); nil != err {
+	if err := testParams.Client.NewFilter(&filterId, filterReq); nil != err {
 		t.Error(err)
 	} else {
 
 		logChan := make(chan []eth.Log)
-		if err := client.Subscribe(&logChan, filterId); nil != err {
+		if err := testParams.Client.Subscribe(&logChan, filterId); nil != err {
 			log.Errorf("error:%s", err.Error())
 		} else {
 			for {
@@ -462,57 +365,16 @@ func TestFilter(t *testing.T) {
 
 }
 
-func TestApprove(t *testing.T) {
-	/**
-	  HexToAddress("0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511"),
-	  		types.HexToAddress("0x96124db0972e3522a9b3910578b3f2e1a50159c7"),
-	*/
-	cTest := &chainclient.Erc20Token{}
-	client.NewContract(cTest, "0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511", chainclient.Erc20TokenAbiStr)
-	var res string
-	var err error
-	//if res,err = cTest.Approve.SendTransaction(types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-	//	common.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"),
-	//	big.NewInt(2000),
-	//); nil != err {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(res)
-	//}
-	//if res,err = cTest.Approve.SendTransaction(types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
-	//	common.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"),
-	//	big.NewInt(2000),
-	//); nil != err {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(res)
-	//}
-	//
-	//client.NewContract(cTest, "0x96124db0972e3522a9b3910578b3f2e1a50159c7",chainclient.Erc20TokenAbiStr)
-	//if res,err = cTest.Approve.SendTransaction(types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
-	//	common.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"),
-	//	big.NewInt(2000),
-	//); nil != err {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(res)
-	//}
-	//if res,err = cTest.Approve.SendTransaction(types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-	//	common.HexToAddress("0xfd9ecf92e3684451c2502cf9cdc45962a4febffa"),
-	//	big.NewInt(2000),
-	//); nil != err {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(res)
-	//}
-	res, err = cTest.Transfer.SendTransaction(types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-		common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
-		big.NewInt(20000),
-	)
-	if nil != err {
-		t.Error(err)
-	} else {
-		t.Log(res)
+func TestClient_BlockIterator(t *testing.T) {
+	iterator := testParams.Client.BlockIterator(big.NewInt(4069), big.NewInt(4080), false)
+	for {
+		_, err := iterator.Next()
+		if nil != err {
+			println(err.Error())
+			break
+		} else {
+			//block := b.(eth.Block)
+			//println(block.Number.BigInt().String(), block.Hash.Hex())
+		}
 	}
-
 }

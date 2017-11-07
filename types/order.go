@@ -19,6 +19,7 @@
 package types
 
 import (
+	"errors"
 	"github.com/Loopring/ringminer/crypto"
 	"github.com/Loopring/ringminer/log"
 	"math/big"
@@ -27,9 +28,9 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_NEW OrderStatus = iota
+	ORDER_UNKNOWN OrderStatus = iota
+	ORDER_NEW
 	ORDER_PENDING
-	ORDER_PARTIAL
 	ORDER_FINISHED
 	ORDER_CANCEL
 	ORDER_REJECT
@@ -61,7 +62,7 @@ type Order struct {
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
 
-	Owner Address `json:"owner" `
+	Owner Address `json:"owner"`
 	Hash  Hash    `json:"hash"`
 }
 
@@ -76,17 +77,24 @@ type orderMarshaling struct {
 
 func (o *Order) GenerateHash() Hash {
 	h := &Hash{}
+
+	buyNoMoreThanAmountB := byte(0)
+	if o.BuyNoMoreThanAmountB {
+		buyNoMoreThanAmountB = byte(1)
+	}
+
 	hashBytes := crypto.CryptoInstance.GenerateHash(
 		o.Protocol.Bytes(),
+		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
-		o.AmountS.Bytes(),
-		o.AmountB.Bytes(),
-		o.Timestamp.Bytes(),
-		o.Ttl.Bytes(),
-		o.Salt.Bytes(),
-		o.LrcFee.Bytes(),
-		[]byte{byte(0)}, //todo:o.BuyNoMoreThanAmountB to byte, test with contract
+		LeftPadBytes(o.AmountS.Bytes(), 32),
+		LeftPadBytes(o.AmountB.Bytes(), 32),
+		LeftPadBytes(o.Timestamp.Bytes(), 32),
+		LeftPadBytes(o.Ttl.Bytes(), 32),
+		LeftPadBytes(o.Salt.Bytes(), 32),
+		LeftPadBytes(o.LrcFee.Bytes(), 32),
+		[]byte{buyNoMoreThanAmountB},
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
 	h.SetBytes(hashBytes)
@@ -95,8 +103,7 @@ func (o *Order) GenerateHash() Hash {
 }
 
 func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
@@ -117,8 +124,7 @@ func (o *Order) ValidateSignatureValues() bool {
 
 func (o *Order) SignerAddress() (Address, error) {
 	address := &Address{}
-	//todo:how to check hash is nil,this use big.Int
-	if o.Hash.Big().Cmp(big.NewInt(0)) == 0 {
+	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
@@ -135,31 +141,24 @@ func (o *Order) SignerAddress() (Address, error) {
 }
 
 //RateAmountS、FeeSelection 需要提交到contract
-//go:generate gencodec -type FilledOrder -field-override filledOrderMarshaling -out gen_filledorder_json.go
-
 type FilledOrder struct {
 	OrderState       OrderState `json:"orderState" gencodec:"required"`
 	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
-	RateAmountS      *big.Int   `json:"rateAmountS"`      //提交需要
-	AvailableAmountS *big.Int   `json:"availableAmountS"` //需要，也是用于计算fee
-	//AvailableAmountB *big.Int	//需要，也是用于计算fee
-	FillAmountS *EnlargedInt `json:"fillAmountS"`
-	FillAmountB *EnlargedInt `json:"fillAmountB"` //计算需要
-	LrcReward   *EnlargedInt `json:"lrcReward"`
-	LrcFee      *EnlargedInt `json:"lrcFee"`
-	FeeS        *EnlargedInt `json:"feeS"`
+	RateAmountS      *big.Rat   `json:"rateAmountS"`      //提交需要
+	AvailableAmountS *big.Rat   `json:"availableAmountS"` //需要，也是用于计算fee
+	AvailableAmountB *big.Rat   //需要，也是用于计算fee
+	FillAmountS      *big.Rat   `json:"fillAmountS"`
+	FillAmountB      *big.Rat   `json:"fillAmountB"` //计算需要
+	LrcReward        *big.Rat   `json:"lrcReward"`
+	LrcFee           *big.Rat   `json:"lrcFee"`
+	FeeS             *big.Rat   `json:"feeS"`
 	//FeeB             *EnlargedInt
-	LegalFee *EnlargedInt `json:"legalFee"` //法币计算的fee
+	LegalFee *big.Rat `json:"legalFee"` //法币计算的fee
 
-	EnlargedSPrice *EnlargedInt `json:"enlargedSPrice"`
-	EnlargedBPrice *EnlargedInt `json:"enlargedBPrice"`
+	SPrice *big.Rat `json:"SPrice"`
+	BPrice *big.Rat `json:"BPrice"`
 
 	//FullFilled	bool	//this order is fullfilled
-}
-
-type filledOrderMarshaling struct {
-	RateAmountS      *Big
-	AvailableAmountS *Big
 }
 
 //todo: impl it
@@ -167,18 +166,62 @@ func (o *FilledOrder) IsFullFilled() bool {
 	return true
 }
 
-//go:generate gencodec -type OrderState -field-override orderStateMarshaling -out gen_orderstate_json.go
+// 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order       `json:"rawOrder"`
-	RemainedAmountS *big.Int    `json:"remainedAmountS"`
-	RemainedAmountB *big.Int    `json:"remainedAmountB"`
+	RawOrder Order         `json:"rawOrder"`
+	States   []VersionData `json:"states"`
+}
+
+//go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
+type VersionData struct {
+	RemainedAmountS *big.Int    `json:"remainedAmountS" gencodec:"required"`
+	RemainedAmountB *big.Int    `json:"remainedAmountB" gencodec:"required"`
+	Block           *big.Int    `json:"block"`
 	Status          OrderStatus `json:"status"`
 }
 
-type orderStateMarshaling struct {
+type versionDataMarshaling struct {
 	RemainedAmountS *Big
 	RemainedAmountB *Big
+	Block           *Big
 }
 
-type OrderMined struct {
+func (ord *OrderState) LatestVersion() (VersionData, error) {
+	length := len(ord.States)
+	if length < 1 {
+		return VersionData{}, errors.New("no version data")
+	}
+
+	return ord.States[length-1], nil
+}
+
+// 添加新版本，保证所有版本顺序递增
+// 这里不考虑外部订单，外部订单到本地订单的转换在doMethod完成
+func (ord *OrderState) AddVersion(currentVd VersionData) error {
+	preventVd, err := ord.LatestVersion()
+
+	if err != nil {
+		vd := VersionData{}
+		vd.RemainedAmountB = big.NewInt(0)
+		vd.RemainedAmountS = ord.RawOrder.AmountS
+		vd.Block = big.NewInt(0)
+		vd.Status = ORDER_NEW
+		ord.States = append(ord.States, vd)
+
+		log.Debugf("ipfs new order add version data:%s", ord.RawOrder.Hash.Hex())
+		return nil
+	}
+
+	if currentVd.Block.Cmp(preventVd.Block) < 0 {
+		return nil
+	}
+
+	ord.States = append(ord.States, currentVd)
+	log.Debugf("chain order add version data %s->%d", ord.RawOrder.Hash.Hex(), currentVd.Status)
+	return nil
+}
+
+// 放到common package 根据配置决定状态
+func (ord *OrderState) SettleStatus() {
+
 }

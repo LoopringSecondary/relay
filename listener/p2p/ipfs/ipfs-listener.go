@@ -21,63 +21,70 @@ package ipfs
 import (
 	"encoding/json"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ipfs/go-ipfs-api"
 	"sync"
 )
 
-type Whisper struct {
-	PeerOrderChan chan *types.Order
-}
-
 type IPFSListener struct {
 	options config.IpfsOptions
 	sh      *shell.Shell
-	sub     *shell.PubSubSubscription
-	whisper *Whisper
+	subs    []*shell.PubSubSubscription
 	stop    chan struct{}
 	lock    sync.RWMutex
 }
 
-func NewListener(options config.IpfsOptions, whisper *Whisper) *IPFSListener {
+func NewListener(options config.IpfsOptions) *IPFSListener {
 	l := &IPFSListener{}
 
 	l.options = options
 
 	l.sh = shell.NewLocalShell()
-	sub, err := l.sh.PubSubSubscribe(options.Topic)
-	if err != nil {
-		panic(err.Error())
+	for _, topic := range options.Topics {
+		sub, err := l.sh.PubSubSubscribe(topic)
+		if err != nil {
+			log.Fatalf("ipfs listener create sub scribe error:%s", err.Error())
+		}
+		l.subs = append(l.subs, sub)
 	}
-	l.sub = sub
-	l.whisper = whisper
 
 	return l
 }
 
 func (l *IPFSListener) Start() {
 	l.stop = make(chan struct{})
-	go func() {
-		for {
-			record, _ := l.sub.Next()
-			data := record.Data()
-			ord := &types.Order{}
-			err := json.Unmarshal(data, ord)
-			if err != nil {
-				log.Errorf(log.ERROR_P2P_LISTEN_ACCEPT, err.Error())
-			} else {
-				log.Debugf(log.LOG_P2P_ACCEPT, string(data))
-				l.whisper.PeerOrderChan <- ord
+
+	for i := 0; i < len(l.subs); i++ {
+		go func(i int) {
+			for {
+				if record, err := l.subs[i].Next(); nil != err {
+					log.Errorf("err:%s", err.Error())
+				} else {
+					data := record.Data()
+					ord := &types.Order{}
+					err := json.Unmarshal(data, ord)
+					if err != nil {
+						log.Errorf("failed to accept data %s", err.Error())
+					} else {
+						log.Debugf("accept data from ipfs %s", string(data))
+						eventemitter.Emit(eventemitter.OrderBookPeer, ord)
+					}
+				}
 			}
-		}
-	}()
+		}(i)
+	}
 }
 
 func (listener *IPFSListener) Stop() {
 	listener.lock.Lock()
 	close(listener.stop)
 	listener.lock.Unlock()
+}
+
+func (listener *IPFSListener) Restart() {
+
 }
 
 func (listener *IPFSListener) Name() string {

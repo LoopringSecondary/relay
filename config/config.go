@@ -22,8 +22,10 @@ import (
 	"errors"
 	"github.com/naoina/toml"
 	"go.uber.org/zap"
+	"math/big"
 	"os"
 	"reflect"
+	"strings"
 )
 
 func LoadConfig(file string) *GlobalConfig {
@@ -44,6 +46,17 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
+	if c.Common.Develop {
+		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/"
+		c.Database.DataDir = basedir + "leveldb"
+
+		for idx, path := range c.Log.ZapOpts.OutputPaths {
+			if !strings.HasPrefix(path, "std") {
+				c.Log.ZapOpts.OutputPaths[idx] = basedir + path
+			}
+		}
+	}
+
 	return c
 }
 
@@ -55,9 +68,10 @@ type GlobalConfig struct {
 	Database    DbOptions
 	Ipfs        IpfsOptions
 	ChainClient ChainClientOptions
+	Common      CommonOptions
 	Miner       MinerOptions
 	Orderbook   OrderBookOptions
-	Log         zap.Config
+	Log         LogOptions
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -67,7 +81,7 @@ func (c *GlobalConfig) defaultConfig() {
 type IpfsOptions struct {
 	Server string
 	Port   int
-	Topic  string
+	Topics []string
 }
 
 type DbOptions struct {
@@ -80,28 +94,46 @@ type DbOptions struct {
 }
 
 type ChainClientOptions struct {
-	RawUrl     string            `required:"true"`
-	Senders    map[string]string `required:"true"` //address->encrypted private key, used to send transaction
-	Passphrase string            //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
-	Eth        struct {
+	RawUrl  string            `required:"true"`
+	Senders map[string]string `required:"true"` //address->encrypted private key, used to send transaction
+	Eth     struct {
 		GasPrice int
 		GasLimit int
 	}
 }
 
+type CommonOptions struct {
+	LoopringImpAddresses []string         `required:"true"`
+	FilterTopics         []string         `required:"true"`
+	DefaultBlockNumber   *big.Int         `required:"true"`
+	EndBlockNumber       *big.Int         `required:"true"`
+	Passphrase           []byte           `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
+	Develop              bool             `required:"true"`
+	OrderMinAmounts      map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
+}
+
+type LogOptions struct {
+	ZapOpts zap.Config
+}
+
 type MinerOptions struct {
-	Passphrase           string   //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
-	LoopringImpAddresses []string `required:"true"`
-	RingMaxLength        int      `required:"true"` //recommended value:4
-	Miner                string   `required:"true"` //private key, used to sign the ring
-	FeeRecepient         string   //address the recepient of fee
-	IfRegistryRingHash   bool
+	RingMaxLength           int    `required:"true"` //recommended value:4
+	Miner                   string `required:"true"` //private key, used to sign the ring
+	FeeRecepient            string //address the recepient of fee
+	IfRegistryRingHash      bool
+	ThrowIfLrcIsInsuffcient bool
+	RateProvider            struct {
+		LrcAddress    string
+		BaseUrl       string
+		Currency      string
+		CurrenciesMap map[string]string //address -> name
+	}
+	RateRatioCVSThreshold int64
 }
 
 type OrderBookOptions struct {
-	FilterTopics       []string `required:"true"`
-	DefaultBlockNumber int      `required:"true"`
-	Filters            struct {
+	TickerDuration int
+	Filters        struct {
 		BaseFilter struct {
 			MinLrcFee int64
 		}
@@ -114,8 +146,6 @@ type OrderBookOptions struct {
 			Denied []string
 		}
 	}
-
-	OrderMinAmounts map[string]string //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }
 
 func Validator(cv reflect.Value) (bool, error) {

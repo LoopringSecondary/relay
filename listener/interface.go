@@ -21,5 +21,6 @@ package listener
 type Listener interface {
 	Start()
 	Stop()
+	Restart()
 	Name() string
 }

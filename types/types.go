@@ -19,6 +19,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/Loopring/ringminer/log"
 	"math/big"
 )
@@ -98,6 +99,10 @@ func (h *Hash) SetBytes(b []byte) {
 	copy(h[HashLength-len(b):], b)
 }
 
+func (h *Hash) IsZero() bool {
+	return *h == HexToHash("0x")
+}
+
 type Address [AddressLength]byte
 
 func (a Address) Str() string   { return string(a[:]) }
@@ -153,7 +158,7 @@ func BigintToHex(b *big.Int) string {
 	if nil == b {
 		b = big.NewInt(0)
 	}
-	return ToHex(b.Bytes())
+	return fmt.Sprintf("%#x", b)
 }
 
 func HexToBigint(h string) *big.Int {

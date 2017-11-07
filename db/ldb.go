@@ -59,7 +59,7 @@ func NewDB(dbOpts config.DbOptions) *LDBDatabase {
 		WriteBuffer:            cache * opt.MiB, // Two of these are used internally
 	})
 	if err != nil {
-		log.Fatal(log.ERROR_LDB_CREATE_FAILED, log.NewField("content", err.Error()))
+		log.Fatalf("leveldb create failed:%s", err.Error())
 	}
 
 	l.DB = db

@@ -16,27 +16,21 @@
 
 */
 
-package miner
+package realtime
 
 import (
 	"github.com/Loopring/ringminer/types"
-	"math/big"
+	"sync"
 )
 
-type LegalCurrency int
+/**
+todo：功能完整性上，必须要实现的部分
+实时计算最小环，有效的算法
+*/
+//todo:9月22日前完成
+type RealtimeMatcher struct {
+	mtx sync.RWMutex
 
-const (
-	_ LegalCurrency = iota
-	CNY
-	USD
-	EUR
-)
+	OrderChangeChan chan *types.Order //订单改变的channel，在匹配过程中，订单改变可以及时终止或更改当前匹配
 
-const (
-	LRC_ADDRESS = "0x5132a8ce9a61b13b9cAEcd2261abF95323056423"
-)
-
-//todo:获取法币汇率
-func GetLegalRate(currency LegalCurrency, tokenAddress types.Address) *types.EnlargedInt {
-	return &types.EnlargedInt{Value: big.NewInt(100), Decimals: big.NewInt(100)}
 }

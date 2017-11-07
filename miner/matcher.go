@@ -16,21 +16,9 @@
 
 */
 
-package utils
+package miner
 
-import (
-	"github.com/Loopring/ringminer/params"
-	"gopkg.in/urfave/cli.v1"
-	"os"
-	"path/filepath"
-)
-
-func NewApp() *cli.App {
-	app := cli.NewApp()
-	app.Name = filepath.Base(os.Args[0])
-	app.Version = params.Version
-	app.Usage = "the Loopring/ringminer command line interface"
-	app.Author = ""
-	app.Email = ""
-	return app
+type Matcher interface {
+	Start()
+	Stop()
 }

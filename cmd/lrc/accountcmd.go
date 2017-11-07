@@ -86,46 +86,58 @@ func accountCommands() cli.Command {
 	return c
 }
 
-func encrypt(c *cli.Context) {
-	pk := c.String("private-key")
+func encrypt(ctx *cli.Context) {
+	pk := ctx.String("private-key")
 	if !types.IsHex(pk) {
 		panic("the private-key must be hex")
 	}
-	passphrase := c.String("passphrase")
+	passphrase := passphraseFromCtx(ctx, "")
 	p := &types.Passphrase{}
-	p.SetBytes([]byte(passphrase))
+	p.SetBytes(passphrase)
+	passphrase2 := passphraseFromCtx(ctx, "confirm:")
+	p2 := &types.Passphrase{}
+	p2.SetBytes(passphrase2)
+	if p != p2 {
+		panic("doesn't match")
+	}
 
 	if encrypted, err := crypto.AesEncrypted(p.Bytes(), types.FromHex(pk)); nil != err {
-		fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
+		fmt.Fprintf(ctx.App.Writer, "%v \n", err.Error())
 	} else {
-		fmt.Fprintf(c.App.Writer, "encrypted private key:%v \n", types.ToHex(encrypted))
+		fmt.Fprintf(ctx.App.Writer, "encrypted private key:%v \n", types.ToHex(encrypted))
 	}
 }
 
-func decrypt(c *cli.Context) {
-	encrypted := c.String("encrypted")
+func decrypt(ctx *cli.Context) {
+	encrypted := ctx.String("encrypted")
 	if !types.IsHex(encrypted) {
 		panic("the encrypted must be hex")
 	}
-	passphrase := c.String("passphrase")
+	passphrase := passphraseFromCtx(ctx, "")
 	p := &types.Passphrase{}
-	p.SetBytes([]byte(passphrase))
+	p.SetBytes(passphrase)
 
 	if pk, err := crypto.AesDecrypted(p.Bytes(), types.FromHex(encrypted)); nil != err {
-		fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
+		fmt.Fprintf(ctx.App.Writer, "%v \n", err.Error())
 	} else {
-		fmt.Fprintf(c.App.Writer, "private key:%v \n", types.ToHex(pk))
+		fmt.Fprintf(ctx.App.Writer, "private key:%v \n", types.ToHex(pk))
 	}
 }
 
-func generatePrivateKey(c *cli.Context) {
-	passphrase := c.String("passphrase")
-	diaplay := c.Bool("display")
-	pk := c.String("private-key")
+func generatePrivateKey(ctx *cli.Context) {
+	passphrase := passphraseFromCtx(ctx, "")
 	p := &types.Passphrase{}
-	p.SetBytes([]byte(passphrase))
+	p.SetBytes(passphrase)
+	passphrase2 := passphraseFromCtx(ctx, "confirm:")
+	p2 := &types.Passphrase{}
+	p2.SetBytes(passphrase2)
+	if p != p2 {
+		panic("doesn't match")
+	}
+	diaplay := ctx.Bool("display")
+	pk := ctx.String("private-key")
 
-	generateEthPrivateKey(pk, p, diaplay, c)
+	generateEthPrivateKey(pk, p, diaplay, ctx)
 }
 
 func generateEthPrivateKey(pk string, passphrase *types.Passphrase, display bool, c *cli.Context) {

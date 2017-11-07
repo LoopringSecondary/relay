@@ -3,3 +3,5 @@ ringminer.iml
 ringminer
 *.log
 leveldb
+config/ringminer.toml
+>>>>>>> e51fed59f184eb071deefe41da669b564b11732a

@@ -20,6 +20,7 @@ package eth
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/db"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
 	"reflect"
 	"time"
 )
@@ -49,15 +51,16 @@ func (ethClient *EthClient) newRpcMethod(name string) func(result interface{}, a
 }
 
 type CallArg struct {
-	From     string    `json:"from"`
-	To       string    `json:"to"`
-	Gas      types.Big `json:"gas"`
-	GasPrice types.Big `json:"gasPrice"`
-	Value    types.Big `json:"value"`
-	Data     string    `json:"data"`
+	From     types.Address `json:"from"`
+	To       types.Address `json:"to"`
+	Gas      types.Big     `json:"gas"`
+	GasPrice types.Big     `json:"gasPrice"`
+	Value    types.Big     `json:"value"`
+	Data     string        `json:"data"`
+	Nonce    types.Big     `json:"nonce"`
 }
 
-func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
+func NewChainClient(clientConfig config.ChainClientOptions, passphraseBytes []byte) *EthClient {
 	ethClient := &EthClient{}
 	var err error
 	ethClient.rpcClient, err = rpc.Dial(clientConfig.RawUrl)
@@ -71,11 +74,12 @@ func NewChainClient(clientConfig config.ChainClientOptions) *EthClient {
 	ethClient.Subscribe = ethClient.subscribe
 	ethClient.SignAndSendTransaction = ethClient.signAndSendTransaction
 	ethClient.NewContract = ethClient.newContract
+	ethClient.BlockIterator = ethClient.blockIterator
 
 	ethClient.signer = &ethTypes.HomesteadSigner{}
 
 	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(clientConfig.Passphrase))
+	passphrase.SetBytes(passphraseBytes)
 	if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
 		panic(err)
 	} else {
@@ -92,20 +96,19 @@ func (ethClient *EthClient) signAndSendTransaction(result interface{}, from type
 	} else {
 		signer := &ethTypes.HomesteadSigner{}
 
-		signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey)
-
-		log.Debugf("hash:%s, sig:%s", signer.Hash(transaction).Hex(), common.ToHex(signature))
-		if nil != err {
-			return err
-		}
-		if transaction, err = transaction.WithSignature(signer, signature); nil != err {
+		if signature, err := crypto.Sign(signer.Hash(transaction).Bytes(), account.PrivKey); nil != err {
 			return err
 		} else {
-			if txData, err := rlp.EncodeToBytes(transaction); nil != err {
+			if transaction, err = transaction.WithSignature(signer, signature); nil != err {
 				return err
 			} else {
-				err = ethClient.SendRawTransaction(result, common.ToHex(txData))
-				return err
+				if txData, err := rlp.EncodeToBytes(transaction); nil != err {
+					return err
+				} else {
+					log.Debugf("txhash:%s, sig:%s, value:%s, gas:%s, gasPrice:%s", transaction.Hash().Hex(), common.ToHex(signature), transaction.Value().String(), transaction.Gas().String(), transaction.GasPrice().String())
+					err = ethClient.SendRawTransaction(result, common.ToHex(txData))
+					return err
+				}
 			}
 		}
 	}
@@ -127,9 +130,7 @@ func (ethClient *EthClient) doSubscribe(chanVal reflect.Value, filterId string) 
 	}
 }
 
-func (ethClient *EthClient) subscribe(result interface{}, args ...interface{}) error {
-	//the first arg must be filterId
-	filterId := args[0].(string)
+func (ethClient *EthClient) subscribe(result interface{}, filterId string) error {
 	//todo:should check result is a chan
 	chanVal := reflect.ValueOf(result).Elem()
 	go ethClient.doSubscribe(chanVal, filterId)
@@ -199,4 +200,85 @@ func (ethClient *EthClient) applyMethod() error {
 		}
 	}
 	return nil
+}
+
+type BlockIterator struct {
+	startNumber   *big.Int
+	endNumber     *big.Int
+	currentNumber *big.Int
+	ethClient     *EthClient
+	withTxData    bool
+	confirms      uint64
+}
+
+func (iterator *BlockIterator) Next() (interface{}, error) {
+	var block interface{}
+	if iterator.withTxData {
+		block = &BlockWithTxObject{}
+	} else {
+		block = &BlockWithTxHash{}
+	}
+	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
+		return nil, errors.New("finished")
+	}
+
+	var blockNumber types.Big
+	if err := iterator.ethClient.BlockNumber(&blockNumber); nil != err {
+		return nil, err
+	} else {
+		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
+		if blockNumber.Uint64() < confirmNumber {
+		hasNext:
+			for {
+				select {
+				// todo(fk):modify this duration
+				case <-time.After(time.Duration(5 * time.Second)):
+					if err1 := iterator.ethClient.BlockNumber(&blockNumber); nil == err1 && blockNumber.Uint64() >= confirmNumber {
+						break hasNext
+					}
+				}
+			}
+		}
+	}
+
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+		return nil, err
+	} else {
+		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
+		return block, nil
+	}
+}
+
+func (iterator *BlockIterator) Prev() (interface{}, error) {
+	var block interface{}
+	if iterator.withTxData {
+		block = &BlockWithTxObject{}
+	} else {
+		block = &BlockWithTxHash{}
+	}
+	if nil != iterator.startNumber && iterator.startNumber.Cmp(big.NewInt(0)) > 0 && iterator.startNumber.Cmp(iterator.currentNumber) > 0 {
+		return nil, errors.New("finished")
+	}
+	prevNumber := new(big.Int).Sub(iterator.currentNumber, big.NewInt(1))
+	if err := iterator.ethClient.GetBlockByNumber(&block, fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
+		return nil, err
+	} else {
+		if nil == block {
+			return nil, errors.New("there isn't a block with number:" + prevNumber.String())
+		}
+		iterator.currentNumber.Sub(iterator.currentNumber, big.NewInt(1))
+		return block, nil
+	}
+}
+
+func (ethClient *EthClient) blockIterator(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) chainclient.BlockIterator {
+	iterator := &BlockIterator{
+		startNumber:   new(big.Int).Set(startNumber),
+		endNumber:     endNumber,
+		currentNumber: new(big.Int).Set(startNumber),
+		ethClient:     ethClient,
+		withTxData:    withTxData,
+		confirms:      confirms,
+	}
+	return iterator
 }

@@ -38,7 +38,7 @@ func TestEthCrypto_SigToAddress(t *testing.T) {
 	//t.Log("address", common.Bytes2Hex(address))
 	config := &config.ChainClientOptions{}
 	config.RawUrl = "http://127.0.0.1:8545"
-	ethClient := EthClient.NewChainClient(*config)
+	ethClient := EthClient.NewChainClient(*config, "sa")
 	tx := &ethTypes.Transaction{}
 	if err := ethClient.GetTransactionByHash(tx, "0xb0fae8141315ea396b5b6c5576e59b15c2ee156ef0d8c06f32753575f4616557"); err != nil {
 		t.Error(err.Error())
@@ -82,7 +82,7 @@ func TestEthCrypto_SigToAddress(t *testing.T) {
 func TestWithContract(t *testing.T) {
 	config := &config.ChainClientOptions{}
 	config.RawUrl = "http://127.0.0.1:8545"
-	ethClient := EthClient.NewChainClient(*config)
+	ethClient := EthClient.NewChainClient(*config, "sa")
 	type SigTest struct {
 		chainclient.Contract
 		CalculateHash          chainclient.AbiMethod
