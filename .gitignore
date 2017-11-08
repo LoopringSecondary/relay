@@ -2,5 +2,5 @@
 ringminer.iml
 ringminer
 *.log
-leveldb1
+lrcleveldb
 config/ringminer.toml

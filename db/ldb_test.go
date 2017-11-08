@@ -26,7 +26,7 @@ import (
 	"testing"
 )
 
-const dbname = "leveldb"
+const dbname = "lrcleveldb"
 
 var sep = func() string { return string(filepath.Separator) }
 

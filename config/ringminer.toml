@@ -25,8 +25,8 @@ ticker_duration = 1
 [database]
     server = "localhost"
     port = 8001
-    data_dir = "./leveldb"
-    name = "leveldb"
+    data_dir = "./lrcleveldb"
+    name = "lrcleveldb"
     cache_capacity = 8
     buffer_capacity = 4
 
