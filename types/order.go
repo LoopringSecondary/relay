@@ -61,9 +61,8 @@ type Order struct {
 	V                     uint8    `json:"v" gencodec:"required"`
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
-
-	Owner Address `json:"owner"`
-	Hash  Hash    `json:"hash"`
+	Owner                 Address  `json:"owner"`
+	Hash                  Hash     `json:"hash"`
 }
 
 type orderMarshaling struct {

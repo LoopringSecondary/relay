@@ -80,8 +80,8 @@ func (l *IPFSSubServiceImpl) Register(topic string) error {
 
 	var (
 		proxy *subProxy
-		err error
-		ok bool
+		err   error
+		ok    bool
 	)
 
 	if proxy, ok = l.subs[topic]; ok {
@@ -105,7 +105,7 @@ func (l *IPFSSubServiceImpl) Unregister(topic string) error {
 
 	var (
 		proxy *subProxy
-		ok bool
+		ok    bool
 	)
 
 	if proxy, ok = l.subs[topic]; !ok {
@@ -139,9 +139,9 @@ func (l *IPFSSubServiceImpl) Restart() {
 }
 
 type subProxy struct {
-	topic string
+	topic    string
 	iterator *shell.PubSubSubscription
-	stop chan struct{}
+	stop     chan struct{}
 }
 
 func (l *IPFSSubServiceImpl) newSubProxy(topic string) (*subProxy, error) {

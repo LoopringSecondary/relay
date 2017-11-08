@@ -19,21 +19,21 @@
 package gateway_test
 
 import (
-	"testing"
-	"github.com/Loopring/ringminer/test"
-	"github.com/Loopring/ringminer/gateway"
-	"time"
-	"github.com/ipfs/go-ipfs-api"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/gateway"
+	"github.com/Loopring/ringminer/test"
+	"github.com/ipfs/go-ipfs-api"
+	"testing"
+	"time"
 )
 
 var (
 	options config.IpfsOptions
-	impl *gateway.IPFSSubServiceImpl
-	sh *shell.Shell
+	impl    *gateway.IPFSSubServiceImpl
+	sh      *shell.Shell
 )
 
-func prepare(){
+func prepare() {
 	globalConfig := test.LoadConfig()
 	impl = gateway.NewIPFSSubService(globalConfig.Ipfs)
 	options = globalConfig.Ipfs

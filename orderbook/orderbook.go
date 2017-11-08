@@ -62,18 +62,6 @@ func NewOrderBook(options config.OrderBookOptions, commOpts config.CommonOptions
 	ob.ordTimeList = &OrderTimestampList{}
 	ob.cutoffcache = NewCutoffIndexCache(database)
 
-	//todo:filters init
-	filters := []Filter{}
-	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.Filters.BaseFilter.MinLrcFee)}
-	tokenSFilter := &TokenSFilter{}
-	tokenBFilter := &TokenBFilter{}
-	cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
-
-	filters = append(filters, baseFilter)
-	filters = append(filters, tokenSFilter)
-	filters = append(filters, tokenBFilter)
-	filters = append(filters, cutoffFilter)
-
 	return ob
 }
 

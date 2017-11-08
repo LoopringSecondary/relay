@@ -88,7 +88,7 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	return order
 }
 
-func LoadConfig() *config.GlobalConfig{
+func LoadConfig() *config.GlobalConfig {
 	return loadConfig()
 }
 
