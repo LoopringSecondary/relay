@@ -33,7 +33,9 @@ ticker_duration = 1
 [ipfs]
     server = "localhost"
     port = 8080
-    topics = ["test1_topic"]
+    listen_topics = ["test1_topic"]
+    broadcast_topics = ["test11_topic"]
+    is_broadcast = false
 
 [chain_client]
     raw_url = "http://10.137.107.248:8545"

@@ -65,13 +65,14 @@ type GlobalConfig struct {
 	Owner struct {
 		Name string
 	}
-	Database    DbOptions
-	Ipfs        IpfsOptions
-	ChainClient ChainClientOptions
-	Common      CommonOptions
-	Miner       MinerOptions
-	Orderbook   OrderBookOptions
-	Log         LogOptions
+	Database       DbOptions
+	Ipfs           IpfsOptions
+	GatewayFilters GatewayFiltersOptions
+	ChainClient    ChainClientOptions
+	Common         CommonOptions
+	Miner          MinerOptions
+	Orderbook      OrderBookOptions
+	Log            LogOptions
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -79,9 +80,11 @@ func (c *GlobalConfig) defaultConfig() {
 }
 
 type IpfsOptions struct {
-	Server string
-	Port   int
-	Topics []string
+	Server          string
+	Port            int
+	ListenTopics    []string
+	BroadcastTopics []string
+	IsBroadcast     bool
 }
 
 type DbOptions struct {
@@ -133,18 +136,19 @@ type MinerOptions struct {
 
 type OrderBookOptions struct {
 	TickerDuration int
-	Filters        struct {
-		BaseFilter struct {
-			MinLrcFee int64
-		}
-		TokenSFilter struct {
-			Allow  []string
-			Denied []string
-		}
-		TokenBFilter struct {
-			Allow  []string
-			Denied []string
-		}
+}
+
+type GatewayFiltersOptions struct {
+	BaseFilter struct {
+		MinLrcFee int64
+	}
+	TokenSFilter struct {
+		Allow  []string
+		Denied []string
+	}
+	TokenBFilter struct {
+		Allow  []string
+		Denied []string
 	}
 }
 

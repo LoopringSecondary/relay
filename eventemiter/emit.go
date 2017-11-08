@@ -33,6 +33,7 @@ const (
 	Fork                   = "Fork"             //chain forked
 	RingSubmitFailed       = "RingSubmitFailed" //submit ring failed
 	Transaction            = "Transaction"
+	Gateway                = "Gateway"
 	OrderBookPeer          = "OrderBookPeer"
 	OrderBookChain         = "OrderBookChain"
 	MinedOrderState        = "MinedOrderState" //orderbook send orderstate to miner
