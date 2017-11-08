@@ -16,7 +16,7 @@
 
 */
 
-package ipfs_test
+package gateway_test
 
 import (
 	"encoding/json"
@@ -90,7 +90,7 @@ func setOrder2() *types.Order {
 }
 
 func pubMessage(sh *shell.Shell, data string) {
-	topic := testParams.Config.Ipfs.Topic
+	topic := testParams.Config.Ipfs.ListenTopics[0]
 	err := sh.PubSubPublish(topic, data)
 	if err != nil {
 		panic(err.Error())

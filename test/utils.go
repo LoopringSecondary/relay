@@ -88,6 +88,10 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	return order
 }
 
+func LoadConfig() *config.GlobalConfig{
+	return loadConfig()
+}
+
 func LoadConfigAndGenerateTestParams() *TestParams {
 	params := &TestParams{Imp: &chainclient.LoopringProtocolImpl{}, Registry: &chainclient.LoopringRinghashRegistry{}}
 	params.Accounts = testAccounts
