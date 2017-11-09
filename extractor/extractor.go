@@ -16,7 +16,7 @@
 
 */
 
-package eth
+package extractor
 
 import (
 	"errors"
@@ -39,8 +39,14 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
+type ExtractorService interface {
+	Start()
+	Stop()
+	Restart()
+}
+
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
-type EthClientListener struct {
+type ExtractorServiceImpl struct {
 	options         config.ChainClientOptions
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
@@ -52,12 +58,12 @@ type EthClientListener struct {
 	contractEvents  map[types.Address]map[types.Hash]chainclient.AbiEvent
 }
 
-func NewListener(options config.ChainClientOptions,
+func NewExtractorService(options config.ChainClientOptions,
 	commonOpts config.CommonOptions,
 	ethClient *eth.EthClient,
 	ob *orderbook.OrderBook,
-	database db.Database) *EthClientListener {
-	var l EthClientListener
+	database db.Database) *ExtractorServiceImpl {
+	var l ExtractorServiceImpl
 
 	l.rds = NewRds(database, commonOpts)
 	l.options = options
@@ -71,7 +77,7 @@ func NewListener(options config.ChainClientOptions,
 	return &l
 }
 
-func (l *EthClientListener) loadContract() {
+func (l *ExtractorServiceImpl) loadContract() {
 	l.contractEvents = make(map[types.Address]map[types.Hash]chainclient.AbiEvent)
 	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
 
@@ -102,7 +108,7 @@ func (l *EthClientListener) loadContract() {
 	}
 }
 
-func (l *EthClientListener) Start() {
+func (l *ExtractorServiceImpl) Start() {
 	l.stop = make(chan struct{})
 
 	log.Info("eth listener start...")
@@ -137,7 +143,7 @@ func (l *EthClientListener) Start() {
 	}()
 }
 
-func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
+func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 	txhashs := []types.Hash{}
 
 	for _, tx := range block.Transactions {
@@ -198,12 +204,12 @@ func (l *EthClientListener) doBlock(block eth.BlockWithTxObject) {
 	}
 }
 
-func (l *EthClientListener) doMethod(input string) error {
+func (l *ExtractorServiceImpl) doMethod(input string) error {
 	return nil
 }
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
-func (l *EthClientListener) handleSubmitRingMethod(input eventemitter.EventData) error {
+func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
 	println("doMethoddoMethoddoMethoddoMethoddoMethoddoMethod")
 	//println(input.(string))
 	// todo: unpack method
@@ -212,7 +218,7 @@ func (l *EthClientListener) handleSubmitRingMethod(input eventemitter.EventData)
 	return nil
 }
 
-func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData) error {
+func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventData) error {
 	log.Debugf("eth listener log event:orderFilled")
 
 	evt := input.(chainclient.ContractData).Event.(chainclient.OrderFilledEvent)
@@ -245,7 +251,7 @@ func (l *EthClientListener) handleOrderFilledEvent(input eventemitter.EventData)
 	return nil
 }
 
-func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventData) error {
+func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
 	log.Debugf("eth listener log event:orderCancelled")
 
 	evt := input.(chainclient.ContractData).Event.(chainclient.OrderCancelledEvent)
@@ -269,15 +275,15 @@ func (l *EthClientListener) handleOrderCancelledEvent(input eventemitter.EventDa
 	return nil
 }
 
-func (l *EthClientListener) handleCutoffTimestampEvent(input eventemitter.EventData) error {
+func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
 	return nil
 }
 
-func (l *EthClientListener) handleRinghashSubmitEvent(input eventemitter.EventData) error {
+func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.EventData) error {
 	return nil
 }
 
-func (l *EthClientListener) Stop() {
+func (l *ExtractorServiceImpl) Stop() {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
@@ -285,15 +291,15 @@ func (l *EthClientListener) Stop() {
 }
 
 // 重启(分叉)时先关停subscribeEvents，然后关
-func (l *EthClientListener) Restart() {
+func (l *ExtractorServiceImpl) Restart() {
 
 }
 
-func (l *EthClientListener) Name() string {
+func (l *ExtractorServiceImpl) Name() string {
 	return "eth-listener"
 }
 
-func (l *EthClientListener) getBlockNumberRange() (*big.Int, *big.Int) {
+func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
 
@@ -311,7 +317,7 @@ func (l *EthClientListener) getBlockNumberRange() (*big.Int, *big.Int) {
 	return start, end
 }
 
-func (l *EthClientListener) judgeContractAddress(addr string) bool {
+func (l *ExtractorServiceImpl) judgeContractAddress(addr string) bool {
 	for _, v := range l.commOpts.LoopringImpAddresses {
 		if addr == v {
 			return true
@@ -320,7 +326,7 @@ func (l *EthClientListener) judgeContractAddress(addr string) bool {
 	return false
 }
 
-func (l *EthClientListener) addContractEvent(event chainclient.AbiEvent) {
+func (l *ExtractorServiceImpl) addContractEvent(event chainclient.AbiEvent) {
 	id := types.HexToHash(event.Id())
 	addr := event.Address()
 
@@ -333,7 +339,7 @@ func (l *EthClientListener) addContractEvent(event chainclient.AbiEvent) {
 	l.contractEvents[addr][id] = event
 }
 
-func (l *EthClientListener) addContractMethod(method chainclient.AbiMethod) {
+func (l *ExtractorServiceImpl) addContractMethod(method chainclient.AbiMethod) {
 	id := types.HexToHash(method.MethodId())
 	addr := method.Address()
 
@@ -344,7 +350,7 @@ func (l *EthClientListener) addContractMethod(method chainclient.AbiMethod) {
 	l.contractMethods[addr][id] = method
 }
 
-func (l *EthClientListener) getContractEvent(addr types.Address, id types.Hash) (chainclient.AbiEvent, error) {
+func (l *ExtractorServiceImpl) getContractEvent(addr types.Address, id types.Hash) (chainclient.AbiEvent, error) {
 	var (
 		impl  map[types.Hash]chainclient.AbiEvent
 		event chainclient.AbiEvent
@@ -360,7 +366,7 @@ func (l *EthClientListener) getContractEvent(addr types.Address, id types.Hash) 
 	return event, nil
 }
 
-func (l *EthClientListener) getContractMethod(addr types.Address, id types.Hash) (chainclient.AbiMethod, error) {
+func (l *ExtractorServiceImpl) getContractMethod(addr types.Address, id types.Hash) (chainclient.AbiMethod, error) {
 	var (
 		impl   map[types.Hash]chainclient.AbiMethod
 		method chainclient.AbiMethod

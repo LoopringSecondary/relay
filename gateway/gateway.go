@@ -16,7 +16,7 @@ type Filter interface {
 
 func Initialize(options *config.GatewayFiltersOptions) {
 	// add gateway watcher
-	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: handleIPFSOrder}
+	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
 	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
 
 	// add filters
@@ -50,7 +50,7 @@ func Initialize(options *config.GatewayFiltersOptions) {
 	//filters = append(filters, cutoffFilter)
 }
 
-func handleIPFSOrder(input eventemitter.EventData) error {
+func HandleOrder(input eventemitter.EventData) error {
 	for _, v := range filters {
 		valid, err := v.filter(input.(*types.Order))
 		if !valid {
