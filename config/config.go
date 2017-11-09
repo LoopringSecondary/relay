@@ -66,6 +66,7 @@ type GlobalConfig struct {
 		Name string
 	}
 	Database       DbOptions
+	Mysql          MysqlOptions
 	Ipfs           IpfsOptions
 	GatewayFilters GatewayFiltersOptions
 	ChainClient    ChainClientOptions
@@ -150,6 +151,14 @@ type GatewayFiltersOptions struct {
 		Allow  []string
 		Denied []string
 	}
+}
+
+type MysqlOptions struct {
+	User        string
+	Password    string
+	DbName      string
+	Loc         string
+	TablePrefix string
 }
 
 func Validator(cv reflect.Value) (bool, error) {

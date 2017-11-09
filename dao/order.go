@@ -16,19 +16,9 @@
 
 */
 
-package types_test
+package dao
 
-import (
-	"github.com/Loopring/ringminer/types"
-	"math/big"
-	"testing"
-)
-
-func TestOrder_GeneratePrice(t *testing.T) {
-	ord := types.Order{}
-	ord.AmountB = big.NewInt(100)
-	ord.AmountS = big.NewInt(5)
-	ord.GeneratePrice()
-
-	t.Log(ord.Price.String())
+type Order struct {
+	ID        int    `gorm:"column:id;primary_key;"`
+	OrderHash []byte `gorm:"column:order_hash;type:varchar(64);unique_index"`
 }

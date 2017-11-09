@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
 	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
+	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/extractor"
 	"github.com/Loopring/ringminer/gateway"
@@ -37,6 +38,7 @@ import (
 // TODO(fk): add services
 type Node struct {
 	globalConfig     *config.GlobalConfig
+	rdsService       dao.RdsService
 	ipfsSubService   gateway.IPFSSubService
 	extractorService extractor.ExtractorService
 	orderbook        *orderbook.OrderBook
@@ -57,6 +59,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 
+	n.registerMysql()
 	n.registerIPFSSubService()
 	n.registerOrderBook(database)
 	n.registerMiner(ethClient.Client, database)
@@ -66,6 +69,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 }
 
 func (n *Node) Start() {
+	n.rdsService.Prepare()
 
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
@@ -97,6 +101,10 @@ func (n *Node) Stop() {
 	close(n.stop)
 
 	n.lock.RUnlock()
+}
+
+func (n *Node) registerMysql() {
+	n.rdsService = dao.NewRdsService(n.globalConfig.Mysql)
 }
 
 func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
