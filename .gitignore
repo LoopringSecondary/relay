@@ -4,3 +4,4 @@ ringminer
 *.log
 lrcleveldb
 config/ringminer.toml
+dao/err.log

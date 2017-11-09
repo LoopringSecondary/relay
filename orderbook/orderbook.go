@@ -130,7 +130,7 @@ func (ob *OrderBook) handlePeerOrder(input eventemitter.EventData) error {
 	state.RawOrder = *ord
 	state.RawOrder.Hash = orderhash
 	state.RawOrder.GeneratePrice()
-	
+
 	log.Debugf("orderbook accept new order hash:%s", orderhash.Hex())
 	log.Debugf("orderbook accept new order amountS:%s", ord.AmountS.String())
 	log.Debugf("orderbook accept new order amountB:%s", ord.AmountB.String())

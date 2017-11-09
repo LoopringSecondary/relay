@@ -61,7 +61,7 @@ type Order struct {
 	V                     uint8    `json:"v" gencodec:"required"`
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
-	Price                 *big.Rat `json:"rate"`
+	Price                 *big.Rat `json:"price"`
 	Owner                 Address  `json:"owner"`
 	Hash                  Hash     `json:"hash"`
 }

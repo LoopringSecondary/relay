@@ -24,8 +24,9 @@ import (
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/crypto"
 	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
+	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/db"
-	ethChainListener "github.com/Loopring/ringminer/listener/chain/eth"
+	"github.com/Loopring/ringminer/extractor"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
@@ -239,10 +240,10 @@ func loadConfig() *config.GlobalConfig {
 	return c
 }
 
-func LoadConfigAndGenerateSimpleEthListener() *ethChainListener.EthClientListener {
+func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
 	db := db.NewDB(c.Database)
-	l := ethChainListener.NewListener(c.ChainClient, c.Common, nil, nil, db)
+	l := extractor.NewExtractorService(c.ChainClient, c.Common, nil, nil, db)
 	return l
 }
 
@@ -251,4 +252,9 @@ func LoadConfigAndGenerateOrderBook() *orderbook.OrderBook {
 	db := db.NewDB(c.Database)
 	ob := orderbook.NewOrderBook(c.Orderbook, c.Common, db)
 	return ob
+}
+
+func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
+	c := loadConfig()
+	return dao.NewRdsService(c.Mysql)
 }

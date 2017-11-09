@@ -20,8 +20,8 @@ package types_test
 
 import (
 	"github.com/Loopring/ringminer/types"
-	"testing"
 	"math/big"
+	"testing"
 )
 
 func TestOrder_GeneratePrice(t *testing.T) {

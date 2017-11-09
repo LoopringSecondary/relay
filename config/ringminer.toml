@@ -30,6 +30,13 @@ ticker_duration = 1
     cache_capacity = 8
     buffer_capacity = 4
 
+[mysql]
+    user = "root"
+    password = "111111"
+    db_name = "loopring_order_manager"
+    loc = "Local"
+    table_prefix = "lpr_"
+
 [ipfs]
     server = "localhost"
     port = 8080
