@@ -25,9 +25,8 @@ import (
 	"github.com/Loopring/ringminer/crypto"
 	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
 	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/listener"
-	ethListenerLib "github.com/Loopring/ringminer/listener/chain/eth"
-	ipfsListenerLib "github.com/Loopring/ringminer/listener/p2p/ipfs"
+	"github.com/Loopring/ringminer/extractor"
+	"github.com/Loopring/ringminer/gateway"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/miner/bucket"
 	"github.com/Loopring/ringminer/orderbook"
@@ -37,14 +36,14 @@ import (
 
 // TODO(fk): add services
 type Node struct {
-	globalConfig  *config.GlobalConfig
-	p2pListener   listener.Listener
-	chainListener listener.Listener
-	orderbook     *orderbook.OrderBook
-	miner         *miner.Miner
-	stop          chan struct{}
-	lock          sync.RWMutex
-	logger        *zap.Logger
+	globalConfig     *config.GlobalConfig
+	ipfsSubService   gateway.IPFSSubService
+	extractorService extractor.ExtractorService
+	orderbook        *orderbook.OrderBook
+	miner            *miner.Miner
+	stop             chan struct{}
+	lock             sync.RWMutex
+	logger           *zap.Logger
 }
 
 func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
@@ -58,18 +57,18 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 
-	n.registerP2PListener()
+	n.registerIPFSSubService()
 	n.registerOrderBook(database)
 	n.registerMiner(ethClient.Client, database)
-	n.registerEthListener(ethClient, database)
+	n.registerExtractor(ethClient, database)
 
 	return n
 }
 
 func (n *Node) Start() {
 
-	n.chainListener.Start()
-	n.p2pListener.Start()
+	n.extractorService.Start()
+	n.ipfsSubService.Start()
 	n.miner.Start()
 
 	n.orderbook.Start()
@@ -100,12 +99,12 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
-func (n *Node) registerEthListener(client *ethClientLib.EthClient, database db.Database) {
-	n.chainListener = ethListenerLib.NewListener(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.orderbook, database)
+func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.orderbook, database)
 }
 
-func (n *Node) registerP2PListener() {
-	n.p2pListener = ipfsListenerLib.NewListener(n.globalConfig.Ipfs)
+func (n *Node) registerIPFSSubService() {
+	n.ipfsSubService = gateway.NewIPFSSubService(n.globalConfig.Ipfs)
 }
 
 func (n *Node) registerOrderBook(database db.Database) {

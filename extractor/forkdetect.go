@@ -16,7 +16,7 @@
 
 */
 
-package eth
+package extractor
 
 import (
 	"errors"
@@ -38,7 +38,7 @@ type forkDetect struct {
 }
 
 //fork detect
-func (l *EthClientListener) StartForkDetect() error {
+func (l *ExtractorServiceImpl) StartForkDetect() error {
 
 	detectedEventChan := make(chan chainclient.ForkedEvent)
 
@@ -65,7 +65,7 @@ func (l *EthClientListener) StartForkDetect() error {
 }
 
 //todo:should be optimized， 启动点等需要重新考虑，获取分叉点等的问题
-func (l *EthClientListener) forkDetect(database db.Database) error {
+func (l *ExtractorServiceImpl) forkDetect(database db.Database) error {
 	detect := &forkDetect{}
 	detect.hashStore = db.NewTable(database, "fork_")
 	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
@@ -104,7 +104,7 @@ func (l *EthClientListener) forkDetect(database db.Database) error {
 	return nil
 }
 
-func (l *EthClientListener) getForkedBlock(parentNumber *big.Int, hashStore db.Database) (*big.Int, types.Hash, error) {
+func (l *ExtractorServiceImpl) getForkedBlock(parentNumber *big.Int, hashStore db.Database) (*big.Int, types.Hash, error) {
 	bs, _ := hashStore.Get(parentNumber.Bytes())
 	parentStoredHash := types.BytesToHash(bs)
 	if parentStoredHash.IsZero() {

@@ -16,7 +16,7 @@
 
 */
 
-package eth
+package extractor
 
 import (
 	"encoding/json"
@@ -51,7 +51,7 @@ type Rds struct {
 //go:generate gencodec -type BlockIndex -field-override blockIndexMarshaling -out gen_blockindex_json.go
 type BlockIndex struct {
 	Number     *big.Int   `json:"number" 		gencodec:"required"`
-	Hash       types.Hash `json:"hash"		gencodec:"required"`
+	Hash       types.Hash `json:"hash"			gencodec:"required"`
 	ParentHash types.Hash `json:"parentHash"	gencodec:"required"`
 }
 
