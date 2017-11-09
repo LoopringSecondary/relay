@@ -61,6 +61,7 @@ type Order struct {
 	V                     uint8    `json:"v" gencodec:"required"`
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
+	Price                 *big.Rat `json:"rate"`
 	Owner                 Address  `json:"owner"`
 	Hash                  Hash     `json:"hash"`
 }
@@ -137,6 +138,10 @@ func (o *Order) SignerAddress() (Address, error) {
 		address.SetBytes(addressBytes)
 		return *address, nil
 	}
+}
+
+func (o *Order) GeneratePrice() {
+	o.Price = new(big.Rat).SetFrac(o.AmountB, o.AmountS)
 }
 
 //RateAmountS、FeeSelection 需要提交到contract
