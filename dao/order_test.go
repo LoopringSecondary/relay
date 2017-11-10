@@ -20,9 +20,9 @@ package dao_test
 import (
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/test"
-	"testing"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"testing"
 )
 
 func TestRdsServiceImpl_NewOrder(t *testing.T) {
@@ -31,8 +31,8 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	ord := &dao.Order{}
 
 	suffix := "100002000030000418"
-	amountB, _ := new(big.Int).SetString("20000000" + suffix, 0)
-	amountS, _ := new(big.Int).SetString("1" + suffix, 0)
+	amountB, _ := new(big.Int).SetString("20000000"+suffix, 0)
+	amountS, _ := new(big.Int).SetString("1"+suffix, 0)
 	fee, _ := new(big.Int).SetString("466778", 0)
 	price, _ := new(big.Rat).SetFrac(amountB, amountS).Float64()
 
