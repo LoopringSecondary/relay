@@ -119,3 +119,10 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 
 	return nil
 }
+
+func (s *RdsServiceImpl) GetOrderByHash(orderhash types.Hash) (*Order, error) {
+	//s.db.Find()
+	// todo
+
+	return nil, nil
+}

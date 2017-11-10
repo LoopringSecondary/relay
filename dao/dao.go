@@ -20,6 +20,7 @@ package dao
 
 import (
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/types"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
@@ -32,6 +33,7 @@ type RdsService interface {
 	Last(item interface{}) error
 	Update(item interface{}) error
 	FindAll(item interface{}) error
+	GetOrderByHash(orderhash types.Hash) (*Order, error)
 }
 
 type RdsServiceImpl struct {

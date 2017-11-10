@@ -23,11 +23,11 @@ import (
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
-	"github.com/Loopring/ringminer/orderbook"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
@@ -50,7 +50,7 @@ type ExtractorServiceImpl struct {
 	options         config.ChainClientOptions
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
-	ob              *orderbook.OrderBook
+	dao             dao.RdsService
 	rds             *Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
@@ -61,7 +61,7 @@ type ExtractorServiceImpl struct {
 func NewExtractorService(options config.ChainClientOptions,
 	commonOpts config.CommonOptions,
 	ethClient *eth.EthClient,
-	ob *orderbook.OrderBook,
+	rds dao.RdsService,
 	database db.Database) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
@@ -69,7 +69,7 @@ func NewExtractorService(options config.ChainClientOptions,
 	l.options = options
 	l.commOpts = commonOpts
 	l.ethClient = ethClient
-	l.ob = ob
+	l.dao = rds
 
 	l.loadContract()
 
@@ -238,15 +238,17 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 	}
 
 	hash := types.BytesToHash(evt.OrderHash)
-	ord, err := l.ob.GetOrder(hash)
+	model, err := l.dao.GetOrderByHash(hash)
 	if err != nil {
 		return err
 	}
-	if err := evt.ConvertDown(ord); err != nil {
+
+	state := &types.OrderState{}
+	if err := model.ConvertUp(state); err != nil {
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.OrderBookChain, ord)
+	eventemitter.Emit(eventemitter.OrderBookExtractor, state)
 
 	return nil
 }
@@ -264,13 +266,17 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	}
 
 	hash := types.BytesToHash(evt.OrderHash)
-	ord, err := l.ob.GetOrder(hash)
+	model, err := l.dao.GetOrderByHash(hash)
 	if err != nil {
 		return err
 	}
 
-	evt.ConvertDown(ord)
-	eventemitter.Emit(eventemitter.OrderBookChain, ord)
+	state := &types.OrderState{}
+	if err := model.ConvertUp(state); err != nil {
+		return err
+	}
+
+	eventemitter.Emit(eventemitter.OrderBookExtractor, state)
 
 	return nil
 }

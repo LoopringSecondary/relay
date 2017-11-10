@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/eventemiter"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
@@ -51,14 +52,26 @@ func Initialize(options *config.GatewayFiltersOptions) {
 }
 
 func HandleOrder(input eventemitter.EventData) error {
+	ord := input.(types.Order)
+
+	orderhash := ord.GenerateHash()
+	state := &types.OrderState{}
+	state.RawOrder = ord
+	state.RawOrder.Hash = orderhash
+	state.RawOrder.GeneratePrice()
+
+	log.Debugf("gateway accept new order hash:%s", orderhash.Hex())
+	log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
+	log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
+
 	for _, v := range filters {
-		valid, err := v.filter(input.(*types.Order))
+		valid, err := v.filter(&ord)
 		if !valid {
 			return err
 		}
 	}
 
-	eventemitter.Emit(eventemitter.OrderBookPeer, input)
+	eventemitter.Emit(eventemitter.OrderBookGateway, state)
 
 	// todo: broadcast
 	return nil

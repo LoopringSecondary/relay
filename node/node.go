@@ -30,7 +30,7 @@ import (
 	"github.com/Loopring/ringminer/gateway"
 	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/miner/bucket"
-	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/ordermanager"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -41,7 +41,7 @@ type Node struct {
 	rdsService       dao.RdsService
 	ipfsSubService   gateway.IPFSSubService
 	extractorService extractor.ExtractorService
-	orderbook        *orderbook.OrderBook
+	orderManager     ordermanager.OrderManager
 	miner            *miner.Miner
 	stop             chan struct{}
 	lock             sync.RWMutex
@@ -61,7 +61,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	n.registerMysql()
 	n.registerIPFSSubService()
-	n.registerOrderBook(database)
+	n.registerOrderManager(database)
 	n.registerMiner(ethClient.Client, database)
 	n.registerExtractor(ethClient, database)
 
@@ -75,7 +75,7 @@ func (n *Node) Start() {
 	n.ipfsSubService.Start()
 	n.miner.Start()
 
-	n.orderbook.Start()
+	n.orderManager.Start()
 }
 
 func (n *Node) Wait() {
@@ -108,15 +108,15 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.orderbook, database)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService, database)
 }
 
 func (n *Node) registerIPFSSubService() {
 	n.ipfsSubService = gateway.NewIPFSSubService(n.globalConfig.Ipfs)
 }
 
-func (n *Node) registerOrderBook(database db.Database) {
-	n.orderbook = orderbook.NewOrderBook(n.globalConfig.Orderbook, n.globalConfig.Common, database)
+func (n *Node) registerOrderManager(database db.Database) {
+	n.orderManager = ordermanager.NewOrderBook(n.globalConfig.Orderbook, n.rdsService)
 }
 
 func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {

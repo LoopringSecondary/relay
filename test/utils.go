@@ -28,7 +28,7 @@ import (
 	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/extractor"
 	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/orderbook"
+	"github.com/Loopring/ringminer/ordermanager"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -247,10 +247,10 @@ func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	return l
 }
 
-func LoadConfigAndGenerateOrderBook() *orderbook.OrderBook {
+func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
 	c := loadConfig()
 	db := db.NewDB(c.Database)
-	ob := orderbook.NewOrderBook(c.Orderbook, c.Common, db)
+	ob := ordermanager.NewOrderBook(c.Orderbook, c.Common, db)
 	return ob
 }
 

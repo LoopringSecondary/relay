@@ -169,7 +169,7 @@ func (p *subProxy) listen() {
 				log.Errorf("failed to accept data %s", err.Error())
 			} else {
 				log.Debugf("accept data from topic %s and data is %s", p.topic, string(data))
-				eventemitter.Emit(eventemitter.OrderBookPeer, ord)
+				eventemitter.Emit(eventemitter.Gateway, ord)
 			}
 		}
 	}()
