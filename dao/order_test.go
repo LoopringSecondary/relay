@@ -36,6 +36,7 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	fee, _ := new(big.Int).SetString("466778", 0)
 	price, _ := new(big.Rat).SetFrac(amountB, amountS).Float64()
 
+	ord.Protocol = types.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876218").Hex()
 	ord.OrderHash = types.HexToHash("0x4753513505617586b115b82a0131f5a5da4325063e3f912a49b1aed7ceb80f26").Hex()
 	ord.Owner = types.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876219").Hex()
 	ord.TokenB = types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e").Hex()
