@@ -39,7 +39,7 @@ type Order struct {
 	Ttl                   int64   `gorm:"column:ttl"`
 	Salt                  int64   `gorm:"column:salt"`
 	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(128)"`
-	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb;type:bit"`
+	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
 	R                     string  `gorm:"column:r;type:varchar(66)"`
@@ -121,8 +121,27 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 }
 
 func (s *RdsServiceImpl) GetOrderByHash(orderhash types.Hash) (*Order, error) {
-	//s.db.Find()
-	// todo
+	order := &Order{}
+	err := s.db.Where("order_hash = ?", orderhash.Hex()).First(order).Error
+	return order, err
+}
 
-	return nil, nil
+func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error) {
+	var (
+		list        []Order
+		filterhashs []string
+		err         error
+	)
+
+	for _, v := range orderhashList {
+		filterhashs = append(filterhashs, v.Hex())
+	}
+
+	if len(filterhashs) == 0 {
+		err = s.db.Order("price desc").Find(&list).Error
+	} else {
+		err = s.db.Where("order_hash not in(?)", filterhashs).Order("price desc").Find(&list).Error
+	}
+
+	return list, err
 }
