@@ -64,6 +64,7 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 func (s *RdsServiceImpl) Prepare() {
 	var tables []interface{}
 	tables = append(tables, &Order{})
+	tables = append(tables, &Block{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
