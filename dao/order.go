@@ -45,6 +45,7 @@ type Order struct {
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
+	BlockNumber           []byte  `gorm:"column:block_num;varchar(30)"`
 }
 
 func (o *Order) ConvertDown(state *types.OrderState) error {
@@ -62,6 +63,9 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 		return err
 	}
 	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
+		return err
+	}
+	if o.BlockNumber, err = state.BlockNumber.MarshalText(); err != nil {
 		return err
 	}
 
@@ -95,6 +99,10 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	}
 	dst.LrcFee = new(big.Int)
 	if err := dst.LrcFee.UnmarshalText(o.LrcFee); err != nil {
+		return err
+	}
+	state.BlockNumber = new(big.Int)
+	if err := state.BlockNumber.UnmarshalText(o.BlockNumber); err != nil {
 		return err
 	}
 	dst.GeneratePrice()

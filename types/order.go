@@ -172,8 +172,9 @@ func (o *FilledOrder) IsFullFilled() bool {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder Order         `json:"rawOrder"`
-	States   []VersionData `json:"states"`
+	RawOrder    Order         `json:"rawOrder"`
+	BlockNumber *big.Int      `json:"block_number"`
+	States      []VersionData `json:"states"`
 }
 
 //go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
