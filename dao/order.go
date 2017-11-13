@@ -42,8 +42,8 @@ type Order struct {
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb;type:bit"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
-	R                     string  `gorm:"column:r;type:varchar(62)"`
-	S                     string  `gorm:"column:s;type:varchar(62)"`
+	R                     string  `gorm:"column:r;type:varchar(66)"`
+	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 }
 

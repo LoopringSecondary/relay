@@ -23,7 +23,7 @@ func Initialize(options *config.GatewayFiltersOptions) {
 	// add filters
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.BaseFilter.MinLrcFee)}
 
-	tokenSFilter := &TokenSFilter{}
+	tokenSFilter := &TokenSFilter{AllowTokens: make(map[types.Address]bool), DeniedTokens: make(map[types.Address]bool)}
 	for _, v := range options.TokenSFilter.Allow {
 		address := types.HexToAddress(v)
 		tokenSFilter.AllowTokens[address] = true
@@ -33,7 +33,7 @@ func Initialize(options *config.GatewayFiltersOptions) {
 		tokenSFilter.DeniedTokens[address] = true
 	}
 
-	tokenBFilter := &TokenBFilter{}
+	tokenBFilter := &TokenBFilter{AllowTokens: make(map[types.Address]bool), DeniedTokens: make(map[types.Address]bool)}
 	for _, v := range options.TokenBFilter.Allow {
 		address := types.HexToAddress(v)
 		tokenBFilter.AllowTokens[address] = true
@@ -43,33 +43,38 @@ func Initialize(options *config.GatewayFiltersOptions) {
 		tokenBFilter.DeniedTokens[address] = true
 	}
 
+	signFilter := &SignFilter{}
+
 	//cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
 
 	filters = append(filters, baseFilter)
+	filters = append(filters, signFilter)
 	filters = append(filters, tokenSFilter)
 	filters = append(filters, tokenBFilter)
 	//filters = append(filters, cutoffFilter)
 }
 
 func HandleOrder(input eventemitter.EventData) error {
-	ord := input.(types.Order)
+	ord := input.(*types.Order)
 
 	orderhash := ord.GenerateHash()
+	ord.Hash = orderhash
+	ord.GeneratePrice()
+
+	for _, v := range filters {
+		valid, err := v.filter(ord)
+		if !valid {
+			log.Errorf("gateway filter order error:%s", err.Error())
+			return err
+		}
+	}
+
 	state := &types.OrderState{}
-	state.RawOrder = ord
-	state.RawOrder.Hash = orderhash
-	state.RawOrder.GeneratePrice()
+	state.RawOrder = *ord
 
 	log.Debugf("gateway accept new order hash:%s", orderhash.Hex())
 	log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
 	log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
-
-	for _, v := range filters {
-		valid, err := v.filter(&ord)
-		if !valid {
-			return err
-		}
-	}
 
 	eventemitter.Emit(eventemitter.OrderBookGateway, state)
 
@@ -86,7 +91,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 		return false, errors.New("order " + o.Hash.Hex() + " tokenB == tokenS")
 	}
 	if f.MinLrcFee.Cmp(o.LrcFee) >= 0 {
-		return false, errors.New("order " + o.Hash.Hex() + "lrcFee too tiny")
+		return false, errors.New("order " + o.Hash.Hex() + " lrcFee too tiny")
 	}
 
 	return true, nil
@@ -121,9 +126,13 @@ type TokenSFilter struct {
 }
 
 func (f *TokenSFilter) filter(o *types.Order) (bool, error) {
-	_, allowExists := f.AllowTokens[o.TokenS]
-	_, deniedExits := f.DeniedTokens[o.TokenS]
-	return !allowExists && deniedExits, nil
+	if _, ok := f.AllowTokens[o.TokenS]; !ok {
+		return false, errors.New("tokenS filter allowTokens do not contain " + o.TokenS.Hex())
+	}
+	if _, ok := f.DeniedTokens[o.TokenS]; ok {
+		return false, errors.New("tokenS filter deniedTokens contain " + o.TokenS.Hex())
+	}
+	return true, nil
 }
 
 type TokenBFilter struct {
@@ -132,9 +141,13 @@ type TokenBFilter struct {
 }
 
 func (f *TokenBFilter) filter(o *types.Order) (bool, error) {
-	_, allowExists := f.AllowTokens[o.TokenS]
-	_, deniedExits := f.DeniedTokens[o.TokenS]
-	return !allowExists && deniedExits, nil
+	if _, ok := f.AllowTokens[o.TokenB]; !ok {
+		return false, errors.New("tokenB filter allowTokens do not contain " + o.TokenB.Hex())
+	}
+	if _, ok := f.DeniedTokens[o.TokenB]; ok {
+		return false, errors.New("tokenB filter deniedTokens contain " + o.TokenB.Hex())
+	}
+	return true, nil
 }
 
 // todo: cutoff filter

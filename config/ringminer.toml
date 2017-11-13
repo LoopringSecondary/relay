@@ -45,7 +45,7 @@ ticker_duration = 1
     is_broadcast = false
 
 [chain_client]
-    raw_url = "http://10.137.107.248:8545"
+    raw_url = "http://10.137.108.104:8545"
     [chain_client.senders]
         "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
         "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
@@ -74,3 +74,13 @@ ticker_duration = 1
         currency = "USD"
             [miner.rate_provider.currencies_map]
             "0x5132a8ce9a61b13b9cAEcd2261abF95323056423" = "Loopring"
+
+[gateway_filters]
+    [gateway_filters.base_filter]
+        min_lrc_fee = 10
+    [gateway_filters.token_s_filter]
+        allow = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
+        denied = []
+    [gateway_filters.token_b_filter]
+        allow = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
+        denied = []

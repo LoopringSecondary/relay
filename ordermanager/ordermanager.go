@@ -48,7 +48,7 @@ type OrderManagerImpl struct {
 	ticker  *time.Ticker
 }
 
-func NewOrderBook(options config.OrderBookOptions, dao dao.RdsService) *OrderManagerImpl {
+func NewOrderManager(options config.OrderBookOptions, dao dao.RdsService) *OrderManagerImpl {
 	ob := &OrderManagerImpl{}
 
 	// todo: use config
