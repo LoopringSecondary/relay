@@ -19,105 +19,88 @@
 package extractor
 
 import (
-	"errors"
 	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
-	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
 
-type forkDetect struct {
-	observers     []chan chainclient.ForkedEvent
-	hashStore     db.Database
-	parentHash    types.Hash
-	startedNumber *big.Int
-}
+func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
+	var (
+		latestBlock   types.Block
+		newBlockModel dao.Block
+		forkEvent     chainclient.ForkedEvent
+	)
 
-//fork detect
-func (l *ExtractorServiceImpl) StartForkDetect() error {
+	latestBlockModel, err := l.dao.FindLatestBlock()
+	if err != nil {
+		return err
+	}
+	if err := latestBlockModel.ConvertUp(&latestBlock); err != nil {
+		return err
+	}
 
-	detectedEventChan := make(chan chainclient.ForkedEvent)
-
-	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: func(eventData eventemitter.EventData) error {
-		event := eventData.(chainclient.ForkedEvent)
-		log.Debugf("forked:%s , checked:%s", event.ForkHash.Hex(), event.DetectedHash.Hex())
-		detectedEventChan <- event
+	// 重启时第一个块
+	if block.BlockHash == latestBlock.BlockHash {
 		return nil
-	}}
-	eventemitter.On(eventemitter.Fork, forkWatcher)
+	}
 
-	go func() {
-	L:
-		go l.forkDetect(l.rds.db)
-		for {
-			select {
-			case event := <-detectedEventChan:
-				log.Debugf("forked:%s , checked:%s", event.ForkHash.Hex(), event.DetectedHash.Hex())
-				goto L
-			}
+	// 没有分叉
+	if block.ParentHash == latestBlock.BlockHash || latestBlock.ParentHash.IsZero() {
+		if err := newBlockModel.ConvertUp(block); err != nil {
+			return err
 		}
-	}()
+		if err := l.dao.Add(newBlockModel); err != nil {
+			return err
+		}
+	}
+
+	// 已经分叉,寻找分叉块,出错则在下一个块继续检查
+	forkBlock, err := l.getForkedBlock(block)
+	if err != nil {
+		return err
+	}
+
+	forkEvent.ForkHash = forkBlock.BlockHash
+	forkEvent.ForkBlock = forkBlock.BlockNumber
+	forkEvent.DetectedHash = block.BlockHash
+	forkEvent.DetectedBlock = block.BlockNumber
+
+	eventemitter.Emit(eventemitter.Fork, &forkEvent)
 	return nil
 }
 
-//todo:should be optimized， 启动点等需要重新考虑，获取分叉点等的问题
-func (l *ExtractorServiceImpl) forkDetect(database db.Database) error {
-	detect := &forkDetect{}
-	detect.hashStore = db.NewTable(database, "fork_")
-	startedNumberBs, _ := detect.hashStore.Get([]byte("latest"))
-	detect.startedNumber = new(big.Int).SetBytes(startedNumberBs)
-	iterator := l.ethClient.BlockIterator(detect.startedNumber, nil, false, uint64(0))
-	for {
-		b, err := iterator.Next()
-		if nil != err {
-			log.Errorf("err:%s", err.Error())
-			panic(err)
+func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block, error) {
+	var (
+		ethBlock    eth.Block
+		parentBlock types.Block
+	)
+
+	// 如果数据库已存在,则该block即为分叉根节点
+	if parentBlockModel, err := l.dao.FindBlockByParentHash(block.ParentHash); err == nil {
+		if err := parentBlockModel.ConvertUp(&parentBlock); err != nil {
+			return nil, err
 		} else {
-			block := b.(*eth.BlockWithTxHash)
-			if block.ParentHash == detect.parentHash || detect.parentHash.IsZero() {
-				detect.hashStore.Put(block.Number.BigInt().Bytes(), block.Hash.Bytes())
-				detect.parentHash = block.Hash
-				detect.hashStore.Put([]byte("latest"), block.Number.BigInt().Bytes())
-			} else {
-				parentNumber := new(big.Int).Set(block.Number.BigInt())
-				parentNumber.Sub(parentNumber, big.NewInt(1))
-				if forkedNumber, forkedHash, err := l.getForkedBlock(parentNumber, detect.hashStore); nil != err {
-					panic(err)
-				} else {
-					forkedEvent := chainclient.ForkedEvent{
-						DetectedBlock: block.Number.BigInt(),
-						DetectedHash:  block.Hash,
-						ForkBlock:     forkedNumber,
-						ForkHash:      forkedHash,
-					}
-					detect.hashStore.Put([]byte("latest"), forkedNumber.Bytes())
-					eventemitter.Emit(eventemitter.Fork, forkedEvent)
-					break
-				}
-			}
+			return &parentBlock, nil
 		}
 	}
-	return nil
+
+	// 如果不存在,则查询以太坊
+	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
+	l.ethClient.GetBlockByNumber(ethBlock, fmt.Sprintf("%#x", parentBlockNumber), false)
+
+	forkBlock := &types.Block{}
+	forkBlock.BlockNumber = ethBlock.Number.BigInt()
+	forkBlock.BlockHash = ethBlock.Hash
+	forkBlock.ParentHash = ethBlock.ParentHash
+
+	return l.getForkedBlock(forkBlock)
 }
 
-func (l *ExtractorServiceImpl) getForkedBlock(parentNumber *big.Int, hashStore db.Database) (*big.Int, types.Hash, error) {
-	bs, _ := hashStore.Get(parentNumber.Bytes())
-	parentStoredHash := types.BytesToHash(bs)
-	if parentStoredHash.IsZero() {
-		return nil, types.HexToHash("0x"), errors.New("detected fork ,but parent block not stored in database")
-	} else if parentNumber.Cmp(big.NewInt(0)) < 0 {
-		return nil, types.HexToHash("0x"), errors.New("detected fork ,but not found forked block")
-	}
-	var parentBlock eth.Block
-	l.ethClient.GetBlockByNumber(&parentBlock, fmt.Sprintf("%#x", parentNumber), false)
+func (l *ExtractorServiceImpl) processFork(input eventemitter.EventData) error {
 
-	if parentBlock.Hash == parentStoredHash {
-		return parentNumber, parentStoredHash, nil
-	} else {
-		return l.getForkedBlock(parentNumber.Sub(parentNumber, big.NewInt(1)), hashStore)
-	}
+	return nil
 }
