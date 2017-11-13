@@ -20,6 +20,7 @@ package extractor
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
@@ -33,6 +34,7 @@ import (
 	"math/big"
 	"reflect"
 	"sync"
+	"time"
 )
 
 /**
@@ -73,7 +75,9 @@ func NewExtractorService(options config.ChainClientOptions,
 
 	l.loadContract()
 
-	//l.StartForkDetect()
+	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: n.fork}
+	eventemitter.On(eventemitter.Fork, forkWatcher)
+
 	return &l
 }
 
@@ -141,6 +145,20 @@ func (l *ExtractorServiceImpl) Start() {
 			l.doBlock(*block)
 		}
 	}()
+}
+
+func (l *ExtractorServiceImpl) Stop() {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
+	close(l.stop)
+}
+
+// 重启(分叉)时先关停subscribeEvents，然后关
+func (l *ExtractorServiceImpl) Restart() {
+	l.Stop()
+	time.Sleep(1 * time.Second)
+	l.Start()
 }
 
 func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
@@ -287,22 +305,6 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 
 func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.EventData) error {
 	return nil
-}
-
-func (l *ExtractorServiceImpl) Stop() {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	close(l.stop)
-}
-
-// 重启(分叉)时先关停subscribeEvents，然后关
-func (l *ExtractorServiceImpl) Restart() {
-
-}
-
-func (l *ExtractorServiceImpl) Name() string {
-	return "eth-listener"
 }
 
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {

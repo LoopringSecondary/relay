@@ -26,6 +26,7 @@ import (
 	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/extractor"
 	"github.com/Loopring/ringminer/gateway"
 	"github.com/Loopring/ringminer/miner"

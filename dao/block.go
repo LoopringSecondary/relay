@@ -19,6 +19,7 @@
 package dao
 
 import (
+	"errors"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 )
@@ -31,6 +32,7 @@ type Block struct {
 	CreateTime  int64  `gorm:"column:create_time"`
 }
 
+// convert types/block to dao/block
 func (b *Block) ConvertDown(src *types.Block) error {
 	var err error
 	b.BlockNumber, err = src.BlockNumber.MarshalText()
@@ -45,6 +47,7 @@ func (b *Block) ConvertDown(src *types.Block) error {
 	return nil
 }
 
+// convert dao/block to types/block
 func (b *Block) ConvertUp(dst *types.Block) error {
 	dst.BlockNumber = new(big.Int)
 	if err := dst.BlockNumber.UnmarshalText(b.BlockNumber); err != nil {
@@ -56,4 +59,45 @@ func (b *Block) ConvertUp(dst *types.Block) error {
 	dst.CreateTime = b.CreateTime
 
 	return nil
+}
+
+func (s *RdsServiceImpl) FindBlockByHash(blockhash types.Hash) (*Block, error) {
+	var (
+		block Block
+		err   error
+	)
+
+	if blockhash.IsZero() {
+		return nil, errors.New("block table findBlockByHash get an illegal hash")
+	}
+
+	err = s.db.Where("block_hash = ?", blockhash.Hex()).First(&block).Error
+
+	return &block, err
+}
+
+func (s *RdsServiceImpl) FindBlockByParentHash(parenthash types.Hash) (*Block, error) {
+	var (
+		block Block
+		err   error
+	)
+
+	if parenthash.IsZero() {
+		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
+	}
+
+	err = s.db.Where("parent_hash = ?", parenthash.Hex()).First(&block).Error
+
+	return &block, err
+}
+
+func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
+	var (
+		block Block
+		err   error
+	)
+
+	err = s.db.Order("create_time, desc").First(&block).Error
+
+	return &block, err
 }
