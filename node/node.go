@@ -71,11 +71,10 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 func (n *Node) Start() {
 	n.rdsService.Prepare()
-
 	//n.extractorService.Start()
 	n.ipfsSubService.Start()
 	//n.miner.Start()
-
+	gateway.NewJsonrpcService("8080").Start()
 	n.orderManager.Start()
 }
 

@@ -328,6 +328,12 @@
 			"revisionTime": "2017-04-28T05:41:52Z"
 		},
 		{
+			"checksumSHA1": "ZBhR1HqPS+S9rVeXaWP4H7R2zAA=",
+			"path": "github.com/powerman/rpc-codec/jsonrpc2",
+			"revision": "d10c0e9cfeac32cd94ee57c8eb8728abd6594618",
+			"revisionTime": "2017-02-22T15:23:36Z"
+		},
+		{
 			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
 			"origin": "github.com/ethereum/go-ethereum/vendor/github.com/rcrowley/go-metrics",
 			"path": "github.com/rcrowley/go-metrics",

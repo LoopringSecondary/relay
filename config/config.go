@@ -68,12 +68,17 @@ type GlobalConfig struct {
 	Database       DbOptions
 	Mysql          MysqlOptions
 	Ipfs           IpfsOptions
+	Jsonrpc        JsonrpcOptions
 	GatewayFilters GatewayFiltersOptions
 	ChainClient    ChainClientOptions
 	Common         CommonOptions
 	Miner          MinerOptions
 	Orderbook      OrderBookOptions
 	Log            LogOptions
+}
+
+type JsonrpcOptions struct {
+	Port int
 }
 
 func (c *GlobalConfig) defaultConfig() {
