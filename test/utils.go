@@ -249,8 +249,8 @@ func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 
 func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
 	c := loadConfig()
-	db := db.NewDB(c.Database)
-	ob := ordermanager.NewOrderBook(c.Orderbook, c.Common, db)
+	rds := LoadConfigAndGenerateDaoService()
+	ob := ordermanager.NewOrderManager(c.Orderbook, rds)
 	return ob
 }
 

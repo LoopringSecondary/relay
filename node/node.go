@@ -61,6 +61,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	n.registerMysql()
 	n.registerIPFSSubService()
+	n.registerGateway()
 	n.registerOrderManager(database)
 	n.registerMiner(ethClient.Client, database)
 	n.registerExtractor(ethClient, database)
@@ -71,9 +72,9 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) Start() {
 	n.rdsService.Prepare()
 
-	n.extractorService.Start()
+	//n.extractorService.Start()
 	n.ipfsSubService.Start()
-	n.miner.Start()
+	//n.miner.Start()
 
 	n.orderManager.Start()
 }
@@ -116,7 +117,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager(database db.Database) {
-	n.orderManager = ordermanager.NewOrderBook(n.globalConfig.Orderbook, n.rdsService)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.Orderbook, n.rdsService)
 }
 
 func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
@@ -128,4 +129,8 @@ func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
 	miner.Initialize(minerInstance)
 
 	n.miner = minerInstance
+}
+
+func (n *Node) registerGateway() {
+	gateway.Initialize(&n.globalConfig.GatewayFilters)
 }
