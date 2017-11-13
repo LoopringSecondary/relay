@@ -57,3 +57,30 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
+	s := test.LoadConfigAndGenerateDaoService()
+	order, err := s.GetOrderByHash(types.HexToHash("0x5187cde2ebd86d9c02ecbb3ba31437e4d1d17f8089a834bc943fa618d800aea9"))
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(order.TokenS)
+}
+
+func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
+	s := test.LoadConfigAndGenerateDaoService()
+
+	filters := []types.Hash{}
+	list, err := s.GetOrdersForMiner(filters)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log("length of list", len(list))
+
+	for _, v := range list {
+		t.Log(v.OrderHash)
+	}
+}
