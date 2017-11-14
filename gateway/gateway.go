@@ -76,7 +76,7 @@ func HandleOrder(input eventemitter.EventData) error {
 	log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
 	log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
 
-	eventemitter.Emit(eventemitter.OrderBookGateway, state)
+	eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 
 	// todo: broadcast
 	return nil

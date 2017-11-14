@@ -27,16 +27,18 @@ import (
 type Topic string
 
 const (
-	RingMined          Topic = "RingMined"
-	OrderCanceled            = "OrderCanceled"
-	OrderFilled              = "OrderFilled"
-	Fork                     = "Fork"             //chain forked
-	RingSubmitFailed         = "RingSubmitFailed" //submit ring failed
-	Transaction              = "Transaction"
-	Gateway                  = "Gateway"
-	OrderBookGateway         = "OrderBookGateway"
-	OrderBookExtractor       = "OrderBookExtractor"
-	MinedOrderState          = "MinedOrderState" //orderbook send orderstate to miner
+	RingMined                   Topic = "RingMined"
+	OrderCanceled                     = "OrderCanceled"
+	OrderFilled                       = "OrderFilled"
+	Fork                              = "Fork"             //chain forked
+	RingSubmitFailed                  = "RingSubmitFailed" //submit ring failed
+	Transaction                       = "Transaction"
+	Gateway                           = "Gateway"
+	OrderManagerGatewayNewOrder       = "OrderManagerGatewayNewOrder"
+	OrderManagerExtractorFill         = "OrderManagerExtractorFill"
+	OrderManagerExtractorCancel       = "OrderManagerExtractorCancel"
+	OrderManagerExtractorCutoff       = "OrderManagerExtractorCutoff"
+	MinedOrderState                   = "MinedOrderState" //orderbook send orderstate to miner
 
 	//Miner
 	Miner_DeleteOrderState = "Miner_DeleteOrderState"
