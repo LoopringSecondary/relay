@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 	//"net/http"
+	"github.com/Loopring/ringminer/types"
+	"math/big"
 )
 
 var (
@@ -45,7 +47,29 @@ func TestJsonrpcServiceImpl_SubmitOrder(t *testing.T) {
 	clientHTTP = jsonrpc2.NewHTTPClient("http://127.0.0.1:8080/rpc")
 	defer clientHTTP.Close()
 
-	err := clientHTTP.Call("JsonrpcServiceImpl.SubmitOrder", map[string]int{"a": 10, "b": 20, "c": 30}, &relay)
+	var req types.Order
+	req.Protocol = types.StringToAddress("testProtocol")
+	req.AmountB = new(big.Int)
+	req.AmountB.UnmarshalText([]byte("123"))
+	req.AmountS = new(big.Int)
+	req.AmountS.UnmarshalText([]byte("222"))
+	req.Timestamp = new(big.Int)
+	req.Timestamp.UnmarshalText([]byte("222"))
+	req.Ttl = new(big.Int)
+	req.Ttl.UnmarshalText([]byte("222"))
+	req.Salt = new(big.Int)
+	req.Salt.UnmarshalText([]byte("222"))
+	req.LrcFee = new(big.Int)
+	req.LrcFee.UnmarshalText([]byte("222"))
+	req.BuyNoMoreThanAmountB = true
+	req.MarginSplitPercentage = uint8(10)
+	req.V = uint8(11)
+	req.R = types.StringToSign("ssss")
+	req.S = types.StringToSign("ssss")
+
+	fmt.Println(req)
+
+	err := clientHTTP.Call("JsonrpcServiceImpl.SubmitOrder", req, &relay)
 	if err != nil {
 		fmt.Println(err)
 	}

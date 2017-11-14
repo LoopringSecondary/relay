@@ -7,6 +7,7 @@ import (
 	"net"
 	"fmt"
 	"context"
+	"github.com/Loopring/ringminer/types"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -77,13 +78,9 @@ func (j *JsonrpcServiceImpl) Start() {
 
 }
 
-func (*JsonrpcServiceImpl) SubmitOrder(order map[string]int, res *string) error {
-
-	fmt.Printf("request is %s", order)
-
-	*res = "skdfjdksfjksdf"
-	fmt.Println(res)
-
+func (*JsonrpcServiceImpl) SubmitOrder(order types.Order, res *string) error {
+	HandleOrder(&order)
+	*res = "SUBMIT_SUCCESS"
 	return nil
 }
 
