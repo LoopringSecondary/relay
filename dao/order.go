@@ -39,12 +39,13 @@ type Order struct {
 	Ttl                   int64   `gorm:"column:ttl"`
 	Salt                  int64   `gorm:"column:salt"`
 	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(128)"`
-	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb;type:bit"`
+	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
+	BlockNumber           []byte  `gorm:"column:block_num;varchar(30)"`
 }
 
 func (o *Order) ConvertDown(state *types.OrderState) error {
@@ -62,6 +63,9 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 		return err
 	}
 	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
+		return err
+	}
+	if o.BlockNumber, err = state.BlockNumber.MarshalText(); err != nil {
 		return err
 	}
 
@@ -97,6 +101,10 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	if err := dst.LrcFee.UnmarshalText(o.LrcFee); err != nil {
 		return err
 	}
+	state.BlockNumber = new(big.Int)
+	if err := state.BlockNumber.UnmarshalText(o.BlockNumber); err != nil {
+		return err
+	}
 	dst.GeneratePrice()
 
 	dst.Protocol = types.HexToAddress(o.Protocol)
@@ -121,8 +129,27 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 }
 
 func (s *RdsServiceImpl) GetOrderByHash(orderhash types.Hash) (*Order, error) {
-	//s.db.Find()
-	// todo
+	order := &Order{}
+	err := s.db.Where("order_hash = ?", orderhash.Hex()).First(order).Error
+	return order, err
+}
 
-	return nil, nil
+func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error) {
+	var (
+		list        []Order
+		filterhashs []string
+		err         error
+	)
+
+	for _, v := range orderhashList {
+		filterhashs = append(filterhashs, v.Hex())
+	}
+
+	if len(filterhashs) == 0 {
+		err = s.db.Order("price desc").Find(&list).Error
+	} else {
+		err = s.db.Where("order_hash not in(?)", filterhashs).Order("price desc").Find(&list).Error
+	}
+
+	return list, err
 }

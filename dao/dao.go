@@ -27,13 +27,24 @@ import (
 )
 
 type RdsService interface {
+	// create tables
 	Prepare()
+
+	// normal functions
 	Add(item interface{}) error
 	First(item interface{}) error
 	Last(item interface{}) error
 	Update(item interface{}) error
 	FindAll(item interface{}) error
+
+	// order table
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
+	GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error)
+
+	// block table
+	FindBlockByHash(blockhash types.Hash) (*Block, error)
+	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
+	FindLatestBlock() (*Block, error)
 }
 
 type RdsServiceImpl struct {
@@ -64,6 +75,7 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 func (s *RdsServiceImpl) Prepare() {
 	var tables []interface{}
 	tables = append(tables, &Order{})
+	tables = append(tables, &Block{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
