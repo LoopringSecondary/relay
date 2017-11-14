@@ -19,6 +19,7 @@
 package ordermanager
 
 import (
+	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
@@ -42,10 +43,11 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options config.OrderBookOptions
-	dao     dao.RdsService
-	lock    sync.RWMutex
-	ticker  *time.Ticker
+	options   config.OrderBookOptions
+	dao       dao.RdsService
+	lock      sync.RWMutex
+	ticker    *time.Ticker
+	processor *forkProcessor
 }
 
 func NewOrderManager(options config.OrderBookOptions, dao dao.RdsService) *OrderManagerImpl {
@@ -55,43 +57,46 @@ func NewOrderManager(options config.OrderBookOptions, dao dao.RdsService) *Order
 	ob.options = options
 	ob.dao = dao
 	ob.ticker = time.NewTicker(1 * time.Second)
+	ob.processor = newForkProcess(ob.dao)
 
 	return ob
 }
 
 // Start start orderbook as a service
-func (ob *OrderManagerImpl) Start() {
-	ob.recover()
-
-	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleGatewayOrder}
-	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: ob.handleExtractorOrder}
+func (om *OrderManagerImpl) Start() {
+	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
+	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleExtractorOrder}
+	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: om.handleFork}
 
 	eventemitter.On(eventemitter.OrderBookGateway, peerOrderWatcher)
 	eventemitter.On(eventemitter.OrderBookExtractor, chainOrderWatcher)
+	eventemitter.On(eventemitter.Fork, forkWatcher)
 }
 
-func (ob *OrderManagerImpl) Stop() {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
+func (om *OrderManagerImpl) Stop() {
+	om.lock.Lock()
+	defer om.lock.Unlock()
 
-	ob.ticker.Stop()
+	om.ticker.Stop()
 }
 
-func (ob *OrderManagerImpl) recover() {
-	// todo
+// todo expire time
+
+func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
+	return om.processor.fork(input.(*chainclient.ForkedEvent))
 }
 
 // 来自ipfs的新订单
 // 所有来自ipfs的订单都是新订单
-func (ob *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
+func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
+	om.lock.Lock()
+	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
 	model := &dao.Order{}
 	model.ConvertDown(state)
 
-	if err := ob.dao.Add(model); err != nil {
+	if err := om.dao.Add(model); err != nil {
 		return err
 	}
 
@@ -102,9 +107,9 @@ func (ob *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 // 订单必须存在，如果不存在则不处理
 // 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
 // 如果之前已经存储，那么应该直接处理并发送到miner
-func (ob *OrderManagerImpl) handleExtractorOrder(input eventemitter.EventData) error {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
+func (om *OrderManagerImpl) handleExtractorOrder(input eventemitter.EventData) error {
+	om.lock.Lock()
+	defer om.lock.Unlock()
 
 	ord := input.(*types.OrderState)
 	vd, err := ord.LatestVersion()
