@@ -20,7 +20,6 @@ package extractor
 
 import (
 	"errors"
-	"fmt"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
