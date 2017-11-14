@@ -6,7 +6,16 @@ import (
 	"net/http"
 	"net"
 	"fmt"
+	"context"
 )
+
+func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
+	*res = "pong for first connect, meaning server is OK"
+	return nil
+}
+
+
+var RemoteAddrContextKey = "RemoteAddr"
 
 type JsonrpcService interface {
 	Start(port string)
@@ -24,13 +33,11 @@ func NewJsonrpcService(port string) *JsonrpcServiceImpl {
 }
 
 func (j *JsonrpcServiceImpl) Start() {
-
-	fmt.Println("start jsonrpc at port" + j.port)
-
+	// Server export an object of type JsonrpcServiceImpl.
 	rpc.Register(&JsonrpcServiceImpl{})
 
 	// Server provide a TCP transport.
-	lnTCP, err := net.Listen("tcp", ":8888")
+	lnTCP, err := net.Listen("tcp", "127.0.0.1:8886")
 	if err != nil {
 		panic(err)
 	}
@@ -41,18 +48,32 @@ func (j *JsonrpcServiceImpl) Start() {
 			if err != nil {
 				return
 			}
-			go jsonrpc2.ServeConn(conn)
+			ctx := context.WithValue(context.Background(), RemoteAddrContextKey, conn.RemoteAddr())
+			go jsonrpc2.ServeConnContext(ctx, conn)
 		}
 	}()
 
 	// Server provide a HTTP transport on /rpc endpoint.
 	http.Handle("/rpc", jsonrpc2.HTTPHandler(nil))
-	lnHTTP, err := net.Listen("tcp", ":" + j.port)
+	lnHTTP, err := net.Listen("tcp", "127.0.0.1:" + j.port)
 	if err != nil {
 		panic(err)
 	}
 	defer lnHTTP.Close()
 	go http.Serve(lnHTTP, nil)
+
+	// Client use HTTP transport.
+	fmt.Println(lnHTTP.Addr())
+	clientHTTP := jsonrpc2.NewHTTPClient("http://" + lnHTTP.Addr().String() + "/rpc")
+	defer clientHTTP.Close()
+
+	var pong string
+	err = clientHTTP.Call("JsonrpcServiceImpl.Ping", []string{"ping"}, &pong)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("ping result is %s\n", pong)
+	}
 
 }
 
@@ -60,8 +81,7 @@ func (*JsonrpcServiceImpl) SubmitOrder(order map[string]int, res *string) error 
 
 	fmt.Printf("request is %s", order)
 
-	var orderHash = "orderHash"
-	res = &orderHash
+	*res = "skdfjdksfjksdf"
 	fmt.Println(res)
 
 	return nil
