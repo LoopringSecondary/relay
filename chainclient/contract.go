@@ -275,3 +275,8 @@ type ContractData struct {
 	Event  AbiEvent
 	TxHash types.Hash
 }
+
+type sd interface {
+	GetErc20Balance()
+	GetAllownce()
+}

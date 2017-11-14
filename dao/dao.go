@@ -40,6 +40,7 @@ type RdsService interface {
 	// order table
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
 	GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error)
+	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 
 	// block table
 	FindBlockByHash(blockhash types.Hash) (*Block, error)

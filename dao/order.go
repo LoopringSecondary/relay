@@ -45,9 +45,10 @@ type Order struct {
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
-	BlockNumber           []byte  `gorm:"column:block_num;varchar(30)"`
+	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
 }
 
+// convert types/orderState to dao/order
 func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder
 
@@ -65,9 +66,6 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
 		return err
 	}
-	if o.BlockNumber, err = state.BlockNumber.MarshalText(); err != nil {
-		return err
-	}
 
 	o.Protocol = src.Protocol.Hex()
 	o.Owner = src.Owner.Hex()
@@ -79,6 +77,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
+	o.BlockNumber = state.BlockNumber.Int64()
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
@@ -86,6 +85,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	return nil
 }
 
+// convert dao/order to types/orderState
 func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst := state.RawOrder
 
@@ -101,10 +101,6 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	if err := dst.LrcFee.UnmarshalText(o.LrcFee); err != nil {
 		return err
 	}
-	state.BlockNumber = new(big.Int)
-	if err := state.BlockNumber.UnmarshalText(o.BlockNumber); err != nil {
-		return err
-	}
 	dst.GeneratePrice()
 
 	dst.Protocol = types.HexToAddress(o.Protocol)
@@ -115,6 +111,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst.Salt = big.NewInt(o.Salt)
 	dst.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	dst.MarginSplitPercentage = o.MarginSplitPercentage
+	state.BlockNumber = big.NewInt(o.BlockNumber)
 	dst.V = o.V
 	dst.S = types.HexToSign(o.S)
 	dst.R = types.HexToSign(o.R)
@@ -150,6 +147,21 @@ func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order,
 	} else {
 		err = s.db.Where("order_hash not in(?)", filterhashs).Order("price desc").Find(&list).Error
 	}
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	if from < to {
+		return list, errors.New("dao/order GetOrdersWithBlockNumberRange invalid block number")
+	}
+
+	err = s.db.Where("block_num between ? and ?", from, to).Find(&list).Error
 
 	return list, err
 }
