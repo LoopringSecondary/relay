@@ -144,6 +144,25 @@ func (o *Order) GeneratePrice() {
 	o.Price = new(big.Rat).SetFrac(o.AmountB, o.AmountS)
 }
 
+// 根据big.Rat价格计算big.int remainAmount
+func (ord *OrderState) CalculateRemainAmount() {
+	const RATE = 1.0e18
+
+	price, _ := ord.RawOrder.Price.Float64()
+	price = price * RATE
+	bigPrice := big.NewInt(int64(price))
+	bigRate := big.NewInt(RATE)
+
+	// 根据remainAmountB计算remainAmountS
+	if ord.RawOrder.BuyNoMoreThanAmountB == true {
+		beenRateAmountB := new(big.Int).Mul(ord.RemainedAmountB, bigRate)
+		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountB, bigPrice)
+	} else {
+		beenRateAmountS := new(big.Int).Mul(ord.RemainedAmountB, bigPrice)
+		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountS, bigRate)
+	}
+}
+
 //RateAmountS、FeeSelection 需要提交到contract
 type FilledOrder struct {
 	OrderState       OrderState `json:"orderState" gencodec:"required"`
@@ -172,9 +191,11 @@ func (o *FilledOrder) IsFullFilled() bool {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder    Order         `json:"rawOrder"`
-	BlockNumber *big.Int      `json:"block_number"`
-	States      []VersionData `json:"states"`
+	RawOrder        Order         `json:"rawOrder"`
+	BlockNumber     *big.Int      `json:"block_number"`
+	RemainedAmountS *big.Int      `json:"remained_amount_b"`
+	RemainedAmountB *big.Int      `json:"remained_amount_s"`
+	States          []VersionData `json:"states"`
 }
 
 //go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
