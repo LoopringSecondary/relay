@@ -28,6 +28,11 @@ import (
 	"math/big"
 )
 
+func (l *ExtractorServiceImpl) startDetectFork() {
+	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: l.processFork}
+	eventemitter.On(eventemitter.Fork, forkWatcher)
+}
+
 func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	var (
 		latestBlock   types.Block
@@ -101,6 +106,7 @@ func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block,
 }
 
 func (l *ExtractorServiceImpl) processFork(input eventemitter.EventData) error {
+	l.Stop()
 
 	return nil
 }

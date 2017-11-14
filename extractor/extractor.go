@@ -73,9 +73,7 @@ func NewExtractorService(options config.ChainClientOptions,
 	l.dao = rds
 
 	l.loadContract()
-
-	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: n.fork}
-	eventemitter.On(eventemitter.Fork, forkWatcher)
+	l.startDetectFork()
 
 	return &l
 }
@@ -136,9 +134,13 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Infof("eth listener get block transaction list length %d", txcnt)
 			}
 
-			if err := l.rds.SaveBlock(*block); err != nil {
-				log.Errorf("eth listener save block hash error:%s", err.Error())
-				continue
+			checkForkBlock := types.Block{}
+			checkForkBlock.BlockNumber = block.Number.BigInt()
+			checkForkBlock.ParentHash = block.ParentHash
+			checkForkBlock.BlockHash = block.Hash
+			checkForkBlock.CreateTime = block.Timestamp.Int64()
+			if err := l.detectFork(&checkForkBlock); err != nil {
+				log.Debugf("extractor detect fork error:%s", err.Error())
 			}
 
 			l.doBlock(*block)
