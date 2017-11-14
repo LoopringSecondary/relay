@@ -23,7 +23,6 @@ func newForkProcess(rds dao.RdsService) *forkProcessor {
 	processor.tokens = make(map[types.Address]*chainclient.Erc20Token)
 
 	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
-		log.Debugf("=====address %s", impl.Address.Hex())
 		processor.contracts[impl.Address] = impl
 	}
 
