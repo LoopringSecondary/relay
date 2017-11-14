@@ -94,6 +94,7 @@ type LoopringProtocolImpl struct {
 	VerifySignature        AbiMethod
 	GetOrderFilled         AbiMethod
 	GetOrderCancelled      AbiMethod
+	GetCancelledOrFilled   AbiMethod `parameterName:"cancelledOrFilled"`
 
 	//event
 	RingMinedEvent              RingMinedEvent

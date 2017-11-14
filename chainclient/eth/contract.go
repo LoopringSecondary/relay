@@ -240,6 +240,8 @@ func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethCl
 				field.Set(reflect.ValueOf(abiMethod))
 			}
 		}
+
+		log.Debugf("eth chain client method name and id %s -> %s", method.Name, types.Bytes2Hex(method.Id()))
 	}
 }
 
@@ -254,12 +256,32 @@ func applyAbiEvent(e reflect.Value, cabi *abi.ABI, address types.Address, ethCli
 		abiEvent.Event.Name = event.Name
 		field := e.FieldByName(eventName)
 
-		log.Debugf("eth chain client event name and id %s -> %s", eventName, abiEvent.Id())
 		if field.IsValid() {
 			v := reflect.New(field.Type()).Elem()
 			v.FieldByName("AbiEvent").Set(reflect.ValueOf(abiEvent))
 			field.Set(v)
 		}
+
+		log.Debugf("eth chain client event name and id %s -> %s", eventName, abiEvent.Id())
+	}
+}
+
+func applyAbiParameters(e reflect.Value, cabi *abi.ABI, address types.Address, ethClient *EthClient) {
+	for i := 0; i < e.NumField(); i++ {
+		methodName := e.Type().Field(i).Tag.Get("parameterName")
+		if methodName == "" {
+			continue
+		}
+
+		abiMethod := &AbiMethod{}
+		abiMethod.Name = methodName
+		abiMethod.Abi = cabi
+		abiMethod.ContractAddress = address
+		abiMethod.Client = ethClient
+
+		e.Field(i).Set(reflect.ValueOf(abiMethod))
+
+		log.Debugf("eth chain client parameter name and id:%s->%s", methodName, types.Bytes2Hex(abiMethod.Id()))
 	}
 }
 
@@ -278,6 +300,7 @@ func (ethClient *EthClient) newContract(contract interface{}, addressStr, abiStr
 
 	applyAbiMethod(e, cabi, address, ethClient)
 	applyAbiEvent(e, cabi, address, ethClient)
+	applyAbiParameters(e, cabi, address, ethClient)
 
 	return nil
 }
