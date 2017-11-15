@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/types"
+	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 	"time"
@@ -98,6 +99,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
+	state.Status = types.ORDER_NEW
 	model := &dao.Order{}
 	model.ConvertDown(state)
 
@@ -110,6 +112,16 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
 	event := input.(*chainclient.OrderFilledEvent)
+
+	// save event
+	_, err := om.dao.FindFillByRinghashAndOrderhash(types.BytesToHash(event.Ringhash), types.BytesToHash(event.OrderHash))
+	if err != nil {
+		newFillModel := &dao.Fill{}
+		if err := newFillModel.ConvertDown(event); err != nil {
+			return err
+		}
+		om.dao.Add(newFillModel)
+	}
 
 	// get dao.Order and types.OrderState
 	state := &types.OrderState{}
@@ -140,6 +152,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	if event.AmountS.Cmp(big.NewInt(0)) < 1 {
 		state.RemainedAmountS = big.NewInt(0)
 	}
+
+	// update order status
+	state.SettleStatus()
 
 	// update dao.Order
 	if err := model.ConvertDown(state); err != nil {
