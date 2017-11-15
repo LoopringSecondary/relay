@@ -52,6 +52,9 @@ type RdsService interface {
 
 	// cancel event table
 	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
+
+	// cutoff event table
+	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
 }
 
 type RdsServiceImpl struct {
@@ -86,6 +89,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &Block{})
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
+	tables = append(tables, &CutOffEvent{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
