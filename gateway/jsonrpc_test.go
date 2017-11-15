@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"testing"
 	"time"
+	//"net/http"
+	"github.com/Loopring/ringminer/types"
+	"math/big"
+	"encoding/json"
 )
 
 var (
@@ -32,36 +36,43 @@ var (
 func prepare() {
 
 	impl = gateway.NewJsonrpcService("8080")
-	clientHTTP = jsonrpc2.NewCustomHTTPClient(
-		"http://127.0.0.1:8080/rpc",
-		jsonrpc2.DoerFunc(func(req *http.Request) (*http.Response, error) {
-			// Setup custom HTTP client.
-			fmt.Println("fuck here ........................")
-			client := &http.Client{}
-			fmt.Println(client)
-			// Modify request as needed.
-			req.Header.Set("Content-Type", "application/json-rpc")
-			fmt.Println(req.Method)
-			fmt.Println(req.Header)
-			resp, err := client.Do(req)
-			fmt.Println(resp.StatusCode)
-			fmt.Println(resp.Request)
-			fmt.Println(err)
-			fmt.Println("fuck here ........................")
-			return resp, err
-		}),
-	)
+
 	impl.Start()
+	//gateway.Example()
 }
 
 func TestJsonrpcServiceImpl_SubmitOrder(t *testing.T) {
 	prepare()
 
-	time.Sleep(1 * time.Second)
-
 	var relay string
 
-	err := clientHTTP.Call("JsonrpcServiceImpl.SubmitOrder", map[string]int{"a": 10, "b": 20, "c": 30}, &relay)
+	clientHTTP = jsonrpc2.NewHTTPClient("http://127.0.0.1:8080/rpc")
+	defer clientHTTP.Close()
+
+	var req types.Order
+	req.Protocol = types.StringToAddress("testProtocol")
+	req.AmountB = new(big.Int)
+	req.AmountB.UnmarshalText([]byte("123"))
+	req.AmountS = new(big.Int)
+	req.AmountS.UnmarshalText([]byte("222"))
+	req.Timestamp = new(big.Int)
+	req.Timestamp.UnmarshalText([]byte("222"))
+	req.Ttl = new(big.Int)
+	req.Ttl.UnmarshalText([]byte("222"))
+	req.Salt = new(big.Int)
+	req.Salt.UnmarshalText([]byte("222"))
+	req.LrcFee = new(big.Int)
+	req.LrcFee.UnmarshalText([]byte("222"))
+	req.BuyNoMoreThanAmountB = true
+	req.MarginSplitPercentage = uint8(10)
+	req.V = uint8(11)
+	req.R = types.StringToSign("ssss")
+	req.S = types.StringToSign("ssss")
+
+	fmt.Println(req)
+	fmt.Println(json.Marshal(req))
+
+	err := clientHTTP.Call("JsonrpcServiceImpl.SubmitOrder", req, &relay)
 	if err != nil {
 		fmt.Println(err)
 	}

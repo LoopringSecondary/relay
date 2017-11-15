@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"github.com/Loopring/ringminer/db"
 	"time"
 )
 
@@ -211,4 +212,28 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
 	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status.Value()).Error
 	return err
+}
+
+func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
+	var (
+		orders []Order
+		err error
+		data = make([]interface{}, 0)
+	)
+
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	err = s.db.Where(&query).Offset((pageIndex - 1)* pageSize).Limit(pageSize).Find(&orders).Error
+	for i, v := range orders {
+		data[i] = v
+	}
+
+	pageResult  := PageResult{data, pageIndex, pageSize, 0}
+	return pageResult, err
 }
