@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/types"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 	"time"
@@ -114,9 +113,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	event := input.(*chainclient.OrderFilledEvent)
 
 	// save event
-	_, err := om.dao.FindFillByRinghashAndOrderhash(types.BytesToHash(event.Ringhash), types.BytesToHash(event.OrderHash))
+	_, err := om.dao.FindFillEventByRinghashAndOrderhash(types.BytesToHash(event.Ringhash), types.BytesToHash(event.OrderHash))
 	if err != nil {
-		newFillModel := &dao.Fill{}
+		newFillModel := &dao.FillEvent{}
 		if err := newFillModel.ConvertDown(event); err != nil {
 			return err
 		}

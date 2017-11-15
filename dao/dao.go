@@ -47,8 +47,11 @@ type RdsService interface {
 	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
 
-	// fill table
-	FindFillByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*Fill, error)
+	// fill event table
+	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
+
+	// cancel event table
+	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
 }
 
 type RdsServiceImpl struct {
@@ -78,8 +81,11 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 // create tables if not exists
 func (s *RdsServiceImpl) Prepare() {
 	var tables []interface{}
+
 	tables = append(tables, &Order{})
 	tables = append(tables, &Block{})
+	tables = append(tables, &FillEvent{})
+	tables = append(tables, &CancelEvent{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
