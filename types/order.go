@@ -149,10 +149,12 @@ func (o *Order) SignerAddress() (Address, error) {
 }
 
 func (o *Order) GeneratePrice() {
-	o.Price = new(big.Rat).SetFrac(o.AmountB, o.AmountS)
+	o.Price = new(big.Rat).SetFrac(o.AmountS, o.AmountB)
 }
 
 // 根据big.Rat价格计算big.int remainAmount
+// buyNoMoreThanAmountB == true  已知remainAmountB计算remainAmountS
+// buyNoMoreThanAmountB == false 已知remainAmountS计算remainAmountB
 func (ord *OrderState) CalculateRemainAmount() {
 	const RATE = 1.0e18
 
@@ -161,13 +163,12 @@ func (ord *OrderState) CalculateRemainAmount() {
 	bigPrice := big.NewInt(int64(price))
 	bigRate := big.NewInt(RATE)
 
-	// 根据remainAmountB计算remainAmountS
 	if ord.RawOrder.BuyNoMoreThanAmountB == true {
-		beenRateAmountB := new(big.Int).Mul(ord.RemainedAmountB, bigRate)
-		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountB, bigPrice)
+		beenRateAmountB := new(big.Int).Mul(ord.RemainedAmountB, bigPrice)
+		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountB, bigRate)
 	} else {
-		beenRateAmountS := new(big.Int).Mul(ord.RemainedAmountB, bigPrice)
-		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountS, bigRate)
+		beenRateAmountS := new(big.Int).Mul(ord.RemainedAmountS, bigRate)
+		ord.RemainedAmountB = new(big.Int).Div(beenRateAmountS, bigPrice)
 	}
 }
 
