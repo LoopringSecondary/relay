@@ -23,7 +23,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 )
 
-type Fill struct {
+type FillEvent struct {
 	ID            int    `gorm:"column:id;primary_key;"`
 	RingIndex     int64  `gorm:"column:ring_index;"`
 	BlockNumber   int64  `gorm:"column:block_number"`
@@ -39,7 +39,7 @@ type Fill struct {
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
-func (f *Fill) ConvertDown(src *chainclient.OrderFilledEvent) error {
+func (f *FillEvent) ConvertDown(src *chainclient.OrderFilledEvent) error {
 	var err error
 
 	if f.AmountS, err = src.AmountS.MarshalText(); err != nil {
@@ -66,9 +66,9 @@ func (f *Fill) ConvertDown(src *chainclient.OrderFilledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindFillByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*Fill, error) {
+func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error) {
 	var (
-		fill Fill
+		fill FillEvent
 		err  error
 	)
 	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
