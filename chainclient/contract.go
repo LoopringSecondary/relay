@@ -174,7 +174,7 @@ type CutoffTimestampChangedEvent struct {
 	AbiEvent
 	Time        *big.Int      `json:"time" alias:"_time" gencodec:"required"`
 	Blocknumber *big.Int      `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Address     types.Address `json:"address" alias:"_address" gencodec:"required"`
+	Owner       types.Address `json:"address" alias:"_address" gencodec:"required"`
 	Cutoff      *big.Int      `json:"cutoff" alias:"_cutoff" gencodec:"required"`
 }
 

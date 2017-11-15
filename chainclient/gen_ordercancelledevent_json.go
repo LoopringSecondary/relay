@@ -14,10 +14,10 @@ var _ = (*orderCancelledEventMarshaling)(nil)
 
 func (o OrderCancelledEvent) MarshalJSON() ([]byte, error) {
 	type OrderCancelledEvent struct {
-		Time            *types.Big `json:"time" gencodec:"required"`
-		Blocknumber     *types.Big `json:"blockNumber" gencodec:"required"`
-		OrderHash       []byte     `json:"orderHash" gencodec:"required"`
-		AmountCancelled *types.Big `json:"amountCancelled gencodec:"required"`
+		Time            *types.Big `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber     *types.Big `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		OrderHash       []byte     `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+		AmountCancelled *types.Big `json:"amountCancelled" alias:"_amountCancelled" gencodec:"required"`
 	}
 	var enc OrderCancelledEvent
 	enc.Time = (*types.Big)(o.Time)
@@ -29,10 +29,10 @@ func (o OrderCancelledEvent) MarshalJSON() ([]byte, error) {
 
 func (o *OrderCancelledEvent) UnmarshalJSON(input []byte) error {
 	type OrderCancelledEvent struct {
-		Time            *types.Big `json:"time" gencodec:"required"`
-		Blocknumber     *types.Big `json:"blockNumber" gencodec:"required"`
-		OrderHash       []byte     `json:"orderHash" gencodec:"required"`
-		AmountCancelled *types.Big `json:"amountCancelled gencodec:"required"`
+		Time            *types.Big `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber     *types.Big `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		OrderHash       []byte     `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+		AmountCancelled *types.Big `json:"amountCancelled" alias:"_amountCancelled" gencodec:"required"`
 	}
 	var dec OrderCancelledEvent
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -50,8 +50,9 @@ func (o *OrderCancelledEvent) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'orderHash' for OrderCancelledEvent")
 	}
 	o.OrderHash = dec.OrderHash
-	if dec.AmountCancelled != nil {
-		o.AmountCancelled = (*big.Int)(dec.AmountCancelled)
+	if dec.AmountCancelled == nil {
+		return errors.New("missing required field 'amountCancelled' for OrderCancelledEvent")
 	}
+	o.AmountCancelled = (*big.Int)(dec.AmountCancelled)
 	return nil
 }

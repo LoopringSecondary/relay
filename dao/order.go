@@ -20,9 +20,9 @@ package dao
 
 import (
 	"errors"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"github.com/Loopring/ringminer/db"
 	"time"
 )
 
@@ -188,11 +188,37 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	return list, err
 }
 
+func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	err = s.db.Where("create_time < ?", cutoffTime).Find(&list).Error
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
+	model := Order{}
+	err := s.db.Where("order_hash = ? and create_time < ?").Find(&model).Error
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
+	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status.Value()).Error
+	return err
+}
+
 func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
 	var (
 		orders []Order
-		err error
-		data = make([]interface{}, 0)
+		err    error
+		data   = make([]interface{}, 0)
 	)
 
 	if pageIndex <= 0 {
@@ -203,11 +229,11 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 		pageSize = 20
 	}
 
-	err = s.db.Where(&query).Offset((pageIndex - 1)* pageSize).Limit(pageSize).Find(&orders).Error
+	err = s.db.Where(&query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
 	for i, v := range orders {
 		data[i] = v
 	}
 
-	pageResult  := PageResult{data, pageIndex, pageSize, 0}
+	pageResult := PageResult{data, pageIndex, pageSize, 0}
 	return pageResult, err
 }

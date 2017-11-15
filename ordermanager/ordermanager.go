@@ -136,13 +136,21 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		return err
 	}
 
-	// todo: if been cutoff
+	// judge status
+	state.SettleStatus()
+	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
+		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
+	}
 
-	// validate orderHash
-	rawOrderHashHex := state.RawOrder.Hash.Hex()
-	evtOrderHashHex := types.BytesToHash(event.OrderHash).Hex()
-	if rawOrderHashHex != evtOrderHashHex {
-		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
+	// validate cutoff
+	if cutoffModel, err := om.dao.FindCutoffEventByOwnerAddress(state.RawOrder.TokenS); err == nil {
+		if beenCutoff := om.dao.CheckOrderCutoff(orderhash.Hex(), cutoffModel.Cutoff); beenCutoff {
+			if err := om.dao.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
+				return err
+			} else {
+				return errors.New("order manager handle order filled event error:order have been cutoff")
+			}
+		}
 	}
 
 	// calculate orderState.remainAmounts
@@ -197,11 +205,10 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 		return err
 	}
 
-	// validate orderHash
-	rawOrderHashHex := state.RawOrder.Hash.Hex()
-	evtOrderHashHex := types.BytesToHash(event.OrderHash).Hex()
-	if rawOrderHashHex != evtOrderHashHex {
-		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
+	// judge status
+	state.SettleStatus()
+	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
+		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
 	}
 
 	// calculate remainAmount
@@ -234,5 +241,41 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
+	event := input.(*chainclient.CutoffTimestampChangedEvent)
+
+	// save event
+	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Owner)
+	if err != nil {
+		model = &dao.CutOffEvent{}
+		if err := model.ConvertDown(event); err != nil {
+			return err
+		}
+		if err := om.dao.Add(model); err != nil {
+			return err
+		}
+	} else {
+		if err := model.ConvertDown(event); err != nil {
+			return err
+		}
+		if err := om.dao.Update(model); err != nil {
+			return err
+		}
+	}
+
+	// get order list
+	list, err := om.dao.GetCutoffOrders(model.Cutoff)
+	if err != nil {
+		return err
+	}
+
+	// update each order
+	var orderhashs []string
+	for _, order := range list {
+		orderhashs = append(orderhashs, order.OrderHash)
+	}
+	if err := om.dao.SettleOrdersStatus(orderhashs, types.ORDER_CUTOFF); err != nil {
+		return err
+	}
+
 	return nil
 }

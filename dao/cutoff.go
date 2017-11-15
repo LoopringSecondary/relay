@@ -25,14 +25,14 @@ import (
 
 type CutOffEvent struct {
 	ID          int    `gorm:"column:id;primary_key;"`
-	Address     string `gorm:"column:owner;type:varchar(42);unique_index"`
+	Owner       string `gorm:"column:owner;type:varchar(42);unique_index"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
 func (e *CutOffEvent) ConvertDown(src *chainclient.CutoffTimestampChangedEvent) error {
-	e.Address = src.Address.Hex()
+	e.Owner = src.Owner.Hex()
 	e.Cutoff = src.Cutoff.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
 

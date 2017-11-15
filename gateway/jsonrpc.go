@@ -1,21 +1,21 @@
 package gateway
 
 import (
-	"github.com/powerman/rpc-codec/jsonrpc2"
-	"net/rpc"
-	gorillaRpc "github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
-	"net/http"
-	"net"
-	"fmt"
 	"context"
+	"errors"
+	"fmt"
+	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/types"
 	"github.com/gorilla/mux"
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/config"
-	"strings"
+	gorillaRpc "github.com/gorilla/rpc"
+	"github.com/gorilla/rpc/json"
+	"github.com/powerman/rpc-codec/jsonrpc2"
+	"net"
+	"net/http"
+	"net/rpc"
 	"os"
-	"errors"
+	"strings"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -24,10 +24,10 @@ func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
 }
 
 type PageResult struct {
-	Data []interface{}
+	Data      []interface{}
 	PageIndex int
-	PageSize int
-	Total int
+	PageSize  int
+	Total     int
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -100,7 +100,7 @@ func (j *JsonrpcServiceImpl) Start() {
 	s.RegisterService(jsonrpc, "")
 	r := mux.NewRouter()
 	r.Handle("/rpc", s)
-	http.ListenAndServe(":" + j.port, r)
+	http.ListenAndServe(":"+j.port, r)
 }
 
 func (*JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res *string) error {
@@ -162,22 +162,21 @@ func (*JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[s
 	return nil
 }
 
-
 func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
 
 	for k, v := range src {
 		switch k {
-			//TODO(xiaolu) change status to string not uint8
-			case "status":
-				query.Status = v.(uint8)
-			case "pageIndex":
-				pageIndex = v.(int)
-			case "pageSize":
-				pageSize = v.(int)
-			case "owner":
-				query.Owner = v.(string)
-			case "contractVersion":
-				query.Protocol = v.(string)
+		//TODO(xiaolu) change status to string not uint8
+		case "status":
+			query.Status = v.(uint8)
+		case "pageIndex":
+			pageIndex = v.(int)
+		case "pageSize":
+			pageSize = v.(int)
+		case "owner":
+			query.Owner = v.(string)
+		case "contractVersion":
+			query.Protocol = v.(string)
 		default:
 			err = errors.New("unsupported query found " + k)
 			return
@@ -202,5 +201,3 @@ func (t *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) 
 	*result = args.A * args.B
 	return nil
 }
-
-
