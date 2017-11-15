@@ -48,6 +48,13 @@ type RdsService interface {
 	FindLatestBlock() (*Block, error)
 }
 
+type PageResult struct {
+	Data []interface{}
+	PageIndex int
+	PageSize int
+	Total int
+}
+
 type RdsServiceImpl struct {
 	options config.MysqlOptions
 	db      *gorm.DB

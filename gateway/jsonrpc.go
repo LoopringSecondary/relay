@@ -12,6 +12,11 @@ import (
 	"context"
 	"github.com/Loopring/ringminer/types"
 	"github.com/gorilla/mux"
+	"github.com/Loopring/ringminer/dao"
+	"github.com/Loopring/ringminer/config"
+	"strings"
+	"os"
+	"errors"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -105,7 +110,44 @@ func (*JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res 
 	return nil
 }
 
-func (*JsonrpcServiceImpl) getOrders(r *http.Request, order *types.Order, res *types.Order) error {
+func (*JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface{}, res *dao.PageResult) error {
+
+	orderQuery, pi, ps, err := convertFromMap(query)
+
+	if err != nil {
+		return err
+	}
+
+	//TODO(xiaolu) finish the connect get . not use this
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	c := config.LoadConfig(path)
+	daoServiceImpl := dao.NewRdsService(c.Mysql)
+	result, queryErr := daoServiceImpl.OrderPageQuery(&orderQuery, pi, ps)
+	res = &result
+	return queryErr
+}
+
+func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
+
+	for k, v := range src {
+		switch k {
+			//case "status":
+			//	query.Status = v
+			case "pageIndex":
+				pageIndex = v.(int)
+			case "pageSize":
+				pageSize = v.(int)
+			case "owner":
+				query.Owner = v.(string)
+			case "contractVersion":
+				query.Protocol = v.(string)
+		default:
+			err = errors.New("unsupported query found " + k)
+			return
+		}
+	}
+
+	return
 
 }
 
@@ -117,10 +159,10 @@ type Arith int
 
 type Result int
 
-func (t *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *PageResult) error {
+func (t *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) error {
 	fmt.Printf("Multiplying %d with %d\n", args.A, args.B)
 
-	*result = (args.A * args.B)
+	*result = args.A * args.B
 	return nil
 }
 

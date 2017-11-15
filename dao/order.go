@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"github.com/Loopring/ringminer/db"
 )
 
 // order amountS 上限1e30
@@ -48,11 +49,6 @@ type Order struct {
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
 	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
-}
-
-type OrderQuery struct {
-	ContractVersion string `gorm:"column:protocol;type:varchar(42)"`
-	Owner           string `gorm:"column:owner;type:varchar(42)"`
 }
 
 // convert types/orderState to dao/order
@@ -185,4 +181,28 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	err = s.db.Where("block_num between ? and ?", from, to).Find(&list).Error
 
 	return list, err
+}
+
+func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
+	var (
+		orders []Order
+		err error
+		data = make([]interface{}, 0)
+	)
+
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	err = s.db.Where(&query).Offset((pageIndex - 1)* pageSize).Limit(pageSize).Find(&orders).Error
+	for i, v := range orders {
+		data[i] = v
+	}
+
+	pageResult  := PageResult{data, pageIndex, pageSize, 0}
+	return pageResult, err
 }
