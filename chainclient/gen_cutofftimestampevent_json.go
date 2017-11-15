@@ -14,25 +14,25 @@ var _ = (*cutoffTimestampChangedEventtMarshaling)(nil)
 
 func (c CutoffTimestampChangedEvent) MarshalJSON() ([]byte, error) {
 	type CutoffTimestampChangedEvent struct {
-		Time        *types.Big    `json:"time" gencodec:"required"`
-		Blocknumber *types.Big    `json:"blockNumber" gencodec:"required"`
-		Address     types.Address `json:"address" gencodec:"required"`
-		Cutoff      *types.Big    `json:"cutoff" gencodec:"required"`
+		Time        *types.Big    `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber *types.Big    `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Owner       types.Address `json:"address" alias:"_address" gencodec:"required"`
+		Cutoff      *types.Big    `json:"cutoff" alias:"_cutoff" gencodec:"required"`
 	}
 	var enc CutoffTimestampChangedEvent
 	enc.Time = (*types.Big)(c.Time)
 	enc.Blocknumber = (*types.Big)(c.Blocknumber)
-	enc.Address = c.Address
+	enc.Owner = c.Owner
 	enc.Cutoff = (*types.Big)(c.Cutoff)
 	return json.Marshal(&enc)
 }
 
 func (c *CutoffTimestampChangedEvent) UnmarshalJSON(input []byte) error {
 	type CutoffTimestampChangedEvent struct {
-		Time        *types.Big     `json:"time" gencodec:"required"`
-		Blocknumber *types.Big     `json:"blockNumber" gencodec:"required"`
-		Address     *types.Address `json:"address" gencodec:"required"`
-		Cutoff      *types.Big     `json:"cutoff" gencodec:"required"`
+		Time        *types.Big     `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber *types.Big     `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Owner       *types.Address `json:"address" alias:"_address" gencodec:"required"`
+		Cutoff      *types.Big     `json:"cutoff" alias:"_cutoff" gencodec:"required"`
 	}
 	var dec CutoffTimestampChangedEvent
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -46,10 +46,10 @@ func (c *CutoffTimestampChangedEvent) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'blockNumber' for CutoffTimestampChangedEvent")
 	}
 	c.Blocknumber = (*big.Int)(dec.Blocknumber)
-	if dec.Address == nil {
+	if dec.Owner == nil {
 		return errors.New("missing required field 'address' for CutoffTimestampChangedEvent")
 	}
-	c.Address = *dec.Address
+	c.Owner = *dec.Owner
 	if dec.Cutoff == nil {
 		return errors.New("missing required field 'cutoff' for CutoffTimestampChangedEvent")
 	}

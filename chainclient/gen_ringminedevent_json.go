@@ -14,13 +14,13 @@ var _ = (*ringMinedEventMarshaling)(nil)
 
 func (r RingMinedEvent) MarshalJSON() ([]byte, error) {
 	type RingMinedEvent struct {
-		RingIndex     *types.Big    `json:"ringIndex" gencodec:"required"`
-		Time          *types.Big    `json:"time" gencodec:"required"`
-		Blocknumber   *types.Big    `json:"blockNumber" gencodec:"required"`
-		Ringhash      types.Hash    `json:"ringHash" gencodec:"required"`
-		Miner         types.Address `json:"miner" gencodec:"required"`
-		FeeRecepient  types.Address `json:"feeRecepient" gencodec:"required"`
-		RinghashFound bool          `json:"ringHashFound" gencodec:"required"`
+		RingIndex     *types.Big    `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+		Time          *types.Big    `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber   *types.Big    `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Ringhash      types.Hash    `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+		Miner         types.Address `json:"miner" alias:"_miner" gencodec:"required"`
+		FeeRecepient  types.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
+		RinghashFound bool          `json:"ringHashFound" alias:"_ringhashFound" gencodec:"required"`
 	}
 	var enc RingMinedEvent
 	enc.RingIndex = (*types.Big)(r.RingIndex)
@@ -35,13 +35,13 @@ func (r RingMinedEvent) MarshalJSON() ([]byte, error) {
 
 func (r *RingMinedEvent) UnmarshalJSON(input []byte) error {
 	type RingMinedEvent struct {
-		RingIndex     *types.Big     `json:"ringIndex" gencodec:"required"`
-		Time          *types.Big     `json:"time" gencodec:"required"`
-		Blocknumber   *types.Big     `json:"blockNumber" gencodec:"required"`
-		Ringhash      *types.Hash    `json:"ringHash" gencodec:"required"`
-		Miner         *types.Address `json:"miner" gencodec:"required"`
-		FeeRecepient  *types.Address `json:"feeRecepient" gencodec:"required"`
-		RinghashFound *bool          `json:"ringHashFound" gencodec:"required"`
+		RingIndex     *types.Big     `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+		Time          *types.Big     `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber   *types.Big     `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Ringhash      *types.Hash    `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+		Miner         *types.Address `json:"miner" alias:"_miner" gencodec:"required"`
+		FeeRecepient  *types.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
+		RinghashFound *bool          `json:"ringHashFound" alias:"_ringhashFound" gencodec:"required"`
 	}
 	var dec RingMinedEvent
 	if err := json.Unmarshal(input, &dec); err != nil {

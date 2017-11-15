@@ -82,26 +82,26 @@ func (l *ExtractorServiceImpl) loadContract() {
 	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
 	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
 	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
-	//cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent:false, Handle: l.handleCutoffTimestampEvent}
+	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
 
 	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
 		submitRingMtd := impl.SubmitRing
 		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
 		orderFilledEvt := impl.OrderFilledEvent
 		orderCancelledEvt := impl.OrderCancelledEvent
-		//cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
+		cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
 
 		l.addContractMethod(submitRingMtd)
 		l.addContractEvent(ringhashSubmittedEvt)
 		l.addContractEvent(orderFilledEvt)
 		l.addContractEvent(orderCancelledEvt)
-		//l.addContractEvent(cutoffTimestampEvt)
+		l.addContractEvent(cutoffTimestampEvt)
 
 		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
 		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
 		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
 		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
-		//eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
+		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
 	}
 }
 
@@ -275,7 +275,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt := input.(chainclient.ContractData).Event.(chainclient.CutoffTimestampChangedEvent)
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Address.Hex())
+		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Owner.Hex())
 		log.Debugf("extractor cutoffTimestampChanged event time -> %s", evt.Time.String())
 		log.Debugf("extractor cutoffTimestampChanged event block -> %s", evt.Blocknumber.String())
 		log.Debugf("extractor cutoffTimestampChanged event cutoff time -> %s", evt.Cutoff.String())

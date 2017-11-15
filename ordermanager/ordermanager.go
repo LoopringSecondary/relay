@@ -244,7 +244,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	event := input.(*chainclient.CutoffTimestampChangedEvent)
 
 	// save event
-	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Address)
+	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Owner)
 	if err != nil {
 		model = &dao.CutOffEvent{}
 		if err := model.ConvertDown(event); err != nil {

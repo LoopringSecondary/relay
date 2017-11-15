@@ -14,17 +14,17 @@ var _ = (*orderFilledEventMarshaling)(nil)
 
 func (o OrderFilledEvent) MarshalJSON() ([]byte, error) {
 	type OrderFilledEvent struct {
-		RingIndex     *types.Big `json:"ringIndex" gencodec:"required"`
-		Time          *types.Big `json:"time" gencodec:"required"`
-		Blocknumber   *types.Big `json:"blockNumber"	gencodec:"required"`
-		Ringhash      []byte     `json:"ringHash" gencodec:"required"`
-		PreOrderHash  []byte     `json:"preOrderHash" gencodec:"required"`
-		OrderHash     []byte     `json:"orderHash" gencodec:"required"`
-		NextOrderHash []byte     `json:"nextOrderHash" gencodec:"required"`
-		AmountS       *types.Big `json:"amountS" gencodec:"required"`
-		AmountB       *types.Big `json:"amountB" gencodec:"required"`
-		LrcReward     *types.Big `json:"lrcReward" gencodec:"required"`
-		LrcFee        *types.Big `json:"lrcFee" gencodec:"required"`
+		RingIndex     *types.Big `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+		Time          *types.Big `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber   *types.Big `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Ringhash      []byte     `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+		PreOrderHash  []byte     `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
+		OrderHash     []byte     `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+		NextOrderHash []byte     `json:"nextOrderHash" alias:"_nextOrderHash" gencodec:"required"`
+		AmountS       *types.Big `json:"amountS" alias:"_amountS" gencodec:"required"`
+		AmountB       *types.Big `json:"amountB" alias:"_amountB" gencodec:"required"`
+		LrcReward     *types.Big `json:"lrcReward" alias:"_lrcReward" gencodec:"required"`
+		LrcFee        *types.Big `json:"lrcFee" alias:"_lrcFee" gencodec:"required"`
 	}
 	var enc OrderFilledEvent
 	enc.RingIndex = (*types.Big)(o.RingIndex)
@@ -43,17 +43,17 @@ func (o OrderFilledEvent) MarshalJSON() ([]byte, error) {
 
 func (o *OrderFilledEvent) UnmarshalJSON(input []byte) error {
 	type OrderFilledEvent struct {
-		RingIndex     *types.Big `json:"ringIndex" gencodec:"required"`
-		Time          *types.Big `json:"time" gencodec:"required"`
-		Blocknumber   *types.Big `json:"blockNumber"	gencodec:"required"`
-		Ringhash      []byte     `json:"ringHash" gencodec:"required"`
-		PreOrderHash  []byte     `json:"preOrderHash" gencodec:"required"`
-		OrderHash     []byte     `json:"orderHash" gencodec:"required"`
-		NextOrderHash []byte     `json:"nextOrderHash" gencodec:"required"`
-		AmountS       *types.Big `json:"amountS" gencodec:"required"`
-		AmountB       *types.Big `json:"amountB" gencodec:"required"`
-		LrcReward     *types.Big `json:"lrcReward" gencodec:"required"`
-		LrcFee        *types.Big `json:"lrcFee" gencodec:"required"`
+		RingIndex     *types.Big `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+		Time          *types.Big `json:"time" alias:"_time" gencodec:"required"`
+		Blocknumber   *types.Big `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+		Ringhash      []byte     `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+		PreOrderHash  []byte     `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
+		OrderHash     []byte     `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+		NextOrderHash []byte     `json:"nextOrderHash" alias:"_nextOrderHash" gencodec:"required"`
+		AmountS       *types.Big `json:"amountS" alias:"_amountS" gencodec:"required"`
+		AmountB       *types.Big `json:"amountB" alias:"_amountB" gencodec:"required"`
+		LrcReward     *types.Big `json:"lrcReward" alias:"_lrcReward" gencodec:"required"`
+		LrcFee        *types.Big `json:"lrcFee" alias:"_lrcFee" gencodec:"required"`
 	}
 	var dec OrderFilledEvent
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -67,9 +67,10 @@ func (o *OrderFilledEvent) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'time' for OrderFilledEvent")
 	}
 	o.Time = (*big.Int)(dec.Time)
-	if dec.Blocknumber != nil {
-		o.Blocknumber = (*big.Int)(dec.Blocknumber)
+	if dec.Blocknumber == nil {
+		return errors.New("missing required field 'blockNumber' for OrderFilledEvent")
 	}
+	o.Blocknumber = (*big.Int)(dec.Blocknumber)
 	if dec.Ringhash == nil {
 		return errors.New("missing required field 'ringHash' for OrderFilledEvent")
 	}
