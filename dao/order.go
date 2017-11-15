@@ -50,6 +50,11 @@ type Order struct {
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 }
 
+type OrderQuery struct {
+	ContractVersion string `gorm:"column:protocol;type:varchar(42)"`
+	Owner           string `gorm:"column:owner;type:varchar(42)"`
+}
+
 // convert types/orderState to dao/order
 func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder

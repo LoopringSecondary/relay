@@ -59,8 +59,8 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 
-	n.registerMysql()
-	n.registerIPFSSubService()
+	//n.registerMysql()
+	//n.registerIPFSSubService()
 	n.registerGateway()
 	n.registerMiner(ethClient.Client, database)
 	n.registerExtractor(ethClient, database)
@@ -70,12 +70,12 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 }
 
 func (n *Node) Start() {
-	n.rdsService.Prepare()
+	//n.rdsService.Prepare()
 	//n.extractorService.Start()
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 	//n.miner.Start()
 	gateway.NewJsonrpcService("8080").Start()
-	n.orderManager.Start()
+	//n.orderManager.Start()
 }
 
 func (n *Node) Wait() {

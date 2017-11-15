@@ -10,6 +10,7 @@ import (
 	//"net/http"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"encoding/json"
 )
 
 var (
@@ -69,6 +70,7 @@ func TestJsonrpcServiceImpl_SubmitOrder(t *testing.T) {
 	req.S = types.StringToSign("ssss")
 
 	fmt.Println(req)
+	fmt.Println(json.Marshal(req))
 
 	err := clientHTTP.Call("JsonrpcServiceImpl.SubmitOrder", req, &relay)
 	if err != nil {
