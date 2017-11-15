@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
+	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"sync"
@@ -119,7 +120,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		if err := newFillModel.ConvertDown(event); err != nil {
 			return err
 		}
-		om.dao.Add(newFillModel)
+		if err := om.dao.Add(newFillModel); err != nil {
+			return err
+		}
 	}
 
 	// get dao.Order and types.OrderState
@@ -132,6 +135,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	if err := model.ConvertUp(state); err != nil {
 		return err
 	}
+
+	// todo: if been cutoff
 
 	// validate orderHash
 	rawOrderHashHex := state.RawOrder.Hash.Hex()
@@ -167,6 +172,64 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 }
 
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
+	event := input.(*chainclient.OrderCancelledEvent)
+	orderhash := types.BytesToHash(event.OrderHash)
+
+	// save event
+	_, err := om.dao.FindCancelEventByOrderhash(orderhash)
+	if err != nil {
+		newCancelEventModel := &dao.CancelEvent{}
+		if err := newCancelEventModel.ConvertDown(event); err != nil {
+			return err
+		}
+		if err := om.dao.Add(newCancelEventModel); err != nil {
+			return err
+		}
+	}
+
+	// get dao.Order and types.OrderState
+	state := &types.OrderState{}
+	model, err := om.dao.GetOrderByHash(orderhash)
+	if err != nil {
+		return err
+	}
+	if err := model.ConvertUp(state); err != nil {
+		return err
+	}
+
+	// validate orderHash
+	rawOrderHashHex := state.RawOrder.Hash.Hex()
+	evtOrderHashHex := types.BytesToHash(event.OrderHash).Hex()
+	if rawOrderHashHex != evtOrderHashHex {
+		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
+	}
+
+	// calculate remainAmount
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled)
+		if state.RemainedAmountB.Cmp(big.NewInt(0)) < 0 {
+			log.Errorf("order:%s cancel amountB:%s error", orderhash.Hex(), event.AmountCancelled.String())
+			state.RemainedAmountB = big.NewInt(0)
+		}
+	} else {
+		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled)
+		if state.RemainedAmountS.Cmp(big.NewInt(0)) < 0 {
+			log.Errorf("order:%s cancel amountS:%s error", orderhash.Hex(), event.AmountCancelled.String())
+			state.RemainedAmountS = big.NewInt(0)
+		}
+	}
+
+	// update order status
+	state.SettleStatus()
+
+	// update dao.Order
+	if err := model.ConvertDown(state); err != nil {
+		return err
+	}
+	if err := om.dao.Update(state); err != nil {
+		return err
+	}
+
 	return nil
 }
 
