@@ -50,6 +50,7 @@ type RdsService interface {
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
 	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
+	FindForkBlock() (*Block, error)
 
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)

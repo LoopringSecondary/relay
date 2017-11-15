@@ -19,14 +19,12 @@
 package extractor
 
 import (
-	"errors"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/miner"
 	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
@@ -72,37 +70,6 @@ func NewExtractorService(options config.ChainClientOptions,
 	l.startDetectFork()
 
 	return &l
-}
-
-func (l *ExtractorServiceImpl) loadContract() {
-	l.contractEvents = make(map[types.Address]map[types.Hash]chainclient.AbiEvent)
-	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
-
-	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
-	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
-	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
-	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
-
-	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
-		submitRingMtd := impl.SubmitRing
-		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
-		orderFilledEvt := impl.OrderFilledEvent
-		orderCancelledEvt := impl.OrderCancelledEvent
-		cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
-
-		l.addContractMethod(submitRingMtd)
-		l.addContractEvent(ringhashSubmittedEvt)
-		l.addContractEvent(orderFilledEvt)
-		l.addContractEvent(orderCancelledEvt)
-		l.addContractEvent(cutoffTimestampEvt)
-
-		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
-		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
-		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
-		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
-		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
-	}
 }
 
 func (l *ExtractorServiceImpl) Start() {
@@ -292,85 +259,26 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 
 // todo: modify
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
+	var tForkBlock types.Block
+
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
 
-	//currentBlockNumber, err := l.rds.GetBlockNumber()
-	//if err != nil {
-	//	return start, end
-	//}
-	//
-	//if currentBlockNumber.Cmp(start) == 1 {
-	//	start = currentBlockNumber
-	//}
-	//
-	//log.Debugf("eth started block number :%s", start.String())
-
-	return start, end
-}
-
-func (l *ExtractorServiceImpl) judgeContractAddress(addr string) bool {
-	for _, v := range l.commOpts.LoopringImpAddresses {
-		if addr == v {
-			return true
-		}
-	}
-	return false
-}
-
-func (l *ExtractorServiceImpl) addContractEvent(event chainclient.AbiEvent) {
-	id := types.HexToHash(event.Id())
-	addr := event.Address()
-
-	log.Infof("addContractEvent address:%s", addr.Hex())
-	if _, ok := l.contractEvents[addr]; !ok {
-		l.contractEvents[addr] = make(map[types.Hash]chainclient.AbiEvent)
+	// 寻找分叉块，并归零分叉标记
+	forkBlock, err := l.dao.FindForkBlock()
+	if err == nil {
+		forkBlock.ConvertUp(&tForkBlock)
+		forkBlock.Fork = false
+		l.dao.Update(forkBlock)
+		return tForkBlock.BlockNumber, end
 	}
 
-	log.Infof("addContractEvent id:%s", id.Hex())
-	l.contractEvents[addr][id] = event
-}
-
-func (l *ExtractorServiceImpl) addContractMethod(method chainclient.AbiMethod) {
-	id := types.HexToHash(method.MethodId())
-	addr := method.Address()
-
-	if _, ok := l.contractMethods[addr]; !ok {
-		l.contractMethods[addr] = make(map[types.Hash]chainclient.AbiMethod)
+	// 寻找最新块
+	latestBlock, err := l.dao.FindLatestBlock()
+	if err != nil {
+		return start, end
 	}
+	latestBlock.ConvertUp(&tForkBlock)
 
-	l.contractMethods[addr][id] = method
-}
-
-func (l *ExtractorServiceImpl) getContractEvent(addr types.Address, id types.Hash) (chainclient.AbiEvent, error) {
-	var (
-		impl  map[types.Hash]chainclient.AbiEvent
-		event chainclient.AbiEvent
-		ok    bool
-	)
-	if impl, ok = l.contractEvents[addr]; !ok {
-		return nil, errors.New("extractor getContractEvent cann't find contract impl:" + addr.Hex())
-	}
-	if event, ok = impl[id]; !ok {
-		return nil, errors.New("extractor getContractEvent cann't find contract event:" + id.Hex())
-	}
-
-	return event, nil
-}
-
-func (l *ExtractorServiceImpl) getContractMethod(addr types.Address, id types.Hash) (chainclient.AbiMethod, error) {
-	var (
-		impl   map[types.Hash]chainclient.AbiMethod
-		method chainclient.AbiMethod
-		ok     bool
-	)
-
-	if impl, ok = l.contractMethods[addr]; !ok {
-		return nil, errors.New("eth listener getContractMethod cann't find contract impl")
-	}
-	if method, ok = impl[id]; !ok {
-		return nil, errors.New("eth listener getContractMethod cann't find contract method")
-	}
-
-	return method, nil
+	return tForkBlock.BlockNumber, end
 }
