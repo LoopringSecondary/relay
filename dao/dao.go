@@ -30,7 +30,7 @@ type RdsService interface {
 	// create tables
 	Prepare()
 
-	// normal functions
+	// base functions
 	Add(item interface{}) error
 	First(item interface{}) error
 	Last(item interface{}) error
@@ -46,6 +46,9 @@ type RdsService interface {
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
 	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
+
+	// fill table
+	FindFillByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*Fill, error)
 }
 
 type RdsServiceImpl struct {

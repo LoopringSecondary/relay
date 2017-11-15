@@ -25,6 +25,9 @@ import (
 
 type Fill struct {
 	ID            int    `gorm:"column:id;primary_key;"`
+	RingIndex     int64  `gorm:"column:ring_index;"`
+	BlockNumber   int64  `gorm:"column:block_number"`
+	CreateTime    int64  `gorm:"column:create_time"`
 	RingHash      string `gorm:"column:ring_hash;varchar(82)"`
 	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)"`
 	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)"`
@@ -52,10 +55,23 @@ func (f *Fill) ConvertDown(src *chainclient.OrderFilledEvent) error {
 		return err
 	}
 
+	f.RingIndex = src.RingIndex.Int64()
+	f.BlockNumber = src.Blocknumber.Int64()
+	f.CreateTime = src.Time.Int64()
 	f.RingHash = types.BytesToHash(src.Ringhash).Hex()
 	f.PreOrderHash = types.BytesToHash(src.PreOrderHash).Hex()
 	f.NextOrderHash = types.BytesToHash(src.NextOrderHash).Hex()
 	f.OrderHash = types.Bytes2Hex(src.OrderHash)
 
 	return nil
+}
+
+func (s *RdsServiceImpl) FindFillByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*Fill, error) {
+	var (
+		fill Fill
+		err  error
+	)
+	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
+
+	return &fill, err
 }
