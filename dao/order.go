@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"github.com/Loopring/ringminer/db"
+	"time"
 )
 
 // order amountS 上限1e30
@@ -49,6 +50,7 @@ type Order struct {
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
 	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
+	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 }
 
 // convert types/orderState to dao/order
@@ -87,6 +89,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
 	o.BlockNumber = state.BlockNumber.Int64()
+	o.Status = state.Status
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
@@ -129,6 +132,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	dst.MarginSplitPercentage = o.MarginSplitPercentage
 	state.BlockNumber = big.NewInt(o.BlockNumber)
+	state.Status = o.Status
 	dst.V = o.V
 	dst.S = types.HexToSign(o.S)
 	dst.R = types.HexToSign(o.R)
@@ -159,10 +163,11 @@ func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order,
 		filterhashs = append(filterhashs, v.Hex())
 	}
 
+	nowtime := time.Now().Unix()
 	if len(filterhashs) == 0 {
-		err = s.db.Order("price desc").Find(&list).Error
+		err = s.db.Where("create_time + ttl > ?", nowtime).Order("price desc").Find(&list).Error
 	} else {
-		err = s.db.Where("order_hash not in(?)", filterhashs).Order("price desc").Find(&list).Error
+		err = s.db.Where("order_hash not in(?) and create_time + ttl > ?", filterhashs, nowtime).Order("price desc").Find(&list).Error
 	}
 
 	return list, err
