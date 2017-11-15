@@ -57,6 +57,13 @@ type RdsService interface {
 	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
 }
 
+type PageResult struct {
+	Data []interface{}
+	PageIndex int
+	PageSize int
+	Total int
+}
+
 type RdsServiceImpl struct {
 	options config.MysqlOptions
 	db      *gorm.DB
