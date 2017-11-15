@@ -20,7 +20,6 @@ package dao
 
 import (
 	"errors"
-	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
 	"time"
