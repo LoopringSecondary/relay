@@ -32,6 +32,7 @@ type RdsService interface {
 
 	// base functions
 	Add(item interface{}) error
+	Del(item interface{}) error
 	First(item interface{}) error
 	Last(item interface{}) error
 	Update(item interface{}) error
@@ -41,6 +42,9 @@ type RdsService interface {
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
 	GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
+	GetCutoffOrders(cutoffTime int64) ([]Order, error)
+	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
+	CheckOrderCutoff(orderhash string, cutoff int64) bool
 
 	// block table
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
@@ -96,40 +100,4 @@ func (s *RdsServiceImpl) Prepare() {
 			s.db.CreateTable(t)
 		}
 	}
-}
-
-////////////////////////////////////////////////////
-//
-// base functions
-//
-////////////////////////////////////////////////////
-
-// add single item
-func (s *RdsServiceImpl) Add(item interface{}) error {
-	return s.db.Create(item).Error
-}
-
-// del single item
-func (s *RdsServiceImpl) Del(item interface{}) error {
-	return s.db.Delete(item).Error
-}
-
-// select first item order by primary key asc
-func (s *RdsServiceImpl) First(item interface{}) error {
-	return s.db.First(item).Error
-}
-
-// select the last item order by primary key asc
-func (s *RdsServiceImpl) Last(item interface{}) error {
-	return s.db.Last(item).Error
-}
-
-// update single item
-func (s *RdsServiceImpl) Update(item interface{}) error {
-	return s.db.Save(item).Error
-}
-
-// find all items in table where primary key > 0
-func (s *RdsServiceImpl) FindAll(item interface{}) error {
-	return s.db.Table("lpr_orders").Find(item, s.db.Where("id > ", 0)).Error
 }

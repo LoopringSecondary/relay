@@ -186,3 +186,29 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 
 	return list, err
 }
+
+func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	err = s.db.Where("create_time < ?", cutoffTime).Find(&list).Error
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
+	model := Order{}
+	err := s.db.Where("order_hash = ? and create_time < ?").Find(&model).Error
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
+	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status.Value()).Error
+	return err
+}
