@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 	//"net/http"
+	"encoding/json"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"encoding/json"
 )
 
 var (

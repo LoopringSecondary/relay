@@ -20,9 +20,9 @@ package dao
 
 import (
 	"errors"
+	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
-	"github.com/Loopring/ringminer/db"
 	"time"
 )
 
@@ -217,8 +217,8 @@ func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.Or
 func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
 	var (
 		orders []Order
-		err error
-		data = make([]interface{}, 0)
+		err    error
+		data   = make([]interface{}, 0)
 	)
 
 	if pageIndex <= 0 {
@@ -229,11 +229,11 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 		pageSize = 20
 	}
 
-	err = s.db.Where(&query).Offset((pageIndex - 1)* pageSize).Limit(pageSize).Find(&orders).Error
+	err = s.db.Where(&query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
 	for i, v := range orders {
 		data[i] = v
 	}
 
-	pageResult  := PageResult{data, pageIndex, pageSize, 0}
+	pageResult := PageResult{data, pageIndex, pageSize, 0}
 	return pageResult, err
 }

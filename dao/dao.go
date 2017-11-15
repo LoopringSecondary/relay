@@ -62,10 +62,10 @@ type RdsService interface {
 }
 
 type PageResult struct {
-	Data []interface{}
+	Data      []interface{}
 	PageIndex int
-	PageSize int
-	Total int
+	PageSize  int
+	Total     int
 }
 
 type RdsServiceImpl struct {
