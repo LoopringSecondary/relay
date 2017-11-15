@@ -19,12 +19,13 @@
 package ordermanager
 
 import (
+	"errors"
 	"github.com/Loopring/ringminer/chainclient"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/dao"
 	"github.com/Loopring/ringminer/eventemiter"
-	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/types"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -64,12 +65,16 @@ func NewOrderManager(options config.OrderBookOptions, dao dao.RdsService) *Order
 
 // Start start orderbook as a service
 func (om *OrderManagerImpl) Start() {
-	peerOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
-	chainOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleExtractorOrder}
-	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: om.handleFork}
+	newOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
+	fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
+	cancelOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
+	cutoffOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
+	forkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
-	eventemitter.On(eventemitter.OrderBookGateway, peerOrderWatcher)
-	eventemitter.On(eventemitter.OrderBookExtractor, chainOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, newOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorCancel, cancelOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, cutoffOrderWatcher)
 	eventemitter.On(eventemitter.Fork, forkWatcher)
 }
 
@@ -103,42 +108,54 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	return nil
 }
 
-// 处理来自eth网络的evt/transaction转换后的orderState
-// 订单必须存在，如果不存在则不处理
-// 如果之前没有存储，那么应该等到eth网络监听到transaction并解析成相应的order再处理
-// 如果之前已经存储，那么应该直接处理并发送到miner
-func (om *OrderManagerImpl) handleExtractorOrder(input eventemitter.EventData) error {
-	om.lock.Lock()
-	defer om.lock.Unlock()
+func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
+	event := input.(*chainclient.OrderFilledEvent)
 
-	ord := input.(*types.OrderState)
-	vd, err := ord.LatestVersion()
+	// get dao.Order and types.OrderState
+	state := &types.OrderState{}
+	orderhash := types.BytesToHash(event.OrderHash)
+	model, err := om.dao.GetOrderByHash(orderhash)
 	if err != nil {
 		return err
 	}
-
-	state := ord
-
-	switch vd.Status {
-	case types.ORDER_PENDING:
-		log.Debugf("orderbook accept pending order from chain:%s", state.RawOrder.Hash.Hex())
-		//ob.afterSendOrderToMiner(state)
-
-	case types.ORDER_FINISHED:
-		log.Debugf("orderbook accept finished order from chain:%s", state.RawOrder.Hash.Hex())
-		//ob.afterSendOrderToMiner(state)
-
-	case types.ORDER_CANCEL:
-		log.Debugf("orderbook accept cancelled order from chain:%s", state.RawOrder.Hash.Hex())
-		//ob.afterSendOrderToMiner(state)
-
-	case types.ORDER_REJECT:
-		log.Debugf("orderbook accept reject order from chain:%s", state.RawOrder.Hash.Hex())
-		//ob.afterSendOrderToMiner(state)
-
-	default:
-		log.Errorf("orderbook version data status error:%s", state.RawOrder.Hash.Hex())
+	if err := model.ConvertUp(state); err != nil {
+		return err
 	}
 
+	// validate orderHash
+	rawOrderHashHex := state.RawOrder.Hash.Hex()
+	evtOrderHashHex := types.BytesToHash(event.OrderHash).Hex()
+	if rawOrderHashHex != evtOrderHashHex {
+		return errors.New("raw orderhash hex:" + rawOrderHashHex + "not equal event orderhash hex:" + evtOrderHashHex)
+	}
+
+	// calculate orderState.remainAmounts
+	state.BlockNumber = event.Blocknumber
+	state.RemainedAmountS = event.AmountS
+	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.Cmp(state.RawOrder.AmountB) > 0 {
+		state.RemainedAmountB = state.RawOrder.AmountB
+	} else {
+		state.RemainedAmountB = event.AmountB
+	}
+	if event.AmountS.Cmp(big.NewInt(0)) < 1 {
+		state.RemainedAmountS = big.NewInt(0)
+	}
+
+	// update dao.Order
+	if err := model.ConvertDown(state); err != nil {
+		return err
+	}
+	if err := om.dao.Update(state); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
+	return nil
+}
+
+func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	return nil
 }

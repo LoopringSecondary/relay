@@ -1,13 +1,11 @@
 package gateway
 
 import (
-	"github.com/powerman/rpc-codec/jsonrpc2"
-	"net/rpc"
-	"net/http"
-	"net"
 	"fmt"
-	"context"
-	"github.com/Loopring/ringminer/types"
+	"github.com/powerman/rpc-codec/jsonrpc2"
+	"net"
+	"net/http"
+	"net/rpc"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -24,7 +22,7 @@ type JsonrpcService interface {
 }
 
 type JsonrpcServiceImpl struct {
-	port    string
+	port string
 }
 
 func NewJsonrpcService(port string) *JsonrpcServiceImpl {
@@ -56,7 +54,7 @@ func (j *JsonrpcServiceImpl) Start() {
 
 	// Server provide a HTTP transport on /rpc endpoint.
 	http.Handle("/rpc", jsonrpc2.HTTPHandler(nil))
-	lnHTTP, err := net.Listen("tcp", "127.0.0.1:" + j.port)
+	lnHTTP, err := net.Listen("tcp", ":"+j.port)
 	if err != nil {
 		panic(err)
 	}
@@ -83,4 +81,3 @@ func (*JsonrpcServiceImpl) SubmitOrder(order types.Order, res *string) error {
 	*res = "SUBMIT_SUCCESS"
 	return nil
 }
-

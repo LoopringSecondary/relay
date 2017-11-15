@@ -1,9 +1,10 @@
 package gateway
 
 import (
-	"github.com/powerman/rpc-codec/jsonrpc2"
-	"github.com/Loopring/ringminer/gateway"
 	"fmt"
+	"github.com/Loopring/ringminer/gateway"
+	"github.com/powerman/rpc-codec/jsonrpc2"
+	"net/http"
 	"testing"
 	"time"
 	//"net/http"
@@ -12,7 +13,7 @@ import (
 )
 
 var (
-	impl    *gateway.JsonrpcServiceImpl
+	impl       *gateway.JsonrpcServiceImpl
 	clientHTTP *jsonrpc2.Client
 )
 
@@ -31,7 +32,7 @@ var (
 //	fmt.Printf("SumAll(3,5,-2)=%d\n", relay)
 //}
 
-func prepare()  {
+func prepare() {
 
 	impl = gateway.NewJsonrpcService("8080")
 

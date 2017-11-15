@@ -38,7 +38,7 @@ type Order struct {
 	CreateTime            int64   `gorm:"column:create_time"`
 	Ttl                   int64   `gorm:"column:ttl"`
 	Salt                  int64   `gorm:"column:salt"`
-	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(128)"`
+	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(30)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
@@ -46,6 +46,8 @@ type Order struct {
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
+	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
+	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 }
 
 // convert types/orderState to dao/order
@@ -61,6 +63,12 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 		return err
 	}
 	if o.AmountS, err = src.AmountS.MarshalText(); err != nil {
+		return err
+	}
+	if o.RemainAmountB, err = state.RemainedAmountB.MarshalText(); err != nil {
+		return err
+	}
+	if o.RemainAmountS, err = state.RemainedAmountS.MarshalText(); err != nil {
 		return err
 	}
 	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
@@ -95,6 +103,14 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	}
 	dst.AmountB = new(big.Int)
 	if err := dst.AmountB.UnmarshalText(o.AmountB); err != nil {
+		return err
+	}
+	state.RemainedAmountS = new(big.Int)
+	if err := state.RemainedAmountS.UnmarshalText(o.RemainAmountS); err != nil {
+		return err
+	}
+	state.RemainedAmountB = new(big.Int)
+	if err := state.RemainedAmountB.UnmarshalText(o.RemainAmountB); err != nil {
 		return err
 	}
 	dst.LrcFee = new(big.Int)

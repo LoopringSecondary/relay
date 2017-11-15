@@ -24,7 +24,6 @@ import (
 	"github.com/Loopring/ringminer/chainclient/eth"
 	"github.com/Loopring/ringminer/config"
 	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/db"
 	"github.com/Loopring/ringminer/eventemiter"
 	"github.com/Loopring/ringminer/log"
 	"github.com/Loopring/ringminer/miner"
@@ -52,7 +51,6 @@ type ExtractorServiceImpl struct {
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
 	dao             dao.RdsService
-	rds             *Rds
 	stop            chan struct{}
 	lock            sync.RWMutex
 	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
@@ -62,11 +60,9 @@ type ExtractorServiceImpl struct {
 func NewExtractorService(options config.ChainClientOptions,
 	commonOpts config.CommonOptions,
 	ethClient *eth.EthClient,
-	rds dao.RdsService,
-	database db.Database) *ExtractorServiceImpl {
+	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
-	l.rds = NewRds(database, commonOpts)
 	l.options = options
 	l.commOpts = commonOpts
 	l.ethClient = ethClient
@@ -216,11 +212,6 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 			txhashs = append(txhashs, txhash)
 		}
 	}
-
-	// 存储block内所有transaction hash
-	if err := l.rds.SaveTransactions(block.Hash, txhashs); err != nil {
-		log.Errorf("eth listener save transactions error:%s", err.Error())
-	}
 }
 
 func (l *ExtractorServiceImpl) doMethod(input string) error {
@@ -256,18 +247,7 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 		log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
 	}
 
-	hash := types.BytesToHash(evt.OrderHash)
-	model, err := l.dao.GetOrderByHash(hash)
-	if err != nil {
-		return err
-	}
-
-	state := &types.OrderState{}
-	if err := model.ConvertUp(state); err != nil {
-		return err
-	}
-
-	eventemitter.Emit(eventemitter.OrderBookExtractor, state)
+	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, evt)
 
 	return nil
 }
@@ -295,7 +275,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.OrderBookExtractor, state)
+	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, state)
 
 	return nil
 }
@@ -308,20 +288,21 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	return nil
 }
 
+// todo: modify
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
 
-	currentBlockNumber, err := l.rds.GetBlockNumber()
-	if err != nil {
-		return start, end
-	}
-
-	if currentBlockNumber.Cmp(start) == 1 {
-		start = currentBlockNumber
-	}
-
-	log.Debugf("eth started block number :%s", start.String())
+	//currentBlockNumber, err := l.rds.GetBlockNumber()
+	//if err != nil {
+	//	return start, end
+	//}
+	//
+	//if currentBlockNumber.Cmp(start) == 1 {
+	//	start = currentBlockNumber
+	//}
+	//
+	//log.Debugf("eth started block number :%s", start.String())
 
 	return start, end
 }

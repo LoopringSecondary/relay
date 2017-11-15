@@ -108,7 +108,7 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService, database)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

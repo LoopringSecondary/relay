@@ -138,8 +138,8 @@ type OrderFilledEvent struct {
 	PreOrderHash  []byte   `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
 	OrderHash     []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`
 	NextOrderHash []byte   `json:"nextOrderHash" alias:"_nextOrderHash" gencodec:"required"`
-	AmountS       *big.Int `json:"amountS" alias:"_amountS" gencodec:"required"`
-	AmountB       *big.Int `json:"amountB" alias:"_amountB" gencodec:"required"`
+	AmountS       *big.Int `json:"amountS" alias:"_amountS" gencodec:"required"` // 存量数据
+	AmountB       *big.Int `json:"amountB" alias:"_amountB" gencodec:"required"` // 存量数据
 	LrcReward     *big.Int `json:"lrcReward" alias:"_lrcReward" gencodec:"required"`
 	LrcFee        *big.Int `json:"lrcFee" alias:"_lrcFee" gencodec:"required"`
 }
