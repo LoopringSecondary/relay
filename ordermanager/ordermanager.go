@@ -76,7 +76,7 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, cutoffOrderWatcher)
-	eventemitter.On(eventemitter.Fork, forkWatcher)
+	eventemitter.On(eventemitter.OrderManagerFork, forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {

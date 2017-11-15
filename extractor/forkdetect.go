@@ -30,7 +30,7 @@ import (
 
 func (l *ExtractorServiceImpl) startDetectFork() {
 	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: l.processFork}
-	eventemitter.On(eventemitter.Fork, forkWatcher)
+	eventemitter.On(eventemitter.ExtractorFork, forkWatcher)
 }
 
 func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
@@ -69,12 +69,22 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 		return err
 	}
 
+	// 更新block分叉标记
+	model := dao.Block{}
+	if err := model.ConvertDown(forkBlock); err == nil {
+		model.Fork = true
+		l.dao.Update(model)
+	}
+
+	// 发送分叉事件
 	forkEvent.ForkHash = forkBlock.BlockHash
 	forkEvent.ForkBlock = forkBlock.BlockNumber
 	forkEvent.DetectedHash = block.BlockHash
 	forkEvent.DetectedBlock = block.BlockNumber
 
-	eventemitter.Emit(eventemitter.Fork, &forkEvent)
+	eventemitter.Emit(eventemitter.ExtractorFork, &forkEvent)
+	eventemitter.Emit(eventemitter.OrderManagerFork, &forkEvent)
+
 	return nil
 }
 
@@ -97,16 +107,15 @@ func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block,
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
 	l.ethClient.GetBlockByNumber(ethBlock, fmt.Sprintf("%#x", parentBlockNumber), false)
 
-	forkBlock := &types.Block{}
-	forkBlock.BlockNumber = ethBlock.Number.BigInt()
-	forkBlock.BlockHash = ethBlock.Hash
-	forkBlock.ParentHash = ethBlock.ParentHash
+	preBlock := &types.Block{}
+	preBlock.BlockNumber = ethBlock.Number.BigInt()
+	preBlock.BlockHash = ethBlock.Hash
+	preBlock.ParentHash = ethBlock.ParentHash
 
-	return l.getForkedBlock(forkBlock)
+	return l.getForkedBlock(preBlock)
 }
 
 func (l *ExtractorServiceImpl) processFork(input eventemitter.EventData) error {
-	l.Stop()
-
+	l.Restart()
 	return nil
 }

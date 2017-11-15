@@ -30,6 +30,7 @@ type Block struct {
 	BlockHash   string `gorm:"column:block_hash;type:varchar(82);unique_index"`
 	ParentHash  string `gorm:"column:parent_hash;type:varchar(82);unique_index"`
 	CreateTime  int64  `gorm:"column:create_time"`
+	Fork        bool   `gorm:"column:fork;"`
 }
 
 // convert types/block to dao/block
@@ -43,6 +44,7 @@ func (b *Block) ConvertDown(src *types.Block) error {
 	b.BlockHash = src.BlockHash.Hex()
 	b.ParentHash = src.ParentHash.Hex()
 	b.CreateTime = src.CreateTime
+	b.Fork = false
 
 	return nil
 }
@@ -98,6 +100,17 @@ func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
 	)
 
 	err = s.db.Order("create_time, desc").First(&block).Error
+
+	return &block, err
+}
+
+func (s *RdsServiceImpl) FindForkBlock() (*Block, error) {
+	var (
+		block Block
+		err   error
+	)
+
+	err = s.db.Where("fork = ?", true).First(&block).Error
 
 	return &block, err
 }

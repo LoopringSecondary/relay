@@ -30,7 +30,8 @@ const (
 	RingMined                   Topic = "RingMined"
 	OrderCanceled                     = "OrderCanceled"
 	OrderFilled                       = "OrderFilled"
-	Fork                              = "Fork"             //chain forked
+	ExtractorFork                     = "ExtractorFork" //chain forked
+	OrderManagerFork                  = "OrderManagerFork"
 	RingSubmitFailed                  = "RingSubmitFailed" //submit ring failed
 	Transaction                       = "Transaction"
 	Gateway                           = "Gateway"
