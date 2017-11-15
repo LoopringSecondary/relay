@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/ringminer/types"
 	"math/big"
+	"time"
 )
 
 // order amountS 上限1e30
@@ -161,10 +162,11 @@ func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order,
 		filterhashs = append(filterhashs, v.Hex())
 	}
 
+	nowtime := time.Now().Unix()
 	if len(filterhashs) == 0 {
-		err = s.db.Order("price desc").Find(&list).Error
+		err = s.db.Where("create_time + ttl > ?", nowtime).Order("price desc").Find(&list).Error
 	} else {
-		err = s.db.Where("order_hash not in(?)", filterhashs).Order("price desc").Find(&list).Error
+		err = s.db.Where("order_hash not in(?) and create_time + ttl > ?", filterhashs, nowtime).Order("price desc").Find(&list).Error
 	}
 
 	return list, err
