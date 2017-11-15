@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/powerman/rpc-codec/jsonrpc2"
 	"net/rpc"
 	gorillaRpc "github.com/gorilla/rpc"
@@ -126,6 +125,43 @@ func (*JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface
 	res = &result
 	return queryErr
 }
+
+//TODO
+func (*JsonrpcServiceImpl) getDepth(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
+//TODO
+func (*JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
+//TODO
+func (*JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
+//TODO
+func (*JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
+//TODO
+func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
+//TODO
+func (*JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
+	// not support now
+	return nil
+}
+
 
 func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
 
