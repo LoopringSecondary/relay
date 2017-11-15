@@ -131,8 +131,9 @@ func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int,
 
 	for k, v := range src {
 		switch k {
-			//case "status":
-			//	query.Status = v
+			//TODO(xiaolu) change status to string not uint8
+			case "status":
+				query.Status = v.(uint8)
 			case "pageIndex":
 				pageIndex = v.(int)
 			case "pageSize":
