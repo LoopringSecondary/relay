@@ -116,18 +116,18 @@ func (l *ExtractorServiceImpl) Start() {
 		for {
 			inter, err := iterator.Next()
 			if err != nil {
-				log.Fatalf("eth listener iterator next error:%s", err.Error())
+				log.Fatalf("extractor iterator next error:%s", err.Error())
 			}
 
 			block := inter.(*eth.BlockWithTxObject)
-			log.Debugf("eth listener get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+			log.Debugf("extractor get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {
-				log.Debugf("eth listener get none block transaction")
+				log.Debugf("extractor get none block transaction")
 				continue
 			} else {
-				log.Infof("eth listener get block transaction list length %d", txcnt)
+				log.Infof("extractor get block transaction list length %d", txcnt)
 			}
 
 			checkForkBlock := types.Block{}
@@ -162,8 +162,8 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 	txhashs := []types.Hash{}
 
 	for _, tx := range block.Transactions {
-		log.Debugf("eth listener get transaction hash:%s", tx.Hash)
-		log.Debugf("eth listener get transaction input:%s", tx.Input)
+		log.Debugf("extractor get transaction hash:%s", tx.Hash)
+		log.Debugf("extractor get transaction input:%s", tx.Input)
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
 		l.doMethod(tx.Input)
@@ -172,7 +172,7 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 		var receipt eth.TransactionReceipt
 		err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash)
 		if err != nil {
-			log.Errorf("eth listener get transaction receipt error:%s", err.Error())
+			log.Errorf("extractor get transaction receipt error:%s", err.Error())
 			continue
 		}
 
@@ -234,17 +234,17 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 	evt := input.(chainclient.ContractData).Event.(chainclient.OrderFilledEvent)
 
 	if l.commOpts.Develop {
-		log.Debugf("eth listener order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
-		log.Debugf("eth listener order filled event amountS -> %s", evt.AmountS.String())
-		log.Debugf("eth listener order filled event amountB -> %s", evt.AmountB.String())
-		log.Debugf("eth listener order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-		log.Debugf("eth listener order filled event blocknumber -> %s", evt.Blocknumber.String())
-		log.Debugf("eth listener order filled event time -> %s", evt.Time.String())
-		log.Debugf("eth listener order filled event lrcfee -> %s", evt.LrcFee.String())
-		log.Debugf("eth listener order filled event lrcreward -> %s", evt.LrcReward.String())
-		log.Debugf("eth listener order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
-		log.Debugf("eth listener order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
-		log.Debugf("eth listener order filled event ringindex -> %s", evt.RingIndex.String())
+		log.Debugf("extractor order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
+		log.Debugf("extractor order filled event amountS -> %s", evt.AmountS.String())
+		log.Debugf("extractor order filled event amountB -> %s", evt.AmountB.String())
+		log.Debugf("extractor order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+		log.Debugf("extractor order filled event blocknumber -> %s", evt.Blocknumber.String())
+		log.Debugf("extractor order filled event time -> %s", evt.Time.String())
+		log.Debugf("extractor order filled event lrcfee -> %s", evt.LrcFee.String())
+		log.Debugf("extractor order filled event lrcreward -> %s", evt.LrcReward.String())
+		log.Debugf("extractor order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
+		log.Debugf("extractor order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
+		log.Debugf("extractor order filled event ringindex -> %s", evt.RingIndex.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, evt)
@@ -253,15 +253,15 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 }
 
 func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
-	log.Debugf("eth listener log event:orderCancelled")
+	log.Debugf("extractor log event:orderCancelled")
 
 	evt := input.(chainclient.ContractData).Event.(chainclient.OrderCancelledEvent)
 
 	if l.commOpts.Develop {
-		log.Debugf("eth listener order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-		log.Debugf("eth listener order cancelled event time -> %s", evt.Time.String())
-		log.Debugf("eth listener order cancelled event block -> %s", evt.Blocknumber.String())
-		log.Debugf("eth listener order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
+		log.Debugf("extractor order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
+		log.Debugf("extractor order cancelled event time -> %s", evt.Time.String())
+		log.Debugf("extractor order cancelled event block -> %s", evt.Blocknumber.String())
+		log.Debugf("extractor order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
@@ -270,6 +270,19 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 }
 
 func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:cutOffTimestampChanged")
+
+	evt := input.(chainclient.ContractData).Event.(chainclient.CutoffTimestampChangedEvent)
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Address.Hex())
+		log.Debugf("extractor cutoffTimestampChanged event time -> %s", evt.Time.String())
+		log.Debugf("extractor cutoffTimestampChanged event block -> %s", evt.Blocknumber.String())
+		log.Debugf("extractor cutoffTimestampChanged event cutoff time -> %s", evt.Cutoff.String())
+	}
+
+	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
+
 	return nil
 }
 
@@ -336,10 +349,10 @@ func (l *ExtractorServiceImpl) getContractEvent(addr types.Address, id types.Has
 		ok    bool
 	)
 	if impl, ok = l.contractEvents[addr]; !ok {
-		return nil, errors.New("eth listener getContractEvent cann't find contract impl:" + addr.Hex())
+		return nil, errors.New("extractor getContractEvent cann't find contract impl:" + addr.Hex())
 	}
 	if event, ok = impl[id]; !ok {
-		return nil, errors.New("eth listener getContractEvent cann't find contract event:" + id.Hex())
+		return nil, errors.New("extractor getContractEvent cann't find contract event:" + id.Hex())
 	}
 
 	return event, nil
