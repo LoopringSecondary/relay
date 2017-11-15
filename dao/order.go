@@ -88,7 +88,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
 	o.BlockNumber = state.BlockNumber.Int64()
-	o.Status = state.Status
+	o.Status = uint8(state.Status)
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
@@ -131,7 +131,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	dst.MarginSplitPercentage = o.MarginSplitPercentage
 	state.BlockNumber = big.NewInt(o.BlockNumber)
-	state.Status = o.Status
+	state.Status = types.OrderStatus(o.Status)
 	dst.V = o.V
 	dst.S = types.HexToSign(o.S)
 	dst.R = types.HexToSign(o.R)

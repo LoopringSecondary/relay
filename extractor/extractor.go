@@ -264,18 +264,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 		log.Debugf("eth listener order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
 	}
 
-	hash := types.BytesToHash(evt.OrderHash)
-	model, err := l.dao.GetOrderByHash(hash)
-	if err != nil {
-		return err
-	}
-
-	state := &types.OrderState{}
-	if err := model.ConvertUp(state); err != nil {
-		return err
-	}
-
-	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, state)
+	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
 
 	return nil
 }

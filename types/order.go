@@ -195,7 +195,7 @@ type OrderState struct {
 	BlockNumber     *big.Int      `json:"block_number"`
 	RemainedAmountS *big.Int      `json:"remained_amount_b"`
 	RemainedAmountB *big.Int      `json:"remained_amount_s"`
-	Status          uint8         `json:"status"`
+	Status          OrderStatus   `json:"status"`
 	States          []VersionData `json:"states"`
 }
 
