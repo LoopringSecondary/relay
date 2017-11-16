@@ -52,7 +52,7 @@ type OrderCancelledEvent struct {
 }
 
 type CutoffEvent struct {
-	Address     Address
+	Owner       Address
 	Time        *Big
 	Blocknumber *Big
 	Cutoff      *Big

@@ -241,7 +241,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
-	event := input.(*chainclient.CutoffTimestampChangedEvent)
+	event := input.(*types.CutoffEvent)
 
 	// save event
 	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Owner)

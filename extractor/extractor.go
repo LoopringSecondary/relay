@@ -249,15 +249,17 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:cutOffTimestampChanged")
 
-	contractEvt := input.(chainclient.ContractData)
-	evt := contractEvt.Event.(chainclient.CutoffTimestampChangedEvent)
-	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.CutoffTimestampChangedEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Owner.Hex())
-		log.Debugf("extractor cutoffTimestampChanged event time -> %s", evt.Time.String())
-		log.Debugf("extractor cutoffTimestampChanged event block -> %s", evt.Blocknumber.String())
-		log.Debugf("extractor cutoffTimestampChanged event cutoff time -> %s", evt.Cutoff.String())
+		log.Debugf("extractor cutoffTimestampChanged event time -> %s", evt.Time.BigInt().String())
+		log.Debugf("extractor cutoffTimestampChanged event block -> %s", evt.Blocknumber.BigInt().String())
+		log.Debugf("extractor cutoffTimestampChanged event cutoff time -> %s", evt.Cutoff.BigInt().String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)

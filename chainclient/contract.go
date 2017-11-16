@@ -209,6 +209,14 @@ type cutoffTimestampChangedEventtMarshaling struct {
 	Cutoff      *types.Big
 }
 
+func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	evt.Owner = e.Address()
+	evt.Cutoff = types.NewBigPtr(e.Cutoff)
+
+	return evt
+}
+
 type LoopringRinghashRegistry struct {
 	Contract
 	SubmitRinghash    AbiMethod
