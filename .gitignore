@@ -1,7 +1,7 @@
 .idea
-ringminer.iml
-ringminer
+relay.iml
+relay
 *.log
 lrcleveldb
-config/ringminer.toml
+config/relay.toml
 dao/err.log

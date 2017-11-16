@@ -19,7 +19,7 @@
 package db_test
 
 import (
-	"github.com/Loopring/ringminer/db"
+	"github.com/Loopring/relay/db"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,7 +32,7 @@ var sep = func() string { return string(filepath.Separator) }
 
 func file() string {
 	gopath := os.Getenv("GOPATH")
-	proj := "github.com/Loopring/ringminer"
+	proj := "github.com/Loopring/relay"
 	return gopath + sep() + "src" + sep() + proj + sep() + dbname
 }
 

@@ -20,7 +20,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/params"
+	"github.com/Loopring/relay/params"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"path/filepath"
@@ -65,7 +65,7 @@ func newApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Version = params.Version
-	app.Usage = "the Loopring/ringminer command line interface"
+	app.Usage = "the Loopring/relay command line interface"
 	app.Author = ""
 	app.Email = ""
 	return app

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
 	gorillaRpc "github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
@@ -118,7 +118,7 @@ func (*JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface
 	}
 
 	//TODO(xiaolu) finish the connect get . not use this
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
 	c := config.LoadConfig(path)
 	daoServiceImpl := dao.NewRdsService(c.Mysql)
 	result, queryErr := daoServiceImpl.OrderPageQuery(&orderQuery, pi, ps)

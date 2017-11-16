@@ -20,9 +20,9 @@ package main
 
 import (
 	"fmt"
-	ethClient "github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/crypto"
-	"github.com/Loopring/ringminer/types"
+	ethClient "github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/types"
 	"gopkg.in/urfave/cli.v1"
 )
 

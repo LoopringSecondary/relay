@@ -20,11 +20,11 @@ package extractor
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/eventemiter"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/types"
 	"math/big"
 )
 

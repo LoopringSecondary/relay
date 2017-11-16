@@ -19,7 +19,7 @@
 package chainclient
 
 import (
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
 	"math/big"
 )
 

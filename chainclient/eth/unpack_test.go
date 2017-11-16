@@ -19,7 +19,7 @@
 package eth_test
 
 import (
-	"github.com/Loopring/ringminer/chainclient/eth"
+	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

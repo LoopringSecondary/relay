@@ -19,9 +19,9 @@
 package gateway_test
 
 import (
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/gateway"
-	"github.com/Loopring/ringminer/test"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/gateway"
+	"github.com/Loopring/relay/test"
 	"github.com/ipfs/go-ipfs-api"
 	"testing"
 	"time"

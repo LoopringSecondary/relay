@@ -20,9 +20,9 @@ package gateway_test
 
 import (
 	"encoding/json"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/test"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"

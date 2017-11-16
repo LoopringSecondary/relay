@@ -19,17 +19,17 @@
 package test
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/crypto"
-	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/extractor"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/ordermanager"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
+	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/db"
+	"github.com/Loopring/relay/extractor"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
@@ -233,7 +233,7 @@ func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/config/ringminer.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 

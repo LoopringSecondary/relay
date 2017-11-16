@@ -19,8 +19,8 @@
 package dao
 
 import (
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/types"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"

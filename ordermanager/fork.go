@@ -20,11 +20,11 @@ package ordermanager
 
 import (
 	"errors"
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/miner"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/types"
 	"math/big"
 )
 

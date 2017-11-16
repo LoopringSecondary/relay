@@ -19,13 +19,13 @@
 package chainclient_test
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/crypto"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/test"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
