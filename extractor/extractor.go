@@ -172,11 +172,12 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 			// 处理事件
 			event := chainclient.ContractData{
 				Event: dstEvt.Elem().Interface().(chainclient.AbiEvent),
+				BlockNumber: evtLog.BlockNumber,
 			}
 			eventemitter.Emit(contractEvt.WatcherTopic(), event)
 
-			// 最后存储
 			txhashs = append(txhashs, txhash)
+			// todo 是否需要存储transaction
 		}
 	}
 }
@@ -198,7 +199,9 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventData) error {
 	log.Debugf("eth listener log event:orderFilled")
 
-	evt := input.(chainclient.ContractData).Event.(chainclient.OrderFilledEvent)
+	contractEvt := input.(chainclient.ContractData)
+	evt := contractEvt.Event.(chainclient.OrderFilledEvent)
+	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
@@ -222,7 +225,9 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:orderCancelled")
 
-	evt := input.(chainclient.ContractData).Event.(chainclient.OrderCancelledEvent)
+	contractEvt := input.(chainclient.ContractData)
+	evt := contractEvt.Event.(chainclient.OrderCancelledEvent)
+	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
@@ -239,7 +244,9 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:cutOffTimestampChanged")
 
-	evt := input.(chainclient.ContractData).Event.(chainclient.CutoffTimestampChangedEvent)
+	contractEvt := input.(chainclient.ContractData)
+	evt := contractEvt.Event.(chainclient.CutoffTimestampChangedEvent)
+	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Owner.Hex())
