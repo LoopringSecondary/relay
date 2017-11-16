@@ -52,7 +52,7 @@ func (p *minerOrdersProvider) start() {
 	for {
 		select {
 		case <-p.ticker.C:
-			p.clearOrders()
+			p.unMarkOrders()
 		}
 	}
 }
@@ -79,7 +79,7 @@ func (p *minerOrdersProvider) markOrders(orderhashs []types.Hash) error {
 	return p.dao.MarkMinerOrders(orderhashstrs, p.currentBlockNumber.Int64())
 }
 
-func (p *minerOrdersProvider) clearOrders() error {
+func (p *minerOrdersProvider) unMarkOrders() error {
 	des := new(big.Int).Sub(p.currentBlockNumber.BigInt(), p.blockNumberPeriod.BigInt())
 	if des.Cmp(big.NewInt(1)) < 0 {
 		return nil
