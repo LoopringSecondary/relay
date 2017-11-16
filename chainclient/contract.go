@@ -310,8 +310,3 @@ type ContractData struct {
 	BlockNumber *types.Big
 	Time        *types.Big
 }
-
-type sd interface {
-	GetErc20Balance()
-	GetAllownce()
-}
