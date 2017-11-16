@@ -36,9 +36,9 @@ type Order struct {
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
 	AmountS               []byte  `gorm:"column:amount_s;type:varchar(30)"`
 	AmountB               []byte  `gorm:"column:amount_b;type:varchar(30)"`
-	CreateTime            int64   `gorm:"column:create_time"`
-	Ttl                   int64   `gorm:"column:ttl"`
-	Salt                  int64   `gorm:"column:salt"`
+	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
+	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
+	Salt                  int64   `gorm:"column:salt;type:bigint"`
 	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(30)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
@@ -50,6 +50,7 @@ type Order struct {
 	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
+	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 }
 
 // convert types/orderState to dao/order
@@ -151,23 +152,30 @@ func (s *RdsServiceImpl) GetOrderByHash(orderhash types.Hash) (*Order, error) {
 	return order, err
 }
 
-func (s *RdsServiceImpl) GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error) {
+func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error {
+	err := s.db.Where("order_hash in (?)", filterOrderhashs).Update("miner_block_mark = ?", blockNumber).Error
+
+	return err
+}
+
+func (s *RdsServiceImpl) ClearMinerOrdersMark(blockNumber int64) error {
+	return s.db.Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark = ?", 0).Error
+}
+
+func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error) {
 	var (
-		list        []Order
-		filterhashs []string
-		err         error
+		list []Order
+		err  error
 	)
 
-	for _, v := range orderhashList {
-		filterhashs = append(filterhashs, v.Hex())
+	if len(filterStatus) < 1 {
+		return list, errors.New("should filter cutoff and finished orders")
 	}
 
 	nowtime := time.Now().Unix()
-	if len(filterhashs) == 0 {
-		err = s.db.Where("create_time + ttl > ?", nowtime).Order("price desc").Find(&list).Error
-	} else {
-		err = s.db.Where("order_hash not in(?) and create_time + ttl > ?", filterhashs, nowtime).Order("price desc").Find(&list).Error
-	}
+	err = s.db.
+		Where("token_s = ? and token_b = ? and create_time + ttl > ? and status not in (?) and miner_block_mark = ?", tokenS, tokenB, nowtime, filterStatus, 0).
+		Order("price desc").Find(&list).Error
 
 	return list, err
 }

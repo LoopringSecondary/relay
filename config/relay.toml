@@ -3,8 +3,9 @@ title = "Loopring TOML"
 [owner]
 name = "Loopring corporation"
 
-[order_book]
-ticker_duration = 1
+[order_manager]
+ticker_duration = 10
+block_period = 5
 
 [log]
     [log.zap_opts]

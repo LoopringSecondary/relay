@@ -31,35 +31,31 @@ import (
 	"time"
 )
 
-/**
-todo:
-1. filter
-2. chain event
-3. 事件执行到第几个块等信息数据
-4. 订单完成的标志，以及需要发送到miner
-*/
-
 type OrderManager interface {
 	Start()
 	Stop()
+	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
 }
 
 type OrderManagerImpl struct {
-	options   config.OrderBookOptions
+	options   config.OrderManagerOptions
 	dao       dao.RdsService
 	lock      sync.RWMutex
-	ticker    *time.Ticker
 	processor *forkProcessor
+	provider  *minerOrdersProvider
 }
 
-func NewOrderManager(options config.OrderBookOptions, dao dao.RdsService) *OrderManagerImpl {
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService) *OrderManagerImpl {
 	ob := &OrderManagerImpl{}
 
-	// todo: use config
 	ob.options = options
 	ob.dao = dao
-	ob.ticker = time.NewTicker(1 * time.Second)
 	ob.processor = newForkProcess(ob.dao)
+
+	// new miner orders provider
+	duration := time.Duration(options.TickerDuration)
+	blockPeriod := types.NewBigPtr(big.NewInt(int64(options.BlockPeriod)))
+	ob.provider = newMinerOrdersProvider(duration, blockPeriod)
 
 	return ob
 }
@@ -77,19 +73,27 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, cutoffOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerFork, forkWatcher)
+
+	om.provider.start()
 }
 
 func (om *OrderManagerImpl) Stop() {
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
-	om.ticker.Stop()
+	om.provider.stop()
 }
 
-// todo expire time
-
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
-	return om.processor.fork(input.(*chainclient.ForkedEvent))
+	om.Stop()
+
+	if err := om.processor.fork(input.(*chainclient.ForkedEvent)); err != nil {
+		log.Errorf("order manager handle fork error:%s", err.Error())
+	}
+
+	om.Start()
+
+	return nil
 }
 
 // 来自ipfs的新订单
@@ -112,6 +116,9 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
 	event := input.(*types.OrderFilledEvent)
+
+	// set miner order provider current block number
+	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
 	_, err := om.dao.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
@@ -183,6 +190,9 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	event := input.(*types.OrderCancelledEvent)
 	orderhash := event.OrderHash
 
+	// set miner order provider current block number
+	om.provider.setBlockNumber(event.Blocknumber)
+
 	// save event
 	_, err := om.dao.FindCancelEventByOrderhash(orderhash)
 	if err != nil {
@@ -243,6 +253,9 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
+	// set miner order provider current block number
+	om.provider.setBlockNumber(event.Blocknumber)
+
 	// save event
 	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Owner)
 	if err != nil {
@@ -278,4 +291,12 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	}
 
 	return nil
+}
+
+func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState {
+	if err := om.provider.markOrders(filterOrderhashs); err != nil {
+		log.Debugf("get miner orders error:%s", err.Error())
+	}
+
+	return om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
 }

@@ -73,7 +73,7 @@ type GlobalConfig struct {
 	ChainClient    ChainClientOptions
 	Common         CommonOptions
 	Miner          MinerOptions
-	Orderbook      OrderBookOptions
+	OrderManager   OrderManagerOptions
 	Log            LogOptions
 }
 
@@ -140,8 +140,9 @@ type MinerOptions struct {
 	RateRatioCVSThreshold int64
 }
 
-type OrderBookOptions struct {
+type OrderManagerOptions struct {
 	TickerDuration int
+	BlockPeriod    int
 }
 
 type GatewayFiltersOptions struct {
