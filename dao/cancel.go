@@ -19,8 +19,8 @@
 package dao
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/types"
 )
 
 type CancelEvent struct {

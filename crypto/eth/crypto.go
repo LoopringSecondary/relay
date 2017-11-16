@@ -19,7 +19,7 @@
 package eth
 
 import (
-	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )

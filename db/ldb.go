@@ -19,8 +19,8 @@
 package db
 
 import (
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"

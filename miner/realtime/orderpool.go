@@ -18,7 +18,7 @@
 
 package realtime
 
-import "github.com/Loopring/ringminer/types"
+import "github.com/Loopring/relay/types"
 
 //
 type Pool interface {

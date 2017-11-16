@@ -19,11 +19,11 @@
 package bucket
 
 import (
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/eventemiter"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/miner"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/types"
 	"sync"
 	"time"
 )

@@ -21,9 +21,9 @@ package eth
 import (
 	"crypto/ecdsa"
 	"errors"
-	"github.com/Loopring/ringminer/crypto"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"strings"

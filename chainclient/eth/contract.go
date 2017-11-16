@@ -20,8 +20,8 @@ package eth
 
 import (
 	"errors"
-	"github.com/Loopring/ringminer/log"
-	types "github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/log"
+	types "github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"

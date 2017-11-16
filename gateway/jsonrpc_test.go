@@ -2,14 +2,14 @@ package gateway
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/gateway"
+	"github.com/Loopring/relay/gateway"
 	"github.com/powerman/rpc-codec/jsonrpc2"
 	"net/http"
 	"testing"
 	"time"
 	//"net/http"
 	"encoding/json"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
 	"math/big"
 )
 

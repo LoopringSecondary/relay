@@ -21,15 +21,15 @@ package miner_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/crypto"
-	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/miner"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
+	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
+	"github.com/Loopring/relay/db"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/types"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -45,7 +45,7 @@ var registry *chainclient.LoopringRinghashRegistry = &chainclient.LoopringRingha
 var ringClient *miner.RingSubmitter
 
 func init() {
-	globalConfig := config.LoadConfig("../config/ringminer.toml")
+	globalConfig := config.LoadConfig("../config/relay.toml")
 	log.Initialize(globalConfig.Log)
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}

@@ -1,11 +1,11 @@
 package eth_test
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	EthClient "github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/crypto/eth"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	EthClient "github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto/eth"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"strconv"

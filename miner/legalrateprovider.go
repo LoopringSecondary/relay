@@ -21,9 +21,9 @@ package miner
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/types"
 	"io/ioutil"
 	"math/big"
 	"net/http"

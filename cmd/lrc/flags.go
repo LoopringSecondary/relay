@@ -20,7 +20,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/relay/config"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/urfave/cli.v1"
 	"reflect"

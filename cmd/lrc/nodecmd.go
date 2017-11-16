@@ -19,8 +19,8 @@
 package main
 
 import (
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/node"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/node"
 	"gopkg.in/urfave/cli.v1"
 	"os"
 	"os/signal"

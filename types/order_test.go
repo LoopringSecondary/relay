@@ -19,7 +19,7 @@
 package types_test
 
 import (
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
 	"math/big"
 	"testing"
 )

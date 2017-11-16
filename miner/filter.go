@@ -18,7 +18,7 @@
 
 package miner
 
-import "github.com/Loopring/ringminer/types"
+import "github.com/Loopring/relay/types"
 
 type Filter interface {
 	filter(ring *types.RingState)

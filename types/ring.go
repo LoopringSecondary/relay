@@ -19,8 +19,8 @@
 package types
 
 import (
-	"github.com/Loopring/ringminer/crypto"
-	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
 	"math/big"
 )
 

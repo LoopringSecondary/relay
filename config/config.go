@@ -31,7 +31,7 @@ import (
 func LoadConfig(file string) *GlobalConfig {
 	if "" == file {
 		dir, _ := os.Getwd()
-		file = dir + "/config/ringminer.toml"
+		file = dir + "/config/relay.toml"
 	}
 
 	io, err := os.Open(file)
@@ -47,7 +47,7 @@ func LoadConfig(file string) *GlobalConfig {
 	}
 
 	if c.Common.Develop {
-		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/ringminer/"
+		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/"
 		c.Database.DataDir = basedir + c.Database.Name
 
 		for idx, path := range c.Log.ZapOpts.OutputPaths {
