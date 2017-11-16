@@ -19,7 +19,6 @@
 package dao
 
 import (
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/types"
 )
 
@@ -28,13 +27,15 @@ type CutOffEvent struct {
 	Owner       string `gorm:"column:owner;type:varchar(42);unique_index"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
+	CreateTime  int64  `gorm:"column:create_time"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
-func (e *CutOffEvent) ConvertDown(src *chainclient.CutoffTimestampChangedEvent) error {
+func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Cutoff = src.Cutoff.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
+	e.CreateTime = src.Time.Int64()
 
 	return nil
 }

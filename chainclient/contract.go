@@ -154,6 +154,23 @@ type orderFilledEventMarshaling struct {
 	LrcFee      *types.Big
 }
 
+func (e *OrderFilledEvent) ConvertDown() *types.OrderFilledEvent {
+	evt := &types.OrderFilledEvent{}
+
+	evt.Ringhash = types.BytesToHash(e.Ringhash)
+	evt.PreOrderHash = types.BytesToHash(e.PreOrderHash)
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.NextOrderHash = types.BytesToHash(e.NextOrderHash)
+
+	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.AmountS = types.NewBigPtr(e.AmountS)
+	evt.AmountB = types.NewBigPtr(e.AmountB)
+	evt.LrcReward = types.NewBigPtr(e.LrcReward)
+	evt.LrcFee = types.NewBigPtr(e.LrcFee)
+
+	return evt
+}
+
 //go:generate gencodec -type OrderCancelledEvent -field-override orderCancelledEventMarshaling -out gen_ordercancelledevent_json.go
 type OrderCancelledEvent struct {
 	AbiEvent
@@ -169,6 +186,14 @@ type orderCancelledEventMarshaling struct {
 	AmountCancelled *types.Big
 }
 
+func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
+	evt := &types.OrderCancelledEvent{}
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.AmountCancelled = types.NewBigPtr(e.AmountCancelled)
+
+	return evt
+}
+
 //go:generate gencodec -type CutoffTimestampChangedEvent -field-override cutoffTimestampChangedEventtMarshaling -out gen_cutofftimestampevent_json.go
 type CutoffTimestampChangedEvent struct {
 	AbiEvent
@@ -182,6 +207,14 @@ type cutoffTimestampChangedEventtMarshaling struct {
 	Time        *types.Big
 	Blocknumber *types.Big
 	Cutoff      *types.Big
+}
+
+func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	evt.Owner = e.Address()
+	evt.Cutoff = types.NewBigPtr(e.Cutoff)
+
+	return evt
 }
 
 type LoopringRinghashRegistry struct {
@@ -271,13 +304,9 @@ func (loopring *Loopring) AddToken(tokenAddress types.Address) {
 }
 
 type ContractData struct {
-	Method AbiMethod
-	Event  AbiEvent
-	TxHash types.Hash
-	BlockNumber types.Big
-}
-
-type sd interface {
-	GetErc20Balance()
-	GetAllownce()
+	Method      AbiMethod
+	Event       AbiEvent
+	TxHash      types.Hash
+	BlockNumber *types.Big
+	Time        *types.Big
 }

@@ -19,7 +19,6 @@
 package dao
 
 import (
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/types"
 )
 
@@ -32,14 +31,14 @@ type CancelEvent struct {
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
-func (e *CancelEvent) ConvertDown(src *chainclient.OrderCancelledEvent) error {
+func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	var err error
 	e.AmountCancelled, err = src.AmountCancelled.MarshalText()
 	if err != nil {
 		return err
 	}
 
-	e.OrderHash = types.BytesToHash(src.OrderHash).Hex()
+	e.OrderHash = src.OrderHash.Hex()
 	e.CreateTime = src.Time.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
 

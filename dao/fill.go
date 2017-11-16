@@ -19,7 +19,6 @@
 package dao
 
 import (
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/types"
 )
 
@@ -39,7 +38,7 @@ type FillEvent struct {
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
-func (f *FillEvent) ConvertDown(src *chainclient.OrderFilledEvent) error {
+func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	var err error
 
 	if f.AmountS, err = src.AmountS.MarshalText(); err != nil {
@@ -58,10 +57,10 @@ func (f *FillEvent) ConvertDown(src *chainclient.OrderFilledEvent) error {
 	f.RingIndex = src.RingIndex.Int64()
 	f.BlockNumber = src.Blocknumber.Int64()
 	f.CreateTime = src.Time.Int64()
-	f.RingHash = types.BytesToHash(src.Ringhash).Hex()
-	f.PreOrderHash = types.BytesToHash(src.PreOrderHash).Hex()
-	f.NextOrderHash = types.BytesToHash(src.NextOrderHash).Hex()
-	f.OrderHash = types.Bytes2Hex(src.OrderHash)
+	f.RingHash = src.Ringhash.Hex()
+	f.PreOrderHash = src.PreOrderHash.Hex()
+	f.NextOrderHash = src.NextOrderHash.Hex()
+	f.OrderHash = src.OrderHash.Hex()
 
 	return nil
 }

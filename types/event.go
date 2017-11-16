@@ -35,7 +35,6 @@ type OrderFilledEvent struct {
 	PreOrderHash  Hash
 	OrderHash     Hash
 	NextOrderHash Hash
-	BlockHash     Hash
 	RingIndex     *Big
 	Time          *Big
 	Blocknumber   *Big
@@ -47,15 +46,13 @@ type OrderFilledEvent struct {
 
 type OrderCancelledEvent struct {
 	OrderHash       Hash
-	BlockHash       Hash
 	Time            *Big
 	Blocknumber     *Big
 	AmountCancelled *Big
 }
 
 type CutoffEvent struct {
-	Address     Address
-	BlockHash   Hash
+	Owner       Address
 	Time        *Big
 	Blocknumber *Big
 	Cutoff      *Big
@@ -65,7 +62,6 @@ type RingMinedEvent struct {
 	RingIndex     *Big
 	Time          *Big
 	Blocknumber   *Big
-	BlockHash     Hash
 	Ringhash      Hash
 	Miner         Address
 	FeeRecepient  Address
