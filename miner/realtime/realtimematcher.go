@@ -19,7 +19,7 @@
 package realtime
 
 import (
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
 	"sync"
 )
 

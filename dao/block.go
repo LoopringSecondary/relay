@@ -20,7 +20,7 @@ package dao
 
 import (
 	"errors"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
 	"math/big"
 )
 

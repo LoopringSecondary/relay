@@ -142,6 +142,24 @@
 			"revisionTime": "2017-02-15T23:32:05Z"
 		},
 		{
+			"checksumSHA1": "3HFUqdhX43kNPJe18WJWCVkthKI=",
+			"path": "github.com/gorilla/mux",
+			"revision": "2d5fef06b891c971b14aa6f71ca5ab6c03a36e0e",
+			"revisionTime": "2017-11-09T03:54:02Z"
+		},
+		{
+			"checksumSHA1": "UcxIsr0IzcSKDqGVnK1HsxnSSVU=",
+			"path": "github.com/gorilla/rpc",
+			"revision": "22c016f3df3febe0c1f6727598b6389507e03a18",
+			"revisionTime": "2016-09-23T22:06:01Z"
+		},
+		{
+			"checksumSHA1": "XaF5REB8hCVZiiOp0hMZ9L0EtOo=",
+			"path": "github.com/gorilla/rpc/json",
+			"revision": "22c016f3df3febe0c1f6727598b6389507e03a18",
+			"revisionTime": "2016-09-23T22:06:01Z"
+		},
+		{
 			"checksumSHA1": "1A0qEbe7YBbem+8oK1eqXbzqSXw=",
 			"path": "github.com/ipfs/go-ipfs-api",
 			"revision": "1c4abbe587f0f68fee5fcecf741a45dbe3d7bc12",
@@ -326,12 +344,6 @@
 			"path": "github.com/naoina/toml/ast",
 			"revision": "e6f5723bf2a66af014955e0888881314cf294129",
 			"revisionTime": "2017-04-28T05:41:52Z"
-		},
-		{
-			"checksumSHA1": "JVGDxPn66bpe6xEiexs1r+y6jF0=",
-			"path": "github.com/patrickmn/go-cache",
-			"revision": "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0",
-			"revisionTime": "2017-07-22T04:01:10Z"
 		},
 		{
 			"checksumSHA1": "ZBhR1HqPS+S9rVeXaWP4H7R2zAA=",
@@ -600,5 +612,5 @@
 			"revisionTime": "2016-11-30T20:14:28Z"
 		}
 	],
-	"rootPath": "github.com/Loopring/ringminer"
+	"rootPath": "github.com/Loopring/relay"
 }

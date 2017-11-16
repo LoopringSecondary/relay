@@ -1,2 +1,2 @@
-# ringminer
+# relay
 This program is under development.

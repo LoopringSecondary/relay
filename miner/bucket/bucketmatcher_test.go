@@ -19,25 +19,25 @@
 package bucket_test
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	ethClientLib "github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/crypto"
-	ethCryptoLib "github.com/Loopring/ringminer/crypto/eth"
-	"github.com/Loopring/ringminer/db"
-	"github.com/Loopring/ringminer/eventemiter"
-	"github.com/Loopring/ringminer/log"
-	"github.com/Loopring/ringminer/miner"
-	"github.com/Loopring/ringminer/miner/bucket"
-	"github.com/Loopring/ringminer/test"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient"
+	ethClientLib "github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
+	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
+	"github.com/Loopring/relay/db"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/miner/bucket"
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"math/big"
 	"testing"
 	"time"
 )
 
 func init() {
-	globalConfig := config.LoadConfig("../../config/ringminer.toml")
+	globalConfig := config.LoadConfig("../../config/relay.toml")
 	globalConfig.Common.Passphrase = []byte("sa")
 	log.Initialize(globalConfig.Log)
 

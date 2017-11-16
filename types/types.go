@@ -20,7 +20,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/Loopring/ringminer/log"
+	"github.com/Loopring/relay/log"
 	"math/big"
 )
 

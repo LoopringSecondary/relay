@@ -19,8 +19,8 @@
 package dao_test
 
 import (
-	"github.com/Loopring/ringminer/dao"
-	"github.com/Loopring/ringminer/test"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/test"
 	"testing"
 )
 

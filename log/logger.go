@@ -19,7 +19,7 @@
 package log
 
 import (
-	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/relay/config"
 	"go.uber.org/zap"
 )
 

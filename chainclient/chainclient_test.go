@@ -19,9 +19,9 @@
 package chainclient_test
 
 import (
-	"github.com/Loopring/ringminer/chainclient/eth"
-	"github.com/Loopring/ringminer/config"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/types"
 	"testing"
 )
 

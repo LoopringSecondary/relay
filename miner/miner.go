@@ -19,8 +19,8 @@
 package miner
 
 import (
-	"github.com/Loopring/ringminer/chainclient"
-	"github.com/Loopring/ringminer/config"
+	"github.com/Loopring/relay/chainclient"
+	"github.com/Loopring/relay/config"
 )
 
 var MinerInstance *Miner
