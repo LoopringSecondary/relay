@@ -171,8 +171,9 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 
 			// 处理事件
 			event := chainclient.ContractData{
-				Event: dstEvt.Elem().Interface().(chainclient.AbiEvent),
-				BlockNumber: evtLog.BlockNumber,
+				Event:       dstEvt.Elem().Interface().(chainclient.AbiEvent),
+				BlockNumber: &evtLog.BlockNumber,
+				Time:        &block.Timestamp,
 			}
 			eventemitter.Emit(contractEvt.WatcherTopic(), event)
 
@@ -199,22 +200,24 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventData) error {
 	log.Debugf("eth listener log event:orderFilled")
 
-	contractEvt := input.(chainclient.ContractData)
-	evt := contractEvt.Event.(chainclient.OrderFilledEvent)
-	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.OrderFilledEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor order filled event ringhash -> %s", types.BytesToHash(evt.Ringhash).Hex())
-		log.Debugf("extractor order filled event amountS -> %s", evt.AmountS.String())
-		log.Debugf("extractor order filled event amountB -> %s", evt.AmountB.String())
-		log.Debugf("extractor order filled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-		log.Debugf("extractor order filled event blocknumber -> %s", evt.Blocknumber.String())
-		log.Debugf("extractor order filled event time -> %s", evt.Time.String())
-		log.Debugf("extractor order filled event lrcfee -> %s", evt.LrcFee.String())
-		log.Debugf("extractor order filled event lrcreward -> %s", evt.LrcReward.String())
-		log.Debugf("extractor order filled event nextorderhash -> %s", types.BytesToHash(evt.NextOrderHash).Hex())
-		log.Debugf("extractor order filled event preorderhash -> %s", types.BytesToHash(evt.PreOrderHash).Hex())
-		log.Debugf("extractor order filled event ringindex -> %s", evt.RingIndex.String())
+		log.Debugf("extractor order filled event ringhash -> %s", evt.Ringhash.Hex())
+		log.Debugf("extractor order filled event amountS -> %s", evt.AmountS.BigInt().String())
+		log.Debugf("extractor order filled event amountB -> %s", evt.AmountB.BigInt().String())
+		log.Debugf("extractor order filled event orderhash -> %s", evt.OrderHash.Hex())
+		log.Debugf("extractor order filled event blocknumber -> %s", evt.Blocknumber.BigInt().String())
+		log.Debugf("extractor order filled event time -> %s", evt.Time.BigInt().String())
+		log.Debugf("extractor order filled event lrcfee -> %s", evt.LrcFee.BigInt().String())
+		log.Debugf("extractor order filled event lrcreward -> %s", evt.LrcReward.BigInt().String())
+		log.Debugf("extractor order filled event nextorderhash -> %s", evt.NextOrderHash.Hex())
+		log.Debugf("extractor order filled event preorderhash -> %s", evt.PreOrderHash.Hex())
+		log.Debugf("extractor order filled event ringindex -> %s", evt.RingIndex.BigInt().String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, evt)

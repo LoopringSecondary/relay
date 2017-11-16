@@ -154,6 +154,23 @@ type orderFilledEventMarshaling struct {
 	LrcFee      *types.Big
 }
 
+func (e *OrderFilledEvent) ConvertDown() *types.OrderFilledEvent {
+	evt := &types.OrderFilledEvent{}
+
+	evt.Ringhash = types.BytesToHash(e.Ringhash)
+	evt.PreOrderHash = types.BytesToHash(e.PreOrderHash)
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.NextOrderHash = types.BytesToHash(e.NextOrderHash)
+
+	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.AmountS = types.NewBigPtr(e.AmountS)
+	evt.AmountB = types.NewBigPtr(e.AmountB)
+	evt.LrcReward = types.NewBigPtr(e.LrcReward)
+	evt.LrcFee = types.NewBigPtr(e.LrcFee)
+
+	return evt
+}
+
 //go:generate gencodec -type OrderCancelledEvent -field-override orderCancelledEventMarshaling -out gen_ordercancelledevent_json.go
 type OrderCancelledEvent struct {
 	AbiEvent
@@ -271,10 +288,11 @@ func (loopring *Loopring) AddToken(tokenAddress types.Address) {
 }
 
 type ContractData struct {
-	Method AbiMethod
-	Event  AbiEvent
-	TxHash types.Hash
-	BlockNumber types.Big
+	Method      AbiMethod
+	Event       AbiEvent
+	TxHash      types.Hash
+	BlockNumber *types.Big
+	Time        *types.Big
 }
 
 type sd interface {

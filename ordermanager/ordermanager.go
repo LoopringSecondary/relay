@@ -111,10 +111,10 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 }
 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
-	event := input.(*chainclient.OrderFilledEvent)
+	event := input.(*types.OrderFilledEvent)
 
 	// save event
-	_, err := om.dao.FindFillEventByRinghashAndOrderhash(types.BytesToHash(event.Ringhash), types.BytesToHash(event.OrderHash))
+	_, err := om.dao.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
 	if err != nil {
 		newFillModel := &dao.FillEvent{}
 		if err := newFillModel.ConvertDown(event); err != nil {
@@ -127,7 +127,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 	// get dao.Order and types.OrderState
 	state := &types.OrderState{}
-	orderhash := types.BytesToHash(event.OrderHash)
+	orderhash := event.OrderHash
 	model, err := om.dao.GetOrderByHash(orderhash)
 	if err != nil {
 		return err
@@ -154,14 +154,14 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate orderState.remainAmounts
-	state.BlockNumber = event.Blocknumber
-	state.RemainedAmountS = event.AmountS
-	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.Cmp(state.RawOrder.AmountB) > 0 {
+	state.BlockNumber = event.Blocknumber.BigInt()
+	state.RemainedAmountS = event.AmountS.BigInt()
+	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.BigInt().Cmp(state.RawOrder.AmountB) > 0 {
 		state.RemainedAmountB = state.RawOrder.AmountB
 	} else {
-		state.RemainedAmountB = event.AmountB
+		state.RemainedAmountB = event.AmountB.BigInt()
 	}
-	if event.AmountS.Cmp(big.NewInt(0)) < 1 {
+	if event.AmountS.BigInt().Cmp(big.NewInt(0)) < 1 {
 		state.RemainedAmountS = big.NewInt(0)
 	}
 

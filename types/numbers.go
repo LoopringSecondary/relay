@@ -24,6 +24,12 @@ import (
 
 type Big big.Int
 
+func NewBigPtr(v *big.Int) *Big {
+	h := new(Big)
+	(*big.Int)(h).Set(v)
+	return h
+}
+
 func (h *Big) UnmarshalText(input []byte) error {
 	//length := len(input)
 	//if length >= 2 && input[0] == '"' && input[length-1] == '"' {
