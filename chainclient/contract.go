@@ -274,6 +274,7 @@ type ContractData struct {
 	Method AbiMethod
 	Event  AbiEvent
 	TxHash types.Hash
+	BlockNumber types.Big
 }
 
 type sd interface {
