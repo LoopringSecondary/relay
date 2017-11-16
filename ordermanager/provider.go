@@ -85,7 +85,7 @@ func (p *minerOrdersProvider) unMarkOrders() error {
 		return nil
 	}
 
-	return p.dao.ClearMinerOrdersMark(des.Int64())
+	return p.dao.UnMarkMinerOrders(des.Int64())
 }
 
 func (p *minerOrdersProvider) getOrders(tokenS, tokenB types.Address, orderhashs []types.Hash) []types.OrderState {

@@ -158,7 +158,7 @@ func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber 
 	return err
 }
 
-func (s *RdsServiceImpl) ClearMinerOrdersMark(blockNumber int64) error {
+func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
 	return s.db.Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark = ?", 0).Error
 }
 
