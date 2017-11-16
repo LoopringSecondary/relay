@@ -228,15 +228,17 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:orderCancelled")
 
-	contractEvt := input.(chainclient.ContractData)
-	evt := contractEvt.Event.(chainclient.OrderCancelledEvent)
-	evt.Blocknumber = contractEvt.BlockNumber.BigInt()
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.OrderCancelledEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor order cancelled event orderhash -> %s", types.BytesToHash(evt.OrderHash).Hex())
-		log.Debugf("extractor order cancelled event time -> %s", evt.Time.String())
-		log.Debugf("extractor order cancelled event block -> %s", evt.Blocknumber.String())
-		log.Debugf("extractor order cancelled event cancel amount -> %s", evt.AmountCancelled.String())
+		log.Debugf("extractor order cancelled event orderhash -> %s", evt.OrderHash.Hex())
+		log.Debugf("extractor order cancelled event time -> %s", evt.Time.BigInt().String())
+		log.Debugf("extractor order cancelled event block -> %s", evt.Blocknumber.BigInt().String())
+		log.Debugf("extractor order cancelled event cancel amount -> %s", evt.AmountCancelled.BigInt().String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)

@@ -180,8 +180,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 }
 
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
-	event := input.(*chainclient.OrderCancelledEvent)
-	orderhash := types.BytesToHash(event.OrderHash)
+	event := input.(*types.OrderCancelledEvent)
+	orderhash := event.OrderHash
 
 	// save event
 	_, err := om.dao.FindCancelEventByOrderhash(orderhash)
@@ -213,15 +213,15 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled)
+		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled.BigInt())
 		if state.RemainedAmountB.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order:%s cancel amountB:%s error", orderhash.Hex(), event.AmountCancelled.String())
+			log.Errorf("order:%s cancel amountB:%s error", orderhash.Hex(), event.AmountCancelled.BigInt().String())
 			state.RemainedAmountB = big.NewInt(0)
 		}
 	} else {
-		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled)
+		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled.BigInt())
 		if state.RemainedAmountS.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order:%s cancel amountS:%s error", orderhash.Hex(), event.AmountCancelled.String())
+			log.Errorf("order:%s cancel amountS:%s error", orderhash.Hex(), event.AmountCancelled.BigInt().String())
 			state.RemainedAmountS = big.NewInt(0)
 		}
 	}

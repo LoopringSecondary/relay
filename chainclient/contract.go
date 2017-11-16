@@ -186,6 +186,14 @@ type orderCancelledEventMarshaling struct {
 	AmountCancelled *types.Big
 }
 
+func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
+	evt := &types.OrderCancelledEvent{}
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.AmountCancelled = types.NewBigPtr(e.AmountCancelled)
+
+	return evt
+}
+
 //go:generate gencodec -type CutoffTimestampChangedEvent -field-override cutoffTimestampChangedEventtMarshaling -out gen_cutofftimestampevent_json.go
 type CutoffTimestampChangedEvent struct {
 	AbiEvent
