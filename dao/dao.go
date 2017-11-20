@@ -54,12 +54,17 @@ type RdsService interface {
 
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
+	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
+	QueryRecentFills(tokenS string, tokenB string, start int64) (fills [] FillEvent, err error)
 
 	// cancel event table
 	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
+
+	// trend table
+	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
 }
 
 type PageResult struct {

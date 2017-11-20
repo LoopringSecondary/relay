@@ -37,6 +37,7 @@ type FillEvent struct {
 	TokenB        string  `gorm:"column:token_b;type:varchar(42)"`
 	LrcReward     []byte `gorm:"column:lrc_reward;type:varchar(30)"`
 	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
+	Price		  float64
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -77,7 +78,13 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 	return &fill, err
 }
 
-func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill, err error) {
+func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill FillEvent, err error) {
 	err = s.db.First(&fill).Error
 	return
 }
+
+func (s *RdsServiceImpl) QueryRecentFills(tokenS string, tokenB string, start int64) (fills [] FillEvent, err error) {
+	err = s.db.Where("token_s = ? and token_b = ? and create_time > ?", tokenS, tokenB, start).Order("create_time desc").Limit(100).Find(&fills).Error
+	return
+}
+

@@ -359,6 +359,12 @@
 			"revisionTime": "2017-09-18T21:07:19Z"
 		},
 		{
+			"checksumSHA1": "bOUCnFlRuGN/E633R/lFuiWVrkk=",
+			"path": "github.com/robfig/cron",
+			"revision": "2315d5715e36303a941d907f038da7f7c44c773b",
+			"revisionTime": "2017-11-01T20:10:47Z"
+		},
+		{
 			"checksumSHA1": "LjPdvMphElL0GOVNQCsmZMVgWIw=",
 			"origin": "github.com/ethereum/go-ethereum/vendor/github.com/rs/cors",
 			"path": "github.com/rs/cors",
