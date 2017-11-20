@@ -35,6 +35,7 @@ type FillEvent struct {
 	AmountB       []byte `gorm:"column:amount_b;type:varchar(30)"`
 	LrcReward     []byte `gorm:"column:lrc_reward;type:varchar(30)"`
 	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
+	IsDeleted     bool   `gorm:"column:is_deleted"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -61,6 +62,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.PreOrderHash = src.PreOrderHash.Hex()
 	f.NextOrderHash = src.NextOrderHash.Hex()
 	f.OrderHash = src.OrderHash.Hex()
+	f.IsDeleted = src.IsDeleted
 
 	return nil
 }
@@ -70,7 +72,11 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 		fill FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
+	err = s.db.Where("ring_hash = ? and order_hash = ? and is_deleted = false", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
+}
+
+func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
 }
