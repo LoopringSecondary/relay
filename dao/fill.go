@@ -33,6 +33,8 @@ type FillEvent struct {
 	OrderHash     string `gorm:"column:order_hash;type:varchar(82)"`
 	AmountS       []byte `gorm:"column:amount_s;type:varchar(30)"`
 	AmountB       []byte `gorm:"column:amount_b;type:varchar(30)"`
+	TokenS        string  `gorm:"column:token_s;type:varchar(42)"`
+	TokenB        string  `gorm:"column:token_b;type:varchar(42)"`
 	LrcReward     []byte `gorm:"column:lrc_reward;type:varchar(30)"`
 	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
 }
@@ -73,4 +75,9 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
+}
+
+func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill, err error) {
+	err = s.db.First(&fill).Error
+	return
 }
