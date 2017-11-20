@@ -63,12 +63,14 @@ func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService) *Or
 // Start start orderbook as a service
 func (om *OrderManagerImpl) Start() {
 	newOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
+	ringMinedWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
 	fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	cancelOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
 	cutoffOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
 	forkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
 	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, newOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, ringMinedWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, cutoffOrderWatcher)
@@ -109,6 +111,31 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 	if err := om.dao.Add(model); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
+	event := input.(*types.RingMinedEvent)
+
+	model, err := om.dao.FindRingMinedByRingHash(event.Ringhash.Hex())
+	if err != nil {
+		model = &dao.RingMined{}
+		if err := model.ConvertDown(event); err != nil {
+			return err
+		}
+
+		om.dao.Add(model)
+	} else {
+		modelConvertEvent := &types.RingMinedEvent{}
+		if err := model.ConvertUp(modelConvertEvent); err != nil {
+			return err
+		}
+
+		if modelConvertEvent.RingIndex.BigInt().Cmp(event.RingIndex.BigInt()) != 0 {
+			om.dao.Add(model)
+		}
 	}
 
 	return nil
