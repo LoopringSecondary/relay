@@ -59,11 +59,11 @@ type CutoffEvent struct {
 }
 
 type RingMinedEvent struct {
-	RingIndex     *Big
-	Time          *Big
-	Blocknumber   *Big
-	Ringhash      Hash
-	Miner         Address
-	FeeRecepient  Address
-	RinghashFound bool
+	RingIndex          *Big
+	Time               *Big
+	Blocknumber        *Big
+	Ringhash           Hash
+	Miner              Address
+	FeeRecipient       Address
+	IsRinghashReserved bool
 }

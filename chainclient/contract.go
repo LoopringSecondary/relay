@@ -109,23 +109,33 @@ type SubmitRingMethod struct {
 	Outputs types.RingSubmitOuts
 }
 
-// todo(fk): []byte to hash
 //go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
 type RingMinedEvent struct {
 	AbiEvent
-	RingIndex     *big.Int      `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
-	Time          *big.Int      `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber   *big.Int      `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Ringhash      types.Hash    `json:"ringHash" alias:"_ringhash" gencodec:"required"`
-	Miner         types.Address `json:"miner" alias:"_miner" gencodec:"required"`
-	FeeRecepient  types.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
-	RinghashFound bool          `json:"ringHashFound" alias:"_ringhashFound" gencodec:"required"`
+	RingIndex          *big.Int      `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+	Time               *big.Int      `json:"time" alias:"_time" gencodec:"required"`
+	Blocknumber        *big.Int      `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+	Ringhash           types.Hash    `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+	Miner              types.Address `json:"miner" alias:"_miner" gencodec:"required"`
+	FeeRecepient       types.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
+	IsRinghashReserved bool          `json:"isRinghashReserved" alias:"_isRinghashReserved" gencodec:"required"`
 }
 
 type ringMinedEventMarshaling struct {
 	RingIndex   *types.Big
 	Time        *types.Big
 	Blocknumber *types.Big
+}
+
+func (e *RingMinedEvent) ConvertDown() *types.RingMinedEvent {
+	evt := &types.RingMinedEvent{}
+	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.Ringhash = e.Ringhash
+	evt.Miner = e.Miner
+	evt.FeeRecipient = e.FeeRecepient
+	evt.IsRinghashReserved = e.IsRinghashReserved
+
+	return evt
 }
 
 //go:generate gencodec -type OrderFilledEvent -field-override orderFilledEventMarshaling -out gen_orderfilledevent_json.go

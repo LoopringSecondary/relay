@@ -38,9 +38,14 @@ type RdsService interface {
 	Update(item interface{}) error
 	FindAll(item interface{}) error
 
+	// ring mined table
+	FindRingMinedByRingHash(ringhash string) (*RingMined, error)
+
 	// order table
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
-	GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error)
+	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
+	UnMarkMinerOrders(blockNumber int64) error
+	GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error

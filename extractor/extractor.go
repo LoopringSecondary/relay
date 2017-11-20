@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -197,8 +198,30 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	return nil
 }
 
+func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:ringMined")
+
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.RingMinedEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor ring mined event ringhash -> %s", evt.Ringhash.Hex())
+		log.Debugf("extractor ring mined event ringIndex -> %s", evt.RingIndex.BigInt().String())
+		log.Debugf("extractor ring mined event miner -> %s", evt.Miner.Hex())
+		log.Debugf("extractor ring mined event feeRecipient -> %s", evt.FeeRecipient.Hex())
+		log.Debugf("extractor ring mined event isRinghashReserved -> %s", strconv.FormatBool(evt.IsRinghashReserved))
+	}
+
+	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, evt)
+
+	return nil
+}
+
 func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventData) error {
-	log.Debugf("eth listener log event:orderFilled")
+	log.Debugf("extractor log event:orderFilled")
 
 	contractData := input.(chainclient.ContractData)
 	contractEvent := contractData.Event.(chainclient.OrderFilledEvent)
