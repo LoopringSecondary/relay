@@ -40,6 +40,7 @@ type RdsService interface {
 
 	// ring mined table
 	FindRingMinedByRingHash(ringhash string) (*RingMined, error)
+	RollBackRingMined(from, to int64) error
 
 	// order table
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
@@ -59,12 +60,15 @@ type RdsService interface {
 
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
+	RollBackFill(from, to int64) error
 
 	// cancel event table
 	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
+	RollBackCancel(from, to int64) error
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
+	RollBackCutoff(from, to int64) error
 }
 
 type PageResult struct {

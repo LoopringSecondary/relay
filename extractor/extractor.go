@@ -206,6 +206,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor ring mined event ringhash -> %s", evt.Ringhash.Hex())
@@ -228,6 +229,7 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor order filled event ringhash -> %s", evt.Ringhash.Hex())
@@ -256,6 +258,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor order cancelled event orderhash -> %s", evt.OrderHash.Hex())
@@ -277,6 +280,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor cutoffTimestampChanged event owner address -> %s", evt.Owner.Hex())

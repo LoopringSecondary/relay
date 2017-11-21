@@ -32,6 +32,7 @@ type RingMined struct {
 	IsRinghashReserved bool   `gorm:"column:is_ring_hash_reserved;"`
 	BlockNumber        int64  `gorm:"column:block_number;type:bigint"`
 	Time               int64  `gorm:"column:time;type:bigint"`
+	IsDeleted          bool   `gorm:"column:is_deleted"`
 }
 
 func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
@@ -47,6 +48,7 @@ func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 	r.IsRinghashReserved = event.IsRinghashReserved
 	r.BlockNumber = event.Blocknumber.Int64()
 	r.Time = event.Time.Int64()
+	r.IsDeleted = event.IsDeleted
 
 	return nil
 }
@@ -63,6 +65,7 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	event.IsRinghashReserved = r.IsRinghashReserved
 	event.Blocknumber = types.NewBigPtr(big.NewInt(r.BlockNumber))
 	event.Time = types.NewBigPtr(big.NewInt(r.Time))
+	event.IsDeleted = r.IsDeleted
 
 	return nil
 }
@@ -73,7 +76,13 @@ func (s *RdsServiceImpl) FindRingMinedByRingHash(ringhash string) (*RingMined, e
 		err   error
 	)
 
-	err = s.db.Where("ring_hash = ?", ringhash).First(&model).Error
+	err = s.db.Where("ring_hash = ? and is_deleted = false", ringhash).First(&model).Error
 
 	return &model, err
+}
+
+func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
+	err := s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
+
+	return err
 }
