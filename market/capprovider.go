@@ -16,7 +16,7 @@
 
 */
 
-package miner
+package market
 
 import (
 	"encoding/json"
@@ -55,7 +55,7 @@ const (
 	BTC
 )
 
-type LegalRateProvider struct {
+type MarketCapProvider struct {
 	LRC_ADDRESS   string
 	baseUrl       string
 	currenciesMap map[types.Address]*CurrencyMarketCap
@@ -106,7 +106,7 @@ func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *LegalRateProvider) GetLegalRate(tokenAddress types.Address) *big.Rat {
+func (p *MarketCapProvider) GetMarketCap(tokenAddress types.Address) *big.Rat {
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)
 		switch p.currency {
@@ -123,11 +123,11 @@ func (p *LegalRateProvider) GetLegalRate(tokenAddress types.Address) *big.Rat {
 	}
 }
 
-func (p *LegalRateProvider) stop() {
+func (p *MarketCapProvider) stop() {
 	//todo:
 }
 
-func (p *LegalRateProvider) start() {
+func (p *MarketCapProvider) start() {
 	go func() {
 		for {
 			for _, c := range p.currenciesMap {
@@ -158,8 +158,8 @@ func (p *LegalRateProvider) start() {
 	}()
 }
 
-func NewLegalRateProvider(options config.MinerOptions) *LegalRateProvider {
-	provider := &LegalRateProvider{}
+func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
+	provider := &MarketCapProvider{}
 	provider.baseUrl = options.RateProvider.BaseUrl
 	provider.LRC_ADDRESS = options.RateProvider.LrcAddress
 	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
