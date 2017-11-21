@@ -23,7 +23,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"log"
+	"github.com/Loopring/relay/log"
 )
 
 type RdsService interface {
@@ -108,13 +108,17 @@ func (s *RdsServiceImpl) Prepare() {
 
 	tables = append(tables, &Order{})
 	tables = append(tables, &Block{})
+	tables = append(tables, &RingMined{})
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})
+	tables = append(tables, &Trend{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
-			s.db.CreateTable(t)
+			if err := s.db.CreateTable(t).Error; err != nil {
+				log.Errorf("create mysql table error:%s", err.Error())
+			}
 		}
 	}
 }

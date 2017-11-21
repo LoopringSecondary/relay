@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/db"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/ordermanager"
@@ -104,7 +103,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := eth.NewChainClient(globalConfig.ChainClient, []byte("sa"))
+	ethClient := generateEthClient(globalConfig)
 	params.Client = ethClient.Client
 	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
 
@@ -242,8 +241,9 @@ func loadConfig() *config.GlobalConfig {
 
 func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
-	db := db.NewDB(c.Database)
-	l := extractor.NewExtractorService(c.ChainClient, c.Common, nil, nil, db)
+	rds := LoadConfigAndGenerateDaoService()
+	ethClient := generateEthClient(c)
+	l := extractor.NewExtractorService(c.ChainClient, c.Common, ethClient, rds)
 	return l
 }
 
@@ -257,4 +257,8 @@ func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
 func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
 	c := loadConfig()
 	return dao.NewRdsService(c.Mysql)
+}
+
+func generateEthClient(c *config.GlobalConfig) *eth.EthClient{
+	return eth.NewChainClient(c.ChainClient, []byte("sa"))
 }

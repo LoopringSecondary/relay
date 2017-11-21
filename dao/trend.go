@@ -20,6 +20,7 @@ package dao
 
 // order amountS 上限1e30
 
+// todo: 建表失败
 type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
 	Interval   string  `gorm:"column:interval;type:varchar(42)"`
@@ -31,8 +32,8 @@ type Trend struct {
 	Close      float64 `gorm:"column:close;type:decimal(28,16);"`
 	High       float64 `gorm:"column:high;type:decimal(28,16);"`
 	Low        float64 `gorm:"column:low;type:decimal(28,16);"`
-	From       int64   `gorm:"column:create_time";type:bigint`
-	To         int64   `gorm:"column:create_time";type:bigint`
+	From       int64   `gorm:"column:from";type:bigint`
+	To         int64   `gorm:"column:to";type:bigint`
 }
 
 func (s *RdsServiceImpl) create(trend Trend) error {
