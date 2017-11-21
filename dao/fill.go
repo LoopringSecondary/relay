@@ -33,6 +33,8 @@ type FillEvent struct {
 	OrderHash     string `gorm:"column:order_hash;type:varchar(82)"`
 	AmountS       []byte `gorm:"column:amount_s;type:varchar(30)"`
 	AmountB       []byte `gorm:"column:amount_b;type:varchar(30)"`
+	TokenS        string  `gorm:"column:token_s;type:varchar(42)"`
+	TokenB        string  `gorm:"column:token_b;type:varchar(42)"`
 	LrcReward     []byte `gorm:"column:lrc_reward;type:varchar(30)"`
 	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
 	IsDeleted     bool   `gorm:"column:is_deleted"`
@@ -75,6 +77,20 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 	err = s.db.Where("ring_hash = ? and order_hash = ? and is_deleted = false", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
+}
+
+func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill FillEvent, err error) {
+	err = s.db.First(&fill).Error
+	return
+}
+
+func (s *RdsServiceImpl) QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills [] FillEvent, err error) {
+	if end != 0 {
+		err = s.db.Where("token_s = ? and token_b = ? and create_time > ? and create_time <= ?", tokenS, tokenB, start, end).Order("create_time desc").Limit(100).Find(&fills).Error
+	} else {
+		err = s.db.Where("token_s = ? and token_b = ? and create_time > ?", tokenS, tokenB, start).Order("create_time desc").Limit(100).Find(&fills).Error
+	}
+	return
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {

@@ -33,6 +33,7 @@ import (
 	"github.com/Loopring/relay/ordermanager"
 	"go.uber.org/zap"
 	"sync"
+	"github.com/Loopring/relay/market"
 )
 
 // TODO(fk): add services
@@ -46,6 +47,8 @@ type Node struct {
 	stop             chan struct{}
 	lock             sync.RWMutex
 	logger           *zap.Logger
+	trendManager     market.TrendManager
+	jsonRpcService  gateway.JsonrpcServiceImpl
 }
 
 func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
@@ -65,6 +68,8 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMiner(ethClient.Client, database)
 	n.registerExtractor(ethClient, database)
 	n.registerOrderManager(database)
+	n.registerTrendManager(database)
+	n.registerJsonRpcService()
 
 	return n
 }
@@ -74,7 +79,7 @@ func (n *Node) Start() {
 	//n.extractorService.Start()
 	//n.ipfsSubService.Start()
 	//n.miner.Start()
-	gateway.NewJsonrpcService("8080").Start()
+	//gateway.NewJsonrpcService("8080").Start()
 	//n.orderManager.Start()
 }
 
@@ -117,6 +122,14 @@ func (n *Node) registerIPFSSubService() {
 
 func (n *Node) registerOrderManager(database db.Database) {
 	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService)
+}
+
+func (n *Node) registerTrendManager(database db.Database) {
+	n.trendManager = market.NewTrendManager(n.rdsService)
+}
+
+func (n *Node) registerJsonRpcService() {
+	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
 }
 
 func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
