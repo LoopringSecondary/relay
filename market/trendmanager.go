@@ -103,7 +103,9 @@ func (t *TrendManager) initCache() {
 		}
 
 		tokenS, tokenB, _ := Unpack(mkt)
-		fills, err := t.rds.QueryRecentFills(tokenS, tokenB, time.Now().Unix())
+		now := time.Now()
+		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
+		fills, err := t.rds.QueryRecentFills(tokenS, tokenB, firstSecondThisHour.Unix(), 0)
 
 		if err != nil {
 			log.Fatal(err)
@@ -112,20 +114,22 @@ func (t *TrendManager) initCache() {
 		mktCache.fills = fills
 		trendMap[mkt] = mktCache
 
-		ticker := calculateTicker(mkt, fills[0], mktCache.trends)
+		ticker := calculateTicker(mkt, fills, mktCache.trends, firstSecondThisHour)
 		tickerMap[mkt] = ticker
 	}
 	t.c.Set(TREND_KEY, trendMap, cache.NoExpiration)
 	t.c.Set(TICKER_KEY, tickerMap, cache.NoExpiration)
 
-
-
+	t.cacheReady = true
+	t.startScheduleUpdate()
 
 }
 
-func calculateTicker(market string, fill dao.FillEvent, trends [] Trend) Ticker {
+func calculateTicker(market string, fills []dao.FillEvent, trends [] Trend, now time.Time) Ticker {
 
 	var result = Ticker{Market:market}
+
+	before24Hour := now.Unix() - 24 * 60 * 60
 
 	var (
 		high float64
@@ -134,7 +138,17 @@ func calculateTicker(market string, fill dao.FillEvent, trends [] Trend) Ticker 
 		amountB float64
 	)
 
+	sort.Slice(trends, func(i, j int) bool {
+		return trends[i].Start < trends[j].Start
+	})
+
+
 	for _, data := range trends {
+
+		if data.Start > before24Hour {
+			continue
+		}
+
 		amountS += byteToFloat(data.AmountS)
 		amountB += byteToFloat(data.AmountB)
 		if high == 0 || high < data.High {
@@ -145,25 +159,53 @@ func calculateTicker(market string, fill dao.FillEvent, trends [] Trend) Ticker 
 		}
 	}
 
+	for i, data := range fills {
+
+		amountS += byteToFloat(data.AmountS)
+		amountB += byteToFloat(data.AmountB)
+
+		//TODO(xiaolu) how to cal price?
+		var price float64 = 0
+
+		if i == len(fills) - 1 {
+			result.Last = price
+		}
+
+		if high == 0 || high < price {
+			high = price
+		}
+		if low == 0 || low < price {
+			low = price
+		}
+	}
+
 	result.High = high
 	result.Low = low
 
-	sort.Slice(trends, func(i, j int) bool {
-		return trends[i].Start < trends[j].Start
-	})
-
 	result.Open = trends[0].Open
 	result.Close = trends[len(trends) - 1].Close
+
+	result.AmountS = amountS
+	result.AmountB = amountB
 	return result
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("0 5 * * * *", t.insertTrend)
+	t.cron.AddFunc("10 * * * * *", t.insertTrend)
 	t.cron.Start()
 }
 
-func (t *TrendManager) insertTrend() {
 
+func (t *TrendManager) insertTrend() {
+	// get latest 24 hour trend if not exist generate
+
+	for _, mkt := range supportMarkets {
+		now := time.Now()
+		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
+		before24Hour := firstSecondThisHour.Unix() - 24 * 60 * 60
+		trends, err := t.rds.TrendQueryByTime(mkt, before24Hour, firstSecondThisHour.Unix())
+
+	}
 }
 
 func(t *TrendManager) GetTrends(market string) (trends []Trend, err error) {

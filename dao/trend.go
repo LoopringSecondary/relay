@@ -62,3 +62,8 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	err = s.db.Where(query).Count(&result.Total).Error
 	return
 }
+
+func (s *RdsServiceImpl) TrendQueryByTime(market string, start, end int64) (trends [] Trend, err error) {
+	err = s.db.Where("market = ? and start > ? and end <= ?", market, start, end).Order("start desc").Find(&trends).Error
+	return
+}
