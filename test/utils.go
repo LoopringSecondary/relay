@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/db"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/ordermanager"
@@ -242,8 +241,7 @@ func loadConfig() *config.GlobalConfig {
 
 func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
-	db := db.NewDB(c.Database)
-	l := extractor.NewExtractorService(c.ChainClient, c.Common, nil, nil, db)
+	l := extractor.NewExtractorService(c.ChainClient, c.Common, nil, nil)
 	return l
 }
 

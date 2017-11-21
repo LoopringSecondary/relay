@@ -21,6 +21,7 @@ package miner
 import (
 	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/market"
 )
 
 var MinerInstance *Miner
@@ -30,24 +31,23 @@ type Miner struct {
 	matcher               Matcher
 	submitter             *RingSubmitter
 	rateRatioCVSThreshold int64
-	legalRateProvider     *LegalRateProvider
+	marketCapProvider     *market.MarketCapProvider
 }
 
 func (minerInstance *Miner) Start() {
 	minerInstance.matcher.Start()
 	minerInstance.submitter.start()
-	minerInstance.legalRateProvider.start()
 }
 
 func (minerInstance *Miner) Stop() {
 	minerInstance.matcher.Stop()
 	minerInstance.submitter.stop()
-	minerInstance.legalRateProvider.stop()
 }
 
-func NewMiner(options config.MinerOptions, submitter *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, rateProvider *LegalRateProvider) *Miner {
+func NewMinerInstance(options config.MinerOptions, submitter *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, marketCapProvider *market.MarketCapProvider) *Miner {
 	rateRatioCVSThreshold := options.RateRatioCVSThreshold
-	return &Miner{legalRateProvider: rateProvider,
+	return &Miner{
+		marketCapProvider:     marketCapProvider,
 		submitter:             submitter,
 		matcher:               matcher,
 		rateRatioCVSThreshold: rateRatioCVSThreshold,

@@ -262,6 +262,8 @@ type Loopring struct {
 	LoopringImpls map[types.Address]*LoopringProtocolImpl
 }
 
+var LoopringInstance *Loopring
+
 func NewLoopringInstance(commOpts config.CommonOptions, client *Client) *Loopring {
 	loopringInstance := &Loopring{}
 	loopringInstance.Client = client
