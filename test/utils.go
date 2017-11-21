@@ -259,6 +259,6 @@ func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
 	return dao.NewRdsService(c.Mysql)
 }
 
-func generateEthClient(c *config.GlobalConfig) *eth.EthClient{
+func generateEthClient(c *config.GlobalConfig) *eth.EthClient {
 	return eth.NewChainClient(c.ChainClient, []byte("sa"))
 }

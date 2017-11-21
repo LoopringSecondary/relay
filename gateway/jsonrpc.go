@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
 	gorillaRpc "github.com/gorilla/rpc"
@@ -38,12 +39,14 @@ type JsonrpcService interface {
 }
 
 type JsonrpcServiceImpl struct {
-	port string
+	port         string
+	trendManager market.TrendManager
 }
 
-func NewJsonrpcService(port string) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
+	l.trendManager = trendManager
 	return l
 }
 
@@ -144,10 +147,10 @@ func (*JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[st
 	return nil
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *map[string]int) error {
-	// not support now
-	return nil
+func (j *JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *[]market.Trend) error {
+	trends, err := j.trendManager.GetTrends(market)
+	res = &trends
+	return err
 }
 
 //TODO
