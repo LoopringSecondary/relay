@@ -38,9 +38,15 @@ type RdsService interface {
 	Update(item interface{}) error
 	FindAll(item interface{}) error
 
+	// ring mined table
+	FindRingMinedByRingHash(ringhash string) (*RingMined, error)
+	RollBackRingMined(from, to int64) error
+
 	// order table
 	GetOrderByHash(orderhash types.Hash) (*Order, error)
-	GetOrdersForMiner(orderhashList []types.Hash) ([]Order, error)
+	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
+	UnMarkMinerOrders(blockNumber int64) error
+	GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
@@ -56,12 +62,15 @@ type RdsService interface {
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
 	QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills [] FillEvent, err error)
+	RollBackFill(from, to int64) error
 
 	// cancel event table
 	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
+	RollBackCancel(from, to int64) error
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
+	RollBackCutoff(from, to int64) error
 
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)

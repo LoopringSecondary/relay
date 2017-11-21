@@ -28,6 +28,7 @@ type CutOffEvent struct {
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
 	CreateTime  int64  `gorm:"column:create_time"`
+	IsDeleted   bool   `gorm:"column:is_deleted"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
@@ -36,6 +37,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Cutoff = src.Cutoff.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
 	e.CreateTime = src.Time.Int64()
+	e.IsDeleted = src.IsDeleted
 
 	return nil
 }
@@ -46,7 +48,11 @@ func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner types.Address) (*Cu
 		err   error
 	)
 
-	err = s.db.Where("owner = ?", owner.Hex()).First(&model).Error
+	err = s.db.Where("owner = ? and is_deleted = false", owner.Hex()).First(&model).Error
 
 	return &model, err
+}
+
+func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
 }

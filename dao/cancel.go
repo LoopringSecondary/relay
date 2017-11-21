@@ -28,6 +28,7 @@ type CancelEvent struct {
 	BlockNumber     int64  `gorm:"column:block_number"`
 	CreateTime      int64  `gorm:"column:create_time"`
 	AmountCancelled []byte `gorm:"column:amount_cancelled;type:varchar(30)"`
+	IsDeleted       bool   `gorm:"column:is_deleted"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
@@ -41,6 +42,7 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.OrderHash = src.OrderHash.Hex()
 	e.CreateTime = src.Time.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
+	e.IsDeleted = src.IsDeleted
 
 	return nil
 }
@@ -51,7 +53,11 @@ func (s *RdsServiceImpl) FindCancelEventByOrderhash(orderhash types.Hash) (*Canc
 		err   error
 	)
 
-	err = s.db.Where("order_hash = ?", orderhash.Hex()).First(&model).Error
+	err = s.db.Where("order_hash = ? and is_deleted = false", orderhash.Hex()).First(&model).Error
 
 	return &model, err
+}
+
+func (s *RdsServiceImpl) RollBackCancel(from, to int64) error {
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
 }

@@ -121,7 +121,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager(database db.Database) {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.Orderbook, n.rdsService)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService)
 }
 
 func (n *Node) registerTrendManager(database db.Database) {

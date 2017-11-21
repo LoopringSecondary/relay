@@ -42,6 +42,7 @@ type OrderFilledEvent struct {
 	AmountB       *Big
 	LrcReward     *Big
 	LrcFee        *Big
+	IsDeleted     bool
 }
 
 type OrderCancelledEvent struct {
@@ -49,6 +50,7 @@ type OrderCancelledEvent struct {
 	Time            *Big
 	Blocknumber     *Big
 	AmountCancelled *Big
+	IsDeleted       bool
 }
 
 type CutoffEvent struct {
@@ -56,14 +58,16 @@ type CutoffEvent struct {
 	Time        *Big
 	Blocknumber *Big
 	Cutoff      *Big
+	IsDeleted   bool
 }
 
 type RingMinedEvent struct {
-	RingIndex     *Big
-	Time          *Big
-	Blocknumber   *Big
-	Ringhash      Hash
-	Miner         Address
-	FeeRecepient  Address
-	RinghashFound bool
+	RingIndex          *Big
+	Time               *Big
+	Blocknumber        *Big
+	Ringhash           Hash
+	Miner              Address
+	FeeRecipient       Address
+	IsRinghashReserved bool
+	IsDeleted          bool
 }
