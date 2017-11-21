@@ -19,8 +19,6 @@
 package dao
 
 // order amountS 上限1e30
-
-// todo: 建表失败
 type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
 	Interval   string  `gorm:"column:interval;type:varchar(42)"`
