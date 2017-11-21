@@ -31,9 +31,9 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/ordermanager"
-	"github.com/Loopring/ringminer/miner/bucket"
 	"go.uber.org/zap"
 	"sync"
+	"github.com/Loopring/relay/miner/timing_matcher"
 )
 
 // TODO(fk): add services
@@ -136,7 +136,7 @@ func (n *Node) registerJsonRpcService() {
 func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *market.MarketCapProvider) {
 	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
 	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, client)
-	matcher := bucket.NewBucketMatcher(submitter, n.globalConfig.Miner.RingMaxLength)
+	matcher := timing_matcher.NewTimingMatcher()
 	minerInstance := miner.NewMinerInstance(n.globalConfig.Miner, submitter, matcher, loopringInstance, marketCapProvider)
 	miner.Initialize(minerInstance)
 

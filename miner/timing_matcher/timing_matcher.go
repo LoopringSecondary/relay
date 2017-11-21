@@ -74,7 +74,7 @@ type Market struct {
 func NewTimingMatcher() *TimingMatcher {
 	matcher := &TimingMatcher{}
 	matcher.MatchedOrders = make(map[types.Hash]*OrderMatchState)
-	//todo:add market from config
+	//todo:get markets from market.Allmarket
 	m := &Market{}
 	m.matcher = matcher
 	m.AtoBNotMatchedOrderHashes = []types.Hash{}
