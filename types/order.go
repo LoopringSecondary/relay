@@ -199,25 +199,11 @@ func (o *FilledOrder) IsFullFilled() bool {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order         `json:"raw_order"`
-	BlockNumber     *big.Int      `json:"block_number"`
-	RemainedAmountS *big.Int      `json:"remained_amount_b"`
-	RemainedAmountB *big.Int      `json:"remained_amount_s"`
+	RawOrder        Order         `json:"rawOrder"`
+	BlockNumber     *big.Int      `json:"blockNumber"`
+	RemainedAmountS *big.Int      `json:"remainedAmountB"`
+	RemainedAmountB *big.Int      `json:"remainedAmountS"`
 	Status          OrderStatus   `json:"status"`
-}
-
-//go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
-type VersionData struct {
-	RemainedAmountS *big.Int    `json:"remainedAmountS" gencodec:"required"`
-	RemainedAmountB *big.Int    `json:"remainedAmountB" gencodec:"required"`
-	Block           *big.Int    `json:"block"`
-	Status          OrderStatus `json:"status"`
-}
-
-type versionDataMarshaling struct {
-	RemainedAmountS *Big
-	RemainedAmountB *Big
-	Block           *Big
 }
 
 // 放到common package 根据配置决定状态
