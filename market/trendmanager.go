@@ -106,7 +106,7 @@ func (t *TrendManager) initCache() {
 		}
 
 		for _, trend := range trends.Data {
-			mktCache.Trends = append(mktCache.Trends, dao.ConvertUp(trend.(dao.Trend)))
+			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
 		}
 
 		tokenS, tokenB, _ := UnWrap(mkt)
@@ -337,13 +337,14 @@ func(t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err error
 		event := input.(*types.OrderFilledEvent)
 
 		newFillModel := &dao.FillEvent{}
-		if err := newFillModel.ConvertDown(event); err != nil {
+		if err = newFillModel.ConvertDown(event); err != nil {
 			return
 		}
 
-		market, err := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
+		market, wrapErr := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
 
-		if err != nil {
+		if wrapErr != nil {
+			err = wrapErr
 			return
 		}
 
@@ -372,4 +373,22 @@ func (t *TrendManager) reCalTicker(market string) {
 	tickerInCache, _ := t.c.Get(tickerKey)
 	tickerMap := tickerInCache.(map[string]Ticker)
 	tickerMap[market] = ticker
+}
+
+
+func ConvertUp(src dao.Trend) Trend {
+
+	return Trend{
+		Interval:src.Interval,
+		Market:src.Market,
+		Vol:src.Vol,
+		Amount:src.Amount,
+		CreateTime:src.CreateTime,
+		Open:src.Open,
+		Close:src.Close,
+		High:src.High,
+		Low:src.Low,
+		Start:src.Start,
+		End:src.End,
+	}
 }

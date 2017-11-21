@@ -18,8 +18,6 @@
 
 package dao
 
-import "github.com/Loopring/relay/market"
-
 // order amountS 上限1e30
 
 type Trend struct {
@@ -37,24 +35,6 @@ type Trend struct {
 	End        int64   `gorm:"column:end";type:bigint`
 
 }
-
-func ConvertUp(src Trend) market.Trend {
-
-	return market.Trend{
-		Interval:src.Interval,
-		Market:src.Market,
-		Vol:src.Vol,
-		Amount:src.Amount,
-		CreateTime:src.CreateTime,
-		Open:src.Open,
-		Close:src.Close,
-		High:src.High,
-		Low:src.Low,
-		Start:src.Start,
-		End:src.End,
-	}
-}
-
 
 func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error) {
 
