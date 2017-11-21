@@ -36,10 +36,6 @@ type Trend struct {
 
 }
 
-func (s *RdsServiceImpl) create(trend Trend) error {
-	return s.db.Create(trend).Error
-}
-
 func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error) {
 
 	var result PageResult
