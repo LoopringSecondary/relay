@@ -1,3 +1,21 @@
+/*
+
+  Copyright 2017 Loopring Project Ltd (Loopring Foundation).
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+*/
+
 package market
 
 import (
@@ -106,7 +124,7 @@ func (t *TrendManager) initCache() {
 		}
 
 		for _, trend := range trends.Data {
-			mktCache.Trends = append(mktCache.Trends, dao.ConvertUp(trend.(dao.Trend)))
+			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
 		}
 
 		tokenS, tokenB, _ := UnWrap(mkt)
@@ -337,13 +355,14 @@ func(t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err error
 		event := input.(*types.OrderFilledEvent)
 
 		newFillModel := &dao.FillEvent{}
-		if err := newFillModel.ConvertDown(event); err != nil {
+		if err = newFillModel.ConvertDown(event); err != nil {
 			return
 		}
 
-		market, err := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
+		market, wrapErr := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
 
-		if err != nil {
+		if wrapErr != nil {
+			err = wrapErr
 			return
 		}
 
@@ -372,4 +391,22 @@ func (t *TrendManager) reCalTicker(market string) {
 	tickerInCache, _ := t.c.Get(tickerKey)
 	tickerMap := tickerInCache.(map[string]Ticker)
 	tickerMap[market] = ticker
+}
+
+
+func ConvertUp(src dao.Trend) Trend {
+
+	return Trend{
+		Interval:src.Interval,
+		Market:src.Market,
+		Vol:src.Vol,
+		Amount:src.Amount,
+		CreateTime:src.CreateTime,
+		Open:src.Open,
+		Close:src.Close,
+		High:src.High,
+		Low:src.Low,
+		Start:src.Start,
+		End:src.End,
+	}
 }
