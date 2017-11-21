@@ -10,6 +10,8 @@ import (
 	"log"
 	"time"
 	"fmt"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/types"
 )
 
 const (
@@ -32,8 +34,8 @@ type Ticker struct {
 }
 
 type Cache struct {
-	trends []Trend
-	fills []dao.FillEvent
+	Trends []Trend
+	Fills []dao.FillEvent
 }
 
 type Trend struct {
@@ -71,6 +73,8 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager = TrendManager{rds:dao, cron:cron.New()}
 		trendManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 		trendManager.initCache()
+		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
+		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 		//trendManager.startScheduleUpdate()
 	})
 
@@ -91,8 +95,8 @@ func (t *TrendManager) initCache() {
 	tickerMap := make(map[string]Ticker)
 	for _, mkt := range AllMarkets {
 		mktCache := Cache{}
-		mktCache.trends = make([]Trend, 0)
-		mktCache.fills = make([]dao.FillEvent, 0)
+		mktCache.Trends = make([]Trend, 0)
+		mktCache.Fills = make([]dao.FillEvent, 0)
 
 		// default 100 records load first time
 		trends, err := t.rds.TrendPageQuery(dao.Trend{Market:mkt}, 1, 100)
@@ -102,7 +106,7 @@ func (t *TrendManager) initCache() {
 		}
 
 		for _, trend := range trends.Data {
-			mktCache.trends = append(mktCache.trends, dao.ConvertUp(trend.(dao.Trend)))
+			mktCache.Trends = append(mktCache.Trends, dao.ConvertUp(trend.(dao.Trend)))
 		}
 
 		tokenS, tokenB, _ := UnWrap(mkt)
@@ -120,15 +124,15 @@ func (t *TrendManager) initCache() {
 		}
 
 		for _, f := range sbFills {
-			mktCache.fills = append(mktCache.fills, f)
+			mktCache.Fills = append(mktCache.Fills, f)
 		}
 		for _, f := range bsFills {
-			mktCache.fills = append(mktCache.fills, f)
+			mktCache.Fills = append(mktCache.Fills, f)
 		}
 
 		trendMap[mkt] = mktCache
 
-		ticker := calculateTicker(mkt, mktCache.fills, mktCache.trends, firstSecondThisHour)
+		ticker := calculateTicker(mkt, mktCache.Fills, mktCache.Trends, firstSecondThisHour)
 		tickerMap[mkt] = ticker
 	}
 	t.c.Set(trendKey, trendMap, cache.NoExpiration)
@@ -325,4 +329,47 @@ func(t *TrendManager) GetTicker() (tickers [] Ticker, err error) {
 		err = errors.New("cache is not ready , please access later")
 	}
 	return
+}
+
+func(t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err error) {
+	if t.cacheReady {
+
+		event := input.(*types.OrderFilledEvent)
+
+		newFillModel := &dao.FillEvent{}
+		if err := newFillModel.ConvertDown(event); err != nil {
+			return
+		}
+
+		market, err := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
+
+		if err != nil {
+			return
+		}
+
+		if tickerInCache, ok := t.c.Get(trendKey); ok {
+			trendMap := tickerInCache.(map[string]Cache)
+			trendMap[market].Fills[len(trendMap[market].Fills)] = *newFillModel
+		} else {
+			fills := make([]dao.FillEvent, 0)
+			fills = append(fills, *newFillModel)
+			newCache := Cache{make([]Trend, 0), fills}
+			t.c.Set(trendKey, newCache, cache.NoExpiration)
+			t.reCalTicker(market)
+		}
+	} else {
+		err = errors.New("cache is not ready , please access later")
+	}
+	return
+}
+
+func (t *TrendManager) reCalTicker(market string) {
+	trendInCache, _ := t.c.Get(trendKey)
+	mktCache := trendInCache.(map[string]Cache)[market]
+	now := time.Now()
+	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
+	ticker := calculateTicker(market, mktCache.Fills, mktCache.Trends, firstSecondThisHour)
+	tickerInCache, _ := t.c.Get(tickerKey)
+	tickerMap := tickerInCache.(map[string]Ticker)
+	tickerMap[market] = ticker
 }
