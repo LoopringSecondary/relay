@@ -23,9 +23,15 @@ import (
 	"errors"
 	"strings"
 	"fmt"
+	"github.com/Loopring/relay/types"
 )
 
 const weiToEther = 1e18
+
+type TokenPair struct {
+	TokenS types.Address
+	TokenB types.Address
+}
 
 func ByteToFloat(amount [] byte) float64 {
 	var rst big.Int
@@ -59,6 +65,22 @@ var AllTokens = func() map[string]string {
 }()
 
 var AllMarkets = AllMarket()
+
+var AllTokenPairs = func() []TokenPair {
+	pairsMap := make(map[string]TokenPair, 0)
+	for _,v := range SupportMarket {
+		for _, vv := range SupportTokens {
+			pairsMap[v + "-" + vv] = TokenPair{types.StringToAddress(v), types.StringToAddress(vv)}
+			pairsMap[vv + "-" + v] = TokenPair{types.StringToAddress(vv), types.StringToAddress(v)}
+		}
+	}
+	pairs := make([]TokenPair, 0)
+	for _,v := range pairsMap {
+		pairs = append(pairs, v)
+	}
+
+	return pairs
+}()
 
 func WrapMarket(s, b string) (market string, err error) {
 
