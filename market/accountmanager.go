@@ -46,6 +46,7 @@ func NewAccountManager() AccountManager {
 	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleTokenTransfer}
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
+	//TODO(xiaolu) change event type
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, transferWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, approveWatcher)
 
