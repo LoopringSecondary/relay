@@ -30,7 +30,7 @@ import (
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/miner"
-	"github.com/Loopring/relay/miner/bucket"
+	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
 	"go.uber.org/zap"
 	"sync"
@@ -62,10 +62,11 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	database := db.NewDB(globalConfig.Database)
 
+	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
 	//n.registerMysql()
 	//n.registerIPFSSubService()
 	n.registerGateway()
-	n.registerMiner(ethClient.Client, database)
+	n.registerMiner(ethClient.Client, marketCapProvider)
 	n.registerExtractor(ethClient, database)
 	n.registerOrderManager(database)
 	n.registerTrendManager(database)
@@ -132,12 +133,11 @@ func (n *Node) registerJsonRpcService() {
 	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
 }
 
-func (n *Node) registerMiner(client *chainclient.Client, database db.Database) {
+func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *market.MarketCapProvider) {
 	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, database, client)
-	rateProvider := miner.NewLegalRateProvider(n.globalConfig.Miner)
-	matcher := bucket.NewBucketMatcher(submitter, n.globalConfig.Miner.RingMaxLength)
-	minerInstance := miner.NewMiner(n.globalConfig.Miner, submitter, matcher, loopringInstance, rateProvider)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, client)
+	matcher := timing_matcher.NewTimingMatcher()
+	minerInstance := miner.NewMinerInstance(n.globalConfig.Miner, submitter, matcher, loopringInstance, marketCapProvider)
 	miner.Initialize(minerInstance)
 
 	n.miner = minerInstance

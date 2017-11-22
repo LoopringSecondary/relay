@@ -23,13 +23,13 @@ type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
 	Interval   string  `gorm:"column:interval;type:varchar(42)"`
 	Market     string  `gorm:"column:market;type:varchar(42)"`
-	AmountS    []byte  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB    []byte  `gorm:"column:amount_b;type:varchar(30)"`
+	Vol        float64 `gorm:"column:open;type:float;"`
+	Amount     float64 `gorm:"column:open;type:float;"`
 	CreateTime int64   `gorm:"column:create_time";type:bigint`
-	Open       float64 `gorm:"column:open;type:decimal(28,16);"`
-	Close      float64 `gorm:"column:close;type:decimal(28,16);"`
-	High       float64 `gorm:"column:high;type:decimal(28,16);"`
-	Low        float64 `gorm:"column:low;type:decimal(28,16);"`
+	Open       float64 `gorm:"column:open;type:float;"`
+	Close      float64 `gorm:"column:close;type:float;"`
+	High       float64 `gorm:"column:high;type:float;"`
+	Low        float64 `gorm:"column:low;type:float;"`
 	Start      int64   `gorm:"column:start";type:bigint`
 	End        int64   `gorm:"column:end";type:bigint`
 }

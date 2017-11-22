@@ -26,51 +26,15 @@ import (
 	"math/big"
 )
 
-//compute availableAmountS of order
-func AvailableAmountS(filledOrder *types.FilledOrder) error {
-	order := filledOrder.OrderState.RawOrder
-	balance := &types.Big{}
-	allowance := &types.Big{}
-	filledOrder.AvailableAmountS = new(big.Rat).SetInt(order.AmountS)
-	filledOrder.AvailableAmountB = new(big.Rat).SetInt(order.AmountB)
+func availableAmountS(filledOrder *types.FilledOrder) error {
+	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountS)
+	filledOrder.AvailableAmountB = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountB)
+	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
 
-	var err error
-	if err = MinerInstance.Loopring.Tokens[order.TokenS].BalanceOf.Call(balance, "latest", order.Owner); nil != err {
-		return err
-	}
-
-	if err = MinerInstance.Loopring.Tokens[order.TokenS].Allowance.Call(allowance, "latest", order.Owner, MinerInstance.Loopring.LoopringImpls[order.Protocol].TokenTransferDelegate.Address); nil != err {
-		return err
-	}
-	if balance.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return errors.New("not enough balance")
-	} else if allowance.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return errors.New("not enough allowance")
-	} else {
-		if filledOrder.AvailableAmountS.Cmp(new(big.Rat).SetInt(balance.BigInt())) > 0 {
-			filledOrder.AvailableAmountS.SetInt(balance.BigInt())
-		}
-		if filledOrder.AvailableAmountS.Cmp(new(big.Rat).SetInt(allowance.BigInt())) > 0 {
-			filledOrder.AvailableAmountS.SetInt(allowance.BigInt())
-		}
-	}
-	//订单的剩余金额
-	filledAmount := &types.Big{}
-	//filled buynomorethanb=true保存的为amountb，如果为false保存的为amounts
-	MinerInstance.Loopring.LoopringImpls[filledOrder.OrderState.RawOrder.Protocol].GetOrderFilled.Call(filledAmount, "pending", order.Hash)
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
-		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))
-		if filledOrder.AvailableAmountB.Cmp(remainedAmount) > 0 {
-			filledOrder.AvailableAmountB.Set(remainedAmount)
-		}
+		filledOrder.AvailableAmountS.Mul(filledOrder.AvailableAmountB, sellPrice)
 	} else {
-		remainedAmount := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
-		remainedAmount.Sub(remainedAmount, new(big.Rat).SetInt(filledAmount.BigInt()))
-		//todo:return false when remainedAmount less than amount x
-		if filledOrder.AvailableAmountS.Cmp(remainedAmount) > 0 {
-			filledOrder.AvailableAmountS.Set(remainedAmount)
-		}
+		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountB, new(big.Rat).Inv(sellPrice))
 	}
 	return nil
 }
@@ -119,7 +83,7 @@ func ComputeRing(ringState *types.RingState) error {
 		filledOrder.BPrice.Inv(filledOrder.SPrice)
 
 		//todo:当以Sell为基准时，考虑账户余额、订单剩余金额的最小值
-		if err := AvailableAmountS(filledOrder); nil != err {
+		if err := availableAmountS(filledOrder); nil != err {
 			return err
 		}
 		amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
@@ -165,7 +129,6 @@ func ComputeRing(ringState *types.RingState) error {
 	//if (ring.RawRing.Orders[len(ring.RawRing.Orders) - 1].FillAmountB.Cmp(ring.RawRing.Orders[0].FillAmountS) < 0) {
 	//	minVolumeIdx = len(ring.RawRing.Orders) - 1
 	//	for i := minVolumeIdx-1; i >= 0; i-- {
-	//
 	//		//按照前面的，同步减少交易量
 	//		order := ring.RawRing.Orders[i]
 	//		var nextOrder *types.FilledOrder
@@ -222,7 +185,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 	for _, filledOrder := range ringState.RawRing.Orders {
 		lrcAddress := &types.Address{}
 
-		lrcAddress.SetBytes([]byte(MinerInstance.legalRateProvider.LRC_ADDRESS))
+		lrcAddress.SetBytes([]byte(MinerInstance.marketCapProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)
 		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -234,7 +197,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.legalRateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenS))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenS))
 			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
@@ -242,7 +205,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.legalRateProvider.GetLegalRate(filledOrder.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenB))
 		}
 
 		//compute lrcFee
@@ -250,7 +213,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(MinerInstance.legalRateProvider.GetLegalRate(*lrcAddress), filledOrder.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(MinerInstance.marketCapProvider.GetMarketCap(*lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -262,7 +225,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, MinerInstance.legalRateProvider.GetLegalRate(*lrcAddress))
+			lrcReward.Quo(lrcReward, MinerInstance.marketCapProvider.GetMarketCap(*lrcAddress))
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}
@@ -271,13 +234,9 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 }
 
 //成环之后才可计算能否成交，否则不需计算，判断是否能够成交，不能使用除法计算
-func PriceValid(ring *types.RingState) bool {
-	amountS := big.NewInt(1)
-	amountB := big.NewInt(1)
-	for _, order := range ring.RawRing.Orders {
-		amountS.Mul(amountS, order.OrderState.RawOrder.AmountS)
-		amountB.Mul(amountB, order.OrderState.RawOrder.AmountB)
-	}
+func PriceValid(a2BOrder *types.OrderState, b2AOrder *types.OrderState) bool {
+	amountS := new(big.Int).Mul(a2BOrder.RawOrder.AmountS, b2AOrder.RawOrder.AmountS)
+	amountB := new(big.Int).Mul(a2BOrder.RawOrder.AmountB, b2AOrder.RawOrder.AmountB)
 	return amountS.Cmp(amountB) >= 0
 }
 

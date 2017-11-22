@@ -199,11 +199,11 @@ func (o *FilledOrder) IsFullFilled() bool {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order         `json:"rawOrder"`
-	BlockNumber     *big.Int      `json:"blockNumber"`
-	RemainedAmountS *big.Int      `json:"remainedAmountB"`
-	RemainedAmountB *big.Int      `json:"remainedAmountS"`
-	Status          OrderStatus   `json:"status"`
+	RawOrder        Order       `json:"rawOrder"`
+	BlockNumber     *big.Int    `json:"blockNumber"`
+	RemainedAmountS *big.Int    `json:"remainedAmountB"`
+	RemainedAmountB *big.Int    `json:"remainedAmountS"`
+	Status          OrderStatus `json:"status"`
 }
 
 // 放到common package 根据配置决定状态

@@ -34,14 +34,13 @@ import (
 // 但是，根据谷歌竞拍法则(A出价10,B出价20,最终成交价为10)，撮合者最终获得的利润只能是利润最小的环路利润
 
 type Ring struct {
-	Orders                  []*FilledOrder `json:"orderes"`
-	Miner                   Address        `json:"miner"`
-	FeeRecepient            Address        `json:"feeRecepient"`
-	ThrowIfLrcIsInsuffcient bool           `json:"throwIfLrcIsInsuffcient"`
-	V                       uint8          `json:"v"`
-	R                       Sign           `json:"r"`
-	S                       Sign           `json:"s"`
-	Hash                    Hash           `json:"hash"`
+	Orders       []*FilledOrder `json:"orderes"`
+	Miner        Address        `json:"miner"`
+	FeeRecepient Address        `json:"feeRecepient"`
+	V            uint8          `json:"v"`
+	R            Sign           `json:"r"`
+	S            Sign           `json:"s"`
+	Hash         Hash           `json:"hash"`
 }
 
 func (ring *Ring) GenerateHash() Hash {
@@ -114,8 +113,6 @@ func (ring *Ring) GenerateSubmitArgs(minerPk []byte) *RingSubmitInputs {
 		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R.Bytes())
 		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S.Bytes())
 	}
-
-	ringSubmitArgs.ThrowIfLRCIsInsuffcient = ring.ThrowIfLrcIsInsuffcient
 
 	if err := ring.GenerateAndSetSignature(minerPk); nil != err {
 		log.Error(err.Error())

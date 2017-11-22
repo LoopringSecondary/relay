@@ -16,17 +16,42 @@
 
 */
 
-package miner
+package market
 
-import "github.com/Loopring/relay/types"
+import (
+	"github.com/patrickmn/go-cache"
+	"github.com/robfig/cron"
+)
 
-type Filter interface {
-	filter(ring *types.RingState)
+type Account struct {
+	contractVersion string
+	tokens          []Balance
 }
 
-/**
-过滤条件
-1、inToken != outToken
-2、费用
-3、
-*/
+type Balance struct {
+	token     string
+	balance   string
+	allowance string
+}
+
+type AccountManager struct {
+	c          *cache.Cache
+	cacheReady bool
+	cron       *cron.Cron
+}
+
+func (a *AccountManager) getBalance(address string) Account {
+	return Account{}
+}
+
+func (a *AccountManager) getNonceFromAccessor(address string) {
+
+}
+
+func (a *AccountManager) getCutoff(address string) {
+
+}
+
+func (a *AccountManager) getBalanceFromAccessor(address string) {
+
+}
