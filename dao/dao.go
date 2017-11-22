@@ -75,6 +75,9 @@ type RdsService interface {
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
 	TrendQueryByTime(market string, start, end int64) (trends []Trend, err error)
+
+	// white list
+	GetWhiteList() ([]WhiteList, error)
 }
 
 type PageResult struct {
@@ -119,6 +122,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})
 	tables = append(tables, &Trend{})
+	tables = append(tables, &WhiteList{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
