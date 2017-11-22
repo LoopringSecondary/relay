@@ -51,6 +51,8 @@ type RdsService interface {
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
+	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error)
+	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
 
 	// block table
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
