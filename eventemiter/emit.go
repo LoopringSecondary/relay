@@ -35,6 +35,8 @@ const (
 	RingSubmitFailed               = "RingSubmitFailed" //submit ring failed
 	Transaction                    = "Transaction"
 	Gateway                        = "Gateway"
+	AccountTransfer                = "AccountTransfer"
+	AccountApproval                = "AccountApproval"
 	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
 	OrderManagerExtractorRingMined = "OrderManagerRingMined"
 	OrderManagerExtractorFill      = "OrderManagerExtractorFill"

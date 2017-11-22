@@ -60,6 +60,40 @@ type Erc20Token struct {
 	TransferFrom AbiMethod
 	Approve      AbiMethod
 	Allowance    AbiMethod
+	TransferEvt  TransferEvent
+	ApprovalEvt  ApprovalEvent
+}
+
+type TransferEvent struct {
+	AbiEvent
+	From  types.Address `json:"from" alias:"from"`
+	To    types.Address `json:"to" alias:"to"`
+	Value *big.Int      `json:"value" alias:"value"`
+}
+
+func (e *TransferEvent) ConvertDown() *types.TransferEvent {
+	evt := &types.TransferEvent{}
+	evt.From = e.From
+	evt.To = e.To
+	evt.Value = types.NewBigPtr(e.Value)
+
+	return evt
+}
+
+type ApprovalEvent struct {
+	AbiEvent
+	Owner   types.Address `json:"owner" alias:"owner"`
+	Spender types.Address `json:"spender" alias:"spender"`
+	Value   *big.Int      `json:"value" alias:"value"`
+}
+
+func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
+	evt := &types.ApprovalEvent{}
+	evt.Owner = e.Owner
+	evt.Spender = e.Spender
+	evt.Value = types.NewBigPtr(e.Value)
+
+	return evt
 }
 
 const (

@@ -30,11 +30,21 @@ type TokenAllowanceUpdateEvent struct {
 	BlockHash   *Hash
 }
 
-// todo: erc20 event
-/*
-event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-*/
+type TransferEvent struct {
+	From        Address
+	To          Address
+	Value       *Big
+	Blocknumber *Big
+	Time        *Big
+}
+
+type ApprovalEvent struct {
+	Owner       Address
+	Spender     Address
+	Value       *Big
+	Blocknumber *Big
+	Time        *Big
+}
 
 type OrderFilledEvent struct {
 	Ringhash      Hash

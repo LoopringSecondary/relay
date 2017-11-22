@@ -18,6 +18,8 @@ func (l *ExtractorServiceImpl) loadContract() {
 	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
 	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
+	transferEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
+	approvalEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
 
 	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
 		submitRingMtd := impl.SubmitRing
@@ -37,6 +39,17 @@ func (l *ExtractorServiceImpl) loadContract() {
 		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
 		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
 		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
+	}
+
+	for _, impl := range miner.MinerInstance.Loopring.Tokens {
+		transferEvt := impl.TransferEvt
+		approvalEvt := impl.ApprovalEvt
+
+		l.addContractEvent(transferEvt)
+		l.addContractEvent(approvalEvt)
+
+		eventemitter.On(transferEvt.WatcherTopic(), transferEventWatcher)
+		eventemitter.On(approvalEvt.WatcherTopic(), approvalEventWatcher)
 	}
 }
 
