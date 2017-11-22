@@ -298,6 +298,46 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	return nil
 }
 
+func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:erc20 transfer event")
+
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.TransferEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor transfer event from -> %s", evt.From.Hex())
+		log.Debugf("extractor transfer event to -> %s", evt.To.Hex())
+		log.Debugf("extractor transfer event value -> %s", evt.Value.BigInt().String())
+	}
+
+	eventemitter.Emit(eventemitter.AccountTransfer, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:erc20 approval event")
+
+	contractData := input.(chainclient.ContractData)
+	contractEvent := contractData.Event.(chainclient.ApprovalEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor approval event owner -> %s", evt.Owner.Hex())
+		log.Debugf("extractor approval event spender -> %s", evt.Spender.Hex())
+		log.Debugf("extractor approval event value -> %s", evt.Value.BigInt().String())
+	}
+
+	eventemitter.Emit(eventemitter.AccountApproval, evt)
+
+	return nil
+}
+
 // todo: modify
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	var tForkBlock types.Block
