@@ -103,7 +103,7 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := eth.NewChainClient(globalConfig.ChainClient, []byte("sa"))
+	ethClient := generateEthClient(globalConfig)
 	params.Client = ethClient.Client
 	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
 
@@ -241,7 +241,9 @@ func loadConfig() *config.GlobalConfig {
 
 func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
-	l := extractor.NewExtractorService(c.ChainClient, c.Common, nil, nil)
+	rds := LoadConfigAndGenerateDaoService()
+	ethClient := generateEthClient(c)
+	l := extractor.NewExtractorService(c.ChainClient, c.Common, ethClient, rds)
 	return l
 }
 
@@ -255,4 +257,8 @@ func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
 func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
 	c := loadConfig()
 	return dao.NewRdsService(c.Mysql)
+}
+
+func generateEthClient(c *config.GlobalConfig) *eth.EthClient {
+	return eth.NewChainClient(c.ChainClient, []byte("sa"))
 }

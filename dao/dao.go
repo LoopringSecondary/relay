@@ -20,10 +20,10 @@ package dao
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"log"
 )
 
 type RdsService interface {
@@ -51,6 +51,8 @@ type RdsService interface {
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
+	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error)
+	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
 
 	// block table
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
@@ -61,7 +63,7 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
-	QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills [] FillEvent, err error)
+	QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills []FillEvent, err error)
 	RollBackFill(from, to int64) error
 
 	// cancel event table
@@ -74,7 +76,10 @@ type RdsService interface {
 
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
-	TrendQueryByTime(market string, start, end int64) (trends [] Trend, err error)
+	TrendQueryByTime(market string, start, end int64) (trends []Trend, err error)
+
+	// white list
+	GetWhiteList() ([]WhiteList, error)
 }
 
 type PageResult struct {
@@ -114,13 +119,18 @@ func (s *RdsServiceImpl) Prepare() {
 
 	tables = append(tables, &Order{})
 	tables = append(tables, &Block{})
+	tables = append(tables, &RingMined{})
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})
+	tables = append(tables, &Trend{})
+	tables = append(tables, &WhiteList{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
-			s.db.CreateTable(t)
+			if err := s.db.CreateTable(t).Error; err != nil {
+				log.Errorf("create mysql table error:%s", err.Error())
+			}
 		}
 	}
 }

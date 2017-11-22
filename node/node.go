@@ -30,10 +30,11 @@ import (
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/usermanager"
 	"go.uber.org/zap"
 	"sync"
-	"github.com/Loopring/relay/miner/timing_matcher"
 )
 
 // TODO(fk): add services
@@ -43,6 +44,7 @@ type Node struct {
 	ipfsSubService   gateway.IPFSSubService
 	extractorService extractor.ExtractorService
 	orderManager     ordermanager.OrderManager
+	userManager      usermanager.UserManager
 	miner            *miner.Miner
 	stop             chan struct{}
 	lock             sync.RWMutex
@@ -65,6 +67,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
 	//n.registerMysql()
+	n.registerUserManager()
 	//n.registerIPFSSubService()
 	n.registerGateway()
 	n.registerMiner(ethClient.Client, marketCapProvider)
@@ -151,4 +154,8 @@ func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *mark
 
 func (n *Node) registerGateway() {
 	gateway.Initialize(&n.globalConfig.GatewayFilters)
+}
+
+func (n *Node) registerUserManager() {
+	n.userManager = usermanager.NewUserManager(n.rdsService)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
 	"math/big"
 	"sync"
 	"time"
@@ -35,6 +36,8 @@ type OrderManager interface {
 	Start()
 	Stop()
 	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
+	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error)
+	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 }
 
 type OrderManagerImpl struct {
@@ -43,21 +46,23 @@ type OrderManagerImpl struct {
 	lock      sync.RWMutex
 	processor *forkProcessor
 	provider  *minerOrdersProvider
+	um        usermanager.UserManager
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService) *OrderManagerImpl {
-	ob := &OrderManagerImpl{}
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager) *OrderManagerImpl {
+	om := &OrderManagerImpl{}
 
-	ob.options = options
-	ob.dao = dao
-	ob.processor = newForkProcess(ob.dao)
+	om.options = options
+	om.dao = dao
+	om.processor = newForkProcess(om.dao)
+	om.um = userManager
 
 	// new miner orders provider
 	duration := time.Duration(options.TickerDuration)
 	blockPeriod := types.NewBigPtr(big.NewInt(int64(options.BlockPeriod)))
-	ob.provider = newMinerOrdersProvider(duration, blockPeriod)
+	om.provider = newMinerOrdersProvider(duration, blockPeriod)
 
-	return ob
+	return om
 }
 
 // Start start orderbook as a service
@@ -321,9 +326,61 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 }
 
 func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState {
+	var list []types.OrderState
+
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
 		log.Debugf("get miner orders error:%s", err.Error())
 	}
 
-	return om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+	filterList := om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+
+	for _, v := range filterList {
+		if !om.um.InWhiteList(v.RawOrder.TokenS) {
+			list = append(list, v)
+		}
+	}
+
+	return list
+}
+
+func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error) {
+	var list []types.OrderState
+	models, err := om.dao.GetOrderBook(protocol, tokenS, tokenB, length)
+	if err != nil {
+		return list, err
+	}
+
+	for _, v := range models {
+		var state types.OrderState
+		if err := v.ConvertUp(&state); err != nil {
+			continue
+		}
+		list = append(list, state)
+	}
+
+	return list, nil
+}
+
+func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error) {
+	var (
+		pageRes dao.PageResult
+	)
+	tmp, err := om.dao.OrderPageQuery(query, pageIndex, pageSize)
+	if err != nil {
+		return pageRes, err
+	}
+	pageRes.PageIndex = tmp.PageIndex
+	pageRes.PageSize = tmp.PageSize
+	pageRes.Total = tmp.Total
+
+	for _, v := range tmp.Data {
+		var state types.OrderState
+		model := v.(dao.Order)
+		if err := model.ConvertUp(&state); err != nil {
+			continue
+		}
+		pageRes.Data = append(pageRes.Data, state)
+	}
+
+	return pageRes, nil
 }

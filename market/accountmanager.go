@@ -31,8 +31,8 @@ type Account struct {
 }
 
 type Balance struct {
-	token string
-	balance string
+	token     string
+	balance   string
 	allowance string
 }
 
@@ -73,7 +73,7 @@ func(a *AccountManager) GetBalance(contractVersion, address string) Account {
 	}
 }
 
-func(a *AccountManager) getCutoff(address string) {
+func (a *AccountManager) getCutoff(address string) {
 
 }
 

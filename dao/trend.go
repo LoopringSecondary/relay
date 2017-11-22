@@ -19,13 +19,12 @@
 package dao
 
 // order amountS 上限1e30
-
 type Trend struct {
-	ID                    int     `gorm:"column:id;primary_key;"`
-	Interval              string  `gorm:"column:interval;type:varchar(42)"`
+	ID         int     `gorm:"column:id;primary_key;"`
+	Interval   string  `gorm:"column:interval;type:varchar(42)"`
 	Market     string  `gorm:"column:market;type:varchar(42)"`
 	Vol        float64 `gorm:"column:open;type:float;"`
-	Amount     float64  `gorm:"column:open;type:float;"`
+	Amount     float64 `gorm:"column:open;type:float;"`
 	CreateTime int64   `gorm:"column:create_time";type:bigint`
 	Open       float64 `gorm:"column:open;type:float;"`
 	Close      float64 `gorm:"column:close;type:float;"`
@@ -33,7 +32,6 @@ type Trend struct {
 	Low        float64 `gorm:"column:low;type:float;"`
 	Start      int64   `gorm:"column:start";type:bigint`
 	End        int64   `gorm:"column:end";type:bigint`
-
 }
 
 func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error) {
@@ -59,7 +57,7 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	return
 }
 
-func (s *RdsServiceImpl) TrendQueryByTime(market string, start, end int64) (trends [] Trend, err error) {
+func (s *RdsServiceImpl) TrendQueryByTime(market string, start, end int64) (trends []Trend, err error) {
 	err = s.db.Where("market = ? and start > ? and end <= ?", market, start, end).Order("start desc").Find(&trends).Error
 	return
 }

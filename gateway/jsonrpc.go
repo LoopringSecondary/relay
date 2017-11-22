@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
 	gorillaRpc "github.com/gorilla/rpc"
@@ -34,7 +35,6 @@ import (
 	"net/rpc"
 	"os"
 	"strings"
-	"github.com/Loopring/relay/market"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -57,7 +57,7 @@ type JsonrpcService interface {
 }
 
 type JsonrpcServiceImpl struct {
-	port string
+	port         string
 	trendManager market.TrendManager
 }
 

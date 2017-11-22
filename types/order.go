@@ -19,7 +19,6 @@
 package types
 
 import (
-	"errors"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"math/big"
@@ -200,61 +199,11 @@ func (o *FilledOrder) IsFullFilled() bool {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order         `json:"rawOrder"`
-	BlockNumber     *big.Int      `json:"block_number"`
-	RemainedAmountS *big.Int      `json:"remained_amount_b"`
-	RemainedAmountB *big.Int      `json:"remained_amount_s"`
-	Status          OrderStatus   `json:"status"`
-	States          []VersionData `json:"states"`
-}
-
-//go:generate gencodec -type VersionData -field-override versionDataMarshaling -out gen_versiondata_json.go
-type VersionData struct {
-	RemainedAmountS *big.Int    `json:"remainedAmountS" gencodec:"required"`
-	RemainedAmountB *big.Int    `json:"remainedAmountB" gencodec:"required"`
-	Block           *big.Int    `json:"block"`
+	RawOrder        Order       `json:"rawOrder"`
+	BlockNumber     *big.Int    `json:"blockNumber"`
+	RemainedAmountS *big.Int    `json:"remainedAmountB"`
+	RemainedAmountB *big.Int    `json:"remainedAmountS"`
 	Status          OrderStatus `json:"status"`
-}
-
-type versionDataMarshaling struct {
-	RemainedAmountS *Big
-	RemainedAmountB *Big
-	Block           *Big
-}
-
-func (ord *OrderState) LatestVersion() (VersionData, error) {
-	length := len(ord.States)
-	if length < 1 {
-		return VersionData{}, errors.New("no version data")
-	}
-
-	return ord.States[length-1], nil
-}
-
-// 添加新版本，保证所有版本顺序递增
-// 这里不考虑外部订单，外部订单到本地订单的转换在doMethod完成
-func (ord *OrderState) AddVersion(currentVd VersionData) error {
-	preventVd, err := ord.LatestVersion()
-
-	if err != nil {
-		vd := VersionData{}
-		vd.RemainedAmountB = big.NewInt(0)
-		vd.RemainedAmountS = ord.RawOrder.AmountS
-		vd.Block = big.NewInt(0)
-		vd.Status = ORDER_NEW
-		ord.States = append(ord.States, vd)
-
-		log.Debugf("ipfs new order add version data:%s", ord.RawOrder.Hash.Hex())
-		return nil
-	}
-
-	if currentVd.Block.Cmp(preventVd.Block) < 0 {
-		return nil
-	}
-
-	ord.States = append(ord.States, currentVd)
-	log.Debugf("chain order add version data %s->%d", ord.RawOrder.Hash.Hex(), currentVd.Status)
-	return nil
 }
 
 // 放到common package 根据配置决定状态

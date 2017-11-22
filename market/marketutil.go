@@ -19,11 +19,11 @@
 package market
 
 import (
-	"math/big"
 	"errors"
-	"strings"
 	"fmt"
 	"github.com/Loopring/relay/types"
+	"math/big"
+	"strings"
 )
 
 const weiToEther = 1e18
@@ -36,21 +36,21 @@ type TokenPair struct {
 func ByteToFloat(amount [] byte) float64 {
 	var rst big.Int
 	rst.UnmarshalText(amount)
-	return float64(rst.Int64())/weiToEther
+	return float64(rst.Int64()) / weiToEther
 }
 
-func FloatToByte(amount float64) [] byte {
+func FloatToByte(amount float64) []byte {
 	rst, _ := big.NewInt(int64(amount * weiToEther)).MarshalText()
 	return rst
 }
 
-var SupportTokens = map[string]string {
-	"lrc" : "0xskdfjdkfj",
-	"coss" : "0xskdjfskdfj",
+var SupportTokens = map[string]string{
+	"lrc":  "0xskdfjdkfj",
+	"coss": "0xskdjfskdfj",
 }
 
-var SupportMarket = map[string]string {
-	"weth" : "0xsldkfjsdkfj",
+var SupportMarket = map[string]string{
+	"weth": "0xsldkfjsdkfj",
 }
 
 var ContractVersionConfig = map[string] string {
@@ -91,9 +91,9 @@ func WrapMarket(s, b string) (market string, err error) {
 
 	s, b = strings.ToLower(s), strings.ToLower(b)
 
-	if SupportMarket[s] != "" &&  SupportTokens[b] != "" {
+	if SupportMarket[s] != "" && SupportTokens[b] != "" {
 		market = fmt.Sprintf("%s-%s", b, s)
-	} else if SupportMarket[b] != "" &&  SupportTokens[s] != "" {
+	} else if SupportMarket[b] != "" && SupportTokens[s] != "" {
 		market = fmt.Sprintf("%s-%s", s, b)
 	} else {
 		err = errors.New(fmt.Sprintf("not supported market type : %s-%s", s, b))
@@ -137,7 +137,7 @@ func AllMarket() []string {
 	mkts := make([]string, 0)
 	for k := range SupportTokens {
 		for kk := range SupportMarket {
-			mkts = append(mkts, k + "-" + kk)
+			mkts = append(mkts, k+"-"+kk)
 		}
 	}
 	return mkts
@@ -153,14 +153,14 @@ func CalculatePrice(amountS, amountB []byte, s, b string) float64 {
 	}
 
 	if IsBuy(s) {
-		return ab/as
+		return ab / as
 	}
 
-	return as/ab
+	return as / ab
 
 }
 
-func IsBuy(s string) (bool) {
+func IsBuy(s string) bool {
 	if IsAddress(s) {
 		s = AddressToAlias(s)
 	}
