@@ -153,7 +153,7 @@ func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *mark
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.GatewayFilters)
 }
 
 func (n *Node) registerUserManager() {

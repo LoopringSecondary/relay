@@ -38,6 +38,8 @@ type OrderManager interface {
 	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
+	GetOrderByHash(hash types.Hash) (types.OrderState, error)
+	UpdateBroadcastTimeByHash(hash types.Hash, bt int) error
 }
 
 type OrderManagerImpl struct {
@@ -383,4 +385,18 @@ func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int)
 	}
 
 	return pageRes, nil
+}
+
+func (om *OrderManagerImpl) GetOrderByHash(hash types.Hash) (orderState types.OrderState, err error) {
+	order, err := om.dao.GetOrderByHash(hash)
+	if err != nil {
+		return
+	}
+	result := &types.OrderState{}
+	order.ConvertUp(result)
+	return *result, nil
+}
+
+func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash types.Hash, bt int) error {
+	return om.dao.UpdateBroadcastTimeByHash(hash.Str(), bt)
 }

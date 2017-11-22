@@ -204,6 +204,7 @@ type OrderState struct {
 	RemainedAmountS *big.Int    `json:"remainedAmountB"`
 	RemainedAmountB *big.Int    `json:"remainedAmountS"`
 	Status          OrderStatus `json:"status"`
+	BroadcastTime   int 		`json:"broadcastTime"`
 }
 
 // 放到common package 根据配置决定状态

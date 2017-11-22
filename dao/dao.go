@@ -53,8 +53,9 @@ type RdsService interface {
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error)
 	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
+	UpdateBroadcastTimeByHash(hash string, bt int) error
 
-	// block table
+// block table
 	FindBlockByHash(blockhash types.Hash) (*Block, error)
 	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
