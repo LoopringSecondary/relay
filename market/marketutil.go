@@ -53,6 +53,11 @@ var SupportMarket = map[string]string {
 	"weth" : "0xsldkfjsdkfj",
 }
 
+var ContractVersionConfig = map[string] string {
+	"v1.0" : "0x39kdjfskdfjsdfj",
+	"v1.2" : "0x39kdjfskdfjsdfj",
+}
+
 var AllTokens = func() map[string]string {
 	all := make(map[string]string)
 	for k, v := range SupportMarket {
@@ -167,4 +172,13 @@ func IsBuy(s string) (bool) {
 
 func IsAddress(token string) bool {
 	return strings.HasPrefix(token, "0x")
+}
+
+func getContractVersion(address string) string {
+	for k, v := range ContractVersionConfig {
+		if v == address {
+			return k
+		}
+	}
+	return ""
 }

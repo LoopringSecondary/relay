@@ -19,13 +19,15 @@
 package market
 
 import (
-	"github.com/robfig/cron"
 	"github.com/patrickmn/go-cache"
+	"github.com/Loopring/relay/eventemiter"
 )
 
 type Account struct {
 	contractVersion string
-	tokens []Balance
+	address string
+	balances []Balance
+	blockNumber int
 }
 
 type Balance struct {
@@ -36,25 +38,65 @@ type Balance struct {
 
 type AccountManager struct {
 	c             *cache.Cache
-	cacheReady    bool
-	cron		  *cron.Cron
 }
 
-func(a *AccountManager) getBalance(address string) Account {
-	return Account{}
+func NewAccountManager() AccountManager {
+
+	accountManager := AccountManager{}
+	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
+	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleTokenTransfer}
+	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
+	eventemitter.On(eventemitter.OrderManagerExtractorFill, transferWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorFill, approveWatcher)
+
+	return accountManager
 }
 
-func(a *AccountManager) getNonceFromAccessor(address string) {
+func(a *AccountManager) GetBalance(contractVersion, address string) Account {
 
+	accountInCache, ok := a.c.Get(buildCacheKey(contractVersion, address))
+	if ok {
+		account := accountInCache.(Account)
+		return account
+	} else {
+		account := Account{contractVersion:contractVersion, address:address, balances:make([]Balance, 0), blockNumber:-1}
+		for k, v := range AllTokens {
+			amount := a.getBalanceFromAccessor(v)
+			balance := Balance{token:k, balance:amount}
+			allowance := a.getAllowanceFromAccessor(v)
+			balance.allowance = allowance
+			account.balances = append(account.balances, balance)
+		}
+		a.c.Set(buildCacheKey(contractVersion, address), account, cache.NoExpiration)
+		return account
+	}
 }
 
 func(a *AccountManager) getCutoff(address string) {
 
 }
 
-func(a *AccountManager) getBalanceFromAccessor(address string) {
+func(a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {
 
 }
 
+func(a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
 
+}
 
+func(a *AccountManager) getBalanceFromAccessor(token string) string {
+
+	return ""
+}
+
+func(a *AccountManager) getAllowanceFromAccessor(token string) string {
+	return ""
+}
+
+func(a *AccountManager) buildBalanceFromAccessor(token string) Balance {
+	return Balance{}
+}
+
+func buildCacheKey(version, address string) string {
+	return address + "_" + version
+}

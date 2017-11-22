@@ -48,6 +48,7 @@ type Node struct {
 	lock             sync.RWMutex
 	logger           *zap.Logger
 	trendManager     market.TrendManager
+	accountManager   market.AccountManager
 	jsonRpcService   gateway.JsonrpcServiceImpl
 }
 
@@ -70,6 +71,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerExtractor(ethClient, database)
 	n.registerOrderManager(database)
 	n.registerTrendManager(database)
+	n.registerAccountManager()
 	n.registerJsonRpcService()
 
 	return n
@@ -127,6 +129,10 @@ func (n *Node) registerOrderManager(database db.Database) {
 
 func (n *Node) registerTrendManager(database db.Database) {
 	n.trendManager = market.NewTrendManager(n.rdsService)
+}
+
+func (n *Node) registerAccountManager() {
+	n.accountManager = market.NewAccountManager()
 }
 
 func (n *Node) registerJsonRpcService() {
