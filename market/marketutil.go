@@ -105,15 +105,19 @@ func WrapMarketByAddress(s, b string) (market string, err error) {
 	return WrapMarket(AddressToAlias(s), AddressToAlias(b))
 }
 
-func UnWrap(market string) (s, b string, err error) {
+func UnWrap(market string) (s, b string) {
 	mkt := strings.Split(strings.TrimSpace(market), "-")
 	if len(mkt) != 2 {
-		err = errors.New("only support market format like tokenS-tokenB")
-		return
+		return "", ""
 	}
 
 	s, b = strings.ToLower(mkt[0]), strings.ToLower(mkt[1])
 	return
+}
+
+func UnWrapToAddress(market string) (s, b types.Address) {
+	sa, sb := UnWrap(market)
+	return types.StringToAddress(sa), types.StringToAddress(sb)
 }
 
 func IsSupportedToken(token string) bool {

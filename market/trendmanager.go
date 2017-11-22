@@ -127,7 +127,7 @@ func (t *TrendManager) initCache() {
 			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
 		}
 
-		tokenS, tokenB, _ := UnWrap(mkt)
+		tokenS, tokenB := UnWrap(mkt)
 		now := time.Now()
 		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
 		sbFills, err := t.rds.QueryRecentFills(tokenS, tokenB, firstSecondThisHour.Unix(), 0)
@@ -253,7 +253,7 @@ func (t *TrendManager) insertTrend() {
 				return
 			}
 
-			tokenS, tokenB, _ := UnWrap(mkt)
+			tokenS, tokenB := UnWrap(mkt)
 			if trends == nil || len(trends) == 0 {
 				fills, _ := t.rds.QueryRecentFills(tokenS, tokenB, start, end)
 

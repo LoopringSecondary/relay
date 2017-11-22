@@ -22,7 +22,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
@@ -32,10 +31,9 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"os"
-	"strings"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/ordermanager"
+	"math/big"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -48,6 +46,17 @@ type PageResult struct {
 	PageIndex int
 	PageSize  int
 	Total     int
+}
+
+type Depth struct {
+	contractVersion string
+	market string
+	Depth AskBid
+}
+
+type AskBid struct {
+	Buy [][]string
+	Sell [][]string
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -129,32 +138,73 @@ func (j *JsonrpcServiceImpl) Start() {
 	http.ListenAndServe(":"+j.port, r)
 }
 
-func (*JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res *string) error {
+func (j *JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res *string) error {
 	HandleOrder(order)
 	*res = "SUBMIT_SUCCESS"
 	return nil
 }
 
-func (*JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface{}, res *dao.PageResult) error {
+func (j *JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface{}, res *dao.PageResult) error {
 
 	orderQuery, pi, ps, err := convertFromMap(query)
-
 	if err != nil {
 		return err
 	}
 
-	//TODO(xiaolu) finish the connect get . not use this
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
-	c := config.LoadConfig(path)
-	daoServiceImpl := dao.NewRdsService(c.Mysql)
-	result, queryErr := daoServiceImpl.OrderPageQuery(&orderQuery, pi, ps)
+	result, queryErr := j.orderManager.GetOrders(&orderQuery, pi, ps)
 	res = &result
 	return queryErr
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getDepth(r *http.Request, market string, res *map[string]int) error {
-	// not support now
+func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interface{}, res *Depth) error {
+
+	mkt := query["market"].(string)
+	protocol := query["contractVersion"].(string)
+	length := query["length"].(int)
+
+	if mkt == "" || protocol == "" || market.ContractVersionConfig[protocol] == "" {
+		return errors.New("market and correct contract version must be applied")
+	}
+
+	if length <= 0 || length > 20 {
+		length = 20
+	}
+
+	a, b := market.UnWrap(mkt)
+	if market.SupportTokens[a] == "" || market.SupportMarket[b] == "" {
+		return errors.New("unsupported market type")
+	}
+
+	empty := make([][]string, 0)
+	for i := range empty {
+		empty[i] = make([]string, 0)
+	}
+	askBid := AskBid{Buy:empty, Sell:empty}
+	depth := Depth{contractVersion:market.ContractVersionConfig[protocol], market:mkt, Depth:askBid}
+
+	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
+	asks, askErr := j.orderManager.GetOrderBook(
+		types.StringToAddress(market.ContractVersionConfig[protocol]),
+		types.StringToAddress(a),
+		types.StringToAddress(b), length * 2)
+
+	if askErr != nil {
+		return errors.New("get depth error , please refresh again")
+	}
+
+	depth.Depth.Sell = calculateDepth(asks, length)
+
+	bids, bidErr := j.orderManager.GetOrderBook(
+		types.StringToAddress(market.ContractVersionConfig[protocol]),
+		types.StringToAddress(b),
+		types.StringToAddress(a), length * 2)
+
+	if bidErr != nil {
+		return errors.New("get depth error , please refresh again")
+	}
+
+	depth.Depth.Buy = calculateDepth(bids, length)
+
 	return nil
 }
 
@@ -165,7 +215,7 @@ func (*JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[str
 }
 
 //TODO
-func (*JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[string]int) error {
+func (j *JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[string]int) error {
 	// not support now
 	return nil
 }
@@ -183,7 +233,7 @@ func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map
 }
 
 //TODO
-func (*JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
+func (j *JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
 	// not support now
 	return nil
 }
@@ -221,9 +271,45 @@ type Arith int
 
 type Result int
 
-func (t *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) error {
+func (j *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) error {
 	fmt.Printf("Multiplying %d with %d\n", args.A, args.B)
 
 	*result = args.A * args.B
 	return nil
+}
+
+func calculateDepth(states []types.OrderState, length int) [][]string {
+
+	if len(states) == 0 {
+		return [][]string{}
+	}
+
+	depth := make([][]string, 0)
+	for i := range depth {
+		depth[i] = make([]string, 0)
+	}
+
+	var tempSumAmountS, tempSumAmountB big.Int
+	var lastPrice big.Rat
+
+	for i,s := range states {
+
+		if i == 0 {
+			lastPrice = *s.RawOrder.Price
+			tempSumAmountS = *s.RawOrder.AmountS
+			tempSumAmountB = *s.RawOrder.AmountB
+		} else {
+			if lastPrice.Cmp(s.RawOrder.Price) != 0 {
+				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
+				tempSumAmountS.Set(big.NewInt(0))
+				tempSumAmountB.Set(big.NewInt(0))
+				lastPrice = *s.RawOrder.Price
+			} else {
+				tempSumAmountS.Add(&tempSumAmountS, s.RawOrder.AmountS)
+				tempSumAmountB.Add(&tempSumAmountB, s.RawOrder.AmountB)
+			}
+		}
+	}
+
+	return depth[:length]
 }
