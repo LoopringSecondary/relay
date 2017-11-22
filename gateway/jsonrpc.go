@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
 	gorillaRpc "github.com/gorilla/rpc"
@@ -35,6 +34,8 @@ import (
 	"net/rpc"
 	"os"
 	"strings"
+	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/ordermanager"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -59,12 +60,16 @@ type JsonrpcService interface {
 type JsonrpcServiceImpl struct {
 	port         string
 	trendManager market.TrendManager
+	orderManager ordermanager.OrderManager
+	accountManager market.AccountManager
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
+	l.orderManager = orderManager
+	l.accountManager = accountManager
 	return l
 }
 
