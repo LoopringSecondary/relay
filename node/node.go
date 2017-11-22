@@ -139,7 +139,7 @@ func (n *Node) registerAccountManager() {
 }
 
 func (n *Node) registerJsonRpcService() {
-	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
+	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager)
 }
 
 func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *market.MarketCapProvider) {
