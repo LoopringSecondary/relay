@@ -66,18 +66,20 @@ func (e Event) tupleUnpack(v interface{}, output []byte) error {
 	}
 
 	j := 0
+	k := 0
 	for i := 0; i < len(e.Inputs); i++ {
 		input := e.Inputs[i]
 
 		if input.Indexed {
 			// can't read, continue
+			k++
 			continue
 		} else if input.Type.T == ArrayTy {
 			// need to move this up because they read sequentially
 			j += input.Type.Size
 		}
 
-		marshalledValue, err := toGoType((i+j)*32, input.Type, output)
+		marshalledValue, err := toGoType((i+j-k)*32, input.Type, output)
 		if err != nil {
 			return err
 		}
@@ -89,7 +91,7 @@ func (e Event) tupleUnpack(v interface{}, output []byte) error {
 				field := typ.Field(j)
 				// TODO read tags: `abi:"fieldName"`
 				// if field.Name == strings.ToUpper(e.Inputs[i].Name[:1])+e.Inputs[i].Name[1:] {
-				if field.Tag.Get("alias") == e.Inputs[i].Name {
+				if field.Tag.Get("fieldName") == e.Inputs[i].Name {
 					if err := set(value.Field(j), reflectValue, e.Inputs[i]); err != nil {
 						return err
 					}
