@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
 	"math/big"
 	"sync"
 	"time"
@@ -43,21 +44,23 @@ type OrderManagerImpl struct {
 	lock      sync.RWMutex
 	processor *forkProcessor
 	provider  *minerOrdersProvider
+	um        usermanager.UserManager
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService) *OrderManagerImpl {
-	ob := &OrderManagerImpl{}
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager) *OrderManagerImpl {
+	om := &OrderManagerImpl{}
 
-	ob.options = options
-	ob.dao = dao
-	ob.processor = newForkProcess(ob.dao)
+	om.options = options
+	om.dao = dao
+	om.processor = newForkProcess(om.dao)
+	om.um = userManager
 
 	// new miner orders provider
 	duration := time.Duration(options.TickerDuration)
 	blockPeriod := types.NewBigPtr(big.NewInt(int64(options.BlockPeriod)))
-	ob.provider = newMinerOrdersProvider(duration, blockPeriod)
+	om.provider = newMinerOrdersProvider(duration, blockPeriod)
 
-	return ob
+	return om
 }
 
 // Start start orderbook as a service
@@ -321,9 +324,19 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 }
 
 func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState {
+	var list []types.OrderState
+
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
 		log.Debugf("get miner orders error:%s", err.Error())
 	}
 
-	return om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+	filterList := om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+
+	for _, v := range filterList {
+		if !om.um.InWhiteList(v.RawOrder.TokenS) {
+			list = append(list, v)
+		}
+	}
+
+	return list
 }
