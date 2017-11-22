@@ -36,6 +36,8 @@ type OrderManager interface {
 	Start()
 	Stop()
 	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
+	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error)
+	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 }
 
 type OrderManagerImpl struct {
@@ -339,4 +341,46 @@ func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrde
 	}
 
 	return list
+}
+
+func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error) {
+	var list []types.OrderState
+	models, err := om.dao.GetOrderBook(protocol, tokenS, tokenB, length)
+	if err != nil {
+		return list, err
+	}
+
+	for _, v := range models {
+		var state types.OrderState
+		if err := v.ConvertUp(&state); err != nil {
+			continue
+		}
+		list = append(list, state)
+	}
+
+	return list, nil
+}
+
+func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error) {
+	var (
+		pageRes dao.PageResult
+	)
+	tmp, err := om.dao.OrderPageQuery(query, pageIndex, pageSize)
+	if err != nil {
+		return pageRes, err
+	}
+	pageRes.PageIndex = tmp.PageIndex
+	pageRes.PageSize = tmp.PageSize
+	pageRes.Total = tmp.Total
+
+	for _, v := range tmp.Data {
+		var state types.OrderState
+		model := v.(dao.Order)
+		if err := model.ConvertUp(&state); err != nil {
+			continue
+		}
+		pageRes.Data = append(pageRes.Data, state)
+	}
+
+	return pageRes, nil
 }

@@ -221,6 +221,18 @@ func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.Or
 	return err
 }
 
+func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol.Hex(), tokenS.Hex(), tokenB.Hex()).
+		Order("price desc").Limit(length).Find(&list).Error
+
+	return list, err
+}
+
 func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
 	var (
 		orders []Order
