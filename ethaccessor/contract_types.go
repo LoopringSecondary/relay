@@ -115,6 +115,8 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.AmountB = types.NewBigPtr(e.AmountsList[i][1])
 		fill.LrcReward = types.NewBigPtr(e.AmountsList[i][2])
 		fill.LrcFee = types.NewBigPtr(e.AmountsList[i][3])
+
+		list = append(list, &fill)
 	}
 
 	return evt, list, nil
