@@ -1,7 +1,5 @@
 # Loopring Relay
-Loopring relay can switch to relay or ringminer with config:<br>
-the former may broadcast orders to ipfs network and provide series jsonrpc interfaces,<br>
-ringminer will listen and extract ethereum network transactions,beside those,it's main task is matching orders to ring and send to ethereum network<br>
+Loopring relay contains two partments:Relay and Miner. Relay is the service for wallet and broadcast orders to ipfs network ,Miner found ring from the unmatched orders. It can act as one or both of them:<br>
 
 mention:
 This program is under development.
