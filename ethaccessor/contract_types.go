@@ -21,107 +21,176 @@ package ethaccessor
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"reflect"
 )
-
-type AbiMethod struct {
-	abi.Method
-	ContractAddress types.Address
-	rpcClient       *rpc.Client
-	Pack            func(args ...interface{}) ([]byte, error)
-}
-
-func (method AbiMethod) Call(result interface{}, blockParameter string, args ...interface{}) error {
-	dataBytes, err := method.Pack(args...)
-	if nil != err {
-		return err
-	}
-	data := types.ToHex(dataBytes)
-	//when call a contract method，gas,gasPrice and value are not needed.
-	arg := &CallArg{}
-	arg.To = method.ContractAddress
-	arg.Data = data
-	return method.rpcClient.Call(result, "eth_call", arg, blockParameter)
-}
-
-func (m *AbiMethod) EstimateGas(args ...interface{}) (gas, gasPrice *big.Int, err error) {
-	callData, err := m.Pack(args...)
-
-	if nil != err {
-		return
-	}
-
-	if err = m.rpcClient.Call(&gasPrice, "eth_GasPrice"); nil != err {
-		return
-	}
-
-	callArg := &CallArg{}
-	callArg.To = m.ContractAddress
-	callArg.Data = types.ToHex(callData)
-	callArg.GasPrice = *types.NewBigPtr(gasPrice)
-	if err = m.rpcClient.Call(&gas, "eth_EstimateGas", callArg); nil != err {
-		return
-	}
-	return
-}
-
-type AbiEvent struct {
-	abi.Event
-	ContractAddress types.Address
-}
 
 type Abi struct {
 	abi.ABI
 	abiStr string
 }
 
-func NewAbi(abiStr string) Abi {
+func (a Abi) PackMethod(methodName string, args ...interface{}) ([]byte, error) {
+	return a.Pack(methodName, args...)
+}
+
+//todo: unpack event
+func (a Abi) UnpackEvent(v interface{}, eventName string, data []byte, topics []string) error {
+	return nil
+}
+
+func NewAbi(abiStr string) (Abi, error) {
 	a := Abi{}
 	a.abiStr = abiStr
-	a.UnmarshalJSON([]byte(abiStr))
-	return a
+	err := a.UnmarshalJSON([]byte(abiStr))
+	return a, err
 }
 
-func (a Abi) NewMethod(methodName string, contractAddress types.Address, rpcClient *rpc.Client) AbiMethod {
-	abiMethod := AbiMethod{}
-	abiMethod.Name = methodName
-	abiMethod.ContractAddress = contractAddress
-	abiMethod.rpcClient = rpcClient
-	abiMethod.Pack = a.newPack(methodName)
-	return abiMethod
+type TransferEvent struct {
+	From  common.Address `json:"from" alias:"from"`
+	To    common.Address `json:"to" alias:"to"`
+	Value *big.Int       `json:"value" alias:"value"`
 }
 
-func (a Abi) newPack(name string) func(args ...interface{}) ([]byte, error) {
-	return func(args ...interface{}) ([]byte, error) {
-		return a.Pack(name, args...)
-	}
+func (e *TransferEvent) ConvertDown() *types.TransferEvent {
+	evt := &types.TransferEvent{}
+	evt.From = types.HexToAddress(e.From.Hex())
+	evt.To = types.HexToAddress(e.To.Hex())
+	evt.Value = types.NewBigPtr(e.Value)
+
+	return evt
 }
 
-func (a Abi) NewContract(result interface{}, address types.Address, rpcClient *rpc.Client) {
-	res := reflect.ValueOf(result).Elem()
-	t := reflect.TypeOf(AbiMethod{})
-	res.FieldByName("Abi").Set(reflect.ValueOf(a))
-	res.FieldByName("ContractAddress").Set(reflect.ValueOf(address))
-	for i := 0; i < res.NumField(); i++ {
-		f := res.Type().Field(i)
-		if t == f.Type {
-			methodName := f.Tag.Get("name")
-			abiMethod := a.NewMethod(methodName, address, rpcClient)
-			res.Field(i).Set(reflect.ValueOf(abiMethod))
-		}
-	}
+type ApprovalEvent struct {
+	Owner   common.Address `json:"owner" alias:"owner"`
+	Spender common.Address `json:"spender" alias:"spender"`
+	Value   *big.Int       `json:"value" alias:"value"`
 }
 
-type Erc20Token struct {
-	Abi
-	ContractAddress types.Address
-	Name            string
-	TotalSupply     AbiMethod `name:"totalSupply"`
-	BalanceOf       AbiMethod `name:"balanceOf"`
-	Transfer        AbiMethod
-	TransferFrom    AbiMethod
-	Approve         AbiMethod
-	Allowance       AbiMethod
+func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
+	evt := &types.ApprovalEvent{}
+	evt.Owner = types.HexToAddress(e.Owner.Hex())
+	evt.Spender = types.HexToAddress(e.Spender.Hex())
+	evt.Value = types.NewBigPtr(e.Value)
+
+	return evt
+}
+
+//go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
+type RingMinedEvent struct {
+	RingIndex          *big.Int       `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+	Time               *big.Int       `json:"time" alias:"_time" gencodec:"required"`
+	Blocknumber        *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+	Ringhash           types.Hash     `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+	Miner              common.Address `json:"miner" alias:"_miner" gencodec:"required"`
+	FeeRecepient       common.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
+	IsRinghashReserved bool           `json:"isRinghashReserved" alias:"_isRinghashReserved" gencodec:"required"`
+}
+
+type ringMinedEventMarshaling struct {
+	RingIndex   *types.Big
+	Time        *types.Big
+	Blocknumber *types.Big
+}
+
+func (e *RingMinedEvent) ConvertDown() *types.RingMinedEvent {
+	evt := &types.RingMinedEvent{}
+	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.Ringhash = e.Ringhash
+	evt.Miner = types.HexToAddress(e.Miner.Hex())
+	evt.FeeRecipient = types.HexToAddress(e.FeeRecepient.Hex())
+	evt.IsRinghashReserved = e.IsRinghashReserved
+
+	return evt
+}
+
+//go:generate gencodec -type OrderFilledEvent -field-override orderFilledEventMarshaling -out gen_orderfilledevent_json.go
+type OrderFilledEvent struct {
+	RingIndex     *big.Int `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
+	Time          *big.Int `json:"time" alias:"_time" gencodec:"required"`
+	Blocknumber   *big.Int `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+	Ringhash      []byte   `json:"ringHash" alias:"_ringhash" gencodec:"required"`
+	PreOrderHash  []byte   `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
+	OrderHash     []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+	NextOrderHash []byte   `json:"nextOrderHash" alias:"_nextOrderHash" gencodec:"required"`
+	AmountS       *big.Int `json:"amountS" alias:"_amountS" gencodec:"required"` // 存量数据
+	AmountB       *big.Int `json:"amountB" alias:"_amountB" gencodec:"required"` // 存量数据
+	LrcReward     *big.Int `json:"lrcReward" alias:"_lrcReward" gencodec:"required"`
+	LrcFee        *big.Int `json:"lrcFee" alias:"_lrcFee" gencodec:"required"`
+}
+
+type orderFilledEventMarshaling struct {
+	RingIndex   *types.Big
+	Time        *types.Big
+	Blocknumber *types.Big
+	AmountS     *types.Big
+	AmountB     *types.Big
+	LrcReward   *types.Big
+	LrcFee      *types.Big
+}
+
+func (e *OrderFilledEvent) ConvertDown() *types.OrderFilledEvent {
+	evt := &types.OrderFilledEvent{}
+
+	evt.Ringhash = types.BytesToHash(e.Ringhash)
+	evt.PreOrderHash = types.BytesToHash(e.PreOrderHash)
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.NextOrderHash = types.BytesToHash(e.NextOrderHash)
+
+	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.AmountS = types.NewBigPtr(e.AmountS)
+	evt.AmountB = types.NewBigPtr(e.AmountB)
+	evt.LrcReward = types.NewBigPtr(e.LrcReward)
+	evt.LrcFee = types.NewBigPtr(e.LrcFee)
+
+	return evt
+}
+
+//go:generate gencodec -type OrderCancelledEvent -field-override orderCancelledEventMarshaling -out gen_ordercancelledevent_json.go
+type OrderCancelledEvent struct {
+	Time            *big.Int `json:"time" alias:"_time" gencodec:"required"`
+	Blocknumber     *big.Int `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+	OrderHash       []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`
+	AmountCancelled *big.Int `json:"amountCancelled" alias:"_amountCancelled" gencodec:"required"`
+}
+
+type orderCancelledEventMarshaling struct {
+	Time            *types.Big
+	Blocknumber     *types.Big
+	AmountCancelled *types.Big
+}
+
+func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
+	evt := &types.OrderCancelledEvent{}
+	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.AmountCancelled = types.NewBigPtr(e.AmountCancelled)
+
+	return evt
+}
+
+//go:generate gencodec -type CutoffTimestampChangedEvent -field-override cutoffTimestampChangedEventtMarshaling -out gen_cutofftimestampevent_json.go
+type CutoffTimestampChangedEvent struct {
+	Time        *big.Int       `json:"time" alias:"_time" gencodec:"required"`
+	Blocknumber *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
+	Owner       common.Address `json:"address" alias:"_address" gencodec:"required"`
+	Cutoff      *big.Int       `json:"cutoff" alias:"_cutoff" gencodec:"required"`
+}
+
+type cutoffTimestampChangedEventtMarshaling struct {
+	Time        *types.Big
+	Blocknumber *types.Big
+	Cutoff      *types.Big
+}
+
+func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	//todo:
+	//evt.Owner = e.ContractAddress
+	evt.Cutoff = types.NewBigPtr(e.Cutoff)
+	return evt
+}
+
+type RinghashSubmitted struct {
+	RingHash  []byte         `alias:"_ringhash"`
+	RingMiner common.Address `alias:"_ringminer"`
 }
