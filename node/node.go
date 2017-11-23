@@ -26,6 +26,7 @@ import (
 	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/db"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
@@ -35,7 +36,6 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"go.uber.org/zap"
 	"sync"
-	"github.com/Loopring/relay/ethaccessor"
 )
 
 // TODO(fk): add services
@@ -43,7 +43,7 @@ type Node struct {
 	globalConfig     *config.GlobalConfig
 	rdsService       dao.RdsService
 	ipfsSubService   gateway.IPFSSubService
-	accessor 		 *ethaccessor.EthNodeAccessor
+	accessor         *ethaccessor.EthNodeAccessor
 	extractorService extractor.ExtractorService
 	orderManager     ordermanager.OrderManager
 	userManager      usermanager.UserManager
@@ -62,7 +62,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
+	ethClient := ethClientLib.NewChainClient(globalConfig.Accessor, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
 
@@ -120,12 +120,12 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerAccessor() {
-	accessor, _ := ethaccessor.NewAccessor(n.globalConfig.ChainClient, nil)
+	accessor, _ := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, nil)
 	n.accessor = accessor
 }
 
 func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor, database db.Database) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

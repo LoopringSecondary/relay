@@ -26,8 +26,8 @@ import (
 	"math/big"
 )
 
-func NewAbi(abiStr string) (abi.ABI, error) {
-	a := abi.ABI{}
+func NewAbi(abiStr string) (*abi.ABI, error) {
+	a := &abi.ABI{}
 	err := a.UnmarshalJSON([]byte(abiStr))
 	return a, err
 }
@@ -48,9 +48,9 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 }
 
 type ApprovalEvent struct {
-	Owner   common.Address `fieldName:"owner"`
-	Spender common.Address `fieldName:"spender"`
-	Value   *big.Int       `fieldName:"value"`
+	Owner   types.Address `fieldName:"owner"`
+	Spender types.Address `fieldName:"spender"`
+	Value   *big.Int      `fieldName:"value"`
 }
 
 func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
@@ -148,6 +148,24 @@ func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 }
 
 type RinghashSubmitted struct {
-	RingHash  []byte         `alias:"_ringhash"`
-	RingMiner common.Address `alias:"_ringminer"`
+	RingHash  []byte        `alias:"_ringhash"`
+	RingMiner types.Address `alias:"_ringminer"`
+}
+
+type ProtocolImpl struct {
+	Version         string
+	ContractAddress types.Address
+	ProtocolImplAbi *abi.ABI
+
+	LrcTokenAddress types.Address
+	LrcTokenAbi     *abi.ABI
+
+	TokenRegistryAddress types.Address
+	TokenRegistryAbi     *abi.ABI
+
+	RinghashRegistryAddress types.Address
+	RinghashRegistryAbi     *abi.ABI
+
+	DelegateAddress types.Address
+	DelegateAbi     *abi.ABI
 }

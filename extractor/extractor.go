@@ -23,17 +23,17 @@ import (
 	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/bak/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/ethereum/bak/go-ethereum/accounts/abi"
 )
 
 /**
@@ -48,15 +48,19 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	commOpts        config.CommonOptions
-	accessor 		*ethaccessor.EthNodeAccessor
-	dao             dao.RdsService
-	stop            chan struct{}
-	lock            sync.RWMutex
-	abis 			map[types.Address]abi.ABI
+	options  config.AccessorOptions
+	commOpts config.CommonOptions
+	accessor *ethaccessor.EthNodeAccessor
+	dao      dao.RdsService
+	stop     chan struct{}
+	lock     sync.RWMutex
+	abis     map[types.Address]abi.ABI
 }
 
-func NewExtractorService(commonOpts config.CommonOptions, accessor *ethaccessor.EthNodeAccessor, rds dao.RdsService) *ExtractorServiceImpl {
+func NewExtractorService(options config.AccessorOptions,
+	commonOpts config.CommonOptions,
+	accessor *ethaccessor.EthNodeAccessor,
+	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.commOpts = commonOpts

@@ -26,7 +26,7 @@ import (
 )
 
 func TestChainClient(t *testing.T) {
-	config := &config.ChainClientOptions{}
+	config := &config.AccessorOptions{}
 	config.RawUrl = "http://127.0.0.1:8545"
 	ethClient := eth.NewChainClient(*config, "sa")
 

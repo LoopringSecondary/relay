@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -32,23 +33,23 @@ import (
 	"time"
 )
 
-func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address types.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
-	if callData, err1 := accessor.Erc20Abi.Pack("balanceOf", address); nil != err1 {
-		return nil, err1
+	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
+	if err := callMethod(&balance, "balanceOf", blockParameter, address); nil != err {
+		return nil, err
 	} else {
-		err := accessor.CallContract(&balance, blockParameter, tokenAddress, callData)
 		return balance.BigInt(), err
 	}
 }
 
-func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, address, senderAddress common.Address, blockParameter string) (*big.Int, error) {
-	var balance types.Big
-	if callData, err1 := accessor.Erc20Abi.Pack("allowance", address, senderAddress); nil != err1 {
-		return nil, err1
+func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, address, senderAddress types.Address, blockParameter string) (*big.Int, error) {
+	var allowance types.Big
+	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
+	if err := callMethod(&allowance, "allowance", blockParameter, address); nil != err {
+		return nil, err
 	} else {
-		err := accessor.CallContract(&balance, blockParameter, tokenAddress, callData)
-		return balance.BigInt(), err
+		return allowance.BigInt(), err
 	}
 }
 
@@ -87,6 +88,80 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 		req.AllowanceErr = reqElems[2*idx+1].Error
 	}
 	return nil
+}
+
+func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to types.Address) (gas, gasPrice *big.Int, err error) {
+	if err = accessor.Call(&gasPrice, "eth_GasPrice"); nil != err {
+		return
+	}
+	callArg := &CallArg{}
+	callArg.To = to
+	callArg.Data = types.ToHex(callData)
+	callArg.GasPrice = *types.NewBigPtr(gasPrice)
+	if err = accessor.Call(&gas, "eth_EstimateGas", callArg); nil != err {
+		return
+	}
+	return
+}
+
+func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress types.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+	return func(result interface{}, methodName string, blockParameter string, args ...interface{}) error {
+		if callData, err := a.Pack(methodName, args...); nil != err {
+			return err
+		} else {
+			arg := &CallArg{}
+			arg.From = contractAddress
+			arg.To = contractAddress
+			arg.Data = common.ToHex(callData)
+			return accessor.Call(result, "eth_call", arg, blockParameter)
+		}
+	}
+}
+
+func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
+	var err error
+	if tx, err = ethAccessor.ks.SignTx(sender, tx, nil); nil != err {
+		return err
+	}
+	if txData, err := rlp.EncodeToBytes(tx); nil != err {
+		return err
+	} else {
+		log.Debugf("txhash:%s, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
+		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
+		return err
+	}
+}
+
+func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a abi.ABI, contractAddress types.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+	return func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+		if callData, err := a.Pack(methodName, args...); nil != err {
+			return "", err
+		} else {
+			if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
+				return "", errors.New("gasPrice must be setted.")
+			}
+
+			if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
+				return "", errors.New("gas must be setted.")
+			}
+			var txHash string
+			var nonce types.Big
+			if err := accessor.Call(&nonce, "eth_GetTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+				return "", err
+			}
+			transaction := ethTypes.NewTransaction(nonce.Uint64(),
+				common.HexToAddress(contractAddress.Hex()),
+				big.NewInt(0),
+				gas,
+				gasPrice,
+				callData)
+			if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+				return "", err
+			} else {
+				return txHash, err
+			}
+		}
+	}
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
@@ -159,64 +234,4 @@ func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.In
 		confirms:      confirms,
 	}
 	return iterator
-}
-
-func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
-	var err error
-	if tx, err = ethAccessor.ks.SignTx(sender, tx, nil); nil != err {
-		return err
-	}
-	if txData, err := rlp.EncodeToBytes(tx); nil != err {
-		return err
-	} else {
-		log.Debugf("txhash:%s, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
-		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
-		return err
-	}
-}
-
-func (accessor *EthNodeAccessor) SendContractTransaction(sender accounts.Account, to common.Address, gas, gasPrice *big.Int, data []byte) (string, error) {
-
-	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
-		return "", errors.New("gasPrice must be setted.")
-	}
-
-	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
-		return "", errors.New("gas must be setted.")
-	}
-	var txHash string
-	var nonce types.Big
-	if err := accessor.Call(&nonce, "eth_GetTransactionCount", sender.Address.Hex(), "pending"); nil != err {
-		return "", err
-	}
-	transaction := ethTypes.NewTransaction(nonce.Uint64(),
-		to,
-		big.NewInt(0),
-		gas,
-		gasPrice,
-		data)
-	err := accessor.SignAndSendTransaction(&txHash, sender, transaction)
-
-	return txHash, err
-}
-
-func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
-	if err = accessor.Call(&gasPrice, "eth_GasPrice"); nil != err {
-		return
-	}
-	callArg := &CallArg{}
-	callArg.To = to
-	callArg.Data = types.ToHex(callData)
-	callArg.GasPrice = *types.NewBigPtr(gasPrice)
-	if err = accessor.Call(&gas, "eth_EstimateGas", callArg); nil != err {
-		return
-	}
-	return
-}
-
-func (accessor *EthNodeAccessor) CallContract(result interface{}, blockParameter string, to common.Address, callData []byte) error {
-	arg := &CallArg{}
-	arg.To = to
-	arg.Data = common.ToHex(callData)
-	return accessor.Call(result, "eth_call", arg, blockParameter)
 }
