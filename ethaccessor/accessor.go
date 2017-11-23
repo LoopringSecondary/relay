@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 )
 
 type EthNodeAccessor struct {
-	Erc20Abi, ProtocolImplAbi, RinghashRegistryAbi, TransferDelegateAbi, TokenRegistryAbi Abi
+	Erc20Abi, ProtocolImplAbi, RinghashRegistryAbi, TransferDelegateAbi, TokenRegistryAbi abi.ABI
 	ks                                                                                    *keystore.KeyStore
 	*rpc.Client
 }
