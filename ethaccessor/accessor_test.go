@@ -29,36 +29,29 @@ import (
 func TestNewAccessor(t *testing.T) {
 	options := config.ChainClientOptions{}
 	options.RawUrl = "http://127.0.0.1:8545"
-	accessor := ethaccessor.NewAccessor(options)
+	accessor, _ := ethaccessor.NewAccessor(options, nil)
 	var b types.Big
 	if err := accessor.Call(&b, "eth_getBalance", common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259"), "pending"); nil != err {
-		println(err.Error())
+		t.Error(err.Error())
 	}
 
 	t.Log(b.BigInt().String())
 
-	balance, _ := accessor.Erc20Balance(types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"), types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), "pending")
+	balance, _ := accessor.Erc20Balance(common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"), common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), "pending")
 	t.Log(balance.String())
 
-	reqs := []*ethaccessor.BatchErc20BalanceAndAllowanceReq{&ethaccessor.BatchErc20BalanceAndAllowanceReq{
-		Address:        types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-		Token:          types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+	reqs := []*ethaccessor.BatchErc20Req{&ethaccessor.BatchErc20Req{
+		Address:        common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
+		Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		BlockParameter: "pending",
-	}}
+	},
+		&ethaccessor.BatchErc20Req{
+			Address:        common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
+			Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+			BlockParameter: "pending",
+		}}
 	accessor.BatchErc20BalanceAndAllowance(reqs)
 
 	t.Log("balance", reqs[0].Balance.BigInt().String())
-	//
-	//allowance := ethaccessor.Erc20Allowance(types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), types.HexToAddress("0xd02d3e40cde61c267a3886f5828e03aa4914073d"), "pending")
-	//println(allowance.String())
-	//abiStr := `[{"constant":false,"inputs":[{"name":"spender","type":"address"},{"name":"value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"from","type":"address"},{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"who","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
-	//
-	//erc20 := ethaccessor.NewAbi(abiStr)
-	//
-	//balance := erc20.NewMethod("balanceOf", types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"))
-	//
-	//if err := balance.Call(&b, "pending", types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")); nil != err {
-	//	println(err.Error())
-	//}
-	//println(b.BigInt().String())
+	t.Log("balance", reqs[1].Balance.BigInt().String())
 }

@@ -35,7 +35,6 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"go.uber.org/zap"
 	"sync"
-	"github.com/Loopring/relay/ethaccessor"
 )
 
 // TODO(fk): add services

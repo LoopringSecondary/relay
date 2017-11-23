@@ -111,6 +111,13 @@ type ChainClientOptions struct {
 	}
 }
 
+type KeyStoreOptions struct {
+	Keydir     string
+	ScryptN    int
+	ScryptP    int
+	Passphrase string
+}
+
 type CommonOptions struct {
 	LoopringImpAddresses []string         `required:"true"`
 	FilterTopics         []string         `required:"true"`
