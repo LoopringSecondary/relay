@@ -19,6 +19,7 @@
 package ethaccessor
 
 import (
+	"errors"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,9 +33,9 @@ func NewAbi(abiStr string) (abi.ABI, error) {
 }
 
 type TransferEvent struct {
-	From  common.Address `json:"from" alias:"from"`
-	To    common.Address `json:"to" alias:"to"`
-	Value *big.Int       `json:"value" alias:"value"`
+	From  common.Address `fieldName:"from"`
+	To    common.Address `fieldName:"to"`
+	Value *big.Int       `fieldName:"value"`
 }
 
 func (e *TransferEvent) ConvertDown() *types.TransferEvent {
@@ -47,9 +48,9 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 }
 
 type ApprovalEvent struct {
-	Owner   common.Address `json:"owner" alias:"owner"`
-	Spender common.Address `json:"spender" alias:"spender"`
-	Value   *big.Int       `json:"value" alias:"value"`
+	Owner   common.Address `fieldName:"owner"`
+	Spender common.Address `fieldName:"spender"`
+	Value   *big.Int       `fieldName:"value"`
 }
 
 func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
@@ -61,116 +62,85 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	return evt
 }
 
-//go:generate gencodec -type RingMinedEvent -field-override ringMinedEventMarshaling -out gen_ringminedevent_json.go
 type RingMinedEvent struct {
-	RingIndex          *big.Int       `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
-	Time               *big.Int       `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber        *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Ringhash           types.Hash     `json:"ringHash" alias:"_ringhash" gencodec:"required"`
-	Miner              common.Address `json:"miner" alias:"_miner" gencodec:"required"`
-	FeeRecepient       common.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
-	IsRinghashReserved bool           `json:"isRinghashReserved" alias:"_isRinghashReserved" gencodec:"required"`
+	RingIndex          *big.Int      `fieldName:"_ringIndex"`
+	RingHash           types.Hash    `fieldName:"_ringhash"`
+	Miner              types.Address `fieldName:"_miner"`
+	FeeRecipient       types.Address `fieldName:"_feeRecipient"`
+	IsRingHashReserved bool          `fieldName:"_isRinghashReserved"`
+	OrderHashList      []types.Hash  `fieldName:"_orderHashList"`
+	AmountsList        [][4]*big.Int `fieldName:"_amountsList"`
 }
 
-type ringMinedEventMarshaling struct {
-	RingIndex   *types.Big
-	Time        *types.Big
-	Blocknumber *types.Big
-}
+func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
+	length := len(e.OrderHashList)
 
-func (e *RingMinedEvent) ConvertDown() *types.RingMinedEvent {
+	if length != len(e.AmountsList) || length < 2 {
+		return nil, nil, errors.New("ringMined event unpack error:orderHashList length invalid")
+	}
+
 	evt := &types.RingMinedEvent{}
 	evt.RingIndex = types.NewBigPtr(e.RingIndex)
-	evt.Ringhash = e.Ringhash
-	evt.Miner = types.HexToAddress(e.Miner.Hex())
-	evt.FeeRecipient = types.HexToAddress(e.FeeRecepient.Hex())
-	evt.IsRinghashReserved = e.IsRinghashReserved
+	evt.Ringhash = e.RingHash
+	evt.Miner = e.Miner
+	evt.FeeRecipient = e.FeeRecipient
+	evt.IsRinghashReserved = e.IsRingHashReserved
 
-	return evt
+	var list []*types.OrderFilledEvent
+	for i := 0; i < length; i++ {
+		var (
+			fill                        types.OrderFilledEvent
+			preOrderHash, nextOrderHash types.Hash
+		)
+
+		if i == 0 {
+			preOrderHash = e.OrderHashList[length-1]
+			nextOrderHash = e.OrderHashList[1]
+		} else if i == length-1 {
+			preOrderHash = e.OrderHashList[length-2]
+			nextOrderHash = e.OrderHashList[0]
+		} else {
+			preOrderHash = e.OrderHashList[i-1]
+			nextOrderHash = e.OrderHashList[i+1]
+		}
+
+		fill.Ringhash = e.RingHash
+		fill.PreOrderHash = preOrderHash
+		fill.OrderHash = e.OrderHashList[i]
+		fill.NextOrderHash = nextOrderHash
+
+		// _amountSList, _amountBList, _lrcRewardList, _lrcFeeList
+		fill.RingIndex = types.NewBigPtr(e.RingIndex)
+		fill.AmountS = types.NewBigPtr(e.AmountsList[i][0])
+		fill.AmountB = types.NewBigPtr(e.AmountsList[i][1])
+		fill.LrcReward = types.NewBigPtr(e.AmountsList[i][2])
+		fill.LrcFee = types.NewBigPtr(e.AmountsList[i][3])
+	}
+
+	return evt, list, nil
 }
 
-//go:generate gencodec -type OrderFilledEvent -field-override orderFilledEventMarshaling -out gen_orderfilledevent_json.go
-type OrderFilledEvent struct {
-	RingIndex     *big.Int `json:"ringIndex" alias:"_ringIndex" gencodec:"required"`
-	Time          *big.Int `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber   *big.Int `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Ringhash      []byte   `json:"ringHash" alias:"_ringhash" gencodec:"required"`
-	PreOrderHash  []byte   `json:"preOrderHash" alias:"_prevOrderHash" gencodec:"required"`
-	OrderHash     []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`
-	NextOrderHash []byte   `json:"nextOrderHash" alias:"_nextOrderHash" gencodec:"required"`
-	AmountS       *big.Int `json:"amountS" alias:"_amountS" gencodec:"required"` // 存量数据
-	AmountB       *big.Int `json:"amountB" alias:"_amountB" gencodec:"required"` // 存量数据
-	LrcReward     *big.Int `json:"lrcReward" alias:"_lrcReward" gencodec:"required"`
-	LrcFee        *big.Int `json:"lrcFee" alias:"_lrcFee" gencodec:"required"`
-}
-
-type orderFilledEventMarshaling struct {
-	RingIndex   *types.Big
-	Time        *types.Big
-	Blocknumber *types.Big
-	AmountS     *types.Big
-	AmountB     *types.Big
-	LrcReward   *types.Big
-	LrcFee      *types.Big
-}
-
-func (e *OrderFilledEvent) ConvertDown() *types.OrderFilledEvent {
-	evt := &types.OrderFilledEvent{}
-
-	evt.Ringhash = types.BytesToHash(e.Ringhash)
-	evt.PreOrderHash = types.BytesToHash(e.PreOrderHash)
-	evt.OrderHash = types.BytesToHash(e.OrderHash)
-	evt.NextOrderHash = types.BytesToHash(e.NextOrderHash)
-
-	evt.RingIndex = types.NewBigPtr(e.RingIndex)
-	evt.AmountS = types.NewBigPtr(e.AmountS)
-	evt.AmountB = types.NewBigPtr(e.AmountB)
-	evt.LrcReward = types.NewBigPtr(e.LrcReward)
-	evt.LrcFee = types.NewBigPtr(e.LrcFee)
-
-	return evt
-}
-
-//go:generate gencodec -type OrderCancelledEvent -field-override orderCancelledEventMarshaling -out gen_ordercancelledevent_json.go
 type OrderCancelledEvent struct {
-	Time            *big.Int `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber     *big.Int `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	OrderHash       []byte   `json:"orderHash" alias:"_orderHash" gencodec:"required"`
-	AmountCancelled *big.Int `json:"amountCancelled" alias:"_amountCancelled" gencodec:"required"`
-}
-
-type orderCancelledEventMarshaling struct {
-	Time            *types.Big
-	Blocknumber     *types.Big
-	AmountCancelled *types.Big
+	OrderHash       types.Hash `fieldName:"_orderHash"`
+	AmountCancelled *big.Int   `fieldName:"_amountCancelled"`
 }
 
 func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	evt := &types.OrderCancelledEvent{}
-	evt.OrderHash = types.BytesToHash(e.OrderHash)
+	evt.OrderHash = e.OrderHash
 	evt.AmountCancelled = types.NewBigPtr(e.AmountCancelled)
 
 	return evt
 }
 
-//go:generate gencodec -type CutoffTimestampChangedEvent -field-override cutoffTimestampChangedEventtMarshaling -out gen_cutofftimestampevent_json.go
 type CutoffTimestampChangedEvent struct {
-	Time        *big.Int       `json:"time" alias:"_time" gencodec:"required"`
-	Blocknumber *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Owner       common.Address `json:"address" alias:"_address" gencodec:"required"`
-	Cutoff      *big.Int       `json:"cutoff" alias:"_cutoff" gencodec:"required"`
-}
-
-type cutoffTimestampChangedEventtMarshaling struct {
-	Time        *types.Big
-	Blocknumber *types.Big
-	Cutoff      *types.Big
+	Owner  types.Address `fieldName:"_address"`
+	Cutoff *big.Int      `fieldName:"_cutoff"`
 }
 
 func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
-	//todo:
-	//evt.Owner = e.ContractAddress
+	evt.Owner = e.Owner
 	evt.Cutoff = types.NewBigPtr(e.Cutoff)
 	return evt
 }
