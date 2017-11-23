@@ -218,7 +218,7 @@ func (e AbiEvent) Subscribe(eventChan reflect.Value, fromBlock, toBlock string) 
 }
 
 func (e AbiEvent) Unpack(v interface{}, output []byte, topics []string) error {
-	return UnpackEvent(e.Inputs, v, output, topics)
+	return 	UnpackEvent(e.Inputs, v, output, topics)
 }
 
 func applyAbiMethod(e reflect.Value, cabi *abi.ABI, address types.Address, ethClient *EthClient) {

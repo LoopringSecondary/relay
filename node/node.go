@@ -35,6 +35,7 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"go.uber.org/zap"
 	"sync"
+	"github.com/Loopring/relay/ethaccessor"
 )
 
 // TODO(fk): add services
@@ -42,6 +43,7 @@ type Node struct {
 	globalConfig     *config.GlobalConfig
 	rdsService       dao.RdsService
 	ipfsSubService   gateway.IPFSSubService
+	accessor 		 *ethaccessor.EthNodeAccessor
 	extractorService extractor.ExtractorService
 	orderManager     ordermanager.OrderManager
 	userManager      usermanager.UserManager
@@ -66,9 +68,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
 
-	//accessor := ethaccessor.NewAccessor(globalConfig.ChainClient)
-
-	//n.registerMysql()
+	n.registerMysql()
 	n.registerUserManager()
 	//n.registerIPFSSubService()
 	n.registerGateway()
@@ -119,7 +119,12 @@ func (n *Node) registerMysql() {
 	n.rdsService = dao.NewRdsService(n.globalConfig.Mysql)
 }
 
-func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
+func (n *Node) registerAccessor() {
+	accessor, _ := ethaccessor.NewAccessor(n.globalConfig.ChainClient, nil)
+	n.accessor = accessor
+}
+
+func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor, database db.Database) {
 	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService)
 }
 
@@ -128,7 +133,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager(database db.Database) {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager)
 }
 
 func (n *Node) registerTrendManager(database db.Database) {
