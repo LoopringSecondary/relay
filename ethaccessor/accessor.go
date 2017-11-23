@@ -20,20 +20,20 @@ package ethaccessor
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/Loopring/relay/types"
 )
 
 type EthNodeAccessor struct {
-	Erc20Abi *abi.ABI
+	Erc20Abi      *abi.ABI
 	ProtocolImpls map[types.Address]*ProtocolImpl
-	ks                                                                                    *keystore.KeyStore
+	ks            *keystore.KeyStore
 	*rpc.Client
 }
 
-func NewAccessor(accessorOptions config.AccessorOptions,commonOptions config.CommonOptions, ks *keystore.KeyStore) (*EthNodeAccessor, error) {
+func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, ks *keystore.KeyStore) (*EthNodeAccessor, error) {
 	var err error
 	accessor := &EthNodeAccessor{}
 	accessor.Client, err = rpc.Dial(accessorOptions.RawUrl)
@@ -48,7 +48,7 @@ func NewAccessor(accessorOptions config.AccessorOptions,commonOptions config.Com
 	accessor.ProtocolImpls = make(map[types.Address]*ProtocolImpl)
 
 	for version, opts := range commonOptions.ProtocolImpls {
-		impl := &ProtocolImpl{Version:version, ContractAddress:types.HexToAddress(opts.Address)}
+		impl := &ProtocolImpl{Version: version, ContractAddress: types.HexToAddress(opts.Address)}
 		if protocolImplAbi, err := NewAbi(opts.ImplAbi); nil != err {
 			return nil, err
 		} else {

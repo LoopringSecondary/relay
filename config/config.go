@@ -61,8 +61,8 @@ func LoadConfig(file string) *GlobalConfig {
 }
 
 type GlobalConfig struct {
-	Title          string `required:"true"`
-	Owner          struct {
+	Title string `required:"true"`
+	Owner struct {
 		Name string
 	}
 	Database       DbOptions
@@ -118,21 +118,21 @@ type KeyStoreOptions struct {
 }
 
 type ProtocolOptions struct {
-	Address string
-	ImplAbi string
-	RegistryAbi string
-	DelegateAbi string
+	Address          string
+	ImplAbi          string
+	RegistryAbi      string
+	DelegateAbi      string
 	TokenRegistryAbi string
 }
 
 type CommonOptions struct {
-	Erc20Abi string
-	ProtocolImpls map[string]ProtocolOptions         `required:"true"`
-	FilterTopics         []string         `required:"true"`
-	DefaultBlockNumber   *big.Int         `required:"true"`
-	EndBlockNumber       *big.Int         `required:"true"`
-	Develop              bool             `required:"true"`
-	OrderMinAmounts      map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
+	Erc20Abi           string
+	ProtocolImpls      map[string]ProtocolOptions `required:"true"`
+	FilterTopics       []string                   `required:"true"`
+	DefaultBlockNumber *big.Int                   `required:"true"`
+	EndBlockNumber     *big.Int                   `required:"true"`
+	Develop            bool                       `required:"true"`
+	OrderMinAmounts    map[string]int64           //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }
 
 type LogOptions struct {

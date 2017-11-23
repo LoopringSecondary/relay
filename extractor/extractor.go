@@ -23,9 +23,11 @@ import (
 	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/bak/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"reflect"
@@ -46,26 +48,63 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options         config.AccessorOptions
-	commOpts        config.CommonOptions
-	ethClient       *eth.EthClient
-	dao             dao.RdsService
-	stop            chan struct{}
-	lock            sync.RWMutex
-	contractMethods map[types.Address]map[types.Hash]chainclient.AbiMethod
-	contractEvents  map[types.Address]map[types.Hash]chainclient.AbiEvent
+	options  config.AccessorOptions
+	commOpts config.CommonOptions
+	accessor *ethaccessor.EthNodeAccessor
+	dao      dao.RdsService
+	stop     chan struct{}
+	lock     sync.RWMutex
+	abis     map[types.Address]abi.ABI
 }
 
 func NewExtractorService(options config.AccessorOptions,
 	commonOpts config.CommonOptions,
-	ethClient *eth.EthClient,
+	accessor *ethaccessor.EthNodeAccessor,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
-	l.options = options
 	l.commOpts = commonOpts
-	l.ethClient = ethClient
+	l.accessor = accessor
 	l.dao = rds
+
+	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
+	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
+	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
+	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
+	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
+	transferEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
+	approvalEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
+
+	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
+		submitRingMtd := impl.SubmitRing
+		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
+		orderFilledEvt := impl.OrderFilledEvent
+		orderCancelledEvt := impl.OrderCancelledEvent
+		cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
+
+		l.addContractMethod(submitRingMtd)
+		l.addContractEvent(ringhashSubmittedEvt)
+		l.addContractEvent(orderFilledEvt)
+		l.addContractEvent(orderCancelledEvt)
+		l.addContractEvent(cutoffTimestampEvt)
+
+		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
+		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
+		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
+		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
+		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
+	}
+
+	for _, impl := range miner.MinerInstance.Loopring.Tokens {
+		transferEvt := impl.TransferEvt
+		approvalEvt := impl.ApprovalEvt
+
+		l.addContractEvent(transferEvt)
+		l.addContractEvent(approvalEvt)
+
+		eventemitter.On(transferEvt.WatcherTopic(), transferEventWatcher)
+		eventemitter.On(approvalEvt.WatcherTopic(), approvalEventWatcher)
+	}
 
 	l.loadContract()
 	l.startDetectFork()
@@ -78,7 +117,7 @@ func (l *ExtractorServiceImpl) Start() {
 
 	log.Info("eth listener start...")
 	start, end := l.getBlockNumberRange()
-	iterator := l.ethClient.BlockIterator(start, end, true, uint64(0))
+	iterator := l.accessor.BlockIterator(start, end, true, uint64(0))
 
 	go func() {
 		for {
@@ -138,8 +177,7 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 
 		// 获取transaction内所有event logs
 		var receipt eth.TransactionReceipt
-		err := l.ethClient.GetTransactionReceipt(&receipt, tx.Hash)
-		if err != nil {
+		if err := l.accessor.Call(&receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
 			log.Errorf("extractor get transaction receipt error:%s", err.Error())
 			continue
 		}

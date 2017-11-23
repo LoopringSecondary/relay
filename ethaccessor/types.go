@@ -83,10 +83,10 @@ type Log struct {
 }
 
 type FilterQuery struct {
-	FromBlock string           `json:"fromBlock"`
-	ToBlock   string           `json:"toBlock"`
+	FromBlock string          `json:"fromBlock"`
+	ToBlock   string          `json:"toBlock"`
 	Address   []types.Address `json:"address"`
-	Topics    [][]types.Hash   `json:"topics"`
+	Topics    [][]types.Hash  `json:"topics"`
 }
 
 type LogParameter struct {
@@ -120,9 +120,9 @@ type BlockIterator struct {
 type CallArg struct {
 	From     types.Address `json:"from"`
 	To       types.Address `json:"to"`
-	Gas      types.Big      `json:"gas"`
-	GasPrice types.Big      `json:"gasPrice"`
-	Value    types.Big      `json:"value"`
-	Data     string         `json:"data"`
-	Nonce    types.Big      `json:"nonce"`
+	Gas      types.Big     `json:"gas"`
+	GasPrice types.Big     `json:"gasPrice"`
+	Value    types.Big     `json:"value"`
+	Data     string        `json:"data"`
+	Nonce    types.Big     `json:"nonce"`
 }
