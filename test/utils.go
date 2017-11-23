@@ -243,7 +243,7 @@ func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
 	rds := LoadConfigAndGenerateDaoService()
 	ethClient := generateEthClient(c)
-	l := extractor.NewExtractorService(c.ChainClient, c.Common, ethClient, rds)
+	l := extractor.NewExtractorService(c.Accessor, c.Common, ethClient, rds)
 	return l
 }
 
@@ -260,5 +260,5 @@ func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
 }
 
 func generateEthClient(c *config.GlobalConfig) *eth.EthClient {
-	return eth.NewChainClient(c.ChainClient, []byte("sa"))
+	return eth.NewChainClient(c.Accessor, []byte("sa"))
 }
