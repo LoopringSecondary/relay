@@ -12,22 +12,23 @@ var _ = (*orderMarshaling)(nil)
 
 func (o Order) MarshalJSON() ([]byte, error) {
 	type Order struct {
-		Protocol              Address `json:"protocol" gencodec:"required"`
-		TokenS                Address `json:"tokenS" gencodec:"required"`
-		TokenB                Address `json:"tokenB" gencodec:"required"`
-		AmountS               *Big    `json:"amountS" gencodec:"required"`
-		AmountB               *Big    `json:"amountB" gencodec:"required"`
-		Timestamp             *Big    `json:"timestamp" gencodec:"required"`
-		Ttl                   *Big    `json:"ttl" gencodec:"required"`
-		Salt                  *Big    `json:"salt" gencodec:"required"`
-		LrcFee                *Big    `json:"lrcFee" `
-		BuyNoMoreThanAmountB  bool    `json:"buyNoMoreThanAmountB" gencodec:"required"`
-		MarginSplitPercentage uint8   `json:"marginSplitPercentage" gencodec:"required"`
-		V                     uint8   `json:"v" gencodec:"required"`
-		R                     Sign    `json:"r" gencodec:"required"`
-		S                     Sign    `json:"s" gencodec:"required"`
-		Owner                 Address `json:"owner"`
-		Hash                  Hash    `json:"hash"`
+		Protocol              Address  `json:"protocol" gencodec:"required"`
+		TokenS                Address  `json:"tokenS" gencodec:"required"`
+		TokenB                Address  `json:"tokenB" gencodec:"required"`
+		AmountS               *Big     `json:"amountS" gencodec:"required"`
+		AmountB               *Big     `json:"amountB" gencodec:"required"`
+		Timestamp             *Big     `json:"timestamp" gencodec:"required"`
+		Ttl                   *Big     `json:"ttl" gencodec:"required"`
+		Salt                  *Big     `json:"salt" gencodec:"required"`
+		LrcFee                *Big     `json:"lrcFee" `
+		BuyNoMoreThanAmountB  bool     `json:"buyNoMoreThanAmountB" gencodec:"required"`
+		MarginSplitPercentage uint8    `json:"marginSplitPercentage" gencodec:"required"`
+		V                     uint8    `json:"v" gencodec:"required"`
+		R                     Sign     `json:"r" gencodec:"required"`
+		S                     Sign     `json:"s" gencodec:"required"`
+		Price                 *big.Rat `json:"price"`
+		Owner                 Address  `json:"owner"`
+		Hash                  Hash     `json:"hash"`
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
@@ -44,6 +45,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 	enc.V = o.V
 	enc.R = o.R
 	enc.S = o.S
+	enc.Price = o.Price
 	enc.Owner = o.Owner
 	enc.Hash = o.Hash
 	return json.Marshal(&enc)
@@ -65,6 +67,7 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		V                     *uint8   `json:"v" gencodec:"required"`
 		R                     *Sign    `json:"r" gencodec:"required"`
 		S                     *Sign    `json:"s" gencodec:"required"`
+		Price                 *big.Rat `json:"price"`
 		Owner                 *Address `json:"owner"`
 		Hash                  *Hash    `json:"hash"`
 	}
@@ -127,6 +130,9 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 's' for Order")
 	}
 	o.S = *dec.S
+	if dec.Price != nil {
+		o.Price = dec.Price
+	}
 	if dec.Owner != nil {
 		o.Owner = *dec.Owner
 	}

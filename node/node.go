@@ -35,6 +35,7 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"go.uber.org/zap"
 	"sync"
+	"github.com/Loopring/relay/ethaccessor"
 )
 
 // TODO(fk): add services
@@ -65,6 +66,9 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	database := db.NewDB(globalConfig.Database)
 
 	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
+
+	//accessor := ethaccessor.NewAccessor(globalConfig.ChainClient)
+
 	//n.registerMysql()
 	n.registerUserManager()
 	//n.registerIPFSSubService()
