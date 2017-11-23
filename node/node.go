@@ -60,7 +60,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
 
-	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
+	ethClient := ethClientLib.NewChainClient(globalConfig.Accessor, globalConfig.Common.Passphrase)
 
 	database := db.NewDB(globalConfig.Database)
 
@@ -120,7 +120,7 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, client, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

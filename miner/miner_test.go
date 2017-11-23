@@ -33,7 +33,7 @@ func TestMatch(t *testing.T) {
 	test.LoadConfigAndGenerateTestParams()
 
 	cfg := test.LoadConfig()
-	ethClient := eth.NewChainClient(cfg.ChainClient, []byte("sa"))
+	ethClient := eth.NewChainClient(cfg.Accessor, []byte("sa"))
 	submitter := miner.NewSubmitter(cfg.Miner, cfg.Common, ethClient.Client)
 	chainclient.LoopringInstance = chainclient.NewLoopringInstance(cfg.Common, ethClient.Client)
 

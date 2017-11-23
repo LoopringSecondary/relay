@@ -60,7 +60,7 @@ type CallArg struct {
 	Nonce    types.Big     `json:"nonce"`
 }
 
-func NewChainClient(clientConfig config.ChainClientOptions, passphraseBytes []byte) *EthClient {
+func NewChainClient(clientConfig config.AccessorOptions, passphraseBytes []byte) *EthClient {
 	ethClient := &EthClient{}
 	var err error
 	ethClient.rpcClient, err = rpc.Dial(clientConfig.RawUrl)

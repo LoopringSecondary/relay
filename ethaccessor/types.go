@@ -20,7 +20,6 @@ package ethaccessor
 
 import (
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -86,7 +85,7 @@ type Log struct {
 type FilterQuery struct {
 	FromBlock string           `json:"fromBlock"`
 	ToBlock   string           `json:"toBlock"`
-	Address   []common.Address `json:"address"`
+	Address   []types.Address `json:"address"`
 	Topics    [][]types.Hash   `json:"topics"`
 }
 
@@ -119,8 +118,8 @@ type BlockIterator struct {
 }
 
 type CallArg struct {
-	From     common.Address `json:"from"`
-	To       common.Address `json:"to"`
+	From     types.Address `json:"from"`
+	To       types.Address `json:"to"`
 	Gas      types.Big      `json:"gas"`
 	GasPrice types.Big      `json:"gasPrice"`
 	Value    types.Big      `json:"value"`

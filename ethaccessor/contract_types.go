@@ -21,19 +21,18 @@ package ethaccessor
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
-func NewAbi(abiStr string) (abi.ABI, error) {
-	a := abi.ABI{}
+func NewAbi(abiStr string) (*abi.ABI, error) {
+	a := &abi.ABI{}
 	err := a.UnmarshalJSON([]byte(abiStr))
 	return a, err
 }
 
 type TransferEvent struct {
-	From  common.Address `json:"from" alias:"from"`
-	To    common.Address `json:"to" alias:"to"`
+	From  types.Address `json:"from" alias:"from"`
+	To    types.Address `json:"to" alias:"to"`
 	Value *big.Int       `json:"value" alias:"value"`
 }
 
@@ -47,8 +46,8 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 }
 
 type ApprovalEvent struct {
-	Owner   common.Address `json:"owner" alias:"owner"`
-	Spender common.Address `json:"spender" alias:"spender"`
+	Owner   types.Address `json:"owner" alias:"owner"`
+	Spender types.Address `json:"spender" alias:"spender"`
 	Value   *big.Int       `json:"value" alias:"value"`
 }
 
@@ -67,8 +66,8 @@ type RingMinedEvent struct {
 	Time               *big.Int       `json:"time" alias:"_time" gencodec:"required"`
 	Blocknumber        *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
 	Ringhash           types.Hash     `json:"ringHash" alias:"_ringhash" gencodec:"required"`
-	Miner              common.Address `json:"miner" alias:"_miner" gencodec:"required"`
-	FeeRecepient       common.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
+	Miner              types.Address `json:"miner" alias:"_miner" gencodec:"required"`
+	FeeRecepient       types.Address `json:"feeRecepient" alias:"_feeRecepient" gencodec:"required"`
 	IsRinghashReserved bool           `json:"isRinghashReserved" alias:"_isRinghashReserved" gencodec:"required"`
 }
 
@@ -157,7 +156,7 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 type CutoffTimestampChangedEvent struct {
 	Time        *big.Int       `json:"time" alias:"_time" gencodec:"required"`
 	Blocknumber *big.Int       `json:"blockNumber" alias:"_blocknumber" gencodec:"required"`
-	Owner       common.Address `json:"address" alias:"_address" gencodec:"required"`
+	Owner       types.Address `json:"address" alias:"_address" gencodec:"required"`
 	Cutoff      *big.Int       `json:"cutoff" alias:"_cutoff" gencodec:"required"`
 }
 
@@ -177,5 +176,23 @@ func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 
 type RinghashSubmitted struct {
 	RingHash  []byte         `alias:"_ringhash"`
-	RingMiner common.Address `alias:"_ringminer"`
+	RingMiner types.Address `alias:"_ringminer"`
+}
+
+type ProtocolImpl struct {
+	Version string
+	ContractAddress         types.Address
+	ProtocolImplAbi	*abi.ABI
+
+	LrcTokenAddress         types.Address
+	LrcTokenAbi *abi.ABI
+
+	TokenRegistryAddress    types.Address
+	TokenRegistryAbi *abi.ABI
+
+	RinghashRegistryAddress types.Address
+	RinghashRegistryAbi *abi.ABI
+
+	DelegateAddress         types.Address
+	DelegateAbi *abi.ABI
 }

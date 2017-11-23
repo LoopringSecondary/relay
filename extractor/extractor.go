@@ -46,7 +46,7 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options         config.ChainClientOptions
+	options         config.AccessorOptions
 	commOpts        config.CommonOptions
 	ethClient       *eth.EthClient
 	dao             dao.RdsService
@@ -56,7 +56,7 @@ type ExtractorServiceImpl struct {
 	contractEvents  map[types.Address]map[types.Hash]chainclient.AbiEvent
 }
 
-func NewExtractorService(options config.ChainClientOptions,
+func NewExtractorService(options config.AccessorOptions,
 	commonOpts config.CommonOptions,
 	ethClient *eth.EthClient,
 	rds dao.RdsService) *ExtractorServiceImpl {

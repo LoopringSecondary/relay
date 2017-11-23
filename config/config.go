@@ -61,8 +61,8 @@ func LoadConfig(file string) *GlobalConfig {
 }
 
 type GlobalConfig struct {
-	Title string `required:"true"`
-	Owner struct {
+	Title          string `required:"true"`
+	Owner          struct {
 		Name string
 	}
 	Database       DbOptions
@@ -70,7 +70,7 @@ type GlobalConfig struct {
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
 	GatewayFilters GatewayFiltersOptions
-	ChainClient    ChainClientOptions
+	Accessor       AccessorOptions
 	Common         CommonOptions
 	Miner          MinerOptions
 	OrderManager   OrderManagerOptions
@@ -102,7 +102,7 @@ type DbOptions struct {
 	BufferCapacity int
 }
 
-type ChainClientOptions struct {
+type AccessorOptions struct {
 	RawUrl  string            `required:"true"`
 	Senders map[string]string `required:"true"` //address->encrypted private key, used to send transaction
 	Eth     struct {
@@ -112,18 +112,25 @@ type ChainClientOptions struct {
 }
 
 type KeyStoreOptions struct {
-	Keydir     string
-	ScryptN    int
-	ScryptP    int
-	Passphrase string
+	Keydir  string
+	ScryptN int
+	ScryptP int
+}
+
+type ProtocolOptions struct {
+	Address string
+	ImplAbi string
+	RegistryAbi string
+	DelegateAbi string
+	TokenRegistryAbi string
 }
 
 type CommonOptions struct {
-	LoopringImpAddresses []string         `required:"true"`
+	Erc20Abi string
+	ProtocolImpls map[string]ProtocolOptions         `required:"true"`
 	FilterTopics         []string         `required:"true"`
 	DefaultBlockNumber   *big.Int         `required:"true"`
 	EndBlockNumber       *big.Int         `required:"true"`
-	Passphrase           []byte           `required:"true"` //密码，用于加密私钥，最长为32个字符，安全起见，建议不出现在配置文件中
 	Develop              bool             `required:"true"`
 	OrderMinAmounts      map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }

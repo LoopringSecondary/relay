@@ -22,32 +22,33 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
 
 func TestNewAccessor(t *testing.T) {
-	options := config.ChainClientOptions{}
-	options.RawUrl = "http://127.0.0.1:8545"
-	accessor, _ := ethaccessor.NewAccessor(options, nil)
+	cfg := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/relay.toml")
+	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, nil)
+	if nil != err {
+		println(err.Error())
+	}
 	var b types.Big
-	if err := accessor.Call(&b, "eth_getBalance", common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259"), "pending"); nil != err {
+	if err := accessor.Call(&b, "eth_getBalance", types.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259"), "pending"); nil != err {
 		t.Error(err.Error())
 	}
 
 	t.Log(b.BigInt().String())
 
-	balance, _ := accessor.Erc20Balance(common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"), common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), "pending")
+	balance, _ := accessor.Erc20Balance(types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"), types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), "pending")
 	t.Log(balance.String())
 
 	reqs := []*ethaccessor.BatchErc20Req{&ethaccessor.BatchErc20Req{
-		Address:        common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-		Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+		Address:        types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
+		Token:          types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		BlockParameter: "pending",
 	},
 		&ethaccessor.BatchErc20Req{
-			Address:        common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
-			Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
+			Address:        types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
+			Token:          types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 			BlockParameter: "pending",
 		}}
 	accessor.BatchErc20BalanceAndAllowance(reqs)
