@@ -34,7 +34,7 @@ import (
 
 func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
-	if callData, err1 := accessor.Erc20Abi.PackMethod("balanceOf", address); nil != err1 {
+	if callData, err1 := accessor.Erc20Abi.Pack("balanceOf", address); nil != err1 {
 		return nil, err1
 	} else {
 		err := accessor.CallContract(&balance, blockParameter, tokenAddress, callData)
@@ -44,7 +44,7 @@ func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address common.Addre
 
 func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, address, senderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
-	if callData, err1 := accessor.Erc20Abi.PackMethod("allowance", address, senderAddress); nil != err1 {
+	if callData, err1 := accessor.Erc20Abi.Pack("allowance", address, senderAddress); nil != err1 {
 		return nil, err1
 	} else {
 		err := accessor.CallContract(&balance, blockParameter, tokenAddress, callData)

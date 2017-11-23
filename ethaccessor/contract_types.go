@@ -25,23 +25,8 @@ import (
 	"math/big"
 )
 
-type Abi struct {
-	abi.ABI
-	abiStr string
-}
-
-func (a Abi) PackMethod(methodName string, args ...interface{}) ([]byte, error) {
-	return a.Pack(methodName, args...)
-}
-
-//todo: unpack event
-func (a Abi) UnpackEvent(v interface{}, eventName string, data []byte, topics []string) error {
-	return nil
-}
-
-func NewAbi(abiStr string) (Abi, error) {
-	a := Abi{}
-	a.abiStr = abiStr
+func NewAbi(abiStr string) (abi.ABI, error) {
+	a := abi.ABI{}
 	err := a.UnmarshalJSON([]byte(abiStr))
 	return a, err
 }
