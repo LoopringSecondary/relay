@@ -144,6 +144,33 @@ func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = types.NewBigPtr(e.Cutoff)
+
+	return evt
+}
+
+type TokenRegisteredEvent struct {
+	Token  types.Address `fieldName:"addr"`
+	Symbol string        `fieldName:"symbol"`
+}
+
+func (e *TokenRegisteredEvent) ConvertDown() *types.TokenRegisterEvent {
+	evt := &types.TokenRegisterEvent{}
+	evt.Token = e.Token
+	evt.Symbol = e.Symbol
+
+	return evt
+}
+
+type TokenUnRegisteredEvent struct {
+	Token  types.Address `fieldName:"addr"`
+	Symbol string        `fieldName:"symbol"`
+}
+
+func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
+	evt := &types.TokenUnRegisterEvent{}
+	evt.Token = e.Token
+	evt.Symbol = e.Symbol
+
 	return evt
 }
 
@@ -168,12 +195,4 @@ type ProtocolImpl struct {
 
 	DelegateAddress types.Address
 	DelegateAbi     *abi.ABI
-}
-
-type ContractData struct {
-	Method      interface{}
-	Event       interface{}
-	TxHash      types.Hash
-	BlockNumber *types.Big
-	Time        *types.Big
 }

@@ -1,111 +1,128 @@
 package extractor
 
 import (
-	"errors"
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
+// 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
 func (l *ExtractorServiceImpl) loadContract() {
-	l.contractEvents = make(map[types.Address]map[types.Hash]chainclient.AbiEvent)
-	l.contractMethods = make(map[types.Address]map[types.Hash]chainclient.AbiMethod)
+	l.events = make(map[string]ContractData)
+	l.loadProtocolContract()
+	l.loadTokenRegisterContract()
 
-	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
-	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
-	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
-	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
-	transferEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
-	approvalEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
+	// todo: get erc20 token address and former abi
+	l.loadErc20Contract([]types.Address{})
 
-	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
-		submitRingMtd := impl.SubmitRing
-		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
-		orderFilledEvt := impl.OrderFilledEvent
-		orderCancelledEvt := impl.OrderCancelledEvent
-		cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
+}
 
-		l.addContractMethod(submitRingMtd)
-		l.addContractEvent(ringhashSubmittedEvt)
-		l.addContractEvent(orderFilledEvt)
-		l.addContractEvent(orderCancelledEvt)
-		l.addContractEvent(cutoffTimestampEvt)
+type ContractData struct {
+	Event       interface{}
+	CAbi        *abi.ABI
+	Id          string
+	Name        string
+	WatchName   string
+	BlockNumber *types.Big
+	Time        *types.Big
+}
 
-		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
-		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
-		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
-		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
-		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
-	}
+const (
+	RINGMINED_EVT_NAME         = "RingMined"
+	CANCEL_EVT_NAME            = "OrderCancelled"
+	CUTOFF_EVT_NAME            = "CutoffTimestampChanged"
+	TRANSFER_EVT_NAME          = "Transfer"
+	APPROVAL_EVT_NAME          = "Approval"
+	TOKENREGISTERED_EVT_NAME   = "TokenRegistered"
+	TOKENUNREGISTERED_EVT_NAME = "TokenUnregistered"
+)
 
-	for _, impl := range miner.MinerInstance.Loopring.Tokens {
-		transferEvt := impl.TransferEvt
-		approvalEvt := impl.ApprovalEvt
+func (l *ExtractorServiceImpl) loadProtocolContract() {
+	for _, impl := range l.accessor.ProtocolImpls {
+		for name, event := range impl.ProtocolImplAbi.Events {
+			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
+				continue
+			}
 
-		l.addContractEvent(transferEvt)
-		l.addContractEvent(approvalEvt)
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.CAbi = impl.ProtocolImplAbi
+			contract.Name = name
+			contract.Id = event.Id().Hex()
+			contract.WatchName = impl.ContractAddress.Hex() + "-" + contract.Name
 
-		eventemitter.On(transferEvt.WatcherTopic(), transferEventWatcher)
-		eventemitter.On(approvalEvt.WatcherTopic(), approvalEventWatcher)
+			switch contract.Name {
+			case RINGMINED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRingMinedEvent}
+			case CANCEL_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
+			case CUTOFF_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
+			}
+
+			eventemitter.On(contract.WatchName, watcher)
+			l.events[contract.Id] = contract
+		}
 	}
 }
 
-func (l *ExtractorServiceImpl) addContractEvent(event chainclient.AbiEvent) {
-	id := types.HexToHash(event.Id())
-	addr := event.Address()
+func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
+	tokenabi := l.accessor.Erc20Abi
+	for _, addr := range addrs {
+		for name, event := range tokenabi.Events {
+			if name != TRANSFER_EVT_NAME && name != APPROVAL_EVT_NAME {
+				continue
+			}
 
-	log.Infof("addContractEvent address:%s", addr.Hex())
-	if _, ok := l.contractEvents[addr]; !ok {
-		l.contractEvents[addr] = make(map[types.Hash]chainclient.AbiEvent)
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.CAbi = tokenabi
+			contract.Name = name
+			contract.Id = event.Id().Hex()
+			contract.WatchName = addr.Hex() + "-" + contract.Name
+
+			switch contract.Name {
+			case TRANSFER_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
+			case APPROVAL_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
+			}
+
+			eventemitter.On(contract.WatchName, watcher)
+			l.events[contract.Id] = contract
+		}
 	}
-
-	log.Infof("addContractEvent id:%s", id.Hex())
-	l.contractEvents[addr][id] = event
 }
 
-func (l *ExtractorServiceImpl) addContractMethod(method chainclient.AbiMethod) {
-	id := types.HexToHash(method.MethodId())
-	addr := method.Address()
+func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
+	for _, impl := range l.accessor.ProtocolImpls {
+		for name, event := range impl.TokenRegistryAbi.Events {
+			if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
+				continue
+			}
 
-	if _, ok := l.contractMethods[addr]; !ok {
-		l.contractMethods[addr] = make(map[types.Hash]chainclient.AbiMethod)
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.CAbi = impl.TokenRegistryAbi
+			contract.Name = name
+			contract.Id = event.Id().Hex()
+			contract.WatchName = impl.TokenRegistryAddress.Hex() + "-" + contract.Name
+
+			switch contract.Name {
+			case TOKENREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenRegisteredEvent}
+			case TOKENUNREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
+			}
+
+			eventemitter.On(contract.WatchName, watcher)
+			l.events[contract.Id] = contract
+		}
 	}
-
-	l.contractMethods[addr][id] = method
-}
-
-func (l *ExtractorServiceImpl) getContractEvent(addr types.Address, id types.Hash) (chainclient.AbiEvent, error) {
-	var (
-		impl  map[types.Hash]chainclient.AbiEvent
-		event chainclient.AbiEvent
-		ok    bool
-	)
-	if impl, ok = l.contractEvents[addr]; !ok {
-		return nil, errors.New("extractor getContractEvent cann't find contract impl:" + addr.Hex())
-	}
-	if event, ok = impl[id]; !ok {
-		return nil, errors.New("extractor getContractEvent cann't find contract event:" + id.Hex())
-	}
-
-	return event, nil
-}
-
-func (l *ExtractorServiceImpl) getContractMethod(addr types.Address, id types.Hash) (chainclient.AbiMethod, error) {
-	var (
-		impl   map[types.Hash]chainclient.AbiMethod
-		method chainclient.AbiMethod
-		ok     bool
-	)
-
-	if impl, ok = l.contractMethods[addr]; !ok {
-		return nil, errors.New("eth listener getContractMethod cann't find contract impl")
-	}
-	if method, ok = impl[id]; !ok {
-		return nil, errors.New("eth listener getContractMethod cann't find contract method")
-	}
-
-	return method, nil
 }

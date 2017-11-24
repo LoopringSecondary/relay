@@ -19,18 +19,15 @@
 package extractor
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/bak/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
@@ -54,7 +51,7 @@ type ExtractorServiceImpl struct {
 	dao      dao.RdsService
 	stop     chan struct{}
 	lock     sync.RWMutex
-	abis     map[types.Address]abi.ABI
+	events   map[string]ContractData
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -66,45 +63,6 @@ func NewExtractorService(options config.AccessorOptions,
 	l.commOpts = commonOpts
 	l.accessor = accessor
 	l.dao = rds
-
-	submitRingMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-	ringhashSubmitEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
-	orderFilledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderFilledEvent}
-	orderCancelledEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
-	cutoffTimestampEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
-	transferEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
-	approvalEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
-
-	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
-		submitRingMtd := impl.SubmitRing
-		ringhashSubmittedEvt := impl.RingHashRegistry.RinghashSubmittedEvent
-		orderFilledEvt := impl.OrderFilledEvent
-		orderCancelledEvt := impl.OrderCancelledEvent
-		cutoffTimestampEvt := impl.CutoffTimestampChangedEvent
-
-		l.addContractMethod(submitRingMtd)
-		l.addContractEvent(ringhashSubmittedEvt)
-		l.addContractEvent(orderFilledEvt)
-		l.addContractEvent(orderCancelledEvt)
-		l.addContractEvent(cutoffTimestampEvt)
-
-		eventemitter.On(submitRingMtd.WatcherTopic(), submitRingMethodWatcher)
-		eventemitter.On(ringhashSubmittedEvt.WatcherTopic(), ringhashSubmitEventWatcher)
-		eventemitter.On(orderFilledEvt.WatcherTopic(), orderFilledEventWatcher)
-		eventemitter.On(orderCancelledEvt.WatcherTopic(), orderCancelledEventWatcher)
-		eventemitter.On(cutoffTimestampEvt.WatcherTopic(), cutoffTimestampEventWatcher)
-	}
-
-	for _, impl := range miner.MinerInstance.Loopring.Tokens {
-		transferEvt := impl.TransferEvt
-		approvalEvt := impl.ApprovalEvt
-
-		l.addContractEvent(transferEvt)
-		l.addContractEvent(approvalEvt)
-
-		eventemitter.On(transferEvt.WatcherTopic(), transferEventWatcher)
-		eventemitter.On(approvalEvt.WatcherTopic(), approvalEventWatcher)
-	}
 
 	l.loadContract()
 	l.startDetectFork()
@@ -126,7 +84,7 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Fatalf("extractor iterator next error:%s", err.Error())
 			}
 
-			block := inter.(*eth.BlockWithTxObject)
+			block := inter.(*ethaccessor.BlockWithTxObject)
 			log.Debugf("extractor get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
 			txcnt := len(block.Transactions)
@@ -165,9 +123,7 @@ func (l *ExtractorServiceImpl) Restart() {
 	l.Start()
 }
 
-func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
-	txhashs := []types.Hash{}
-
+func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 	for _, tx := range block.Transactions {
 		log.Debugf("extractor get transaction hash:%s", tx.Hash)
 		log.Debugf("extractor get transaction input:%s", tx.Input)
@@ -176,7 +132,7 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 		l.doMethod(tx.Input)
 
 		// 获取transaction内所有event logs
-		var receipt eth.TransactionReceipt
+		var receipt ethaccessor.TransactionReceipt
 		if err := l.accessor.Call(&receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
 			log.Errorf("extractor get transaction receipt error:%s", err.Error())
 			continue
@@ -188,36 +144,31 @@ func (l *ExtractorServiceImpl) doBlock(block eth.BlockWithTxObject) {
 
 		log.Debugf("transaction receipt  event logs number:%d", len(receipt.Logs))
 
-		contractAddr := types.HexToAddress(receipt.To)
-		txhash := types.HexToHash(tx.Hash)
+		// todo 是否需要存储transaction
 
 		for _, evtLog := range receipt.Logs {
-			data := hexutil.MustDecode(evtLog.Data)
+			var (
+				contract ContractData
+				ok       bool
+			)
 
-			// 寻找合约事件
-			contractEvt, err := l.getContractEvent(contractAddr, types.HexToHash(evtLog.Topics[0]))
-			if err != nil {
-				log.Errorf("%s", err.Error())
+			data := hexutil.MustDecode(evtLog.Data)
+			contractEvtIdHex := evtLog.Topics[0]
+
+			if contract, ok = l.events[contractEvtIdHex]; !ok {
+				log.Errorf("extractor: contract event id error:" + contractEvtIdHex)
 				continue
 			}
 
 			// 解析事件
-			dstEvt := reflect.New(reflect.TypeOf(contractEvt))
-			if err := contractEvt.Unpack(dstEvt, data, evtLog.Topics); nil != err {
+			if err := contract.CAbi.Unpack(contract.Event, contract.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
 				log.Errorf("err :%s", err.Error())
 				continue
 			}
 
-			// 处理事件
-			event := chainclient.ContractData{
-				Event:       dstEvt.Elem().Interface().(chainclient.AbiEvent),
-				BlockNumber: &evtLog.BlockNumber,
-				Time:        &block.Timestamp,
-			}
-			eventemitter.Emit(contractEvt.WatcherTopic(), event)
-
-			txhashs = append(txhashs, txhash)
-			// todo 是否需要存储transaction
+			contract.BlockNumber = &evtLog.BlockNumber
+			contract.Time = &block.Timestamp
+			eventemitter.Emit(contract.WatchName, contract)
 		}
 	}
 }
@@ -239,51 +190,47 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:ringMined")
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.RingMinedEvent)
-	evt := contractEvent.ConvertDown()
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-	evt.IsDeleted = false
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.RingMinedEvent)
+	ringmined, fills, err := contractEvent.ConvertDown()
+	if err != nil {
+		return err
+	}
+	ringmined.Time = contractData.Time
+	ringmined.Blocknumber = contractData.BlockNumber
+	ringmined.IsDeleted = false
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor ring mined event ringhash -> %s", evt.Ringhash.Hex())
-		log.Debugf("extractor ring mined event ringIndex -> %s", evt.RingIndex.BigInt().String())
-		log.Debugf("extractor ring mined event miner -> %s", evt.Miner.Hex())
-		log.Debugf("extractor ring mined event feeRecipient -> %s", evt.FeeRecipient.Hex())
-		log.Debugf("extractor ring mined event isRinghashReserved -> %s", strconv.FormatBool(evt.IsRinghashReserved))
+		log.Debugf("extractor ring mined event ringhash -> %s", ringmined.Ringhash.Hex())
+		log.Debugf("extractor ring mined event ringIndex -> %s", ringmined.RingIndex.BigInt().String())
+		log.Debugf("extractor ring mined event miner -> %s", ringmined.Miner.Hex())
+		log.Debugf("extractor ring mined event feeRecipient -> %s", ringmined.FeeRecipient.Hex())
+		log.Debugf("extractor ring mined event isRinghashReserved -> %s", strconv.FormatBool(ringmined.IsRinghashReserved))
 	}
 
-	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, evt)
+	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
-	return nil
-}
+	for _, fill := range fills {
+		fill.Time = contractData.Time
+		fill.Blocknumber = contractData.BlockNumber
+		fill.IsDeleted = false
 
-func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventData) error {
-	log.Debugf("extractor log event:orderFilled")
+		if l.commOpts.Develop {
+			log.Debugf("extractor order filled event ringhash -> %s", fill.Ringhash.Hex())
+			log.Debugf("extractor order filled event amountS -> %s", fill.AmountS.BigInt().String())
+			log.Debugf("extractor order filled event amountB -> %s", fill.AmountB.BigInt().String())
+			log.Debugf("extractor order filled event orderhash -> %s", fill.OrderHash.Hex())
+			log.Debugf("extractor order filled event blocknumber -> %s", fill.Blocknumber.BigInt().String())
+			log.Debugf("extractor order filled event time -> %s", fill.Time.BigInt().String())
+			log.Debugf("extractor order filled event lrcfee -> %s", fill.LrcFee.BigInt().String())
+			log.Debugf("extractor order filled event lrcreward -> %s", fill.LrcReward.BigInt().String())
+			log.Debugf("extractor order filled event nextorderhash -> %s", fill.NextOrderHash.Hex())
+			log.Debugf("extractor order filled event preorderhash -> %s", fill.PreOrderHash.Hex())
+			log.Debugf("extractor order filled event ringindex -> %s", fill.RingIndex.BigInt().String())
+		}
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.OrderFilledEvent)
-	evt := contractEvent.ConvertDown()
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-	evt.IsDeleted = false
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor order filled event ringhash -> %s", evt.Ringhash.Hex())
-		log.Debugf("extractor order filled event amountS -> %s", evt.AmountS.BigInt().String())
-		log.Debugf("extractor order filled event amountB -> %s", evt.AmountB.BigInt().String())
-		log.Debugf("extractor order filled event orderhash -> %s", evt.OrderHash.Hex())
-		log.Debugf("extractor order filled event blocknumber -> %s", evt.Blocknumber.BigInt().String())
-		log.Debugf("extractor order filled event time -> %s", evt.Time.BigInt().String())
-		log.Debugf("extractor order filled event lrcfee -> %s", evt.LrcFee.BigInt().String())
-		log.Debugf("extractor order filled event lrcreward -> %s", evt.LrcReward.BigInt().String())
-		log.Debugf("extractor order filled event nextorderhash -> %s", evt.NextOrderHash.Hex())
-		log.Debugf("extractor order filled event preorderhash -> %s", evt.PreOrderHash.Hex())
-		log.Debugf("extractor order filled event ringindex -> %s", evt.RingIndex.BigInt().String())
+		eventemitter.Emit(eventemitter.OrderManagerExtractorFill, fill)
 	}
-
-	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, evt)
 
 	return nil
 }
@@ -291,8 +238,8 @@ func (l *ExtractorServiceImpl) handleOrderFilledEvent(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:orderCancelled")
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.OrderCancelledEvent)
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.OrderCancelledEvent)
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -313,8 +260,8 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:cutOffTimestampChanged")
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.CutoffTimestampChangedEvent)
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.CutoffTimestampChangedEvent)
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -339,8 +286,8 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:erc20 transfer event")
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.TransferEvent)
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.TransferEvent)
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -359,8 +306,8 @@ func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData)
 func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:erc20 approval event")
 
-	contractData := input.(chainclient.ContractData)
-	contractEvent := contractData.Event.(chainclient.ApprovalEvent)
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.ApprovalEvent)
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -371,7 +318,45 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		log.Debugf("extractor approval event value -> %s", evt.Value.BigInt().String())
 	}
 
-	eventemitter.Emit(eventemitter.AccountApproval, evt)
+	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:token registered event")
+
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.TokenRegisteredEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor token registered event address -> %s", evt.Token.Hex())
+		log.Debugf("extractor token registered event spender -> %s", evt.Symbol)
+	}
+
+	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:token unregistered event")
+
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.TokenUnRegisteredEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor token unregistered event address -> %s", evt.Token.Hex())
+		log.Debugf("extractor token unregistered event spender -> %s", evt.Symbol)
+	}
+
+	eventemitter.Emit(eventemitter.TokenUnRegistered, evt)
 
 	return nil
 }

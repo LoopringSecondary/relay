@@ -37,6 +37,8 @@ const (
 	Gateway                        = "Gateway"
 	AccountTransfer                = "AccountTransfer"
 	AccountApproval                = "AccountApproval"
+	TokenRegistered                = "TokenRegistered"
+	TokenUnRegistered              = "TokenUnRegistered"
 	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
 	OrderManagerExtractorRingMined = "OrderManagerRingMined"
 	OrderManagerExtractorFill      = "OrderManagerExtractorFill"
