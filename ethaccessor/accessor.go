@@ -20,7 +20,6 @@ package ethaccessor
 
 import (
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/rpc"
