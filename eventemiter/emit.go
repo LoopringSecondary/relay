@@ -39,6 +39,7 @@ const (
 	AccountApproval                = "AccountApproval"
 	TokenRegistered                = "TokenRegistered"
 	TokenUnRegistered              = "TokenUnRegistered"
+	RingHashSubmitted              = "RingHashSubmitted"
 	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
 	OrderManagerExtractorRingMined = "OrderManagerRingMined"
 	OrderManagerExtractorFill      = "OrderManagerExtractorFill"

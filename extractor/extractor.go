@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"errors"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -26,6 +27,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"strconv"
@@ -153,10 +155,10 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			)
 
 			data := hexutil.MustDecode(evtLog.Data)
-			contractEvtIdHex := evtLog.Topics[0]
-
-			if contract, ok = l.events[contractEvtIdHex]; !ok {
-				log.Errorf("extractor: contract event id error:" + contractEvtIdHex)
+			id := evtLog.Topics[0]
+			key := generateKey(receipt.To, id)
+			if contract, ok = l.events[key]; !ok {
+				log.Errorf("extractor: contract event id error:" + id)
 				continue
 			}
 
@@ -166,9 +168,10 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 				continue
 			}
 
+			contract.Topics = evtLog.Topics
 			contract.BlockNumber = &evtLog.BlockNumber
 			contract.Time = &block.Timestamp
-			eventemitter.Emit(contract.WatchName, contract)
+			eventemitter.Emit(contract.Key, contract)
 		}
 	}
 }
@@ -191,7 +194,13 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	log.Debugf("extractor log event:ringMined")
 
 	contractData := input.(ContractData)
+	if len(contractData.Topics) < 2 {
+		return errors.New("extractor:ring mined event indexed fields number error")
+	}
+
 	contractEvent := contractData.Event.(ethaccessor.RingMinedEvent)
+	contractEvent.RingHash = common.HexToHash(contractData.Topics[1])
+
 	ringmined, fills, err := contractEvent.ConvertDown()
 	if err != nil {
 		return err
@@ -239,7 +248,13 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	log.Debugf("extractor log event:orderCancelled")
 
 	contractData := input.(ContractData)
+	if len(contractData.Topics) < 2 {
+		return errors.New("extractor:order cancelled event indexed fields number error")
+	}
+
 	contractEvent := contractData.Event.(ethaccessor.OrderCancelledEvent)
+	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
+
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -261,7 +276,13 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	log.Debugf("extractor log event:cutOffTimestampChanged")
 
 	contractData := input.(ContractData)
+	if len(contractData.Topics) < 2 {
+		return errors.New("extractor:cutoff timestamp changed event indexed fields number error")
+	}
+
 	contractEvent := contractData.Event.(ethaccessor.CutoffTimestampChangedEvent)
+	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
+
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -279,15 +300,18 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	return nil
 }
 
-func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.EventData) error {
-	return nil
-}
-
 func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor log event:erc20 transfer event")
 
 	contractData := input.(ContractData)
+	if len(contractData.Topics) < 3 {
+		return errors.New("extractor:token transfer event indexed fields number error")
+	}
+
 	contractEvent := contractData.Event.(ethaccessor.TransferEvent)
+	contractEvent.From = common.HexToAddress(contractData.Topics[1])
+	contractEvent.To = common.HexToAddress(contractData.Topics[2])
+
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -307,7 +331,14 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 	log.Debugf("extractor log event:erc20 approval event")
 
 	contractData := input.(ContractData)
+	if len(contractData.Topics) < 3 {
+		return errors.New("extractor:token approval event indexed fields number error")
+	}
+
 	contractEvent := contractData.Event.(ethaccessor.ApprovalEvent)
+	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
+	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
+
 	evt := contractEvent.ConvertDown()
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
@@ -357,6 +388,32 @@ func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.E
 	}
 
 	eventemitter.Emit(eventemitter.TokenUnRegistered, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:ringhash registered event")
+
+	contractData := input.(ContractData)
+	if len(contractData.Topics) < 3 {
+		return errors.New("extractor:ringhash registered event indexed fields number error")
+	}
+
+	contractEvent := contractData.Event.(ethaccessor.RinghashSubmittedEvent)
+	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
+	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
+
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor ringhash submit event ringhash -> %s", evt.RingHash.Hex())
+		log.Debugf("extractor ringhash submit event ringminer -> %s", evt.RingMiner.Hex())
+	}
+
+	eventemitter.Emit(eventemitter.RingHashSubmitted, evt)
 
 	return nil
 }
