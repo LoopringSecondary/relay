@@ -1,62 +1,71 @@
 package types
 
+import "github.com/ethereum/go-ethereum/common"
+
 type TokenRegisterEvent struct {
-	Token       Address
+	Token       common.Address
 	Symbol      string
 	Blocknumber *Big
 	Time        *Big
 }
 
 type TokenUnRegisterEvent struct {
-	Token       Address
+	Token       common.Address
 	Symbol      string
+	Blocknumber *Big
+	Time        *Big
+}
+
+type RinghashSubmittedEvent struct {
+	RingHash    common.Hash
+	RingMiner   common.Address
 	Blocknumber *Big
 	Time        *Big
 }
 
 // todo: unpack transaction and create event
 type EtherBalanceUpdateEvent struct {
-	Owner Address
+	Owner common.Address
 }
 
 // todo: transfer change to
 type TokenBalanceUpdateEvent struct {
-	Owner       Address
+	Owner       common.Address
 	Value       *Big
 	BlockNumber *Big
-	BlockHash   Hash
+	BlockHash   common.Hash
 }
 
 // todo: erc20 event
 type TokenAllowanceUpdateEvent struct {
-	Owner       Address
-	Spender     Address
+	Owner       common.Address
+	Spender     common.Address
 	Value       *Big
 	BlockNumber *Big
-	BlockHash   *Hash
+	BlockHash   common.Hash
 }
 
 type TransferEvent struct {
-	From        Address
-	To          Address
+	From        common.Address
+	To          common.Address
 	Value       *Big
 	Blocknumber *Big
 	Time        *Big
 }
 
 type ApprovalEvent struct {
-	Owner       Address
-	Spender     Address
+	Owner       common.Address
+	Spender     common.Address
 	Value       *Big
 	Blocknumber *Big
 	Time        *Big
 }
 
 type OrderFilledEvent struct {
-	Ringhash      Hash
-	PreOrderHash  Hash
-	OrderHash     Hash
-	NextOrderHash Hash
+	Ringhash      common.Hash
+	PreOrderHash  common.Hash
+	OrderHash     common.Hash
+	NextOrderHash common.Hash
 	RingIndex     *Big
 	Time          *Big
 	Blocknumber   *Big
@@ -68,7 +77,7 @@ type OrderFilledEvent struct {
 }
 
 type OrderCancelledEvent struct {
-	OrderHash       Hash
+	OrderHash       common.Hash
 	Time            *Big
 	Blocknumber     *Big
 	AmountCancelled *Big
@@ -76,7 +85,7 @@ type OrderCancelledEvent struct {
 }
 
 type CutoffEvent struct {
-	Owner       Address
+	Owner       common.Address
 	Time        *Big
 	Blocknumber *Big
 	Cutoff      *Big
@@ -87,9 +96,9 @@ type RingMinedEvent struct {
 	RingIndex          *Big
 	Time               *Big
 	Blocknumber        *Big
-	Ringhash           Hash
-	Miner              Address
-	FeeRecipient       Address
+	Ringhash           common.Hash
+	Miner              common.Address
+	FeeRecipient       common.Address
 	IsRinghashReserved bool
 	IsDeleted          bool
 }

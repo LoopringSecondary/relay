@@ -40,36 +40,36 @@ type TransferEvent struct {
 
 func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
-	evt.From = types.HexToAddress(e.From.Hex())
-	evt.To = types.HexToAddress(e.To.Hex())
+	evt.From = e.From
+	evt.To = e.To
 	evt.Value = types.NewBigPtr(e.Value)
 
 	return evt
 }
 
 type ApprovalEvent struct {
-	Owner   types.Address `fieldName:"owner"`
-	Spender types.Address `fieldName:"spender"`
-	Value   *big.Int      `fieldName:"value"`
+	Owner   common.Address `fieldName:"owner"`
+	Spender common.Address `fieldName:"spender"`
+	Value   *big.Int       `fieldName:"value"`
 }
 
 func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	evt := &types.ApprovalEvent{}
-	evt.Owner = types.HexToAddress(e.Owner.Hex())
-	evt.Spender = types.HexToAddress(e.Spender.Hex())
+	evt.Owner = e.Owner
+	evt.Spender = e.Spender
 	evt.Value = types.NewBigPtr(e.Value)
 
 	return evt
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int      `fieldName:"_ringIndex"`
-	RingHash           types.Hash    `fieldName:"_ringhash"`
-	Miner              types.Address `fieldName:"_miner"`
-	FeeRecipient       types.Address `fieldName:"_feeRecipient"`
-	IsRingHashReserved bool          `fieldName:"_isRinghashReserved"`
-	OrderHashList      []types.Hash  `fieldName:"_orderHashList"`
-	AmountsList        [][4]*big.Int `fieldName:"_amountsList"`
+	RingIndex          *big.Int       `fieldName:"_ringIndex"`
+	RingHash           common.Hash    `fieldName:"_ringhash"`
+	Miner              common.Address `fieldName:"_miner"`
+	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
+	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
+	OrderHashList      []common.Hash  `fieldName:"_orderHashList"`
+	AmountsList        [][4]*big.Int  `fieldName:"_amountsList"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
@@ -90,7 +90,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	for i := 0; i < length; i++ {
 		var (
 			fill                        types.OrderFilledEvent
-			preOrderHash, nextOrderHash types.Hash
+			preOrderHash, nextOrderHash common.Hash
 		)
 
 		if i == 0 {
@@ -123,8 +123,8 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 }
 
 type OrderCancelledEvent struct {
-	OrderHash       types.Hash `fieldName:"_orderHash"`
-	AmountCancelled *big.Int   `fieldName:"_amountCancelled"`
+	OrderHash       common.Hash `fieldName:"_orderHash"`
+	AmountCancelled *big.Int    `fieldName:"_amountCancelled"`
 }
 
 func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
@@ -136,8 +136,8 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 }
 
 type CutoffTimestampChangedEvent struct {
-	Owner  types.Address `fieldName:"_address"`
-	Cutoff *big.Int      `fieldName:"_cutoff"`
+	Owner  common.Address `fieldName:"_address"`
+	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
 func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
@@ -149,8 +149,8 @@ func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 }
 
 type TokenRegisteredEvent struct {
-	Token  types.Address `fieldName:"addr"`
-	Symbol string        `fieldName:"symbol"`
+	Token  common.Address `fieldName:"addr"`
+	Symbol string         `fieldName:"symbol"`
 }
 
 func (e *TokenRegisteredEvent) ConvertDown() *types.TokenRegisterEvent {
@@ -162,8 +162,8 @@ func (e *TokenRegisteredEvent) ConvertDown() *types.TokenRegisterEvent {
 }
 
 type TokenUnRegisteredEvent struct {
-	Token  types.Address `fieldName:"addr"`
-	Symbol string        `fieldName:"symbol"`
+	Token  common.Address `fieldName:"addr"`
+	Symbol string         `fieldName:"symbol"`
 }
 
 func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
@@ -174,9 +174,18 @@ func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
 	return evt
 }
 
-type RinghashSubmitted struct {
-	RingHash  []byte        `alias:"_ringhash"`
-	RingMiner types.Address `alias:"_ringminer"`
+type RinghashSubmittedEvent struct {
+	RingHash  common.Hash    `fieldName:"_ringhash"`
+	RingMiner common.Address `fieldName:"_ringminer"`
+}
+
+func (e *RinghashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
+	evt := &types.RinghashSubmittedEvent{}
+
+	evt.RingHash = e.RingHash
+	evt.RingMiner = e.RingMiner
+
+	return evt
 }
 
 type ProtocolImpl struct {

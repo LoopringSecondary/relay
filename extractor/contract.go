@@ -11,30 +11,43 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.events = make(map[string]ContractData)
 	l.loadProtocolContract()
 	l.loadTokenRegisterContract()
+	l.loadRingHashRegisteredContract()
 
 	// todo: get erc20 token address and former abi
 	l.loadErc20Contract([]types.Address{})
-
 }
 
 type ContractData struct {
 	Event       interface{}
+	Address     string
 	CAbi        *abi.ABI
 	Id          string
 	Name        string
-	WatchName   string
+	Key         string
 	BlockNumber *types.Big
 	Time        *types.Big
+	Topics      []string
+}
+
+func (c ContractData) generateSymbol(id, name string) {
+	c.Name = name
+	c.Id = id
+	c.Key = generateKey(c.Address, c.Id)
+}
+
+func generateKey(addr string, id string) string {
+	return addr + "-" + id
 }
 
 const (
-	RINGMINED_EVT_NAME         = "RingMined"
-	CANCEL_EVT_NAME            = "OrderCancelled"
-	CUTOFF_EVT_NAME            = "CutoffTimestampChanged"
-	TRANSFER_EVT_NAME          = "Transfer"
-	APPROVAL_EVT_NAME          = "Approval"
-	TOKENREGISTERED_EVT_NAME   = "TokenRegistered"
-	TOKENUNREGISTERED_EVT_NAME = "TokenUnregistered"
+	RINGMINED_EVT_NAME          = "RingMined"
+	CANCEL_EVT_NAME             = "OrderCancelled"
+	CUTOFF_EVT_NAME             = "CutoffTimestampChanged"
+	TRANSFER_EVT_NAME           = "Transfer"
+	APPROVAL_EVT_NAME           = "Approval"
+	TOKENREGISTERED_EVT_NAME    = "TokenRegistered"
+	TOKENUNREGISTERED_EVT_NAME  = "TokenUnregistered"
+	RINGHASHREGISTERED_EVT_NAME = "RinghashSubmitted"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
@@ -48,10 +61,9 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
+			contract.Address = impl.ContractAddress.Hex()
 			contract.CAbi = impl.ProtocolImplAbi
-			contract.Name = name
-			contract.Id = event.Id().Hex()
-			contract.WatchName = impl.ContractAddress.Hex() + "-" + contract.Name
+			contract.generateSymbol(event.Id().Hex(), name)
 
 			switch contract.Name {
 			case RINGMINED_EVT_NAME:
@@ -62,8 +74,8 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
 			}
 
-			eventemitter.On(contract.WatchName, watcher)
-			l.events[contract.Id] = contract
+			eventemitter.On(contract.Key, watcher)
+			l.events[contract.Key] = contract
 		}
 	}
 }
@@ -80,10 +92,9 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
+			contract.Address = addr.Hex()
 			contract.CAbi = tokenabi
-			contract.Name = name
-			contract.Id = event.Id().Hex()
-			contract.WatchName = addr.Hex() + "-" + contract.Name
+			contract.generateSymbol(event.Id().Hex(), name)
 
 			switch contract.Name {
 			case TRANSFER_EVT_NAME:
@@ -92,8 +103,8 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
 			}
 
-			eventemitter.On(contract.WatchName, watcher)
-			l.events[contract.Id] = contract
+			eventemitter.On(contract.Key, watcher)
+			l.events[contract.Key] = contract
 		}
 	}
 }
@@ -109,10 +120,9 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
+			contract.Address = impl.TokenRegistryAddress.Hex()
 			contract.CAbi = impl.TokenRegistryAbi
-			contract.Name = name
-			contract.Id = event.Id().Hex()
-			contract.WatchName = impl.TokenRegistryAddress.Hex() + "-" + contract.Name
+			contract.generateSymbol(event.Id().Hex(), name)
 
 			switch contract.Name {
 			case TOKENREGISTERED_EVT_NAME:
@@ -121,8 +131,36 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
 			}
 
-			eventemitter.On(contract.WatchName, watcher)
-			l.events[contract.Id] = contract
+			eventemitter.On(contract.Key, watcher)
+			l.events[contract.Key] = contract
+		}
+	}
+}
+
+func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
+	for _, impl := range l.accessor.ProtocolImpls {
+		for name, event := range impl.RinghashRegistryAbi.Events {
+			if name != RINGHASHREGISTERED_EVT_NAME {
+				continue
+			}
+
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.Address = impl.RinghashRegistryAddress.Hex()
+			contract.CAbi = impl.TokenRegistryAbi
+			contract.generateSymbol(event.Id().Hex(), name)
+
+			switch contract.Name {
+			case TOKENREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenRegisteredEvent}
+			case TOKENUNREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
+			}
+
+			eventemitter.On(contract.Key, watcher)
+			l.events[contract.Key] = contract
 		}
 	}
 }
