@@ -169,3 +169,11 @@ type ProtocolImpl struct {
 	DelegateAddress types.Address
 	DelegateAbi     *abi.ABI
 }
+
+type ContractData struct {
+	Method      interface{}
+	Event       interface{}
+	TxHash      types.Hash
+	BlockNumber *types.Big
+	Time        *types.Big
+}

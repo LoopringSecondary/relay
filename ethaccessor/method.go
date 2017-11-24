@@ -127,8 +127,34 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 		return err
 	} else {
 		log.Debugf("txhash:%s, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
-		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
+		err = ethAccessor.Call(result, "eth_sendRawTransaction", types.ToHex(txData))
 		return err
+	}
+}
+
+func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to types.Address, gas, gasPrice *big.Int, callData []byte) (string, error) {
+	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
+		return "", errors.New("gasPrice must be setted.")
+	}
+
+	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
+		return "", errors.New("gas must be setted.")
+	}
+	var txHash string
+	var nonce types.Big
+	if err := accessor.Call(&nonce, "eth_GetTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+		return "", err
+	}
+	transaction := ethTypes.NewTransaction(nonce.Uint64(),
+		common.HexToAddress(to.Hex()),
+		big.NewInt(0),
+		gas,
+		gasPrice,
+		callData)
+	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+		return "", err
+	} else {
+		return txHash, err
 	}
 }
 
@@ -137,29 +163,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a abi.ABI, contra
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
-			if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
-				return "", errors.New("gasPrice must be setted.")
-			}
-
-			if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
-				return "", errors.New("gas must be setted.")
-			}
-			var txHash string
-			var nonce types.Big
-			if err := accessor.Call(&nonce, "eth_GetTransactionCount", sender.Address.Hex(), "pending"); nil != err {
-				return "", err
-			}
-			transaction := ethTypes.NewTransaction(nonce.Uint64(),
-				common.HexToAddress(contractAddress.Hex()),
-				big.NewInt(0),
-				gas,
-				gasPrice,
-				callData)
-			if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
-				return "", err
-			} else {
-				return txHash, err
-			}
+			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
 		}
 	}
 }

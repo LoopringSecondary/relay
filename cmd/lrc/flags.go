@@ -34,8 +34,12 @@ func GlobalFlags() []cli.Flag {
 			Usage: "config file",
 		},
 		cli.StringFlag{
-			Name:  "passphrase,p",
-			Usage: "passphrase used to encrypt/decrypt private key",
+			Name:  "unlock",
+			Usage: "the list of accounts to unlock",
+		},
+		cli.StringFlag{
+			Name:  "pwdfile",
+			Usage: "the file contains passwords used to unlock accounts ",
 		},
 	}
 }
@@ -91,8 +95,6 @@ func setGlobalConfig(ctx *cli.Context) *config.GlobalConfig {
 	globalConfig := config.LoadConfig(file)
 	mergeMinerConfig(ctx, &globalConfig.Miner)
 
-	globalConfig.Common.Passphrase = passphraseFromCtx(ctx, "")
-
 	if _, err := config.Validator(reflect.ValueOf(globalConfig).Elem()); nil != err {
 		panic(err)
 	}
@@ -100,9 +102,9 @@ func setGlobalConfig(ctx *cli.Context) *config.GlobalConfig {
 	return globalConfig
 }
 
-func passphraseFromCtx(ctx *cli.Context, tip string) []byte {
+func passphraseFromCtx(ctx *cli.Context, tip string) string {
 	if ctx.IsSet("passphrase") {
-		return []byte(ctx.String("passphrase"))
+		return ctx.String("passphrase")
 	} else {
 		if "" == tip {
 			tip = "enter passphrase："

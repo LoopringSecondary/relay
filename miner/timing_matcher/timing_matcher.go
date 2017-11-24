@@ -21,7 +21,6 @@ package timing_matcher
 import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/miner"
-	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"math/big"
 	"sync"
@@ -56,11 +55,13 @@ type TimingMatcher struct {
 	StopChan      chan bool
 	round         int64
 	markets       []*Market
+	submitter     *miner.RingSubmitter
+	evaluator     *miner.Evaluator
 }
 
 type Market struct {
-	matcher      *TimingMatcher
-	ordermanager ordermanager.OrderManager
+	matcher *TimingMatcher
+	//om                        ordermanager.OrderManager
 
 	TokenA     types.Address
 	TokenB     types.Address
@@ -71,8 +72,8 @@ type Market struct {
 	BtoANotMatchedOrderHashes []types.Hash
 }
 
-func NewTimingMatcher() *TimingMatcher {
-	matcher := &TimingMatcher{}
+func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator) *TimingMatcher {
+	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
 	matcher.MatchedOrders = make(map[types.Hash]*OrderMatchState)
 	//todo:get markets from market.Allmarket
 	m := &Market{}
@@ -116,9 +117,10 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[types.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[types.Hash]*types.OrderState)
 
-	atoBOrders := market.ordermanager.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
-	btoAOrders := market.ordermanager.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
-
+	//atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
+	//btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
+	atoBOrders := []types.OrderState{}
+	btoAOrders := []types.OrderState{}
 	for _, order := range atoBOrders {
 		market.AtoBOrders[order.RawOrder.Hash] = &order
 	}
@@ -167,33 +169,34 @@ func (market *Market) match() {
 	market.getOrdersForMatching()
 
 	matchedOrderHashes := make(map[types.Hash]bool)
-	ringStates := []*types.RingState{}
+	ringStates := []*types.RingForSubmit{}
 	for _, a2BOrder := range market.AtoBOrders {
-		var ringState *types.RingState
+		var ringForSubmit *types.RingForSubmit
 		for _, b2AOrder := range market.BtoAOrders {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
 				ringTmp := &types.Ring{}
-
 				ringTmp.Orders = []*types.FilledOrder{convertOrderStateToFilledOrder(a2BOrder), convertOrderStateToFilledOrder(b2AOrder)}
 
-				ringStateTmp := &types.RingState{}
-				ringStateTmp.RawRing = ringTmp
-				miner.ComputeRing(ringStateTmp)
-				if nil == ringState || ringState.LegalFee.Cmp(ringStateTmp.LegalFee) < 0 {
-					ringState = ringStateTmp
+				ringStateTmp := &types.Ring{}
+				market.matcher.evaluator.ComputeRing(ringStateTmp)
+				ringForSubmit, _ := market.matcher.submitter.GenerateRingSubmitArgs(ringStateTmp)
+				if nil == ringForSubmit || ringForSubmit.RawRing.LegalFee.Cmp(ringStateTmp.LegalFee) < 0 {
+					//todo: 需要确定花费的gas等是多少，来确定是否生成该环路
+					ringForSubmit.RawRing = ringStateTmp
 				}
+
 			}
 		}
 
 		//对每个order标记已匹配以及减去已匹配的金额
-		if nil != ringState {
-			for _, filledOrder := range ringState.RawRing.Orders {
+		if nil != ringForSubmit {
+			for _, filledOrder := range ringForSubmit.RawRing.Orders {
 				market.reduceRemainedAmountAfterFilled(filledOrder)
 				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = true
-				market.matcher.addMatchedOrder(filledOrder, ringState.RawRing.Hash)
+				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
 			}
 		}
-		ringStates = append(ringStates, ringState)
+		ringStates = append(ringStates, ringForSubmit)
 	}
 
 	for orderHash, _ := range market.AtoBOrders {
@@ -201,6 +204,7 @@ func (market *Market) match() {
 			market.AtoBNotMatchedOrderHashes = append(market.AtoBNotMatchedOrderHashes, orderHash)
 		}
 	}
+
 	for orderHash, _ := range market.BtoAOrders {
 		if _, exists := matchedOrderHashes[orderHash]; !exists {
 			market.BtoANotMatchedOrderHashes = append(market.BtoANotMatchedOrderHashes, orderHash)

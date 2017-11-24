@@ -21,10 +21,16 @@ package miner
 import (
 	"errors"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"math"
 	"math/big"
 )
+
+type Evaluator struct {
+	marketCapProvider     *market.MarketCapProvider
+	rateRatioCVSThreshold int64
+}
 
 func availableAmountS(filledOrder *types.FilledOrder) error {
 	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountS)
@@ -39,7 +45,7 @@ func availableAmountS(filledOrder *types.FilledOrder) error {
 	return nil
 }
 
-func ComputeRing(ringState *types.RingState) error {
+func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
 	ringState.LegalFee = new(big.Rat)
 
@@ -47,7 +53,7 @@ func ComputeRing(ringState *types.RingState) error {
 	productAmountB := big.NewRat(int64(1), int64(1))
 
 	//compute price
-	for _, order := range ringState.RawRing.Orders {
+	for _, order := range ringState.Orders {
 		amountS := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountS)
 		amountB := new(big.Rat).SetInt(order.OrderState.RawOrder.AmountB)
 
@@ -65,11 +71,11 @@ func ComputeRing(ringState *types.RingState) error {
 	productPrice.Quo(productAmountS, productAmountB)
 	//todo:change pow to big.Int
 	priceOfFloat, _ := productPrice.Float64()
-	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.RawRing.Orders)))
+	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.Orders)))
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	ringState.ReducedRate = new(big.Rat)
 	ringState.ReducedRate.Inv(rate)
-	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.RawRing.Orders), rootOfRing, ringState.ReducedRate.RatString())
+	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
@@ -77,7 +83,7 @@ func ComputeRing(ringState *types.RingState) error {
 	//如何计算最小成交量的订单，计算下一次订单的卖出或买入，然后根据比例替换
 	minVolumeIdx := 0
 
-	for idx, filledOrder := range ringState.RawRing.Orders {
+	for idx, filledOrder := range ringState.Orders {
 		filledOrder.SPrice.Mul(filledOrder.SPrice, ringState.ReducedRate)
 
 		filledOrder.BPrice.Inv(filledOrder.SPrice)
@@ -106,7 +112,7 @@ func ComputeRing(ringState *types.RingState) error {
 		//与上一订单的买入进行比较
 		var lastOrder *types.FilledOrder
 		if idx > 0 {
-			lastOrder = ringState.RawRing.Orders[idx-1]
+			lastOrder = ringState.Orders[idx-1]
 		}
 
 		filledOrder.FillAmountS = new(big.Rat)
@@ -140,30 +146,30 @@ func ComputeRing(ringState *types.RingState) error {
 
 	for i := minVolumeIdx - 1; i >= 0; i-- {
 		//按照前面的，同步减少交易量
-		order := ringState.RawRing.Orders[i]
+		order := ringState.Orders[i]
 		var nextOrder *types.FilledOrder
-		nextOrder = ringState.RawRing.Orders[i+1]
+		nextOrder = ringState.Orders[i+1]
 		order.FillAmountB = nextOrder.FillAmountS
 		order.FillAmountS.Mul(order.FillAmountB, order.SPrice)
 	}
 
-	for i := minVolumeIdx + 1; i < len(ringState.RawRing.Orders); i++ {
-		order := ringState.RawRing.Orders[i]
+	for i := minVolumeIdx + 1; i < len(ringState.Orders); i++ {
+		order := ringState.Orders[i]
 		var lastOrder *types.FilledOrder
-		lastOrder = ringState.RawRing.Orders[i-1]
+		lastOrder = ringState.Orders[i-1]
 		order.FillAmountS = lastOrder.FillAmountB
 		order.FillAmountB.Mul(order.FillAmountS, order.BPrice)
 	}
 
 	//compute the fee of this ring and orders, and set the feeSelection
-	computeFeeOfRingAndOrder(ringState)
+	e.computeFeeOfRingAndOrder(ringState)
 
 	//cvs
 	if cvs, err := PriceRateCVSquare(ringState); nil != err {
 		return err
 	} else {
-		log.Debugf("ringState.length:%d ,  cvs:%s", len(ringState.RawRing.Orders), cvs.String())
-		if cvs.Int64() <= MinerInstance.rateRatioCVSThreshold {
+		log.Debugf("ringState.length:%d ,  cvs:%s", len(ringState.Orders), cvs.String())
+		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
 			return errors.New("cvs must less than RateRatioCVSThreshold")
@@ -171,21 +177,21 @@ func ComputeRing(ringState *types.RingState) error {
 	}
 }
 
-func computeFeeOfRingAndOrder(ringState *types.RingState) {
+func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
 	//the ring use the min MarginSplitPercentage as self's MarginSplitPercentage
 	minShareRate := new(big.Rat).SetInt(big.NewInt(0))
-	for _, order := range ringState.RawRing.Orders {
+	for _, order := range ringState.Orders {
 		percentage := new(big.Rat).SetInt64(int64(order.OrderState.RawOrder.MarginSplitPercentage))
 		if minShareRate.Cmp(percentage) > 0 {
 			minShareRate = percentage
 		}
 	}
 
-	for _, filledOrder := range ringState.RawRing.Orders {
+	for _, filledOrder := range ringState.Orders {
 		lrcAddress := &types.Address{}
 
-		lrcAddress.SetBytes([]byte(MinerInstance.marketCapProvider.LRC_ADDRESS))
+		lrcAddress.SetBytes([]byte(e.marketCapProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)
 		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -197,7 +203,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenS))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, e.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenS))
 			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
@@ -205,7 +211,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(filledOrder.FeeS, MinerInstance.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, e.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenB))
 		}
 
 		//compute lrcFee
@@ -213,7 +219,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(MinerInstance.marketCapProvider.GetMarketCap(*lrcAddress), filledOrder.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(e.marketCapProvider.GetMarketCap(*lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -225,7 +231,7 @@ func computeFeeOfRingAndOrder(ringState *types.RingState) {
 			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, MinerInstance.marketCapProvider.GetMarketCap(*lrcAddress))
+			lrcReward.Quo(lrcReward, e.marketCapProvider.GetMarketCap(*lrcAddress))
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}
@@ -240,10 +246,10 @@ func PriceValid(a2BOrder *types.OrderState, b2AOrder *types.OrderState) bool {
 	return amountS.Cmp(amountB) >= 0
 }
 
-func PriceRateCVSquare(ringState *types.RingState) (*big.Int, error) {
+func PriceRateCVSquare(ringState *types.Ring) (*big.Int, error) {
 	rateRatios := []*big.Int{}
 	scale, _ := new(big.Int).SetString("10000", 0)
-	for _, filledOrder := range ringState.RawRing.Orders {
+	for _, filledOrder := range ringState.Orders {
 		rawOrder := filledOrder.OrderState.RawOrder
 		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.FloatString(10))
 		s1b0, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
@@ -281,4 +287,8 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	}
 
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
+}
+
+func NewEvaluator(marketCapProvider *market.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
+	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold}
 }

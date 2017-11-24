@@ -124,8 +124,8 @@ func TestLoopringSigerToAddress(t *testing.T) {
 	vTest := &VTest{}
 	testParams.Client.NewContract(vTest, "0x75472d53ed6624cfa81a61b09175a32b2886ce58", `[{"constant":true,"inputs":[{"name":"i","type":"uint8"}],"name":"calculateHashUint8","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"hash","type":"bytes32"},{"name":"v","type":"uint8"},{"name":"r","type":"bytes32"},{"name":"s","type":"bytes32"}],"name":"calculateSignerAddress","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"calculateHashAddress","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"i","type":"uint256"}],"name":"calculateHashUint","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"b","type":"bool"}],"name":"calculateHashBool","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"}]`)
 	var err error
-	bs, _ := crypto.CryptoInstance.VRSToSig(byte(order.V), order.R.Bytes(), order.S.Bytes())
-	addrBytes, err1 := crypto.CryptoInstance.SigToAddress(order.Hash.Bytes(), bs)
+	bs, _ := crypto.VRSToSig(byte(order.V), order.R.Bytes(), order.S.Bytes())
+	addrBytes, err1 := crypto.SigToAddress(order.Hash.Bytes(), bs)
 	if err1 != nil {
 		t.Error(err1)
 	} else {

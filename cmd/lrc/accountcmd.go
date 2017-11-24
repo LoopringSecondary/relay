@@ -19,46 +19,51 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	ethClient "github.com/Loopring/relay/chainclient/eth"
-	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/urfave/cli.v1"
+	"syscall"
 )
 
 func accountCommands() cli.Command {
 	c := cli.Command{
 		Name:     "account",
-		Usage:    "generate, encrypt and decrypt an account",
+		Usage:    "manage accounts",
 		Category: "account commands:",
 		Subcommands: []cli.Command{
 			cli.Command{
 				Name:   "generate",
 				Usage:  "generate a new account",
-				Action: generatePrivateKey,
+				Action: generateAccount,
 				Flags: []cli.Flag{
 					cli.BoolFlag{
-						Name:  "display",
-						Usage: "display the privatekey",
+						Name:  "datadir",
+						Usage: "keystore",
 					},
 					cli.StringFlag{
 						Name:  "passphrase,p",
-						Usage: "passphrase for encrypted the private",
-					},
-					cli.StringFlag{
-						Name:  "private-key,pk",
-						Usage: "generate account from this private-key when set it",
+						Usage: "passphrase for lock account ",
 					},
 				},
 			},
 			cli.Command{
-				Name:   "encrypt",
-				Usage:  "encrypt a private key using the passphrase",
-				Action: encrypt,
+				Name:   "import",
+				Usage:  "import a private key",
+				Action: importAccount,
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "passphrase,p",
-						Usage: "passphrase for encrypted the private",
+						Usage: "passphrase for lock account",
+					},
+					cli.BoolFlag{
+						Name:  "datadir",
+						Usage: "keystore",
 					},
 					cli.StringFlag{
 						Name:  "private-key,pk",
@@ -67,17 +72,13 @@ func accountCommands() cli.Command {
 				},
 			},
 			cli.Command{
-				Name:   "decrypt",
-				Usage:  "decrypt a encrepted private key using the passphrase",
-				Action: decrypt,
+				Name:   "list",
+				Usage:  "list all the accounts",
+				Action: listAccounts,
 				Flags: []cli.Flag{
-					cli.StringFlag{
-						Name:  "passphrase,p",
-						Usage: "passphrase for encrypted the private",
-					},
-					cli.StringFlag{
-						Name:  "encrypted,e",
-						Usage: "the encrypted private key",
+					cli.BoolFlag{
+						Name:  "datadir",
+						Usage: "keystore",
 					},
 				},
 			},
@@ -86,71 +87,89 @@ func accountCommands() cli.Command {
 	return c
 }
 
-func encrypt(ctx *cli.Context) {
+func generateAccount(ctx *cli.Context) {
+	dir := ctx.String("datadir")
+	if "" == dir {
+		panic(errors.New("keystore file can't empty"))
+	}
+
+	var passphrase string
+	if passphrase = ctx.String("passphrase"); "" == passphrase {
+		var err error
+		if passphrase, err = getPassphraseFromTeminal(true); nil != err {
+			panic(err)
+		}
+	}
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+	if account, err := ks.NewAccount(passphrase); nil != err {
+		panic(err)
+	} else {
+		fmt.Fprintf(ctx.App.Writer, "create address:%x \n", account.Address)
+	}
+}
+
+func importAccount(ctx *cli.Context) {
+	dir := ctx.String("datadir")
+	if "" == dir {
+		panic(errors.New("keystore file can't empty"))
+	}
+
 	pk := ctx.String("private-key")
 	if !types.IsHex(pk) {
 		panic("the private-key must be hex")
 	}
-	passphrase := passphraseFromCtx(ctx, "")
-	p := &types.Passphrase{}
-	p.SetBytes(passphrase)
-	passphrase2 := passphraseFromCtx(ctx, "confirm:")
-	p2 := &types.Passphrase{}
-	p2.SetBytes(passphrase2)
-	if p != p2 {
-		panic("doesn't match")
-	}
-
-	if encrypted, err := crypto.AesEncrypted(p.Bytes(), types.FromHex(pk)); nil != err {
-		fmt.Fprintf(ctx.App.Writer, "%v \n", err.Error())
+	if privateKey, err := crypto.ToECDSA(types.Hex2Bytes(pk)); nil != err {
+		panic(err)
 	} else {
-		fmt.Fprintf(ctx.App.Writer, "encrypted private key:%v \n", types.ToHex(encrypted))
-	}
-}
+		var passphrase string
+		if passphrase = ctx.String("passphrase"); "" == passphrase {
+			var err error
+			if passphrase, err = getPassphraseFromTeminal(true); nil != err {
+				panic(err)
+			}
+		}
 
-func decrypt(ctx *cli.Context) {
-	encrypted := ctx.String("encrypted")
-	if !types.IsHex(encrypted) {
-		panic("the encrypted must be hex")
-	}
-	passphrase := passphraseFromCtx(ctx, "")
-	p := &types.Passphrase{}
-	p.SetBytes(passphrase)
-
-	if pk, err := crypto.AesDecrypted(p.Bytes(), types.FromHex(encrypted)); nil != err {
-		fmt.Fprintf(ctx.App.Writer, "%v \n", err.Error())
-	} else {
-		fmt.Fprintf(ctx.App.Writer, "private key:%v \n", types.ToHex(pk))
-	}
-}
-
-func generatePrivateKey(ctx *cli.Context) {
-	passphrase := passphraseFromCtx(ctx, "")
-	p := &types.Passphrase{}
-	p.SetBytes(passphrase)
-	passphrase2 := passphraseFromCtx(ctx, "confirm:")
-	p2 := &types.Passphrase{}
-	p2.SetBytes(passphrase2)
-	if p != p2 {
-		panic("doesn't match")
-	}
-	diaplay := ctx.Bool("display")
-	pk := ctx.String("private-key")
-
-	generateEthPrivateKey(pk, p, diaplay, ctx)
-}
-
-func generateEthPrivateKey(pk string, passphrase *types.Passphrase, display bool, c *cli.Context) {
-	if account, err := ethClient.NewAccount(pk); nil != err {
-		fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
-	} else {
-		if _, err := account.Encrypt(passphrase); nil != err {
-			fmt.Fprintf(c.App.Writer, "%v \n", err.Error())
+		ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+		if account, err := ks.ImportECDSA(privateKey, passphrase); nil != err {
+			panic(err)
 		} else {
-			fmt.Fprintf(c.App.Writer, "address:%v encrypted private key:%v \n", account.Address.Hex(), types.ToHex(account.EncryptedPrivKey))
-			if display {
-				fmt.Fprintf(c.App.Writer, "private key:%v \n", types.ToHex(account.PrivKey.D.Bytes()))
+			fmt.Fprintf(ctx.App.Writer, "create address:%x \n", account.Address)
+		}
+	}
+}
+
+func listAccounts(ctx *cli.Context) {
+	dir := ctx.String("datadir")
+	if "" == dir {
+		panic(errors.New("keystore file can't empty"))
+	}
+	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	accs := []common.Address{}
+	for _, account := range ks.Accounts() {
+		accs = append(accs, account.Address)
+	}
+	bs, _ := json.Marshal(accs)
+	fmt.Fprintf(ctx.App.Writer, "create address:%s \n", string(bs))
+}
+
+func getPassphraseFromTeminal(confirm bool) (string, error) {
+	var passphrase string
+	var err error
+	fmt.Print("enter passphrase：")
+
+	if passphrase, err = terminal.ReadPassword(int(syscall.Stdin)); nil != err {
+		return "", err
+	}
+	if confirm {
+		fmt.Print("confirm passphrase: ")
+		if passphraseRepeat, err := terminal.ReadPassword(int(syscall.Stdin)); nil != err {
+			return "", err
+		} else {
+			if passphrase != passphraseRepeat {
+				return "", errors.New("not match")
 			}
 		}
 	}
+	return passphrase, nil
 }
