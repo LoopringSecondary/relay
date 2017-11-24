@@ -44,7 +44,7 @@ func accountCommands() cli.Command {
 				Usage:  "create a new account",
 				Action: createAccount,
 				Flags: []cli.Flag{
-					cli.BoolFlag{
+					cli.StringFlag{
 						Name:  "datadir",
 						Usage: "keystore",
 					},
@@ -63,7 +63,7 @@ func accountCommands() cli.Command {
 						Name:  "passphrase,p",
 						Usage: "passphrase for lock account",
 					},
-					cli.BoolFlag{
+					cli.StringFlag{
 						Name:  "datadir",
 						Usage: "keystore",
 					},
@@ -78,7 +78,7 @@ func accountCommands() cli.Command {
 				Usage:  "list all the accounts",
 				Action: listAccounts,
 				Flags: []cli.Flag{
-					cli.BoolFlag{
+					cli.StringFlag{
 						Name:  "datadir",
 						Usage: "keystore",
 					},
