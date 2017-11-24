@@ -20,7 +20,6 @@ package types
 
 import (
 	"fmt"
-	"github.com/Loopring/relay/log"
 	"math/big"
 )
 
@@ -139,19 +138,6 @@ func (a *Address) SetBytes(b []byte) {
 
 func (a *Address) IsZero() bool {
 	return *a == HexToAddress("0x")
-}
-
-type Passphrase [32]byte
-
-func (p *Passphrase) SetBytes(b []byte) {
-	if len(b) > 32 {
-		log.Info("the passphrase will only use 32 bytes ")
-	}
-	copy(p[32-len(b):], b)
-}
-
-func (p *Passphrase) Bytes() []byte {
-	return p[:]
 }
 
 func BigintToHex(b *big.Int) string {
