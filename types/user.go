@@ -18,8 +18,10 @@
 
 package types
 
+import "github.com/ethereum/go-ethereum/common"
+
 // 白名单用户允许广播，但是订单不允许提供给miner
 type WhiteListUser struct {
-	Owner      Address
+	Owner      common.Address
 	CreateTime int64
 }

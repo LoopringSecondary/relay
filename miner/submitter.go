@@ -91,11 +91,6 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 	}
 }
 
-func isOrdersRemined(ring *types.Ring) bool {
-	//todo:args validator
-	return true
-}
-
 //todo: 不在submit中的才会提交
 func (submitter *RingSubmitter) canSubmit(ringState *types.RingForSubmit) error {
 	return errors.New("had been processed")
@@ -127,17 +122,16 @@ func (submitter *RingSubmitter) submitRing(ringSate *types.RingForSubmit) error 
 
 func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) error {
 	if nil != e {
-		contractEventData := e.(ethaccessor.ContractData)
-		event := contractEventData.Event
+		event := e.(types.SubmitRingEvent)
 		//excute ring failed
 		if nil == event {
-			submitter.submitFailed(contractEventData.TxHash)
+			submitter.submitFailed(event.TxHash)
 		}
 	}
 	return nil
 }
 
-func (submitter *RingSubmitter) submitFailed(txHash types.Hash) {
+func (submitter *RingSubmitter) submitFailed(event types.Hash) {
 	//ringHashBytes, _ := submitter.txToRingHashIndexStore.Get(txHash.Bytes())
 	//if nil != ringHashBytes && len(ringHashBytes) > 0 {
 	//	if ringData, _ := submitter.unSubmitedRingsStore.Get(ringHashBytes); nil == ringData || len(ringData) == 0 {
@@ -155,12 +149,11 @@ func (submitter *RingSubmitter) submitFailed(txHash types.Hash) {
 func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) error {
 
 	if nil != e {
-		contractEventData := e.(ethaccessor.ContractData)
+		event := e.(types.RingHashRegistryEvent)
 		//registry failed
-		if nil == contractEventData.Event {
-			submitter.submitFailed(contractEventData.TxHash)
+		if nil == event {
+			submitter.submitFailed(event.TxHash)
 		} else {
-			event := contractEventData.Event.(ethaccessor.RinghashSubmitted)
 			ringHash := types.BytesToHash(event.RingHash)
 			println("ringHash.HexringHash.Hex", ringHash.Hex())
 			//todo:change to dao
