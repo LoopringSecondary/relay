@@ -216,18 +216,18 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 
 type ProtocolImpl struct {
 	Version         string
-	ContractAddress types.Address
+	ContractAddress common.Address
 	ProtocolImplAbi *abi.ABI
 
-	LrcTokenAddress types.Address
+	LrcTokenAddress common.Address
 	LrcTokenAbi     *abi.ABI
 
-	TokenRegistryAddress types.Address
+	TokenRegistryAddress common.Address
 	TokenRegistryAbi     *abi.ABI
 
-	RinghashRegistryAddress types.Address
+	RinghashRegistryAddress common.Address
 	RinghashRegistryAbi     *abi.ABI
 
-	DelegateAddress types.Address
+	DelegateAddress common.Address
 	DelegateAbi     *abi.ABI
 }

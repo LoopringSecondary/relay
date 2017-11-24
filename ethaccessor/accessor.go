@@ -24,11 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type EthNodeAccessor struct {
 	Erc20Abi      *abi.ABI
-	ProtocolImpls map[types.Address]*ProtocolImpl
+	ProtocolImpls map[common.Address]*ProtocolImpl
 	ks            *keystore.KeyStore
 	*rpc.Client
 }
@@ -45,10 +46,10 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 	if accessor.Erc20Abi, err = NewAbi(commonOptions.Erc20Abi); nil != err {
 		return nil, err
 	}
-	accessor.ProtocolImpls = make(map[types.Address]*ProtocolImpl)
+	accessor.ProtocolImpls = make(map[common.Address]*ProtocolImpl)
 
 	for version, opts := range commonOptions.ProtocolImpls {
-		impl := &ProtocolImpl{Version: version, ContractAddress: types.HexToAddress(opts.Address)}
+		impl := &ProtocolImpl{Version: version, ContractAddress: common.HexToAddress(opts.Address)}
 		if protocolImplAbi, err := NewAbi(opts.ImplAbi); nil != err {
 			return nil, err
 		} else {

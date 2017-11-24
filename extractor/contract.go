@@ -4,6 +4,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
@@ -12,9 +13,10 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.loadProtocolContract()
 	l.loadTokenRegisterContract()
 	l.loadRingHashRegisteredContract()
-
+	l.loadTokenTransferDelegateProtocol()
+	
 	// todo: get erc20 token address and former abi
-	l.loadErc20Contract([]types.Address{})
+	l.loadErc20Contract([]common.Address{})
 }
 
 type ContractData struct {
@@ -82,7 +84,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 	}
 }
 
-func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
+func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 	tokenabi := l.accessor.Erc20Abi
 	for _, addr := range addrs {
 		for name, event := range tokenabi.Events {
