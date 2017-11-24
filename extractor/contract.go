@@ -10,6 +10,7 @@ import (
 func (l *ExtractorServiceImpl) loadContract() {
 	l.events = make(map[string]ContractData)
 	l.loadProtocolContract()
+	l.loadTokenRegisterContract()
 
 	// todo: get erc20 token address and former abi
 	l.loadErc20Contract([]types.Address{})
@@ -27,11 +28,13 @@ type ContractData struct {
 }
 
 const (
-	RINGMINED_EVT_NAME = "RingMined"
-	CANCEL_EVT_NAME    = "OrderCancelled"
-	CUTOFF_EVT_NAME    = "CutoffTimestampChanged"
-	TRANSFER_EVT_NAME  = "Transfer"
-	APPROVAL_EVT_NAME  = "Approval"
+	RINGMINED_EVT_NAME         = "RingMined"
+	CANCEL_EVT_NAME            = "OrderCancelled"
+	CUTOFF_EVT_NAME            = "CutoffTimestampChanged"
+	TRANSFER_EVT_NAME          = "Transfer"
+	APPROVAL_EVT_NAME          = "Approval"
+	TOKENREGISTERED_EVT_NAME   = "TokenRegistered"
+	TOKENUNREGISTERED_EVT_NAME = "TokenUnregistered"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
@@ -87,6 +90,35 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
 			case APPROVAL_EVT_NAME:
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
+			}
+
+			eventemitter.On(contract.WatchName, watcher)
+			l.events[contract.Id] = contract
+		}
+	}
+}
+
+func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
+	for _, impl := range l.accessor.ProtocolImpls {
+		for name, event := range impl.TokenRegistryAbi.Events {
+			if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
+				continue
+			}
+
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.CAbi = impl.TokenRegistryAbi
+			contract.Name = name
+			contract.Id = event.Id().Hex()
+			contract.WatchName = impl.TokenRegistryAddress.Hex() + "-" + contract.Name
+
+			switch contract.Name {
+			case TOKENREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenRegisteredEvent}
+			case TOKENUNREGISTERED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
 			}
 
 			eventemitter.On(contract.WatchName, watcher)

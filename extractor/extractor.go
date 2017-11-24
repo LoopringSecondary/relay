@@ -318,7 +318,45 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		log.Debugf("extractor approval event value -> %s", evt.Value.BigInt().String())
 	}
 
-	eventemitter.Emit(eventemitter.AccountApproval, evt)
+	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:token registered event")
+
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.TokenRegisteredEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor token registered event address -> %s", evt.Token.Hex())
+		log.Debugf("extractor token registered event spender -> %s", evt.Symbol)
+	}
+
+	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:token unregistered event")
+
+	contractData := input.(ContractData)
+	contractEvent := contractData.Event.(ethaccessor.TokenUnRegisteredEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor token unregistered event address -> %s", evt.Token.Hex())
+		log.Debugf("extractor token unregistered event spender -> %s", evt.Symbol)
+	}
+
+	eventemitter.Emit(eventemitter.TokenUnRegistered, evt)
 
 	return nil
 }

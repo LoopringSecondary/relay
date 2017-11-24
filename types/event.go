@@ -1,11 +1,17 @@
 package types
 
-// todo: should add in contract
 type TokenRegisterEvent struct {
+	Token       Address
+	Symbol      string
+	Blocknumber *Big
+	Time        *Big
 }
 
-// todo: should add in contract
 type TokenUnRegisterEvent struct {
+	Token       Address
+	Symbol      string
+	Blocknumber *Big
+	Time        *Big
 }
 
 // todo: unpack transaction and create event
