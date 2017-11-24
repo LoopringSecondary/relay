@@ -22,8 +22,6 @@ import (
 	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/crypto"
-	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
@@ -100,9 +98,6 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	globalConfig := loadConfig()
 	params.Config = globalConfig
 
-	params.ImplAddress = types.HexToAddress(globalConfig.Common.LoopringImpAddresses[0])
-	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
-
 	ethClient := generateEthClient(globalConfig)
 	params.Client = ethClient.Client
 	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
@@ -125,13 +120,13 @@ func LoadConfigAndGenerateTestParams() *TestParams {
 	params.Imp.TokenRegistryAddress.Call(&tokenRegistryAddressHex, "pending")
 	params.TokenRegistryAddress = types.HexToAddress(tokenRegistryAddressHex)
 
-	passphrase := &types.Passphrase{}
-	passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
-	var err error
-	params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
-	if nil != err {
-		panic(err)
-	}
+	//passphrase := &types.Passphrase{}
+	//passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
+	//var err error
+	//params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
+	//if nil != err {
+	//	panic(err)
+	//}
 
 	var implOwners []string
 	if err := params.Client.Accounts(&implOwners); nil != err {
@@ -250,7 +245,7 @@ func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
 func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
 	c := loadConfig()
 	rds := LoadConfigAndGenerateDaoService()
-	ob := ordermanager.NewOrderManager(c.OrderManager, rds)
+	ob := ordermanager.NewOrderManager(c.OrderManager, rds, nil)
 	return ob
 }
 

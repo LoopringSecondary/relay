@@ -47,10 +47,7 @@ block_period = 5
 
 [accessor]
     raw_url = "http://127.0.0.1:8545"
-    [accessor.senders]
-        "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2" = "0xfa9a051f7919ec415d9d2a7c729ef4b4762c6ab57efd4b9fcedcb509518b173d"
-        "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" = "0xec1da652e6e40648c6b474e706d7fe09091fb775a38cef706d603c250db5d872"
-        [accessor.eth]
+    [accessor.eth]
             gas_price = 10000
             gas_limit = 10000
 

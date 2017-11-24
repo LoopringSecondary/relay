@@ -19,19 +19,16 @@
 package miner
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/market"
 )
 
-var MinerInstance *Miner
-
 type Miner struct {
-	Loopring              *chainclient.Loopring
-	matcher               Matcher
-	submitter             *RingSubmitter
-	rateRatioCVSThreshold int64
-	marketCapProvider     *market.MarketCapProvider
+	accessor          *ethaccessor.EthNodeAccessor
+	matcher           Matcher
+	submitter         *RingSubmitter
+	marketCapProvider *market.MarketCapProvider
+	evaluator         *Evaluator
 }
 
 func (minerInstance *Miner) Start() {
@@ -44,17 +41,12 @@ func (minerInstance *Miner) Stop() {
 	minerInstance.submitter.stop()
 }
 
-func NewMinerInstance(options config.MinerOptions, submitter *RingSubmitter, matcher Matcher, loopringInstance *chainclient.Loopring, marketCapProvider *market.MarketCapProvider) *Miner {
-	rateRatioCVSThreshold := options.RateRatioCVSThreshold
+func NewMiner(submitter *RingSubmitter, matcher Matcher, evaluator *Evaluator, accessor *ethaccessor.EthNodeAccessor, marketCapProvider *market.MarketCapProvider) *Miner {
 	return &Miner{
-		marketCapProvider:     marketCapProvider,
-		submitter:             submitter,
-		matcher:               matcher,
-		rateRatioCVSThreshold: rateRatioCVSThreshold,
-		Loopring:              loopringInstance,
+		marketCapProvider: marketCapProvider,
+		submitter:         submitter,
+		matcher:           matcher,
+		accessor:          accessor,
+		evaluator:         evaluator,
 	}
-}
-
-func Initialize(minerInstance *Miner) {
-	MinerInstance = minerInstance
 }

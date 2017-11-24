@@ -90,7 +90,7 @@ func (o *Order) GenerateHash() Hash {
 		buyNoMoreThanAmountB = byte(1)
 	}
 
-	hashBytes := crypto.CryptoInstance.GenerateHash(
+	hashBytes := crypto.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
@@ -109,15 +109,15 @@ func (o *Order) GenerateHash() Hash {
 	return *h
 }
 
-func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
+func (o *Order) GenerateAndSetSignature(singerAddr Address) error {
 	if o.Hash.IsZero() {
 		o.Hash = o.GenerateHash()
 	}
 
-	if sig, err := crypto.CryptoInstance.Sign(o.Hash.Bytes(), pkBytes); nil != err {
+	if sig, err := crypto.Sign(o.Hash.Bytes(), singerAddr.Hex()); nil != err {
 		return err
 	} else {
-		v, r, s := crypto.CryptoInstance.SigToVRS(sig)
+		v, r, s := crypto.SigToVRS(sig)
 		o.V = uint8(v)
 		o.R = BytesToSign(r)
 		o.S = BytesToSign(s)
@@ -126,7 +126,7 @@ func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
 }
 
 func (o *Order) ValidateSignatureValues() bool {
-	return crypto.CryptoInstance.ValidateSignatureValues(byte(o.V), o.R.Bytes(), o.S.Bytes())
+	return crypto.ValidateSignatureValues(byte(o.V), o.R.Bytes(), o.S.Bytes())
 }
 
 func (o *Order) SignerAddress() (Address, error) {
@@ -135,10 +135,10 @@ func (o *Order) SignerAddress() (Address, error) {
 		o.Hash = o.GenerateHash()
 	}
 
-	sig, _ := crypto.CryptoInstance.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
+	sig, _ := crypto.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
 	log.Debugf("orderstate.hash:%s", o.Hash.Hex())
 
-	if addressBytes, err := crypto.CryptoInstance.SigToAddress(o.Hash.Bytes(), sig); nil != err {
+	if addressBytes, err := crypto.SigToAddress(o.Hash.Bytes(), sig); nil != err {
 		log.Errorf("error:%s", err.Error())
 		return *address, err
 	} else {

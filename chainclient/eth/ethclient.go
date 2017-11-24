@@ -78,13 +78,13 @@ func NewChainClient(clientConfig config.AccessorOptions, passphraseBytes []byte)
 
 	ethClient.signer = &ethTypes.HomesteadSigner{}
 
-	passphrase := &types.Passphrase{}
-	passphrase.SetBytes(passphraseBytes)
-	if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
-		panic(err)
-	} else {
-		ethClient.senders = accounts
-	}
+	//passphrase := &types.Passphrase{}
+	//passphrase.SetBytes(passphraseBytes)
+	//if accounts, err := DecryptAccounts(passphrase, clientConfig.Senders); nil != err {
+	//	panic(err)
+	//} else {
+	//	ethClient.senders = accounts
+	//}
 
 	return ethClient
 }

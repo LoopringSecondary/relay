@@ -75,6 +75,7 @@ type GlobalConfig struct {
 	Miner          MinerOptions
 	OrderManager   OrderManagerOptions
 	Log            LogOptions
+	Keystore       KeyStoreOptions
 }
 
 type JsonrpcOptions struct {
@@ -103,9 +104,8 @@ type DbOptions struct {
 }
 
 type AccessorOptions struct {
-	RawUrl  string            `required:"true"`
-	Senders map[string]string `required:"true"` //address->encrypted private key, used to send transaction
-	Eth     struct {
+	RawUrl string `required:"true"`
+	Eth    struct {
 		GasPrice int
 		GasLimit int
 	}
