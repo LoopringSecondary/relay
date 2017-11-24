@@ -19,12 +19,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/config"
-	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/urfave/cli.v1"
 	"reflect"
-	"syscall"
 )
 
 func GlobalFlags() []cli.Flag {
@@ -100,20 +97,4 @@ func setGlobalConfig(ctx *cli.Context) *config.GlobalConfig {
 	}
 
 	return globalConfig
-}
-
-func passphraseFromCtx(ctx *cli.Context, tip string) string {
-	if ctx.IsSet("passphrase") {
-		return ctx.String("passphrase")
-	} else {
-		if "" == tip {
-			tip = "enter passphrase："
-		}
-		fmt.Print(tip)
-		if passphrase, err := terminal.ReadPassword(int(syscall.Stdin)); nil != err {
-			panic(err)
-		} else {
-			return passphrase
-		}
-	}
 }
