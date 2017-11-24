@@ -23,6 +23,20 @@ type RinghashSubmittedEvent struct {
 	Time        *Big
 }
 
+type AddressAuthorizedEvent struct {
+	ContractAddress common.Address
+	Number          int
+	Blocknumber     *Big
+	Time            *Big
+}
+
+type AddressDeAuthorizedEvent struct {
+	ContractAddress common.Address
+	Number          int
+	Blocknumber     *Big
+	Time            *Big
+}
+
 // todo: unpack transaction and create event
 type EtherBalanceUpdateEvent struct {
 	Owner common.Address
