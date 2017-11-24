@@ -40,6 +40,8 @@ const (
 	TokenRegistered                = "TokenRegistered"
 	TokenUnRegistered              = "TokenUnRegistered"
 	RingHashSubmitted              = "RingHashSubmitted"
+	AddressAuthorized              = "AddressAuthorized"
+	AddressDeAuthorized            = "AddressDeAuthorized"
 	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
 	OrderManagerExtractorRingMined = "OrderManagerRingMined"
 	OrderManagerExtractorFill      = "OrderManagerExtractorFill"

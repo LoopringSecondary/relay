@@ -174,12 +174,12 @@ func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
 	return evt
 }
 
-type RinghashSubmittedEvent struct {
+type RingHashSubmittedEvent struct {
 	RingHash  common.Hash    `fieldName:"_ringhash"`
 	RingMiner common.Address `fieldName:"_ringminer"`
 }
 
-func (e *RinghashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
+func (e *RingHashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
 	evt := &types.RinghashSubmittedEvent{}
 
 	evt.RingHash = e.RingHash
@@ -188,20 +188,46 @@ func (e *RinghashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
 	return evt
 }
 
+type AddressAuthorizedEvent struct {
+	ContractAddress common.Address `fieldName:"addr"`
+	Number          int            `fieldName:"number"`
+}
+
+func (e *AddressAuthorizedEvent) ConvertDown() *types.AddressAuthorizedEvent {
+	evt := &types.AddressAuthorizedEvent{}
+	evt.ContractAddress = e.ContractAddress
+	evt.Number = e.Number
+
+	return evt
+}
+
+type AddressDeAuthorizedEvent struct {
+	ContractAddress common.Address `fieldName:"addr"`
+	Number          int            `fieldName:"number"`
+}
+
+func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent {
+	evt := &types.AddressDeAuthorizedEvent{}
+	evt.ContractAddress = e.ContractAddress
+	evt.Number = e.Number
+
+	return evt
+}
+
 type ProtocolImpl struct {
 	Version         string
-	ContractAddress types.Address
+	ContractAddress common.Address
 	ProtocolImplAbi *abi.ABI
 
-	LrcTokenAddress types.Address
+	LrcTokenAddress common.Address
 	LrcTokenAbi     *abi.ABI
 
-	TokenRegistryAddress types.Address
+	TokenRegistryAddress common.Address
 	TokenRegistryAbi     *abi.ABI
 
-	RinghashRegistryAddress types.Address
+	RinghashRegistryAddress common.Address
 	RinghashRegistryAbi     *abi.ABI
 
-	DelegateAddress types.Address
+	DelegateAddress common.Address
 	DelegateAbi     *abi.ABI
 }

@@ -400,7 +400,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 		return errors.New("extractor:ringhash registered event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.RinghashSubmittedEvent)
+	contractEvent := contractData.Event.(ethaccessor.RingHashSubmittedEvent)
 	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
 
@@ -414,6 +414,56 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	}
 
 	eventemitter.Emit(eventemitter.RingHashSubmitted, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleAddressAuthorizedEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:address authorized event")
+
+	contractData := input.(ContractData)
+	if len(contractData.Topics) < 2 {
+		return errors.New("extractor:address authorized event indexed fields number error")
+	}
+
+	contractEvent := contractData.Event.(ethaccessor.AddressAuthorizedEvent)
+	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
+
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor address authorized event address -> %s", evt.ContractAddress.Hex())
+		log.Debugf("extractor address authorized event number -> %d", evt.Number)
+	}
+
+	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
+
+	return nil
+}
+
+func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor log event:address deauthorized event")
+
+	contractData := input.(ContractData)
+	if len(contractData.Topics) < 2 {
+		return errors.New("extractor:address deauthorized event indexed fields number error")
+	}
+
+	contractEvent := contractData.Event.(ethaccessor.AddressDeAuthorizedEvent)
+	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
+
+	evt := contractEvent.ConvertDown()
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor address deauthorized event address -> %s", evt.ContractAddress.Hex())
+		log.Debugf("extractor address deauthorized event number -> %d", evt.Number)
+	}
+
+	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
 
 	return nil
 }

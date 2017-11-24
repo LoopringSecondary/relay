@@ -1,9 +1,28 @@
+/*
+
+  Copyright 2017 Loopring Project Ltd (Loopring Foundation).
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+*/
+
 package extractor
 
 import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
@@ -12,9 +31,10 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.loadProtocolContract()
 	l.loadTokenRegisterContract()
 	l.loadRingHashRegisteredContract()
+	l.loadTokenTransferDelegateProtocol()
 
 	// todo: get erc20 token address and former abi
-	l.loadErc20Contract([]types.Address{})
+	l.loadErc20Contract([]common.Address{})
 }
 
 type ContractData struct {
@@ -40,14 +60,16 @@ func generateKey(addr string, id string) string {
 }
 
 const (
-	RINGMINED_EVT_NAME          = "RingMined"
-	CANCEL_EVT_NAME             = "OrderCancelled"
-	CUTOFF_EVT_NAME             = "CutoffTimestampChanged"
-	TRANSFER_EVT_NAME           = "Transfer"
-	APPROVAL_EVT_NAME           = "Approval"
-	TOKENREGISTERED_EVT_NAME    = "TokenRegistered"
-	TOKENUNREGISTERED_EVT_NAME  = "TokenUnregistered"
-	RINGHASHREGISTERED_EVT_NAME = "RinghashSubmitted"
+	RINGMINED_EVT_NAME           = "RingMined"
+	CANCEL_EVT_NAME              = "OrderCancelled"
+	CUTOFF_EVT_NAME              = "CutoffTimestampChanged"
+	TRANSFER_EVT_NAME            = "Transfer"
+	APPROVAL_EVT_NAME            = "Approval"
+	TOKENREGISTERED_EVT_NAME     = "TokenRegistered"
+	TOKENUNREGISTERED_EVT_NAME   = "TokenUnregistered"
+	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
+	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
+	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
@@ -80,7 +102,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 	}
 }
 
-func (l *ExtractorServiceImpl) loadErc20Contract(addrs []types.Address) {
+func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 	tokenabi := l.accessor.Erc20Abi
 	for _, addr := range addrs {
 		for name, event := range tokenabi.Events {
@@ -149,14 +171,37 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 				watcher  *eventemitter.Watcher
 			)
 			contract.Address = impl.RinghashRegistryAddress.Hex()
-			contract.CAbi = impl.TokenRegistryAbi
+			contract.CAbi = impl.RinghashRegistryAbi
+			contract.generateSymbol(event.Id().Hex(), name)
+
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
+			eventemitter.On(contract.Key, watcher)
+
+			l.events[contract.Key] = contract
+		}
+	}
+}
+
+func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
+	for _, impl := range l.accessor.ProtocolImpls {
+		for name, event := range impl.DelegateAbi.Events {
+			if name != ADDRESSAUTHORIZED_EVT_NAME && name != ADDRESSDEAUTHORIZED_EVT_NAME {
+				continue
+			}
+
+			var (
+				contract ContractData
+				watcher  *eventemitter.Watcher
+			)
+			contract.Address = impl.DelegateAddress.Hex()
+			contract.CAbi = impl.DelegateAbi
 			contract.generateSymbol(event.Id().Hex(), name)
 
 			switch contract.Name {
-			case TOKENREGISTERED_EVT_NAME:
-				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenRegisteredEvent}
-			case TOKENUNREGISTERED_EVT_NAME:
-				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
+			case ADDRESSAUTHORIZED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleAddressAuthorizedEvent}
+			case ADDRESSDEAUTHORIZED_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleAddressDeAuthorizedEvent}
 			}
 
 			eventemitter.On(contract.Key, watcher)
