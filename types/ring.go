@@ -61,7 +61,7 @@ func (ring *Ring) GenerateHash() common.Hash {
 	return common.BytesToHash(hashBytes)
 }
 
-func (ring *Ring) GenerateAndSetSignature(signerAddr string) error {
+func (ring *Ring) GenerateAndSetSignature(signerAddr common.Address) error {
 	if IsZeroHash(ring.Hash) {
 		ring.Hash = ring.GenerateHash()
 	}
@@ -100,7 +100,7 @@ func (ring *Ring) SignerAddress() (common.Address, error) {
 	}
 }
 
-func (ring *Ring) GenerateSubmitArgs(miner string, feeReceipt common.Address) *RingSubmitInputs {
+func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Address) *RingSubmitInputs {
 	ringSubmitArgs := emptyRingSubmitArgs()
 
 	for _, filledOrder := range ring.Orders {
