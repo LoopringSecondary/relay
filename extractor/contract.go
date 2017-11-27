@@ -38,21 +38,22 @@ func (l *ExtractorServiceImpl) loadContract() {
 }
 
 type ContractData struct {
-	Event       interface{}
-	Address     string
-	CAbi        *abi.ABI
-	Id          string
-	Name        string
-	Key         string
-	BlockNumber *types.Big
-	Time        *types.Big
-	Topics      []string
+	Event           interface{}
+	ImplAddress     string // lrc合约入口地址
+	ContractAddress string // 某个合约具体地址
+	CAbi            *abi.ABI
+	Id              string
+	Name            string
+	Key             string
+	BlockNumber     *types.Big
+	Time            *types.Big
+	Topics          []string
 }
 
 func (c ContractData) generateSymbol(id, name string) {
 	c.Name = name
 	c.Id = id
-	c.Key = generateKey(c.Address, c.Id)
+	c.Key = generateKey(c.ImplAddress, c.Id)
 }
 
 func generateKey(addr string, id string) string {
@@ -83,7 +84,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
-			contract.Address = impl.ContractAddress.Hex()
+			contract.ImplAddress = impl.ContractAddress.Hex()
 			contract.CAbi = impl.ProtocolImplAbi
 			contract.generateSymbol(event.Id().Hex(), name)
 
@@ -114,7 +115,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
-			contract.Address = addr.Hex()
+			contract.ImplAddress = addr.Hex()
 			contract.CAbi = tokenabi
 			contract.generateSymbol(event.Id().Hex(), name)
 
@@ -142,7 +143,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
-			contract.Address = impl.TokenRegistryAddress.Hex()
+			contract.ImplAddress = impl.TokenRegistryAddress.Hex()
 			contract.CAbi = impl.TokenRegistryAbi
 			contract.generateSymbol(event.Id().Hex(), name)
 
@@ -170,7 +171,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
-			contract.Address = impl.RinghashRegistryAddress.Hex()
+			contract.ImplAddress = impl.RinghashRegistryAddress.Hex()
 			contract.CAbi = impl.RinghashRegistryAbi
 			contract.generateSymbol(event.Id().Hex(), name)
 
@@ -193,7 +194,7 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 				contract ContractData
 				watcher  *eventemitter.Watcher
 			)
-			contract.Address = impl.DelegateAddress.Hex()
+			contract.ImplAddress = impl.DelegateAddress.Hex()
 			contract.CAbi = impl.DelegateAbi
 			contract.generateSymbol(event.Id().Hex(), name)
 
