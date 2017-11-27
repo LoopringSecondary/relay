@@ -21,27 +21,31 @@ package types
 import "github.com/ethereum/go-ethereum/common"
 
 type TokenRegisterEvent struct {
-	Token       common.Address
-	Symbol      string
-	Blocknumber *Big
-	Time        *Big
+	Token           common.Address
+	ContractAddress common.Address
+	Symbol          string
+	Blocknumber     *Big
+	Time            *Big
 }
 
 type TokenUnRegisterEvent struct {
-	Token       common.Address
-	Symbol      string
-	Blocknumber *Big
-	Time        *Big
+	Token           common.Address
+	ContractAddress common.Address
+	Symbol          string
+	Blocknumber     *Big
+	Time            *Big
 }
 
 type RinghashSubmittedEvent struct {
-	RingHash    common.Hash
-	RingMiner   common.Address
-	Blocknumber *Big
-	Time        *Big
+	RingHash        common.Hash
+	RingMiner       common.Address
+	ContractAddress common.Address
+	Blocknumber     *Big
+	Time            *Big
 }
 
 type AddressAuthorizedEvent struct {
+	Protocol        common.Address
 	ContractAddress common.Address
 	Number          int
 	Blocknumber     *Big
@@ -49,6 +53,7 @@ type AddressAuthorizedEvent struct {
 }
 
 type AddressDeAuthorizedEvent struct {
+	Protocol        common.Address
 	ContractAddress common.Address
 	Number          int
 	Blocknumber     *Big
@@ -78,38 +83,42 @@ type TokenAllowanceUpdateEvent struct {
 }
 
 type TransferEvent struct {
-	From        common.Address
-	To          common.Address
-	Value       *Big
-	Blocknumber *Big
-	Time        *Big
+	From            common.Address
+	To              common.Address
+	ContractAddress common.Address
+	Value           *Big
+	Blocknumber     *Big
+	Time            *Big
 }
 
 type ApprovalEvent struct {
-	Owner       common.Address
-	Spender     common.Address
-	Value       *Big
-	Blocknumber *Big
-	Time        *Big
+	Owner           common.Address
+	Spender         common.Address
+	ContractAddress common.Address
+	Value           *Big
+	Blocknumber     *Big
+	Time            *Big
 }
 
 type OrderFilledEvent struct {
-	Ringhash      common.Hash
-	PreOrderHash  common.Hash
-	OrderHash     common.Hash
-	NextOrderHash common.Hash
-	RingIndex     *Big
-	Time          *Big
-	Blocknumber   *Big
-	AmountS       *Big
-	AmountB       *Big
-	LrcReward     *Big
-	LrcFee        *Big
-	IsDeleted     bool
+	Ringhash        common.Hash
+	PreOrderHash    common.Hash
+	OrderHash       common.Hash
+	NextOrderHash   common.Hash
+	ContractAddress common.Address
+	RingIndex       *Big
+	Time            *Big
+	Blocknumber     *Big
+	AmountS         *Big
+	AmountB         *Big
+	LrcReward       *Big
+	LrcFee          *Big
+	IsDeleted       bool
 }
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash
+	ContractAddress common.Address
 	Time            *Big
 	Blocknumber     *Big
 	AmountCancelled *Big
@@ -117,11 +126,12 @@ type OrderCancelledEvent struct {
 }
 
 type CutoffEvent struct {
-	Owner       common.Address
-	Time        *Big
-	Blocknumber *Big
-	Cutoff      *Big
-	IsDeleted   bool
+	Owner           common.Address
+	ContractAddress common.Address
+	Time            *Big
+	Blocknumber     *Big
+	Cutoff          *Big
+	IsDeleted       bool
 }
 
 type RingMinedEvent struct {
@@ -131,6 +141,7 @@ type RingMinedEvent struct {
 	Ringhash           common.Hash
 	Miner              common.Address
 	FeeRecipient       common.Address
+	ContractAddress    common.Address
 	IsRinghashReserved bool
 	IsDeleted          bool
 }
@@ -140,7 +151,8 @@ type SubmitRingEvent struct {
 }
 
 type RingHashRegistryEvent struct {
-	RingHash  common.Hash
-	RingMiner common.Address
-	TxHash    common.Hash
+	RingHash        common.Hash
+	TxHash          common.Hash
+	RingMiner       common.Address
+	ContractAddress common.Address
 }

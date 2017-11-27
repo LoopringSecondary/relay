@@ -195,7 +195,7 @@ type AddressAuthorizedEvent struct {
 
 func (e *AddressAuthorizedEvent) ConvertDown() *types.AddressAuthorizedEvent {
 	evt := &types.AddressAuthorizedEvent{}
-	evt.ContractAddress = e.ContractAddress
+	evt.Protocol = e.ContractAddress
 	evt.Number = e.Number
 
 	return evt
@@ -208,7 +208,7 @@ type AddressDeAuthorizedEvent struct {
 
 func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent {
 	evt := &types.AddressDeAuthorizedEvent{}
-	evt.ContractAddress = e.ContractAddress
+	evt.Protocol = e.ContractAddress
 	evt.Number = e.Number
 
 	return evt
