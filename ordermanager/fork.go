@@ -19,14 +19,10 @@
 package ordermanager
 
 import (
-	"errors"
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -65,7 +61,7 @@ func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 	}
 
 	forkBlockNumber := big.NewInt(from)
-	forkBlockNumStr := forkBlockNumber.String()
+	forkBlockNumHex := types.BigintToHex(forkBlockNumber)
 	for _, v := range orderList {
 		state := &types.OrderState{}
 		if err := v.ConvertUp(state); err != nil {
@@ -74,19 +70,15 @@ func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 		}
 
 		// todo(fuk):get contract cancelOrFilledMap remainAmount and approval token amount,compare and get min
+		remain, err := p.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, forkBlockNumHex)
+		if err != nil {
+			log.Debugf("order manager fork error:%s", err.Error())
+			continue
+		}
+
 		if state.RawOrder.BuyNoMoreThanAmountB == true {
-			remain, err := p.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, forkBlockNumStr)
-			if err != nil {
-				log.Debugf("order manager fork error:%s", err.Error())
-				continue
-			}
 			state.RemainedAmountB = remain // getMinAmount(remain, allowance, balance)
 		} else {
-			remain, err := p.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, forkBlockNumStr)
-			if err != nil {
-				log.Debugf("order manager fork error:%s", err.Error())
-				continue
-			}
 			batchReq := ethaccessor.BatchErc20Req{}
 			batchReq.Spender, err = p.accessor.GetSenderAddress(state.RawOrder.Protocol)
 			if err != nil {
@@ -95,7 +87,7 @@ func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 			}
 			batchReq.Owner = state.RawOrder.Owner
 			batchReq.Token = state.RawOrder.TokenS
-			batchReq.BlockParameter = forkBlockNumStr
+			batchReq.BlockParameter = forkBlockNumHex
 
 			p.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{&batchReq})
 			if err != nil || batchReq.AllowanceErr != nil || batchReq.BalanceErr != nil {
