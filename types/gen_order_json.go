@@ -6,29 +6,31 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+
+	"github.com/Loopring/relay/vendor/github.com/ethereum/go-ethereum/common"
 )
 
 var _ = (*orderMarshaling)(nil)
 
 func (o Order) MarshalJSON() ([]byte, error) {
 	type Order struct {
-		Protocol              Address  `json:"protocol" gencodec:"required"`
-		TokenS                Address  `json:"tokenS" gencodec:"required"`
-		TokenB                Address  `json:"tokenB" gencodec:"required"`
-		AmountS               *Big     `json:"amountS" gencodec:"required"`
-		AmountB               *Big     `json:"amountB" gencodec:"required"`
-		Timestamp             *Big     `json:"timestamp" gencodec:"required"`
-		Ttl                   *Big     `json:"ttl" gencodec:"required"`
-		Salt                  *Big     `json:"salt" gencodec:"required"`
-		LrcFee                *Big     `json:"lrcFee" `
-		BuyNoMoreThanAmountB  bool     `json:"buyNoMoreThanAmountB" gencodec:"required"`
-		MarginSplitPercentage uint8    `json:"marginSplitPercentage" gencodec:"required"`
-		V                     uint8    `json:"v" gencodec:"required"`
-		R                     Sign     `json:"r" gencodec:"required"`
-		S                     Sign     `json:"s" gencodec:"required"`
-		Price                 *big.Rat `json:"price"`
-		Owner                 Address  `json:"owner"`
-		Hash                  Hash     `json:"hash"`
+		Protocol              common.Address `json:"protocol" gencodec:"required"`
+		TokenS                common.Address `json:"tokenS" gencodec:"required"`
+		TokenB                common.Address `json:"tokenB" gencodec:"required"`
+		AmountS               *Big           `json:"amountS" gencodec:"required"`
+		AmountB               *Big           `json:"amountB" gencodec:"required"`
+		Timestamp             *Big           `json:"timestamp" gencodec:"required"`
+		Ttl                   *Big           `json:"ttl" gencodec:"required"`
+		Salt                  *Big           `json:"salt" gencodec:"required"`
+		LrcFee                *Big           `json:"lrcFee" `
+		BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
+		MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"`
+		V                     uint8          `json:"v" gencodec:"required"`
+		R                     Sign           `json:"r" gencodec:"required"`
+		S                     Sign           `json:"s" gencodec:"required"`
+		Price                 *big.Rat       `json:"price"`
+		Owner                 common.Address `json:"owner"`
+		Hash                  common.Hash    `json:"hash"`
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
@@ -53,23 +55,23 @@ func (o Order) MarshalJSON() ([]byte, error) {
 
 func (o *Order) UnmarshalJSON(input []byte) error {
 	type Order struct {
-		Protocol              *Address `json:"protocol" gencodec:"required"`
-		TokenS                *Address `json:"tokenS" gencodec:"required"`
-		TokenB                *Address `json:"tokenB" gencodec:"required"`
-		AmountS               *Big     `json:"amountS" gencodec:"required"`
-		AmountB               *Big     `json:"amountB" gencodec:"required"`
-		Timestamp             *Big     `json:"timestamp" gencodec:"required"`
-		Ttl                   *Big     `json:"ttl" gencodec:"required"`
-		Salt                  *Big     `json:"salt" gencodec:"required"`
-		LrcFee                *Big     `json:"lrcFee" `
-		BuyNoMoreThanAmountB  *bool    `json:"buyNoMoreThanAmountB" gencodec:"required"`
-		MarginSplitPercentage *uint8   `json:"marginSplitPercentage" gencodec:"required"`
-		V                     *uint8   `json:"v" gencodec:"required"`
-		R                     *Sign    `json:"r" gencodec:"required"`
-		S                     *Sign    `json:"s" gencodec:"required"`
-		Price                 *big.Rat `json:"price"`
-		Owner                 *Address `json:"owner"`
-		Hash                  *Hash    `json:"hash"`
+		Protocol              *common.Address `json:"protocol" gencodec:"required"`
+		TokenS                *common.Address `json:"tokenS" gencodec:"required"`
+		TokenB                *common.Address `json:"tokenB" gencodec:"required"`
+		AmountS               *Big            `json:"amountS" gencodec:"required"`
+		AmountB               *Big            `json:"amountB" gencodec:"required"`
+		Timestamp             *Big            `json:"timestamp" gencodec:"required"`
+		Ttl                   *Big            `json:"ttl" gencodec:"required"`
+		Salt                  *Big            `json:"salt" gencodec:"required"`
+		LrcFee                *Big            `json:"lrcFee" `
+		BuyNoMoreThanAmountB  *bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
+		MarginSplitPercentage *uint8          `json:"marginSplitPercentage" gencodec:"required"`
+		V                     *uint8          `json:"v" gencodec:"required"`
+		R                     *Sign           `json:"r" gencodec:"required"`
+		S                     *Sign           `json:"s" gencodec:"required"`
+		Price                 *big.Rat        `json:"price"`
+		Owner                 *common.Address `json:"owner"`
+		Hash                  *common.Hash    `json:"hash"`
 	}
 	var dec Order
 	if err := json.Unmarshal(input, &dec); err != nil {

@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/ringminer/chainclient"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
