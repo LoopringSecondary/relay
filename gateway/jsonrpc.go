@@ -25,8 +25,6 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
-	gorillaRpc "github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
 	"github.com/powerman/rpc-codec/jsonrpc2"
 	"net"
 	"net/http"
@@ -34,6 +32,9 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/ordermanager"
 	"math/big"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/rpc/v2/json2"
+	rpc2 "github.com/gorilla/rpc/v2"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -128,11 +129,12 @@ func (j *JsonrpcServiceImpl) Start2() {
 }
 
 func (j *JsonrpcServiceImpl) Start() {
-	s := gorillaRpc.NewServer()
-	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
+
+	s := rpc2.NewServer()
+	s.RegisterCodec(json2.NewCodec(), "application/json")
+	s.RegisterCodec(json2.NewCodec(), "application/json;charset=UTF-8")
 	jsonrpc := new(JsonrpcServiceImpl)
-	s.RegisterService(jsonrpc, "")
+	s.RegisterService(jsonrpc, "jsonrpc")
 	r := mux.NewRouter()
 	r.Handle("/rpc", s)
 	http.ListenAndServe(":"+j.port, r)
@@ -184,9 +186,9 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := j.orderManager.GetOrderBook(
-		types.StringToAddress(market.ContractVersionConfig[protocol]),
-		types.StringToAddress(a),
-		types.StringToAddress(b), length * 2)
+		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(a),
+		common.StringToAddress(b), length * 2)
 
 	if askErr != nil {
 		return errors.New("get depth error , please refresh again")
@@ -195,9 +197,9 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 	depth.Depth.Sell = calculateDepth(asks, length)
 
 	bids, bidErr := j.orderManager.GetOrderBook(
-		types.StringToAddress(market.ContractVersionConfig[protocol]),
-		types.StringToAddress(b),
-		types.StringToAddress(a), length * 2)
+		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(b),
+		common.StringToAddress(a), length * 2)
 
 	if bidErr != nil {
 		return errors.New("get depth error , please refresh again")
@@ -208,16 +210,17 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 	return nil
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
+func (j *JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
+
 	// not support now
 	return nil
 }
 
-//TODO
-func (j *JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[string]int) error {
+func (j *JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *[]market.Ticker) error {
 	// not support now
-	return nil
+	tickers, err := j.trendManager.GetTicker()
+	res = &tickers
+	return err
 }
 
 func (j *JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *[]market.Trend) error {
@@ -226,13 +229,11 @@ func (j *JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *[]mar
 	return err
 }
 
-//TODO
 func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map[string]int) error {
 	// not support now
 	return nil
 }
 
-//TODO
 func (j *JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
 	// not support now
 	return nil

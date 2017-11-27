@@ -21,16 +21,16 @@ package market
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/types"
 	"math/big"
 	"strings"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const weiToEther = 1e18
 
 type TokenPair struct {
-	TokenS types.Address
-	TokenB types.Address
+	TokenS common.Address
+	TokenB common.Address
 }
 
 func ByteToFloat(amount [] byte) float64 {
@@ -75,8 +75,8 @@ var AllTokenPairs = func() []TokenPair {
 	pairsMap := make(map[string]TokenPair, 0)
 	for _,v := range SupportMarket {
 		for _, vv := range SupportTokens {
-			pairsMap[v + "-" + vv] = TokenPair{types.StringToAddress(v), types.StringToAddress(vv)}
-			pairsMap[vv + "-" + v] = TokenPair{types.StringToAddress(vv), types.StringToAddress(v)}
+			pairsMap[v + "-" + vv] = TokenPair{common.StringToAddress(v), common.StringToAddress(vv)}
+			pairsMap[vv + "-" + v] = TokenPair{common.StringToAddress(vv), common.StringToAddress(v)}
 		}
 	}
 	pairs := make([]TokenPair, 0)
@@ -115,9 +115,9 @@ func UnWrap(market string) (s, b string) {
 	return
 }
 
-func UnWrapToAddress(market string) (s, b types.Address) {
+func UnWrapToAddress(market string) (s, b common.Address) {
 	sa, sb := UnWrap(market)
-	return types.StringToAddress(sa), types.StringToAddress(sb)
+	return common.StringToAddress(sa), common.StringToAddress(sb)
 }
 
 func IsSupportedToken(token string) bool {
