@@ -19,39 +19,26 @@
 package ordermanager
 
 import (
-	"errors"
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/types"
 	"math/big"
 )
 
 type forkProcessor struct {
-	dao       dao.RdsService
-	contracts map[types.Address]*chainclient.LoopringProtocolImpl
-	tokens    map[types.Address]*chainclient.Erc20Token
+	dao      dao.RdsService
+	accessor *ethaccessor.EthNodeAccessor
 }
 
-func newForkProcess(rds dao.RdsService) *forkProcessor {
+func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *forkProcessor {
 	processor := &forkProcessor{}
 	processor.dao = rds
-	processor.contracts = make(map[types.Address]*chainclient.LoopringProtocolImpl)
-	processor.tokens = make(map[types.Address]*chainclient.Erc20Token)
-
-	for _, impl := range miner.MinerInstance.Loopring.LoopringImpls {
-		processor.contracts[impl.Address] = impl
-	}
-
-	for _, token := range miner.MinerInstance.Loopring.Tokens {
-		processor.tokens[token.Address] = token
-	}
 
 	return processor
 }
 
-func (p *forkProcessor) fork(event *chainclient.ForkedEvent) error {
+func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 
@@ -74,6 +61,7 @@ func (p *forkProcessor) fork(event *chainclient.ForkedEvent) error {
 	}
 
 	forkBlockNumber := big.NewInt(from)
+	forkBlockNumHex := types.BigintToHex(forkBlockNumber)
 	for _, v := range orderList {
 		state := &types.OrderState{}
 		if err := v.ConvertUp(state); err != nil {
@@ -82,20 +70,32 @@ func (p *forkProcessor) fork(event *chainclient.ForkedEvent) error {
 		}
 
 		// todo(fuk):get contract cancelOrFilledMap remainAmount and approval token amount,compare and get min
+		remain, err := p.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, forkBlockNumHex)
+		if err != nil {
+			log.Debugf("order manager fork error:%s", err.Error())
+			continue
+		}
+
 		if state.RawOrder.BuyNoMoreThanAmountB == true {
-			remain, allowance, balance, err := p.getAmounts(state, state.RawOrder.TokenB, forkBlockNumber)
-			if err != nil {
-				log.Debugf("order manager fork error %s", err.Error())
-				continue
-			}
-			state.RemainedAmountB = getMinAmount(remain, allowance, balance)
+			state.RemainedAmountB = remain // getMinAmount(remain, allowance, balance)
 		} else {
-			remain, allowance, balance, err := p.getAmounts(state, state.RawOrder.TokenS, forkBlockNumber)
+			batchReq := ethaccessor.BatchErc20Req{}
+			batchReq.Spender, err = p.accessor.GetSenderAddress(state.RawOrder.Protocol)
 			if err != nil {
-				log.Debugf("order manager fork error %s", err.Error())
+				log.Debugf("order manager fork error:%s", err.Error())
 				continue
 			}
-			state.RemainedAmountS = getMinAmount(remain, allowance, balance)
+			batchReq.Owner = state.RawOrder.Owner
+			batchReq.Token = state.RawOrder.TokenS
+			batchReq.BlockParameter = forkBlockNumHex
+
+			p.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{&batchReq})
+			if err != nil || batchReq.AllowanceErr != nil || batchReq.BalanceErr != nil {
+				log.Debugf("order manager fork error:%s", err.Error())
+				continue
+			}
+
+			state.RemainedAmountS = getMinAmount(remain, batchReq.Allowance.BigInt(), batchReq.Balance.BigInt())
 		}
 
 		state.CalculateRemainAmount()
@@ -114,38 +114,6 @@ func (p *forkProcessor) fork(event *chainclient.ForkedEvent) error {
 	}
 	// todo find order in contract
 	return nil
-}
-
-// getAmounts return remain,allowance,balance
-func (p *forkProcessor) getAmounts(state *types.OrderState, tokenAddress types.Address, blockNumber *big.Int) (*big.Int, *big.Int, *big.Int, error) {
-	var remain, allowance, balance *big.Int
-
-	contractAddress := state.RawOrder.Protocol
-	blockNumStr := blockNumber.String()
-
-	impl, ok := p.contracts[contractAddress]
-	if !ok {
-		return nil, nil, nil, errors.New("order manager fork error:contract address doesn't exist")
-	}
-
-	token, ok := p.tokens[tokenAddress]
-	if !ok {
-		return nil, nil, nil, errors.New("order manager fork get token error")
-	}
-
-	if err := impl.GetCancelledOrFilled.Call(&remain, blockNumStr, state.RawOrder.Hash); err != nil {
-		return nil, nil, nil, err
-	}
-
-	// owner & spender
-	if err := token.Allowance.Call(&allowance, blockNumStr, tokenAddress, contractAddress); err != nil {
-		return nil, nil, nil, err
-	}
-	if err := token.BalanceOf.Call(&balance, blockNumStr, tokenAddress); err != nil {
-		return nil, nil, nil, err
-	}
-
-	return remain, allowance, balance, nil
 }
 
 func getMinAmount(a1, a2, a3 *big.Int) *big.Int {

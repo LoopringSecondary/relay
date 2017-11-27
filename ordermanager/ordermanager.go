@@ -20,13 +20,15 @@ package ordermanager
 
 import (
 	"errors"
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
+	"github.com/Loopring/ringminer/chainclient"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
@@ -35,8 +37,8 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
-	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error)
+	MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState
+	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 }
 
@@ -49,12 +51,12 @@ type OrderManagerImpl struct {
 	um        usermanager.UserManager
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager) *OrderManagerImpl {
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager, accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
 	om := &OrderManagerImpl{}
 
 	om.options = options
 	om.dao = dao
-	om.processor = newForkProcess(om.dao)
+	om.processor = newForkProcess(om.dao, accessor)
 	om.um = userManager
 
 	// new miner orders provider
@@ -325,7 +327,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
@@ -343,7 +345,7 @@ func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrde
 	return list
 }
 
-func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error) {
+func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error) {
 	var list []types.OrderState
 	models, err := om.dao.GetOrderBook(protocol, tokenS, tokenB, length)
 	if err != nil {

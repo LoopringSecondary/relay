@@ -19,10 +19,8 @@
 package extractor
 
 import (
-	"fmt"
-	"github.com/Loopring/relay/chainclient"
-	"github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/types"
 	"math/big"
@@ -37,7 +35,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	var (
 		latestBlock   types.Block
 		newBlockModel dao.Block
-		forkEvent     chainclient.ForkedEvent
+		forkEvent     ethaccessor.ForkedEvent
 	)
 
 	latestBlockModel, err := l.dao.FindLatestBlock()
@@ -90,7 +88,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 
 func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block, error) {
 	var (
-		ethBlock    eth.Block
+		ethBlock    ethaccessor.Block
 		parentBlock types.Block
 	)
 
@@ -105,7 +103,9 @@ func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block,
 
 	// 如果不存在,则查询以太坊
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	l.ethClient.GetBlockByNumber(ethBlock, fmt.Sprintf("%#x", parentBlockNumber), false)
+	if err := l.accessor.Call(&ethBlock, "eth_getBlockByNumber", parentBlockNumber, false); err != nil {
+		return nil, err
+	}
 
 	preBlock := &types.Block{}
 	preBlock.BlockNumber = ethBlock.Number.BigInt()

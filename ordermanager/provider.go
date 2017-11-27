@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
@@ -69,7 +70,7 @@ func (p *minerOrdersProvider) setBlockNumber(num *types.Big) {
 	p.currentBlockNumber = num
 }
 
-func (p *minerOrdersProvider) markOrders(orderhashs []types.Hash) error {
+func (p *minerOrdersProvider) markOrders(orderhashs []common.Hash) error {
 	var orderhashstrs []string
 
 	for _, v := range orderhashs {
@@ -88,7 +89,7 @@ func (p *minerOrdersProvider) unMarkOrders() error {
 	return p.dao.UnMarkMinerOrders(des.Int64())
 }
 
-func (p *minerOrdersProvider) getOrders(tokenS, tokenB types.Address, orderhashs []types.Hash) []types.OrderState {
+func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	filterStatus := []uint8{types.ORDER_FINISHED.Value(), types.ORDER_CUTOFF.Value(), types.ORDER_CANCEL.Value()}

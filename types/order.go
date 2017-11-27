@@ -21,8 +21,8 @@ package types
 import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
-	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 type OrderStatus uint8
@@ -55,23 +55,23 @@ func (s OrderStatus) Value() uint8 {
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address  `json:"protocol" gencodec:"required"` // 智能合约地址
-	TokenS                common.Address  `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
-	TokenB                common.Address  `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
-	AmountS               *big.Int `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
-	AmountB               *big.Int `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
-	Timestamp             *big.Int `json:"timestamp" gencodec:"required"`
-	Ttl                   *big.Int `json:"ttl" gencodec:"required"` // 订单过期时间
-	Salt                  *big.Int `json:"salt" gencodec:"required"`
-	LrcFee                *big.Int `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
-	BuyNoMoreThanAmountB  bool     `json:"buyNoMoreThanAmountB" gencodec:"required"`
-	MarginSplitPercentage uint8    `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
-	V                     uint8    `json:"v" gencodec:"required"`
-	R                     Sign     `json:"r" gencodec:"required"`
-	S                     Sign     `json:"s" gencodec:"required"`
-	Price                 *big.Rat `json:"price"`
-	Owner                 common.Address  `json:"owner"`
-	Hash                  common.Hash     `json:"hash"`
+	Protocol              common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
+	TokenS                common.Address `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
+	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
+	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
+	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
+	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"`
+	Ttl                   *big.Int       `json:"ttl" gencodec:"required"` // 订单过期时间
+	Salt                  *big.Int       `json:"salt" gencodec:"required"`
+	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
+	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
+	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
+	V                     uint8          `json:"v" gencodec:"required"`
+	R                     Sign           `json:"r" gencodec:"required"`
+	S                     Sign           `json:"s" gencodec:"required"`
+	Price                 *big.Rat       `json:"price"`
+	Owner                 common.Address `json:"owner"`
+	Hash                  common.Hash    `json:"hash"`
 }
 
 type orderMarshaling struct {

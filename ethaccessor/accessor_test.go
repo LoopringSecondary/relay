@@ -42,12 +42,12 @@ func TestNewAccessor(t *testing.T) {
 	t.Log(balance.String())
 
 	reqs := []*ethaccessor.BatchErc20Req{&ethaccessor.BatchErc20Req{
-		Address:        types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
+		Owner:          types.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
 		Token:          types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 		BlockParameter: "pending",
 	},
 		&ethaccessor.BatchErc20Req{
-			Address:        types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
+			Owner:          types.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
 			Token:          types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
 			BlockParameter: "pending",
 		}}
