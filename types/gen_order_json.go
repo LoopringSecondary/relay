@@ -7,7 +7,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/Loopring/relay/vendor/github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var _ = (*orderMarshaling)(nil)

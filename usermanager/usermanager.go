@@ -21,12 +21,13 @@ package usermanager
 import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type UserManager interface {
 	AddWhiteListUser(user types.WhiteListUser) error
 	DelWhiteListUser(user types.WhiteListUser) error
-	InWhiteList(owner types.Address) bool
+	InWhiteList(owner common.Address) bool
 }
 
 type UserManagerImpl struct {
@@ -42,7 +43,7 @@ func NewUserManager(rds dao.RdsService) *UserManagerImpl {
 	return impl
 }
 
-func (m *UserManagerImpl) InWhiteList(owner types.Address) bool { return m.whiteList.InWhiteList(owner) }
+func (m *UserManagerImpl) InWhiteList(owner common.Address) bool { return m.whiteList.InWhiteList(owner) }
 func (m *UserManagerImpl) AddWhiteListUser(user types.WhiteListUser) error {
 	return m.whiteList.AddWhiteListUser(user)
 }

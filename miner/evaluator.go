@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"math"
 	"math/big"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Evaluator struct {
@@ -189,7 +190,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 	}
 
 	for _, filledOrder := range ringState.Orders {
-		lrcAddress := &types.Address{}
+		lrcAddress := &common.Address{}
 
 		lrcAddress.SetBytes([]byte(e.marketCapProvider.LRC_ADDRESS))
 		//todo:成本节约

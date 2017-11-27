@@ -124,9 +124,9 @@ func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) 
 	if nil != e {
 		event := e.(types.SubmitRingEvent)
 		//excute ring failed
-		if nil == event {
+		//if nil == event {
 			submitter.submitFailed(event.TxHash)
-		}
+		//}
 	}
 	return nil
 }
@@ -151,10 +151,10 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 	if nil != e {
 		event := e.(types.RingHashRegistryEvent)
 		//registry failed
-		if nil == event {
-			submitter.submitFailed(event.TxHash)
-		} else {
-			ringHash := common.BytesToHash(event.RingHash)
+		//if nil == event {
+		//	submitter.submitFailed(event.TxHash)
+		//} else {
+			ringHash := event.RingHash
 			println("ringHash.HexringHash.Hex", ringHash.Hex())
 			//todo:change to dao
 			ringData := []byte{}
@@ -170,7 +170,7 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 					}
 				}
 			}
-		}
+		//}
 	}
 
 	return nil
