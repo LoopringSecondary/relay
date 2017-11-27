@@ -263,6 +263,31 @@ func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int,
 
 }
 
+func FromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
+
+	for k, v := range src {
+		switch k {
+		//TODO(xiaolu) change status to string not uint8
+		case "status":
+			query.Status = v.(uint8)
+		case "pageIndex":
+			pageIndex = v.(int)
+		case "pageSize":
+			pageSize = v.(int)
+		case "owner":
+			query.Owner = v.(string)
+		case "contractVersion":
+			query.Protocol = v.(string)
+		default:
+			err = errors.New("unsupported query found " + k)
+			return
+		}
+	}
+
+	return
+
+}
+
 type Args struct {
 	A, B int
 }
