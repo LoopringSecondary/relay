@@ -115,7 +115,7 @@ func (o *Order) GenerateAndSetSignature(singerAddr common.Address) error {
 		o.Hash = o.GenerateHash()
 	}
 
-	if sig, err := crypto.Sign(o.Hash.Bytes(), singerAddr.Hex()); nil != err {
+	if sig, err := crypto.Sign(o.Hash.Bytes(), singerAddr); nil != err {
 		return err
 	} else {
 		v, r, s := crypto.SigToVRS(sig)

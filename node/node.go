@@ -19,13 +19,9 @@
 package node
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	ethClientLib "github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
-	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/db"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
@@ -119,7 +115,7 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) registerCrypto(ks *keystore.KeyStore) {
-	c := ethCryptoLib.NewCrypto(true, ks)
+	c := crypto.NewCrypto(true, ks)
 	crypto.Initialize(c)
 }
 

@@ -203,7 +203,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*
 		}
 	}
 
-	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address.Hex(), submitter.feeReceipt)
+	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address, submitter.feeReceipt)
 	ringForSubmit.ProtocolData, err = protocolAbi.Pack("submitRing",
 		ringSubmitArgs.AddressList,
 		ringSubmitArgs.UintArgsList,
