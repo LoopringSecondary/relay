@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/types"
 	"io/ioutil"
 	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type LegalCurrency int
@@ -58,7 +58,7 @@ const (
 type MarketCapProvider struct {
 	LRC_ADDRESS   string
 	baseUrl       string
-	currenciesMap map[types.Address]*CurrencyMarketCap
+	currenciesMap map[common.Address]*CurrencyMarketCap
 	currency      LegalCurrency
 }
 
@@ -66,7 +66,7 @@ type CurrencyMarketCap struct {
 	Id           string        `json:"id"`
 	Name         string        `json:"name"`
 	Symbol       string        `json:"symbol"`
-	Address      types.Address `json:"address"`
+	Address      common.Address `json:"address"`
 	PriceUsd     float64       `json:"price_usd"`
 	PriceBtc     float64       `json:"price_btc"`
 	PriceCny     float64       `json:"price_cny"`
@@ -106,7 +106,7 @@ func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (p *MarketCapProvider) GetMarketCap(tokenAddress types.Address) *big.Rat {
+func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)
 		switch p.currency {
@@ -163,11 +163,11 @@ func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
 	provider.baseUrl = options.RateProvider.BaseUrl
 	provider.LRC_ADDRESS = options.RateProvider.LrcAddress
 	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
-	provider.currenciesMap = make(map[types.Address]*CurrencyMarketCap)
+	provider.currenciesMap = make(map[common.Address]*CurrencyMarketCap)
 
 	for addr, name := range options.RateProvider.CurrenciesMap {
 		c := &CurrencyMarketCap{}
-		c.Address = types.HexToAddress(addr)
+		c.Address = common.HexToAddress(addr)
 		c.Id = name
 		c.Name = name
 		provider.currenciesMap[c.Address] = c

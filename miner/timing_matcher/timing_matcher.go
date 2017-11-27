@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 /**
@@ -32,13 +33,13 @@ import (
 */
 
 type minedRing struct {
-	ringHash    types.Hash
-	orderHashes []types.Hash
+	ringHash    common.Hash
+	orderHashes []common.Hash
 }
 
 type RoundState struct {
 	round          int64
-	ringHash       types.Hash
+	ringHash       common.Hash
 	matchedAmountS *big.Rat
 	matchedAmountB *big.Rat
 }
@@ -49,8 +50,8 @@ type OrderMatchState struct {
 }
 
 type TimingMatcher struct {
-	MatchedOrders map[types.Hash]*OrderMatchState
-	MinedRings    map[types.Hash]*minedRing
+	MatchedOrders map[common.Hash]*OrderMatchState
+	MinedRings    map[common.Hash]*minedRing
 	mtx           sync.RWMutex
 	StopChan      chan bool
 	round         int64
@@ -63,23 +64,23 @@ type Market struct {
 	matcher *TimingMatcher
 	//om                        ordermanager.OrderManager
 
-	TokenA     types.Address
-	TokenB     types.Address
-	AtoBOrders map[types.Hash]*types.OrderState
-	BtoAOrders map[types.Hash]*types.OrderState
+	TokenA     common.Address
+	TokenB     common.Address
+	AtoBOrders map[common.Hash]*types.OrderState
+	BtoAOrders map[common.Hash]*types.OrderState
 
-	AtoBNotMatchedOrderHashes []types.Hash
-	BtoANotMatchedOrderHashes []types.Hash
+	AtoBNotMatchedOrderHashes []common.Hash
+	BtoANotMatchedOrderHashes []common.Hash
 }
 
 func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator) *TimingMatcher {
 	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
-	matcher.MatchedOrders = make(map[types.Hash]*OrderMatchState)
+	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	//todo:get markets from market.Allmarket
 	m := &Market{}
 	m.matcher = matcher
-	m.AtoBNotMatchedOrderHashes = []types.Hash{}
-	m.BtoANotMatchedOrderHashes = []types.Hash{}
+	m.AtoBNotMatchedOrderHashes = []common.Hash{}
+	m.BtoANotMatchedOrderHashes = []common.Hash{}
 	matcher.markets = []*Market{m}
 
 	return matcher
@@ -114,8 +115,8 @@ func (matcher *TimingMatcher) Start() {
 }
 
 func (market *Market) getOrdersForMatching() {
-	market.AtoBOrders = make(map[types.Hash]*types.OrderState)
-	market.BtoAOrders = make(map[types.Hash]*types.OrderState)
+	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
+	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
 	//atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
 	//btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
@@ -129,8 +130,8 @@ func (market *Market) getOrdersForMatching() {
 		market.BtoAOrders[order.RawOrder.Hash] = &order
 	}
 
-	market.AtoBNotMatchedOrderHashes = []types.Hash{}
-	market.BtoANotMatchedOrderHashes = []types.Hash{}
+	market.AtoBNotMatchedOrderHashes = []common.Hash{}
+	market.BtoANotMatchedOrderHashes = []common.Hash{}
 
 	//it should sub the matched amount in last round.
 	market.reduceRemainedAmountBeforeMatch()
@@ -168,7 +169,7 @@ func (market *Market) match() {
 
 	market.getOrdersForMatching()
 
-	matchedOrderHashes := make(map[types.Hash]bool)
+	matchedOrderHashes := make(map[common.Hash]bool)
 	ringStates := []*types.RingForSubmit{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingForSubmit
@@ -217,7 +218,7 @@ func (market *Market) match() {
 func (matcher *TimingMatcher) afterSubmit(eventData eventemitter.EventData) error {
 	matcher.mtx.Lock()
 	defer matcher.mtx.Unlock()
-	ringHash := eventData.(types.Hash)
+	ringHash := eventData.(common.Hash)
 	if ringState, ok := matcher.MinedRings[ringHash]; ok {
 		delete(matcher.MinedRings, ringHash)
 		for _, orderHash := range ringState.orderHashes {
@@ -242,7 +243,7 @@ func (matcher *TimingMatcher) Stop() {
 	matcher.StopChan <- true
 }
 
-func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ringiHash types.Hash) {
+func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ringiHash common.Hash) {
 	matcher.mtx.Lock()
 	defer matcher.mtx.Unlock()
 
