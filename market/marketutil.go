@@ -186,3 +186,7 @@ func getContractVersion(address string) string {
 	}
 	return ""
 }
+
+func IsSupportedContract(address string) bool {
+	return getContractVersion(address) != ""
+}

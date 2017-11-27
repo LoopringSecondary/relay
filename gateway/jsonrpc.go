@@ -60,6 +60,20 @@ type AskBid struct {
 	Sell [][]string
 }
 
+type CommonTokenRequest struct {
+	contractVersion string
+	owner string
+}
+
+type OrderQuery struct {
+	Status int
+	PageIndex int
+	PageSize  int
+	ContractVersion string
+	Owner string
+
+}
+
 var RemoteAddrContextKey = "RemoteAddr"
 
 type JsonrpcService interface {
@@ -234,8 +248,10 @@ func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map
 	return nil
 }
 
-func (j *JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
-	// not support now
+func (j *JsonrpcServiceImpl) getBalance(r *http.Request, balanceQuery CommonTokenRequest, res *market.AccountJson) error {
+	account := j.accountManager.GetBalance(balanceQuery.contractVersion, balanceQuery.owner)
+	accountJson := account.ToJsonObject(balanceQuery.contractVersion)
+	res = &accountJson
 	return nil
 }
 

@@ -73,7 +73,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerUserManager()
 	//n.registerIPFSSubService()
 	n.registerGateway()
-	n.registerAccountManager()
+	n.registerAccountManager(accessor)
 	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor(accessor)
 	n.registerOrderManager()
@@ -147,8 +147,8 @@ func (n *Node) registerTrendManager() {
 	n.trendManager = market.NewTrendManager(n.rdsService)
 }
 
-func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager()
+func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
+	n.accountManager = market.NewAccountManager(accessor)
 }
 
 func (n *Node) registerJsonRpcService() {
