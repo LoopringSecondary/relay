@@ -22,8 +22,8 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"sync"
 	"github.com/ethereum/go-ethereum/common"
+	"sync"
 )
 
 type WhiteListCache struct {

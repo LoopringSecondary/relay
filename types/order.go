@@ -193,11 +193,6 @@ type FilledOrder struct {
 	//FullFilled	bool	//this order is fullfilled
 }
 
-//todo: impl it
-func (o *FilledOrder) IsFullFilled() bool {
-	return true
-}
-
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
 	RawOrder        Order       `json:"rawOrder"`

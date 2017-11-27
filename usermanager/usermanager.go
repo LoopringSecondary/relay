@@ -43,7 +43,9 @@ func NewUserManager(rds dao.RdsService) *UserManagerImpl {
 	return impl
 }
 
-func (m *UserManagerImpl) InWhiteList(owner common.Address) bool { return m.whiteList.InWhiteList(owner) }
+func (m *UserManagerImpl) InWhiteList(owner common.Address) bool {
+	return m.whiteList.InWhiteList(owner)
+}
 func (m *UserManagerImpl) AddWhiteListUser(user types.WhiteListUser) error {
 	return m.whiteList.AddWhiteListUser(user)
 }

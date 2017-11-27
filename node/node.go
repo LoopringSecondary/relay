@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
@@ -33,7 +34,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"sync"
-	"github.com/Loopring/relay/marketcap"
 )
 
 // TODO(fk): add services
