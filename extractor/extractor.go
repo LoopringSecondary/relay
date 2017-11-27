@@ -87,7 +87,7 @@ func (l *ExtractorServiceImpl) Start() {
 			}
 
 			block := inter.(*ethaccessor.BlockWithTxObject)
-			log.Debugf("extractor get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+			log.Debugf("extractor get block:%s->%s", block.Number.BigInt().String(), block.Hash)
 
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {

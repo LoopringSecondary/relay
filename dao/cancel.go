@@ -20,6 +20,7 @@ package dao
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type CancelEvent struct {
@@ -47,7 +48,7 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error) {
+func (s *RdsServiceImpl) FindCancelEventByOrderhash(orderhash common.Hash) (*CancelEvent, error) {
 	var (
 		model CancelEvent
 		err   error
