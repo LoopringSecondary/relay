@@ -22,6 +22,7 @@ import (
 	"errors"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -50,12 +51,12 @@ type OrderManagerImpl struct {
 	um        usermanager.UserManager
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager) *OrderManagerImpl {
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager, accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
 	om := &OrderManagerImpl{}
 
 	om.options = options
 	om.dao = dao
-	om.processor = newForkProcess(om.dao)
+	om.processor = newForkProcess(om.dao, accessor)
 	om.um = userManager
 
 	// new miner orders provider

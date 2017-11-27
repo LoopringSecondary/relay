@@ -66,6 +66,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	if nil != err {
 		panic(err)
 	}
+	n.accessor = accessor
 
 	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
 
@@ -140,7 +141,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor)
 }
 
 func (n *Node) registerTrendManager() {
