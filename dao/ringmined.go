@@ -26,6 +26,7 @@ import (
 
 type RingMined struct {
 	ID                 int    `gorm:"column:id;primary_key"`
+	Protocol           string `gorm:"column:contract_address;type:varchar(42)"`
 	RingIndex          []byte `gorm:"column:ring_index;type:varchar(30)"`
 	RingHash           string `gorm:"column:ring_hash;type:varchar(82);unique_index"`
 	Miner              string `gorm:"column:miner;type:varchar(42);"`
@@ -43,6 +44,7 @@ func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 		return err
 	}
 
+	r.Protocol = event.ContractAddress.Hex()
 	r.Miner = event.Miner.Hex()
 	r.FeeRecipient = event.FeeRecipient.Hex()
 	r.RingHash = event.Ringhash.Hex()
