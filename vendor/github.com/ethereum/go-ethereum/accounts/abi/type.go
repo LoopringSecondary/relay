@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -29,19 +30,18 @@ const (
 	BoolTy
 	StringTy
 	SliceTy
+	ArrayTy
 	AddressTy
 	FixedBytesTy
 	BytesTy
 	HashTy
 	FixedPointTy
 	FunctionTy
+	StructTy
 )
 
 // Type is the reflection of the supported argument type
 type Type struct {
-	IsSlice, IsArray bool
-	SliceSize        int
-
 	Elem *Type
 
 	Kind reflect.Kind
@@ -53,64 +53,23 @@ type Type struct {
 }
 
 var (
-	// fullTypeRegex parses the abi types
-	//
-	// Types can be in the format of:
-	//
-	// 	Input  = Type [ "[" [ Number ] "]" ] Name .
-	// 	Type   = [ "u" ] "int" [ Number ] [ x ] [ Number ].
-	//
-	// Examples:
-	//
-	//      string     int       uint       fixed
-	//      string32   int8      uint8      uint[]
-	//      address    int256    uint256    fixed128x128[2]
-	fullTypeRegex = regexp.MustCompile(`([a-zA-Z][a-zA-Z0-9]+(?:(?:\[[0-9]*\])*))(\[([0-9]*)\])`)
-
 	// typeRegex parses the abi sub types
 	typeRegex = regexp.MustCompile("([a-zA-Z]+)(([0-9]+)(x([0-9]+))?)?")
 )
 
 // NewType creates a new reflection type of abi type given in t.
 func NewType(t string) (typ Type, err error) {
-	var typeText string = t
 
-	//check if type is slice and parse type
-	if matches := fullTypeRegex.FindAllStringSubmatch(t, -1); nil != matches && len(matches) > 0 {
-		var res []string
-		res = matches[0]
-		typeText = res[1]
-
-		switch {
-		default:
-			typ.IsSlice, typ.SliceSize = true, -1
-		case res[3] != "":
-			// err is ignored. Already checked for number through the regexp
-			typ.SliceSize, _ = strconv.Atoi(res[3])
-			typ.IsArray = true
-		case res[0] == "":
-			return Type{}, fmt.Errorf("abi: type parse error: %s", t)
-		}
-
-		sliceType, err := NewType(typeText)
-		if err != nil {
-			return Type{}, err
-		}
-		typ.Elem = &sliceType
-		typ.stringKind = sliceType.stringKind + t[len(typeText):]
-		// Although we know that this is an array, we cannot return
-		// as we don't know the type of the element, however, if it
-		// is still an array, then don't determine the type.
-		if typ.Elem.IsArray || typ.Elem.IsSlice {
-			return typ, nil
-		}
+	// if there are brackets, get ready to go into slice/array mode and
+	// recursively create the type
+	var found bool
+	if typ, found, err = checkForSlices(t); found == true || err != nil {
+		return typ, err
 	}
-	parsedTypes := typeRegex.FindAllStringSubmatch(typeText, -1)
-	if nil == parsedTypes || len(parsedTypes) == 0 {
-		return Type{}, fmt.Errorf("abi: type parse error: %s", t)
-	}
-	parsedType := parsedTypes[0]
 
+	typ.stringKind = t
+	// parse the type and size of the abi-type.
+	parsedType := typeRegex.FindAllStringSubmatch(t, -1)[0]
 	// varSize is the size of the variable
 	var varSize int
 	if len(parsedType[3]) > 0 {
@@ -119,22 +78,15 @@ func NewType(t string) (typ Type, err error) {
 		if err != nil {
 			return Type{}, fmt.Errorf("abi: error parsing variable size: %v", err)
 		}
+	} else {
+		if parsedType[0] == "uint" || parsedType[0] == "int" {
+			// this should fail because it means that there's something wrong with
+			// the abi type (the compiler should always format it to the size...always)
+			return Type{}, fmt.Errorf("unsupported arg type: %s", t)
+		}
 	}
 	// varType is the parsed abi type
-	varType := parsedType[1]
-	// substitute canonical integer
-	if varSize == 0 && (varType == "int" || varType == "uint") {
-		varSize = 256
-		t += "256"
-	}
-
-	// only set stringKind if not array or slice, as for those,
-	// the correct string type has been set
-	if !(typ.IsArray || typ.IsSlice) {
-		typ.stringKind = t
-	}
-
-	switch varType {
+	switch varType := parsedType[1]; varType {
 	case "int":
 		typ.Kind, typ.Type = reflectIntKindAndType(false, varSize)
 		typ.Size = varSize
@@ -146,6 +98,7 @@ func NewType(t string) (typ Type, err error) {
 	case "bool":
 		typ.Kind = reflect.Bool
 		typ.T = BoolTy
+		typ.Type = reflect.TypeOf(bool(false))
 	case "address":
 		typ.Kind = reflect.Array
 		typ.Type = address_t
@@ -153,31 +106,118 @@ func NewType(t string) (typ Type, err error) {
 		typ.T = AddressTy
 	case "string":
 		typ.Kind = reflect.String
-		typ.Size = -1
+		typ.Type = reflect.TypeOf("")
 		typ.T = StringTy
 	case "bytes":
-		sliceType, _ := NewType("uint8")
-		typ.Elem = &sliceType
 		if varSize == 0 {
-			typ.IsSlice = true
 			typ.T = BytesTy
-			typ.SliceSize = -1
+			typ.Kind = reflect.Slice
+			typ.Type = reflect.SliceOf(reflect.TypeOf(byte(0)))
 		} else {
-			typ.IsArray = true
 			typ.T = FixedBytesTy
-			typ.SliceSize = varSize
+			typ.Kind = reflect.Array
+			typ.Size = varSize
+			typ.Type = reflect.ArrayOf(varSize, reflect.TypeOf(byte(0)))
 		}
 	case "function":
-		sliceType, _ := NewType("uint8")
-		typ.Elem = &sliceType
-		typ.IsArray = true
+		typ.Kind = reflect.Array
 		typ.T = FunctionTy
-		typ.SliceSize = 24
+		typ.Size = 24
+		typ.Type = reflect.ArrayOf(24, reflect.TypeOf(byte(0)))
 	default:
 		return Type{}, fmt.Errorf("unsupported arg type: %s", t)
 	}
 
 	return
+}
+
+// if brackets surround the type, create it recursively, otherwise note that brackets weren't found
+func checkForSlices(t string, structComponents ...unmarshalArg) (typ Type, found bool, err error) {
+	// check that array brackets are equal if they exist
+	if strings.Count(t, "[") != strings.Count(t, "]") {
+		return Type{}, false, fmt.Errorf("invalid arg type in abi")
+	}
+
+	if strings.Count(t, "[") != 0 {
+		i := strings.LastIndex(t, "[")
+		// grab the last cell and create a type from there
+		sliced := t[i:]
+		// grab the slice size with regexp
+		re := regexp.MustCompile("[0-9]+")
+		intz := re.FindAllString(sliced, -1)
+
+		// recursively embed the type
+		var embeddedType Type
+		if len(structComponents) > 0 {
+			embeddedType, err = ParseStructType(t[:i], structComponents...)
+			typ.stringKind = embeddedType.String() + sliced
+		} else {
+			embeddedType, err = NewType(t[:i])
+			typ.stringKind = t
+		}
+		if err != nil {
+			return Type{}, false, err
+		}
+
+		if len(intz) == 0 {
+			// is a slice
+			typ.T = SliceTy
+			typ.Kind = reflect.Slice
+			typ.Elem = &embeddedType
+			typ.Type = reflect.SliceOf(embeddedType.Type)
+		} else if len(intz) == 1 {
+			// is a array
+			typ.T = ArrayTy
+			typ.Kind = reflect.Array
+			typ.Elem = &embeddedType
+			typ.Size, err = strconv.Atoi(intz[0])
+			if err != nil {
+				return Type{}, false, fmt.Errorf("abi: error parsing variable size: %v", err)
+			}
+			typ.Type = reflect.ArrayOf(typ.Size, embeddedType.Type)
+		} else {
+			return Type{}, false, fmt.Errorf("invalid formatting of array type")
+		}
+		return typ, true, err
+	}
+	return Type{}, false, nil
+}
+
+func ParseStructType(t string, components ...unmarshalArg) (typ Type, err error) {
+	// if there are brackets, get ready to go into slice/array mode and
+	// recursively create the type
+	var found bool
+	if typ, found, err = checkForSlices(t, components...); found == true || err != nil {
+		return typ, err
+	}
+
+	// need to concatenate the different type strings together
+	//typ.stringKind = t
+	typ.T = StructTy
+	typ.Kind = reflect.Struct
+	// create the struct type
+	var fields []reflect.StructField
+	var typeStrings []string
+	for _, component := range components {
+		// it's a embedded struct type
+		var fieldType Type
+
+		if len(component.Components) > 0 {
+			fieldType, err = ParseStructType(component.Type, component.Components...)
+		} else {
+			fieldType, err = NewType(component.Type)
+		}
+		if err != nil {
+			return Type{}, err
+		}
+		typeStrings = append(typeStrings, fieldType.String())
+		field := reflect.StructField{Name: strings.Title(component.Name), Type: fieldType.Type, Tag: reflect.StructTag(fmt.Sprintf(`json:"%v"`, component.Name))}
+		fields = append(fields, field)
+	}
+
+	typ.Type = reflect.StructOf(fields)
+	typ.stringKind = "(" + strings.Join(typeStrings, ",") + ")"
+	return typ, nil
 }
 
 // String implements Stringer
@@ -193,7 +233,7 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 		return nil, err
 	}
 
-	if (t.IsSlice || t.IsArray) && t.T != BytesTy && t.T != FixedBytesTy && t.T != FunctionTy {
+	if t.T == SliceTy || t.T == ArrayTy {
 		var packed []byte
 
 		for i := 0; i < v.Len(); i++ {
@@ -203,18 +243,17 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 			}
 			packed = append(packed, val...)
 		}
-		if t.IsSlice {
+		if t.T == SliceTy {
 			return packBytesSlice(packed, v.Len()), nil
-		} else if t.IsArray {
+		} else if t.T == ArrayTy {
 			return packed, nil
 		}
 	}
-
 	return packElement(t, v), nil
 }
 
 // requireLengthPrefix returns whether the type requires any sort of length
 // prefixing.
 func (t Type) requiresLengthPrefix() bool {
-	return t.T != FixedBytesTy && (t.T == StringTy || t.T == BytesTy || t.IsSlice)
+	return t.T == StringTy || t.T == BytesTy || t.T == SliceTy
 }

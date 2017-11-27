@@ -69,7 +69,7 @@ func (s *RdsServiceImpl) FindBlockByHash(blockhash types.Hash) (*Block, error) {
 		err   error
 	)
 
-	if blockhash.IsZero() {
+	if types.IsZeroHash(blockhash) {
 		return nil, errors.New("block table findBlockByHash get an illegal hash")
 	}
 
@@ -84,7 +84,7 @@ func (s *RdsServiceImpl) FindBlockByParentHash(parenthash types.Hash) (*Block, e
 		err   error
 	)
 
-	if parenthash.IsZero() {
+	if types.IsZeroHash(parenthash) {
 		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
 	}
 

@@ -19,37 +19,41 @@
 package eth
 
 import (
-	"github.com/Loopring/relay/log"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )
 
 type EthCrypto struct {
-	Homestead bool
+	homestead bool
+	ks        *keystore.KeyStore
 }
 
 //签名验证
-func (c *EthCrypto) ValidateSignatureValues(v byte, r, s []byte) bool {
-	return crypto.ValidateSignatureValues(v, new(big.Int).SetBytes(r), new(big.Int).SetBytes(s), c.Homestead)
+func (c EthCrypto) ValidateSignatureValues(v byte, r, s []byte) bool {
+	return ethCrypto.ValidateSignatureValues(v, new(big.Int).SetBytes(r), new(big.Int).SetBytes(s), c.homestead)
 }
 
 //生成hash
-func (c *EthCrypto) GenerateHash(data ...[]byte) []byte {
-	return crypto.Keccak256(data...)
+func (c EthCrypto) GenerateHash(data ...[]byte) []byte {
+	return ethCrypto.Keccak256(data...)
 }
 
 //签名回复到地址
-func (c *EthCrypto) SigToAddress(hashPre, sig []byte) ([]byte, error) {
+func (c EthCrypto) SigToAddress(hashPre, sig []byte) ([]byte, error) {
 	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
-	pubKey, err := crypto.SigToPub(hash, sig)
+	pubKey, err := ethCrypto.SigToPub(hash, sig)
 	if nil != err {
 		return nil, err
 	} else {
-		return crypto.PubkeyToAddress(*pubKey).Bytes(), nil
+		return ethCrypto.PubkeyToAddress(*pubKey).Bytes(), nil
 	}
 }
 
-func (c *EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
+func (c EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
 	sig = make([]byte, 65)
 	vUint8 := uint8(v)
 	if vUint8 >= 27 {
@@ -61,21 +65,21 @@ func (c *EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (c *EthCrypto) Sign(hashPre, pkBytes []byte) ([]byte, error) {
+func (c EthCrypto) Sign(hashPre []byte, signerAddr string) ([]byte, error) {
+	signer := accounts.Account{Address: common.HexToAddress(signerAddr)}
 	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
-	if pk, err := crypto.ToECDSA(pkBytes); err != nil {
-		log.Errorf("err:%s", err.Error())
-		return nil, err
-	} else {
-		return crypto.Sign(hash, pk)
-	}
+	return c.ks.SignHash(hash, signer)
 }
 
-func (c *EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
+func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	r = make([]byte, 32)
 	s = make([]byte, 32)
 	v = byte(uint8(sig[64]) + uint8(27))
 	copy(r, sig[0:32])
 	copy(s, sig[32:64])
 	return v, r, s
+}
+
+func NewCrypto(homestead bool, ks *keystore.KeyStore) EthCrypto {
+	return EthCrypto{homestead: homestead, ks: ks}
 }

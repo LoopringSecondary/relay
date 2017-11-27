@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"math/big"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type OrderStatus uint8
@@ -54,9 +55,9 @@ func (s OrderStatus) Value() uint8 {
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              Address  `json:"protocol" gencodec:"required"` // 智能合约地址
-	TokenS                Address  `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
-	TokenB                Address  `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
+	Protocol              common.Address  `json:"protocol" gencodec:"required"` // 智能合约地址
+	TokenS                common.Address  `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
+	TokenB                common.Address  `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
 	AmountS               *big.Int `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
 	AmountB               *big.Int `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
 	Timestamp             *big.Int `json:"timestamp" gencodec:"required"`
@@ -69,8 +70,8 @@ type Order struct {
 	R                     Sign     `json:"r" gencodec:"required"`
 	S                     Sign     `json:"s" gencodec:"required"`
 	Price                 *big.Rat `json:"price"`
-	Owner                 Address  `json:"owner"`
-	Hash                  Hash     `json:"hash"`
+	Owner                 common.Address  `json:"owner"`
+	Hash                  common.Hash     `json:"hash"`
 }
 
 type orderMarshaling struct {
@@ -82,25 +83,25 @@ type orderMarshaling struct {
 	LrcFee    *Big
 }
 
-func (o *Order) GenerateHash() Hash {
-	h := &Hash{}
+func (o *Order) GenerateHash() common.Hash {
+	h := &common.Hash{}
 
 	buyNoMoreThanAmountB := byte(0)
 	if o.BuyNoMoreThanAmountB {
 		buyNoMoreThanAmountB = byte(1)
 	}
 
-	hashBytes := crypto.CryptoInstance.GenerateHash(
+	hashBytes := crypto.GenerateHash(
 		o.Protocol.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
-		LeftPadBytes(o.AmountS.Bytes(), 32),
-		LeftPadBytes(o.AmountB.Bytes(), 32),
-		LeftPadBytes(o.Timestamp.Bytes(), 32),
-		LeftPadBytes(o.Ttl.Bytes(), 32),
-		LeftPadBytes(o.Salt.Bytes(), 32),
-		LeftPadBytes(o.LrcFee.Bytes(), 32),
+		common.LeftPadBytes(o.AmountS.Bytes(), 32),
+		common.LeftPadBytes(o.AmountB.Bytes(), 32),
+		common.LeftPadBytes(o.Timestamp.Bytes(), 32),
+		common.LeftPadBytes(o.Ttl.Bytes(), 32),
+		common.LeftPadBytes(o.Salt.Bytes(), 32),
+		common.LeftPadBytes(o.LrcFee.Bytes(), 32),
 		[]byte{buyNoMoreThanAmountB},
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
@@ -109,15 +110,15 @@ func (o *Order) GenerateHash() Hash {
 	return *h
 }
 
-func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
-	if o.Hash.IsZero() {
+func (o *Order) GenerateAndSetSignature(singerAddr common.Address) error {
+	if IsZeroHash(o.Hash) {
 		o.Hash = o.GenerateHash()
 	}
 
-	if sig, err := crypto.CryptoInstance.Sign(o.Hash.Bytes(), pkBytes); nil != err {
+	if sig, err := crypto.Sign(o.Hash.Bytes(), singerAddr.Hex()); nil != err {
 		return err
 	} else {
-		v, r, s := crypto.CryptoInstance.SigToVRS(sig)
+		v, r, s := crypto.SigToVRS(sig)
 		o.V = uint8(v)
 		o.R = BytesToSign(r)
 		o.S = BytesToSign(s)
@@ -126,19 +127,19 @@ func (o *Order) GenerateAndSetSignature(pkBytes []byte) error {
 }
 
 func (o *Order) ValidateSignatureValues() bool {
-	return crypto.CryptoInstance.ValidateSignatureValues(byte(o.V), o.R.Bytes(), o.S.Bytes())
+	return crypto.ValidateSignatureValues(byte(o.V), o.R.Bytes(), o.S.Bytes())
 }
 
-func (o *Order) SignerAddress() (Address, error) {
-	address := &Address{}
-	if o.Hash.IsZero() {
+func (o *Order) SignerAddress() (common.Address, error) {
+	address := &common.Address{}
+	if IsZeroHash(o.Hash) {
 		o.Hash = o.GenerateHash()
 	}
 
-	sig, _ := crypto.CryptoInstance.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
+	sig, _ := crypto.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
 	log.Debugf("orderstate.hash:%s", o.Hash.Hex())
 
-	if addressBytes, err := crypto.CryptoInstance.SigToAddress(o.Hash.Bytes(), sig); nil != err {
+	if addressBytes, err := crypto.SigToAddress(o.Hash.Bytes(), sig); nil != err {
 		log.Errorf("error:%s", err.Error())
 		return *address, err
 	} else {

@@ -20,6 +20,7 @@ package dao
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -59,9 +60,9 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 		return err
 	}
 
-	event.Ringhash = types.HexToHash(r.RingHash)
-	event.Miner = types.HexToAddress(r.Miner)
-	event.FeeRecipient = types.HexToAddress(r.FeeRecipient)
+	event.Ringhash = common.HexToHash(r.RingHash)
+	event.Miner = common.HexToAddress(r.Miner)
+	event.FeeRecipient = common.HexToAddress(r.FeeRecipient)
 	event.IsRinghashReserved = r.IsRinghashReserved
 	event.Blocknumber = types.NewBigPtr(big.NewInt(r.BlockNumber))
 	event.Time = types.NewBigPtr(big.NewInt(r.Time))

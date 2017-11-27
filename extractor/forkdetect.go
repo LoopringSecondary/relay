@@ -54,7 +54,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	}
 
 	// 没有分叉
-	if block.ParentHash == latestBlock.BlockHash || latestBlock.ParentHash.IsZero() {
+	if block.ParentHash == latestBlock.BlockHash || types.IsZeroHash(latestBlock.ParentHash) {
 		if err := newBlockModel.ConvertUp(block); err != nil {
 			return err
 		}

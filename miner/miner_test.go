@@ -19,30 +19,41 @@
 package miner_test
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
-	"github.com/Loopring/relay/test"
+	"github.com/Loopring/ringminer/types"
+	"math/big"
+	"os"
+	"strings"
 	"testing"
 	"time"
 )
 
+func loadConfig() *config.GlobalConfig {
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
+	c := config.LoadConfig(path)
+	log.Initialize(c.Log)
+
+	return c
+}
 func TestMatch(t *testing.T) {
-	test.LoadConfigAndGenerateTestParams()
 
-	cfg := test.LoadConfig()
-	ethClient := eth.NewChainClient(cfg.ChainClient, []byte("sa"))
-	submitter := miner.NewSubmitter(cfg.Miner, cfg.Common, ethClient.Client)
-	chainclient.LoopringInstance = chainclient.NewLoopringInstance(cfg.Common, ethClient.Client)
+	cfg := loadConfig()
+	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, nil)
+	submitter := miner.NewSubmitter(cfg.Miner, nil, accessor)
 
-	matcher := timing_matcher.NewTimingMatcher()
+	evaluator := &miner.Evaluator{}
+
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
 	marketCapProvider := &market.MarketCapProvider{}
 
-	miner.MinerInstance = miner.NewMinerInstance(cfg.Miner, submitter, matcher, nil, marketCapProvider)
-	miner.MinerInstance.Start()
-
+	m := miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
+	m.Start()
 	time.Sleep(1 * time.Minute)
+
 	//matcher.Start()
 }

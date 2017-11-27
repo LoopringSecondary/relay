@@ -18,11 +18,14 @@
 
 package types
 
-import "math/big"
+import (
+	"math/big"
+	"github.com/ethereum/go-ethereum/common"
+)
 
 type Block struct {
-	BlockHash   Hash
-	ParentHash  Hash
+	BlockHash   common.Hash
+	ParentHash  common.Hash
 	BlockNumber *big.Int
 	CreateTime  int64
 }

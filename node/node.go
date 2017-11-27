@@ -26,6 +26,7 @@ import (
 	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/db"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
@@ -33,6 +34,7 @@ import (
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/usermanager"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -42,6 +44,7 @@ type Node struct {
 	globalConfig     *config.GlobalConfig
 	rdsService       dao.RdsService
 	ipfsSubService   gateway.IPFSSubService
+	accessor         *ethaccessor.EthNodeAccessor
 	extractorService extractor.ExtractorService
 	orderManager     ordermanager.OrderManager
 	userManager      usermanager.UserManager
@@ -59,22 +62,24 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.logger = logger
 	n.globalConfig = globalConfig
 
-	crypto.CryptoInstance = &ethCryptoLib.EthCrypto{Homestead: false}
-
-	ethClient := ethClientLib.NewChainClient(globalConfig.ChainClient, globalConfig.Common.Passphrase)
-
-	database := db.NewDB(globalConfig.Database)
+	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
+	if nil != err {
+		panic(err)
+	}
 
 	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
-	//n.registerMysql()
+
+	n.registerCrypto(nil)
+	n.registerMysql()
 	n.registerUserManager()
 	//n.registerIPFSSubService()
 	n.registerGateway()
-	n.registerMiner(ethClient.Client, marketCapProvider)
-	n.registerExtractor(ethClient, database)
-	n.registerOrderManager(database)
-	n.registerTrendManager(database)
 	n.registerAccountManager()
+	n.registerMiner(accessor, marketCapProvider)
+	n.registerExtractor(accessor)
+	n.registerOrderManager()
+	n.registerTrendManager()
 	n.registerJsonRpcService()
 
 	return n
@@ -114,23 +119,33 @@ func (n *Node) Stop() {
 	n.lock.RUnlock()
 }
 
+func (n *Node) registerCrypto(ks *keystore.KeyStore) {
+	c := ethCryptoLib.NewCrypto(true, ks)
+	crypto.Initialize(c)
+}
+
 func (n *Node) registerMysql() {
 	n.rdsService = dao.NewRdsService(n.globalConfig.Mysql)
 }
 
-func (n *Node) registerExtractor(client *ethClientLib.EthClient, database db.Database) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.ChainClient, n.globalConfig.Common, client, n.rdsService)
+func (n *Node) registerAccessor() {
+	accessor, _ := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, nil)
+	n.accessor = accessor
+}
+
+func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor) {
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
 	n.ipfsSubService = gateway.NewIPFSSubService(n.globalConfig.Ipfs)
 }
 
-func (n *Node) registerOrderManager(database db.Database) {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService)
+func (n *Node) registerOrderManager() {
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager)
 }
 
-func (n *Node) registerTrendManager(database db.Database) {
+func (n *Node) registerTrendManager() {
 	n.trendManager = market.NewTrendManager(n.rdsService)
 }
 
@@ -142,14 +157,11 @@ func (n *Node) registerJsonRpcService() {
 	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager)
 }
 
-func (n *Node) registerMiner(client *chainclient.Client, marketCapProvider *market.MarketCapProvider) {
-	loopringInstance := chainclient.NewLoopringInstance(n.globalConfig.Common, client)
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, client)
-	matcher := timing_matcher.NewTimingMatcher()
-	minerInstance := miner.NewMinerInstance(n.globalConfig.Miner, submitter, matcher, loopringInstance, marketCapProvider)
-	miner.Initialize(minerInstance)
-
-	n.miner = minerInstance
+func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, marketCapProvider *market.MarketCapProvider) {
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, accessor)
+	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
+	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 }
 
 func (n *Node) registerGateway() {
