@@ -20,6 +20,7 @@ package dao
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type FillEvent struct {
@@ -69,7 +70,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error) {
+func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error) {
 	var (
 		fill FillEvent
 		err  error

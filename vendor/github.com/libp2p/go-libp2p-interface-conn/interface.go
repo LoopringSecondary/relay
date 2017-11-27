@@ -17,12 +17,12 @@ import (
 type PeerConn interface {
 	io.Closer
 
-	// LocalPeer (this side) ID, PrivateKey, and Address
+	// LocalPeer (this side) ID, PrivateKey, and Owner
 	LocalPeer() peer.ID
 	LocalPrivateKey() ic.PrivKey
 	LocalMultiaddr() ma.Multiaddr
 
-	// RemotePeer ID, PublicKey, and Address
+	// RemotePeer ID, PublicKey, and Owner
 	RemotePeer() peer.ID
 	RemotePublicKey() ic.PubKey
 	RemoteMultiaddr() ma.Multiaddr

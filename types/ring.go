@@ -21,8 +21,8 @@ package types
 import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
-	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 // 旷工在成本节约和fee上二选一，撮合者计算出:
@@ -36,11 +36,11 @@ import (
 
 type Ring struct {
 	Orders      []*FilledOrder `json:"orderes"`
-	Miner       common.Address        `json:"miner"`
+	Miner       common.Address `json:"miner"`
 	V           uint8          `json:"v"`
 	R           Sign           `json:"r"`
 	S           Sign           `json:"s"`
-	Hash        common.Hash           `json:"hash"`
+	Hash        common.Hash    `json:"hash"`
 	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
 	FeeMode     int            `json:"feeMode"`     //收费方式，0 lrc 1 share
@@ -61,7 +61,7 @@ func (ring *Ring) GenerateHash() common.Hash {
 	return common.BytesToHash(hashBytes)
 }
 
-func (ring *Ring) GenerateAndSetSignature(signerAddr string) error {
+func (ring *Ring) GenerateAndSetSignature(signerAddr common.Address) error {
 	if IsZeroHash(ring.Hash) {
 		ring.Hash = ring.GenerateHash()
 	}
@@ -100,7 +100,7 @@ func (ring *Ring) SignerAddress() (common.Address, error) {
 	}
 }
 
-func (ring *Ring) GenerateSubmitArgs(miner string, feeReceipt common.Address) *RingSubmitInputs {
+func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Address) *RingSubmitInputs {
 	ringSubmitArgs := emptyRingSubmitArgs()
 
 	for _, filledOrder := range ring.Orders {
@@ -160,16 +160,16 @@ type RingForSubmit struct {
 }
 
 type RingSubmitInputs struct {
-	AddressList              [][2]common.Address  `alias:"addressList"`
-	UintArgsList             [][7]*big.Int `alias:"uintArgsList"`
-	Uint8ArgsList            [][2]uint8    `alias:"uint8ArgsList"`
-	BuyNoMoreThanAmountBList []bool        `alias:"buyNoMoreThanAmountBList"`
-	VList                    []uint8       `alias:"vList"`
-	RList                    [][]byte      `alias:"rList"`
-	SList                    [][]byte      `alias:"sList"`
-	Ringminer                common.Address       `alias:"ringminer"`
-	FeeRecepient             common.Address       `alias:"feeRecepient"`
-	ThrowIfLRCIsInsuffcient  bool          `alias:"throwIfLRCIsInsuffcient"`
+	AddressList              [][2]common.Address `alias:"addressList"`
+	UintArgsList             [][7]*big.Int       `alias:"uintArgsList"`
+	Uint8ArgsList            [][2]uint8          `alias:"uint8ArgsList"`
+	BuyNoMoreThanAmountBList []bool              `alias:"buyNoMoreThanAmountBList"`
+	VList                    []uint8             `alias:"vList"`
+	RList                    [][]byte            `alias:"rList"`
+	SList                    [][]byte            `alias:"sList"`
+	Ringminer                common.Address      `alias:"ringminer"`
+	FeeRecepient             common.Address      `alias:"feeRecepient"`
+	ThrowIfLRCIsInsuffcient  bool                `alias:"throwIfLRCIsInsuffcient"`
 }
 
 func emptyRingSubmitArgs() *RingSubmitInputs {

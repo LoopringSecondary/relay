@@ -20,27 +20,28 @@ package ethaccessor
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
 type Block struct {
-	Number           types.Big  `json:"number"`
-	Hash             types.Hash `json:"hash"`
-	ParentHash       types.Hash `json:"parentHash"`
-	Nonce            string     `json:"nonce"`
-	Sha3Uncles       string     `json:"sha3Uncles"`
-	LogsBloom        string     `json:"logsBloom"`
-	TransactionsRoot string     `json:"transactionsRoot"`
-	ReceiptsRoot     string     `json:"stateRoot"`
-	Miner            string     `json:"miner"`
-	Difficulty       types.Big  `json:"difficulty"`
-	TotalDifficulty  types.Big  `json:"totalDifficulty"`
-	ExtraData        string     `json:"extraData"`
-	Size             types.Big  `json:"size"`
-	GasLimit         types.Big  `json:"gasLimit"`
-	GasUsed          types.Big  `json:"gasUsed"`
-	Timestamp        types.Big  `json:"timestamp"`
-	Uncles           []string   `json:"uncles"`
+	Number           types.Big   `json:"number"`
+	Hash             common.Hash `json:"hash"`
+	ParentHash       common.Hash `json:"parentHash"`
+	Nonce            string      `json:"nonce"`
+	Sha3Uncles       string      `json:"sha3Uncles"`
+	LogsBloom        string      `json:"logsBloom"`
+	TransactionsRoot string      `json:"transactionsRoot"`
+	ReceiptsRoot     string      `json:"stateRoot"`
+	Miner            string      `json:"miner"`
+	Difficulty       types.Big   `json:"difficulty"`
+	TotalDifficulty  types.Big   `json:"totalDifficulty"`
+	ExtraData        string      `json:"extraData"`
+	Size             types.Big   `json:"size"`
+	GasLimit         types.Big   `json:"gasLimit"`
+	GasUsed          types.Big   `json:"gasUsed"`
+	Timestamp        types.Big   `json:"timestamp"`
+	Uncles           []string    `json:"uncles"`
 }
 
 type BlockWithTxObject struct {
@@ -83,10 +84,10 @@ type Log struct {
 }
 
 type FilterQuery struct {
-	FromBlock string          `json:"fromBlock"`
-	ToBlock   string          `json:"toBlock"`
-	Address   []types.Address `json:"address"`
-	Topics    [][]types.Hash  `json:"topics"`
+	FromBlock string           `json:"fromBlock"`
+	ToBlock   string           `json:"toBlock"`
+	Address   []common.Address `json:"address"`
+	Topics    [][]common.Hash  `json:"topics"`
 }
 
 type LogParameter struct {
@@ -118,11 +119,11 @@ type BlockIterator struct {
 }
 
 type CallArg struct {
-	From     types.Address `json:"from"`
-	To       types.Address `json:"to"`
-	Gas      types.Big     `json:"gas"`
-	GasPrice types.Big     `json:"gasPrice"`
-	Value    types.Big     `json:"value"`
-	Data     string        `json:"data"`
-	Nonce    types.Big     `json:"nonce"`
+	From     common.Address `json:"from"`
+	To       common.Address `json:"to"`
+	Gas      types.Big      `json:"gas"`
+	GasPrice types.Big      `json:"gasPrice"`
+	Value    types.Big      `json:"value"`
+	Data     string         `json:"data"`
+	Nonce    types.Big      `json:"nonce"`
 }

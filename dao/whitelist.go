@@ -21,6 +21,7 @@ package dao
 import (
 	"errors"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type WhiteList struct {
@@ -54,7 +55,7 @@ func (w *WhiteList) ConvertUp(dst *types.WhiteListUser) error {
 		return errors.New("white list user " + w.Owner + " has deleted")
 	}
 
-	dst.Owner = types.HexToAddress(w.Owner)
+	dst.Owner = common.HexToAddress(w.Owner)
 	dst.CreateTime = w.CreateTime
 
 	return nil

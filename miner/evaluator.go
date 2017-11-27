@@ -21,14 +21,15 @@ package miner
 import (
 	"errors"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 )
 
 type Evaluator struct {
-	marketCapProvider     *market.MarketCapProvider
+	marketCapProvider     *marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
 }
 
@@ -189,7 +190,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 	}
 
 	for _, filledOrder := range ringState.Orders {
-		lrcAddress := &types.Address{}
+		lrcAddress := &common.Address{}
 
 		lrcAddress.SetBytes([]byte(e.marketCapProvider.LRC_ADDRESS))
 		//todo:成本节约
@@ -289,6 +290,6 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func NewEvaluator(marketCapProvider *market.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
+func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
 	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold}
 }

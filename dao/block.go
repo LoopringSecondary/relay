@@ -21,6 +21,7 @@ package dao
 import (
 	"errors"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -56,14 +57,14 @@ func (b *Block) ConvertUp(dst *types.Block) error {
 		return err
 	}
 
-	dst.BlockHash = types.HexToHash(b.BlockHash)
-	dst.ParentHash = types.HexToHash(b.ParentHash)
+	dst.BlockHash = common.HexToHash(b.BlockHash)
+	dst.ParentHash = common.HexToHash(b.ParentHash)
 	dst.CreateTime = b.CreateTime
 
 	return nil
 }
 
-func (s *RdsServiceImpl) FindBlockByHash(blockhash types.Hash) (*Block, error) {
+func (s *RdsServiceImpl) FindBlockByHash(blockhash common.Hash) (*Block, error) {
 	var (
 		block Block
 		err   error
@@ -78,7 +79,7 @@ func (s *RdsServiceImpl) FindBlockByHash(blockhash types.Hash) (*Block, error) {
 	return &block, err
 }
 
-func (s *RdsServiceImpl) FindBlockByParentHash(parenthash types.Hash) (*Block, error) {
+func (s *RdsServiceImpl) FindBlockByParentHash(parenthash common.Hash) (*Block, error) {
 	var (
 		block Block
 		err   error

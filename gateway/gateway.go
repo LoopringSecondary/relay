@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"github.com/Loopring/relay/ordermanager"
 )
@@ -53,23 +54,23 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// add filters
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee)}
 
-	tokenSFilter := &TokenSFilter{AllowTokens: make(map[types.Address]bool), DeniedTokens: make(map[types.Address]bool)}
+	tokenSFilter := &TokenSFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
 	for _, v := range filterOptions.TokenSFilter.Allow {
-		address := types.HexToAddress(v)
+		address := common.HexToAddress(v)
 		tokenSFilter.AllowTokens[address] = true
 	}
 	for _, v := range filterOptions.TokenSFilter.Denied {
-		address := types.HexToAddress(v)
+		address := common.HexToAddress(v)
 		tokenSFilter.DeniedTokens[address] = true
 	}
 
-	tokenBFilter := &TokenBFilter{AllowTokens: make(map[types.Address]bool), DeniedTokens: make(map[types.Address]bool)}
+	tokenBFilter := &TokenBFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
 	for _, v := range filterOptions.TokenBFilter.Allow {
-		address := types.HexToAddress(v)
+		address := common.HexToAddress(v)
 		tokenBFilter.AllowTokens[address] = true
 	}
 	for _, v := range filterOptions.TokenBFilter.Denied {
-		address := types.HexToAddress(v)
+		address := common.HexToAddress(v)
 		tokenBFilter.DeniedTokens[address] = true
 	}
 
@@ -172,8 +173,8 @@ func (f *SignFilter) filter(o *types.Order) (bool, error) {
 }
 
 type TokenSFilter struct {
-	AllowTokens  map[types.Address]bool
-	DeniedTokens map[types.Address]bool
+	AllowTokens  map[common.Address]bool
+	DeniedTokens map[common.Address]bool
 }
 
 func (f *TokenSFilter) filter(o *types.Order) (bool, error) {
@@ -187,8 +188,8 @@ func (f *TokenSFilter) filter(o *types.Order) (bool, error) {
 }
 
 type TokenBFilter struct {
-	AllowTokens  map[types.Address]bool
-	DeniedTokens map[types.Address]bool
+	AllowTokens  map[common.Address]bool
+	DeniedTokens map[common.Address]bool
 }
 
 func (f *TokenBFilter) filter(o *types.Order) (bool, error) {

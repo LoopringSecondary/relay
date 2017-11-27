@@ -18,6 +18,8 @@
 
 package crypto
 
+import "github.com/ethereum/go-ethereum/accounts"
+
 var crypto Crypto
 
 type Crypto interface {
@@ -26,39 +28,11 @@ type Crypto interface {
 	//生成hash
 	GenerateHash(data ...[]byte) []byte
 	//签名
-	Sign(hash []byte, signerAddr string) ([]byte, error)
+	Sign(hash []byte, signer accounts.Account) ([]byte, error)
 	//签名恢复到地址
 	SigToAddress(hash, sig []byte) ([]byte, error)
 	//生成sig
 	VRSToSig(v byte, r, s []byte) ([]byte, error)
 
 	SigToVRS(sig []byte) (v byte, r []byte, s []byte)
-}
-
-func ValidateSignatureValues(v byte, r, s []byte) bool {
-	return crypto.ValidateSignatureValues(v, r, s)
-}
-
-func GenerateHash(data ...[]byte) []byte {
-	return crypto.GenerateHash(data...)
-}
-
-func Sign(hash []byte, signerAddr string) ([]byte, error) {
-	return crypto.Sign(hash, signerAddr)
-}
-
-func SigToAddress(hash, sig []byte) ([]byte, error) {
-	return crypto.SigToAddress(hash, sig)
-}
-
-func VRSToSig(v byte, r, s []byte) ([]byte, error) {
-	return crypto.VRSToSig(v, r, s)
-}
-
-func SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
-	return crypto.SigToVRS(sig)
-}
-
-func Initialize(c Crypto) {
-	crypto = c
 }

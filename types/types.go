@@ -20,12 +20,12 @@ package types
 
 import (
 	"fmt"
-	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 const (
-	SignLength    = 32
+	SignLength = 32
 )
 
 type Sign [SignLength]byte
@@ -67,7 +67,7 @@ func IsZeroHash(hash common.Hash) bool {
 }
 
 func IsZeroAddress(addr common.Address) bool {
-	return *addr == common.HexToAddress("0x")
+	return addr == common.HexToAddress("0x")
 }
 
 func BigintToHex(b *big.Int) string {

@@ -140,7 +140,7 @@ type SubmitRingEvent struct {
 }
 
 type RingHashRegistryEvent struct {
-	RingHash common.Hash
+	RingHash  common.Hash
 	RingMiner common.Address
-	TxHash common.Hash
+	TxHash    common.Hash
 }

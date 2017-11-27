@@ -20,13 +20,15 @@ package ordermanager
 
 import (
 	"errors"
-	"github.com/Loopring/relay/chainclient"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
@@ -35,8 +37,8 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState
-	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error)
+	MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState
+	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash types.Hash) (types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash types.Hash, bt int) error
@@ -49,14 +51,15 @@ type OrderManagerImpl struct {
 	processor *forkProcessor
 	provider  *minerOrdersProvider
 	um        usermanager.UserManager
+	mc        *marketcap.MarketCapProvider
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager) *OrderManagerImpl {
+func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager, accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
 	om := &OrderManagerImpl{}
 
 	om.options = options
 	om.dao = dao
-	om.processor = newForkProcess(om.dao)
+	om.processor = newForkProcess(om.dao, accessor)
 	om.um = userManager
 
 	// new miner orders provider
@@ -96,7 +99,7 @@ func (om *OrderManagerImpl) Stop() {
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	om.Stop()
 
-	if err := om.processor.fork(input.(*chainclient.ForkedEvent)); err != nil {
+	if err := om.processor.fork(input.(*ethaccessor.ForkedEvent)); err != nil {
 		log.Errorf("order manager handle fork error:%s", err.Error())
 	}
 
@@ -178,7 +181,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// judge status
-	state.SettleStatus()
+	om.orderFullFinished(state)
+
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
 		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
 	}
@@ -207,7 +211,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// update order status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 
 	// update dao.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -250,7 +254,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// judge status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
 		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
 	}
@@ -271,7 +275,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 
 	// update dao.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -327,7 +331,27 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrderhashs []types.Hash) []types.OrderState {
+func (om *OrderManagerImpl) orderFullFinished(state *types.OrderState) {
+	var sum *big.Rat
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		ret := new(big.Int).Sub(state.RawOrder.AmountB, state.RemainedAmountB)
+		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
+		remain := new(big.Rat).SetInt(ret)
+		sum = new(big.Rat).Mul(price, remain)
+	} else {
+		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
+		remain := new(big.Rat).SetInt(state.RemainedAmountS)
+		sum = new(big.Rat).Mul(price, remain)
+	}
+
+	// todo: get compare number from config
+	if sum.Cmp(big.NewRat(10, 1)) <= 0 {
+		state.Status = types.ORDER_FINISHED
+	}
+}
+
+func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
@@ -345,7 +369,7 @@ func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB types.Address, filterOrde
 	return list
 }
 
-func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]types.OrderState, error) {
+func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error) {
 	var list []types.OrderState
 	models, err := om.dao.GetOrderBook(protocol, tokenS, tokenB, length)
 	if err != nil {

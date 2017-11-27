@@ -19,17 +19,14 @@
 package node
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	ethClientLib "github.com/Loopring/relay/chainclient/eth"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
-	ethCryptoLib "github.com/Loopring/relay/crypto/eth"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/db"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
@@ -67,8 +64,9 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	if nil != err {
 		panic(err)
 	}
+	n.accessor = accessor
 
-	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
+	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
 
 	n.registerCrypto(nil)
 	n.registerMysql()
@@ -76,7 +74,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	//n.registerIPFSSubService()
 	n.registerGateway()
 	n.registerAccountManager()
-	n.registerMiner(accessor, marketCapProvider)
+	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor(accessor)
 	n.registerOrderManager()
 	n.registerTrendManager()
@@ -120,7 +118,7 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) registerCrypto(ks *keystore.KeyStore) {
-	c := ethCryptoLib.NewCrypto(true, ks)
+	c := crypto.NewCrypto(true, ks)
 	crypto.Initialize(c)
 }
 
@@ -134,7 +132,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, accessor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
@@ -142,7 +140,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor)
 }
 
 func (n *Node) registerTrendManager() {
@@ -157,15 +155,15 @@ func (n *Node) registerJsonRpcService() {
 	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager)
 }
 
-func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, marketCapProvider *market.MarketCapProvider) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, accessor)
+func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
 	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
 	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.GatewayFilters)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager)
 }
 
 func (n *Node) registerUserManager() {

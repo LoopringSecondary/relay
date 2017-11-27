@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
@@ -43,7 +44,7 @@ type RdsService interface {
 	RollBackRingMined(from, to int64) error
 
 	// order table
-	GetOrderByHash(orderhash types.Hash) (*Order, error)
+	GetOrderByHash(orderhash common.Hash) (*Order, error)
 	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
 	UnMarkMinerOrders(blockNumber int64) error
 	GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error)
@@ -51,28 +52,28 @@ type RdsService interface {
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
-	GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error)
+	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 
-// block table
-	FindBlockByHash(blockhash types.Hash) (*Block, error)
-	FindBlockByParentHash(parenthash types.Hash) (*Block, error)
+	// block table
+	FindBlockByHash(blockhash common.Hash) (*Block, error)
+	FindBlockByParentHash(parenthash common.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
 	FindForkBlock() (*Block, error)
 
 	// fill event table
-	FindFillEventByRinghashAndOrderhash(ringhash, orderhash types.Hash) (*FillEvent, error)
+	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
 	QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills []FillEvent, err error)
 	RollBackFill(from, to int64) error
 
 	// cancel event table
-	FindCancelEventByOrderhash(orderhash types.Hash) (*CancelEvent, error)
+	FindCancelEventByOrderhash(orderhash common.Hash) (*CancelEvent, error)
 	RollBackCancel(from, to int64) error
 
 	// cutoff event table
-	FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error)
+	FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error)
 	RollBackCutoff(from, to int64) error
 
 	// trend table

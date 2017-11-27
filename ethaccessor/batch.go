@@ -20,12 +20,13 @@ package ethaccessor
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type BatchErc20Req struct {
-	Address        types.Address
-	Token          types.Address
-	Spender        types.Address
+	Owner          common.Address
+	Token          common.Address
+	Spender        common.Address
 	BlockParameter string
 	Balance        types.Big
 	Allowance      types.Big

@@ -22,11 +22,12 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"sync"
 )
 
 type WhiteListCache struct {
-	users map[types.Address]types.WhiteListUser
+	users map[common.Address]types.WhiteListUser
 	rds   dao.RdsService
 	mtx   sync.Mutex
 }
@@ -34,7 +35,7 @@ type WhiteListCache struct {
 func newWhiteListCache(rds dao.RdsService) *WhiteListCache {
 	c := &WhiteListCache{}
 	c.rds = rds
-	c.users = make(map[types.Address]types.WhiteListUser)
+	c.users = make(map[common.Address]types.WhiteListUser)
 
 	if list, err := c.rds.GetWhiteList(); err == nil || len(list) == 0 {
 		for _, v := range list {
@@ -86,7 +87,7 @@ func (c *WhiteListCache) DelWhiteListUser(user types.WhiteListUser) error {
 	return c.rds.Del(model)
 }
 
-func (c *WhiteListCache) InWhiteList(user types.Address) bool {
+func (c *WhiteListCache) InWhiteList(user common.Address) bool {
 	if _, ok := c.users[user]; !ok {
 		return false
 	}

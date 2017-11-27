@@ -33,24 +33,38 @@ import (
 	"time"
 )
 
-func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address types.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-	if err := callMethod(&balance, "balanceOf", blockParameter, address); nil != err {
+	if err := callMethod(&balance, "balanceOf", blockParameter, ownerAddress); nil != err {
 		return nil, err
 	} else {
 		return balance.BigInt(), err
 	}
 }
 
-func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, address, senderAddress types.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var allowance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-	if err := callMethod(&allowance, "allowance", blockParameter, address); nil != err {
+	if err := callMethod(&allowance, "allowance", blockParameter, ownerAddress, spenderAddress); nil != err {
 		return nil, err
 	} else {
 		return allowance.BigInt(), err
 	}
+}
+
+func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+	var amount types.Big
+	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
+	if !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
+		return nil, err
+	}
+
+	return amount.BigInt(), nil
 }
 
 func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc20Req) error {
@@ -58,15 +72,15 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	erc20Abi := accessor.Erc20Abi
 
 	for idx, req := range reqs {
-		balanceOfData, _ := erc20Abi.Pack("balanceOf", req.Address)
+		balanceOfData, _ := erc20Abi.Pack("balanceOf", req.Owner)
 		balanceOfArg := &CallArg{}
 		balanceOfArg.To = req.Token
-		balanceOfArg.Data = types.ToHex(balanceOfData)
+		balanceOfArg.Data = common.ToHex(balanceOfData)
 
-		allowanceData, _ := erc20Abi.Pack("allowance", req.Address, req.Spender)
+		allowanceData, _ := erc20Abi.Pack("allowance", req.Owner, req.Spender)
 		allowanceArg := &CallArg{}
 		allowanceArg.To = req.Token
-		allowanceArg.Data = types.ToHex(allowanceData)
+		allowanceArg.Data = common.ToHex(allowanceData)
 		reqElems[2*idx] = rpc.BatchElem{
 			Method: "eth_call",
 			Args:   []interface{}{balanceOfArg, req.BlockParameter},
@@ -90,13 +104,13 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	return nil
 }
 
-func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to types.Address) (gas, gasPrice *big.Int, err error) {
+func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	if err = accessor.Call(&gasPrice, "eth_GasPrice"); nil != err {
 		return
 	}
 	callArg := &CallArg{}
 	callArg.To = to
-	callArg.Data = types.ToHex(callData)
+	callArg.Data = common.ToHex(callData)
 	callArg.GasPrice = *types.NewBigPtr(gasPrice)
 	if err = accessor.Call(&gas, "eth_EstimateGas", callArg); nil != err {
 		return
@@ -104,7 +118,7 @@ func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to types.Address) 
 	return
 }
 
-func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress types.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
 	return func(result interface{}, methodName string, blockParameter string, args ...interface{}) error {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return err
@@ -127,12 +141,12 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 		return err
 	} else {
 		log.Debugf("txhash:%s, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
-		err = ethAccessor.Call(result, "eth_sendRawTransaction", types.ToHex(txData))
+		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
 		return err
 	}
 }
 
-func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to types.Address, gas, gasPrice *big.Int, callData []byte) (string, error) {
+func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to common.Address, gas, gasPrice *big.Int, callData []byte) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -158,7 +172,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	}
 }
 
-func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a abi.ABI, contractAddress types.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
 	return func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
@@ -238,4 +252,13 @@ func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.In
 		confirms:      confirms,
 	}
 	return iterator
+}
+
+func (ethAccessor *EthNodeAccessor) GetSenderAddress(protocol common.Address) (common.Address, error) {
+	impl, ok := ethAccessor.ProtocolImpls[protocol]
+	if !ok {
+		return common.Address{}, errors.New("accessor method:invalid protocol address")
+	}
+
+	return impl.DelegateAddress, nil
 }
