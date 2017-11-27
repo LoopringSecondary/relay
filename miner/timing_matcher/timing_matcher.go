@@ -22,10 +22,10 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 /**

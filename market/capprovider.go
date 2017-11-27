@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
+	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type LegalCurrency int
@@ -63,15 +63,15 @@ type MarketCapProvider struct {
 }
 
 type CurrencyMarketCap struct {
-	Id           string        `json:"id"`
-	Name         string        `json:"name"`
-	Symbol       string        `json:"symbol"`
+	Id           string         `json:"id"`
+	Name         string         `json:"name"`
+	Symbol       string         `json:"symbol"`
 	Address      common.Address `json:"address"`
-	PriceUsd     float64       `json:"price_usd"`
-	PriceBtc     float64       `json:"price_btc"`
-	PriceCny     float64       `json:"price_cny"`
-	Volume24HCNY float64       `json:"24h_volume_cny"`
-	Volume24HUSD float64       `json:"24h_volume_usd"`
+	PriceUsd     float64        `json:"price_usd"`
+	PriceBtc     float64        `json:"price_btc"`
+	PriceCny     float64        `json:"price_cny"`
+	Volume24HCNY float64        `json:"24h_volume_cny"`
+	Volume24HUSD float64        `json:"24h_volume_usd"`
 }
 
 func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {

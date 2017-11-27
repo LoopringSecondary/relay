@@ -21,6 +21,7 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
 )
@@ -36,11 +37,11 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	fee, _ := new(big.Int).SetString("466778", 0)
 	price, _ := new(big.Rat).SetFrac(amountB, amountS).Float64()
 
-	ord.Protocol = types.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876218").Hex()
-	ord.OrderHash = types.HexToHash("0x4753513505617586b115b82a0131f5a5da4325063e3f912a49b1aed7ceb80f26").Hex()
-	ord.Owner = types.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876219").Hex()
-	ord.TokenB = types.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e").Hex()
-	ord.TokenS = types.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f").Hex()
+	ord.Protocol = common.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876218").Hex()
+	ord.OrderHash = common.HexToHash("0x4753513505617586b115b82a0131f5a5da4325063e3f912a49b1aed7ceb80f26").Hex()
+	ord.Owner = common.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876219").Hex()
+	ord.TokenB = common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e").Hex()
+	ord.TokenS = common.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f").Hex()
 	ord.AmountB, _ = amountB.MarshalText()
 	ord.AmountS, _ = amountS.MarshalText()
 	ord.LrcFee, _ = fee.MarshalText()
@@ -60,7 +61,7 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 
 func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
 	s := test.LoadConfigAndGenerateDaoService()
-	order, err := s.GetOrderByHash(types.HexToHash("0x5187cde2ebd86d9c02ecbb3ba31437e4d1d17f8089a834bc943fa618d800aea9"))
+	order, err := s.GetOrderByHash(common.HexToHash("0x5187cde2ebd86d9c02ecbb3ba31437e4d1d17f8089a834bc943fa618d800aea9"))
 
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +73,7 @@ func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
 func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
 	s := test.LoadConfigAndGenerateDaoService()
 
-	filters := []types.Hash{}
+	filters := []common.Hash{}
 	list, err := s.GetOrdersForMiner(filters)
 	if err != nil {
 		t.Fatal(err)

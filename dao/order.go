@@ -21,6 +21,7 @@ package dao
 import (
 	"errors"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
 )
@@ -123,9 +124,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	}
 	dst.GeneratePrice()
 
-	dst.Protocol = types.HexToAddress(o.Protocol)
-	dst.TokenS = types.HexToAddress(o.TokenS)
-	dst.TokenB = types.HexToAddress(o.TokenB)
+	dst.Protocol = common.HexToAddress(o.Protocol)
+	dst.TokenS = common.HexToAddress(o.TokenS)
+	dst.TokenB = common.HexToAddress(o.TokenB)
 	dst.Timestamp = big.NewInt(o.CreateTime)
 	dst.Ttl = big.NewInt(o.Ttl)
 	dst.Salt = big.NewInt(o.Salt)
@@ -136,9 +137,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst.V = o.V
 	dst.S = types.HexToSign(o.S)
 	dst.R = types.HexToSign(o.R)
-	dst.Owner = types.HexToAddress(o.Owner)
+	dst.Owner = common.HexToAddress(o.Owner)
 
-	dst.Hash = types.HexToHash(o.OrderHash)
+	dst.Hash = common.HexToHash(o.OrderHash)
 	if dst.Hash != dst.GenerateHash() {
 		return errors.New("dao order convert down generate hash error")
 	}
@@ -146,7 +147,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) GetOrderByHash(orderhash types.Hash) (*Order, error) {
+func (s *RdsServiceImpl) GetOrderByHash(orderhash common.Hash) (*Order, error) {
 	order := &Order{}
 	err := s.db.Where("order_hash = ?", orderhash.Hex()).First(order).Error
 	return order, err
@@ -221,7 +222,7 @@ func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.Or
 	return err
 }
 
-func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB types.Address, length int) ([]Order, error) {
+func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error) {
 	var (
 		list []Order
 		err  error

@@ -20,6 +20,7 @@ package dao
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type CutOffEvent struct {
@@ -42,7 +43,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner types.Address) (*CutOffEvent, error) {
+func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error) {
 	var (
 		model CutOffEvent
 		err   error
