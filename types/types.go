@@ -67,7 +67,7 @@ func IsZeroHash(hash common.Hash) bool {
 }
 
 func IsZeroAddress(addr common.Address) bool {
-	return *addr == common.HexToAddress("0x")
+	return addr == common.HexToAddress("0x")
 }
 
 func BigintToHex(b *big.Int) string {

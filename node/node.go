@@ -71,7 +71,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerUserManager()
 	//n.registerIPFSSubService()
 	n.registerGateway()
-	n.registerMiner(accessor, marketCapProvider)
+	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor(accessor)
 	n.registerOrderManager()
 	n.registerTrendManager()
@@ -148,8 +148,8 @@ func (n *Node) registerJsonRpcService() {
 	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
 }
 
-func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, marketCapProvider *market.MarketCapProvider) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.globalConfig.Common, accessor)
+func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *market.MarketCapProvider) {
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
 	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
 	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
