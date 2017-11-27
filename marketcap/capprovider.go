@@ -16,7 +16,7 @@
 
 */
 
-package market
+package marketcap
 
 import (
 	"encoding/json"

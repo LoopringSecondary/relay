@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"sync"
+	"github.com/Loopring/relay/marketcap"
 )
 
 // TODO(fk): add services
@@ -64,7 +65,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	}
 	n.accessor = accessor
 
-	marketCapProvider := market.NewMarketCapProvider(globalConfig.Miner)
+	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
 
 	n.registerCrypto(nil)
 	n.registerMysql()
@@ -148,7 +149,7 @@ func (n *Node) registerJsonRpcService() {
 	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
 }
 
-func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *market.MarketCapProvider) {
+func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
 	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
 	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
