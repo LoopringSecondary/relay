@@ -20,12 +20,12 @@ package types
 
 import (
 	"fmt"
-	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 const (
-	SignLength    = 32
+	SignLength = 32
 )
 
 type Sign [SignLength]byte

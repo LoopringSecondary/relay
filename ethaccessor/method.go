@@ -33,24 +33,38 @@ import (
 	"time"
 )
 
-func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, address common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-	if err := callMethod(&balance, "balanceOf", blockParameter, address); nil != err {
+	if err := callMethod(&balance, "balanceOf", blockParameter, ownerAddress); nil != err {
 		return nil, err
 	} else {
 		return balance.BigInt(), err
 	}
 }
 
-func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, address, senderAddress common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var allowance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-	if err := callMethod(&allowance, "allowance", blockParameter, address); nil != err {
+	if err := callMethod(&allowance, "allowance", blockParameter, ownerAddress, spenderAddress); nil != err {
 		return nil, err
 	} else {
 		return allowance.BigInt(), err
 	}
+}
+
+func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+	var amount types.Big
+	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
+	if !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
+		return nil, err
+	}
+
+	return amount.BigInt(), nil
 }
 
 func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc20Req) error {
@@ -58,12 +72,12 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	erc20Abi := accessor.Erc20Abi
 
 	for idx, req := range reqs {
-		balanceOfData, _ := erc20Abi.Pack("balanceOf", req.Address)
+		balanceOfData, _ := erc20Abi.Pack("balanceOf", req.Owner)
 		balanceOfArg := &CallArg{}
 		balanceOfArg.To = req.Token
 		balanceOfArg.Data = common.ToHex(balanceOfData)
 
-		allowanceData, _ := erc20Abi.Pack("allowance", req.Address, req.Spender)
+		allowanceData, _ := erc20Abi.Pack("allowance", req.Owner, req.Spender)
 		allowanceArg := &CallArg{}
 		allowanceArg.To = req.Token
 		allowanceArg.Data = common.ToHex(allowanceData)
@@ -238,4 +252,13 @@ func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.In
 		confirms:      confirms,
 	}
 	return iterator
+}
+
+func (ethAccessor *EthNodeAccessor) GetSenderAddress(protocol common.Address) (common.Address, error) {
+	impl, ok := ethAccessor.ProtocolImpls[protocol]
+	if !ok {
+		return common.Address{}, errors.New("accessor method:invalid protocol address")
+	}
+
+	return impl.DelegateAddress, nil
 }

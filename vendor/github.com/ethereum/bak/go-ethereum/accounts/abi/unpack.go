@@ -63,7 +63,7 @@ func toGoSlice(i int, t Argument, output []byte) (interface{}, error) {
 		default:
 			refSlice = reflect.ValueOf([]*big.Int(nil))
 		}
-	case AddressTy: // address must be of slice Address
+	case AddressTy: // address must be of slice Owner
 		refSlice = reflect.ValueOf([]common.Address(nil))
 	case HashTy: // hash must be of slice hash
 		refSlice = reflect.ValueOf([]common.Hash(nil))

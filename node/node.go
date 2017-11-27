@@ -132,7 +132,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, accessor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
