@@ -21,11 +21,11 @@ package miner
 import (
 	"errors"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/marketcap"
 )
 
 type Evaluator struct {

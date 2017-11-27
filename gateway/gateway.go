@@ -24,8 +24,8 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 var filters []Filter

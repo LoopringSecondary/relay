@@ -125,7 +125,7 @@ func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) 
 		event := e.(types.SubmitRingEvent)
 		//excute ring failed
 		//if nil == event {
-			submitter.submitFailed(event.TxHash)
+		submitter.submitFailed(event.TxHash)
 		//}
 	}
 	return nil
@@ -154,22 +154,22 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 		//if nil == event {
 		//	submitter.submitFailed(event.TxHash)
 		//} else {
-			ringHash := event.RingHash
-			println("ringHash.HexringHash.Hex", ringHash.Hex())
-			//todo:change to dao
-			ringData := []byte{}
-			if nil != ringData {
-				ringState := &types.RingForSubmit{}
-				if err := json.Unmarshal(ringData, ringState); nil != err {
+		ringHash := event.RingHash
+		println("ringHash.HexringHash.Hex", ringHash.Hex())
+		//todo:change to dao
+		ringData := []byte{}
+		if nil != ringData {
+			ringState := &types.RingForSubmit{}
+			if err := json.Unmarshal(ringData, ringState); nil != err {
+				log.Errorf("error:%s", err.Error())
+			} else {
+				log.Debugf("ringhashRegistry:%s", string(ringData))
+				//todo:need pre condition
+				if err := submitter.submitRing(ringState); nil != err {
 					log.Errorf("error:%s", err.Error())
-				} else {
-					log.Debugf("ringhashRegistry:%s", string(ringData))
-					//todo:need pre condition
-					if err := submitter.submitRing(ringState); nil != err {
-						log.Errorf("error:%s", err.Error())
-					}
 				}
 			}
+		}
 		//}
 	}
 

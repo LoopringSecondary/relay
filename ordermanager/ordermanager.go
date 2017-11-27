@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
@@ -48,6 +49,7 @@ type OrderManagerImpl struct {
 	processor *forkProcessor
 	provider  *minerOrdersProvider
 	um        usermanager.UserManager
+	mc        *marketcap.MarketCapProvider
 }
 
 func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager, accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
@@ -177,7 +179,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// judge status
-	state.SettleStatus()
+	om.orderFullFinished(state)
+
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
 		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
 	}
@@ -206,7 +209,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// update order status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 
 	// update dao.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -249,7 +252,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// judge status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
 		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
 	}
@@ -270,7 +273,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	state.SettleStatus()
+	om.orderFullFinished(state)
 
 	// update dao.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -324,6 +327,26 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	}
 
 	return nil
+}
+
+func (om *OrderManagerImpl) orderFullFinished(state *types.OrderState) {
+	var sum *big.Rat
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		ret := new(big.Int).Sub(state.RawOrder.AmountB, state.RemainedAmountB)
+		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
+		remain := new(big.Rat).SetInt(ret)
+		sum = new(big.Rat).Mul(price, remain)
+	} else {
+		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
+		remain := new(big.Rat).SetInt(state.RemainedAmountS)
+		sum = new(big.Rat).Mul(price, remain)
+	}
+
+	// todo: get compare number from config
+	if sum.Cmp(big.NewRat(10, 1)) <= 0 {
+		state.Status = types.ORDER_FINISHED
+	}
 }
 
 func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState {
