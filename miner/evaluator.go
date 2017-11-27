@@ -21,15 +21,15 @@ package miner
 import (
 	"errors"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"math"
 	"math/big"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/Loopring/relay/marketcap"
 )
 
 type Evaluator struct {
-	marketCapProvider     *market.MarketCapProvider
+	marketCapProvider     *marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
 }
 
@@ -290,6 +290,6 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func NewEvaluator(marketCapProvider *market.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
+func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
 	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold}
 }
