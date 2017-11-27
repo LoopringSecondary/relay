@@ -171,6 +171,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			contract.Topics = evtLog.Topics
 			contract.BlockNumber = &evtLog.BlockNumber
 			contract.Time = &block.Timestamp
+			contract.ContractAddress = evtLog.Address
 			eventemitter.Emit(contract.Key, contract)
 		}
 	}
@@ -205,6 +206,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	if err != nil {
 		return err
 	}
+	ringmined.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	ringmined.Time = contractData.Time
 	ringmined.Blocknumber = contractData.BlockNumber
 	ringmined.IsDeleted = false
@@ -220,6 +222,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
 	for _, fill := range fills {
+		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
 		fill.IsDeleted = false
@@ -256,6 +259,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 	evt.IsDeleted = false
@@ -284,6 +288,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 	evt.IsDeleted = false
@@ -313,6 +318,7 @@ func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData)
 	contractEvent.To = common.HexToAddress(contractData.Topics[2])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
@@ -340,6 +346,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
@@ -359,7 +366,9 @@ func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.Eve
 
 	contractData := input.(ContractData)
 	contractEvent := contractData.Event.(ethaccessor.TokenRegisteredEvent)
+
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
@@ -378,7 +387,9 @@ func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.E
 
 	contractData := input.(ContractData)
 	contractEvent := contractData.Event.(ethaccessor.TokenUnRegisteredEvent)
+
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
@@ -405,6 +416,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
@@ -430,11 +442,12 @@ func (l *ExtractorServiceImpl) handleAddressAuthorizedEvent(input eventemitter.E
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor address authorized event address -> %s", evt.ContractAddress.Hex())
+		log.Debugf("extractor address authorized event address -> %s", evt.Protocol.Hex())
 		log.Debugf("extractor address authorized event number -> %d", evt.Number)
 	}
 
@@ -455,11 +468,12 @@ func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor address deauthorized event address -> %s", evt.ContractAddress.Hex())
+		log.Debugf("extractor address deauthorized event address -> %s", evt.Protocol.Hex())
 		log.Debugf("extractor address deauthorized event number -> %d", evt.Number)
 	}
 

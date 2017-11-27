@@ -25,6 +25,7 @@ import (
 
 type FillEvent struct {
 	ID            int    `gorm:"column:id;primary_key;"`
+	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
 	RingIndex     int64  `gorm:"column:ring_index;"`
 	BlockNumber   int64  `gorm:"column:block_number"`
 	CreateTime    int64  `gorm:"column:create_time"`
@@ -58,6 +59,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 		return err
 	}
 
+	f.Protocol = src.ContractAddress.Hex()
 	f.RingIndex = src.RingIndex.Int64()
 	f.BlockNumber = src.Blocknumber.Int64()
 	f.CreateTime = src.Time.Int64()
