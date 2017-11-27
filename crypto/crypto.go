@@ -16,13 +16,11 @@
 
 */
 
-package eth
+package crypto
 
 import (
-	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )
@@ -65,10 +63,9 @@ func (c EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (c EthCrypto) Sign(hashPre []byte, signerAddr string) ([]byte, error) {
-	signer := accounts.Account{Address: common.HexToAddress(signerAddr)}
+func (c EthCrypto) Sign(hashPre []byte, signer accounts.Account) ([]byte, error) {
 	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
-	return c.ks.SignHash(hash, signer)
+	return c.ks.SignHash(signer, hash)
 }
 
 func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {

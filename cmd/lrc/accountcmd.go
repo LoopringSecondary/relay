@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -117,10 +116,10 @@ func importAccount(ctx *cli.Context) {
 	}
 
 	pk := ctx.String("private-key")
-	if !types.IsHex(pk) {
+	if !common.IsHex(pk) {
 		exitWithErr(errors.New("the private-key must be hex"), ctx.App.Writer)
 	}
-	if privateKey, err := crypto.ToECDSA(types.Hex2Bytes(pk)); nil != err {
+	if privateKey, err := crypto.ToECDSA(common.Hex2Bytes(pk)); nil != err {
 		exitWithErr(err, ctx.App.Writer)
 	} else {
 		var passphrase string

@@ -38,7 +38,7 @@ type RingSubmitter struct {
 	Accessor           *ethaccessor.EthNodeAccessor
 	miner              accounts.Account
 	ks                 *keystore.KeyStore
-	feeReceipt         types.Address //used to receive fee
+	feeReceipt         common.Address //used to receive fee
 	ifRegistryRingHash bool
 
 	stopChan chan bool
@@ -46,7 +46,7 @@ type RingSubmitter struct {
 	mtx *sync.RWMutex
 
 	//todo:
-	registeredRings map[types.Hash]types.RingForSubmit
+	registeredRings map[common.Hash]types.RingForSubmit
 }
 
 type RingSubmitFailed struct {
@@ -61,10 +61,10 @@ func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *
 	submitter.ks = ks
 	submitter.miner = accounts.Account{Address: common.HexToAddress(options.Miner)}
 
-	submitter.feeReceipt = types.HexToAddress(options.FeeRecepient)
+	submitter.feeReceipt = common.HexToAddress(options.FeeRecepient)
 	submitter.ifRegistryRingHash = options.IfRegistryRingHash
 
-	submitter.registeredRings = make(map[types.Hash]types.RingForSubmit)
+	submitter.registeredRings = make(map[common.Hash]types.RingForSubmit)
 
 	return submitter
 }
@@ -106,7 +106,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingForSubmit)
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, ringState.RegistryData); nil != err {
 		return err
 	} else {
-		ringState.RegistryTxHash = types.HexToHash(txHash)
+		ringState.RegistryTxHash = common.HexToHash(txHash)
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func (submitter *RingSubmitter) submitRing(ringSate *types.RingForSubmit) error 
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, ringSate.ProtocolData); nil != err {
 		return err
 	} else {
-		ringSate.SubmitTxHash = types.HexToHash(txHash)
+		ringSate.SubmitTxHash = common.HexToHash(txHash)
 	}
 	return nil
 }
@@ -131,7 +131,7 @@ func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) 
 	return nil
 }
 
-func (submitter *RingSubmitter) submitFailed(event types.Hash) {
+func (submitter *RingSubmitter) submitFailed(event common.Hash) {
 	//ringHashBytes, _ := submitter.txToRingHashIndexStore.Get(txHash.Bytes())
 	//if nil != ringHashBytes && len(ringHashBytes) > 0 {
 	//	if ringData, _ := submitter.unSubmitedRingsStore.Get(ringHashBytes); nil == ringData || len(ringData) == 0 {
@@ -154,7 +154,7 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 		if nil == event {
 			submitter.submitFailed(event.TxHash)
 		} else {
-			ringHash := types.BytesToHash(event.RingHash)
+			ringHash := common.BytesToHash(event.RingHash)
 			println("ringHash.HexringHash.Hex", ringHash.Hex())
 			//todo:change to dao
 			ringData := []byte{}
@@ -203,7 +203,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*
 		}
 	}
 
-	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address.Hex(), submitter.feeReceipt)
+	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address, submitter.feeReceipt)
 	ringForSubmit.ProtocolData, err = protocolAbi.Pack("submitRing",
 		ringSubmitArgs.AddressList,
 		ringSubmitArgs.UintArgsList,
