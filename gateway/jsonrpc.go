@@ -225,13 +225,10 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 }
 
 func (j *JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
-
-	// not support now
 	return nil
 }
 
 func (j *JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *[]market.Ticker) error {
-	// not support now
 	tickers, err := j.trendManager.GetTicker()
 	res = &tickers
 	return err
