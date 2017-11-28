@@ -19,7 +19,6 @@
 package ordermanager
 
 import (
-	"errors"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -31,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"fmt"
 )
 
 type OrderManager interface {
@@ -191,7 +191,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	om.orderFullFinished(state)
 
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
+		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
 	}
 
 	// validate cutoff
@@ -200,7 +200,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 			if err := om.rds.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
 				return err
 			} else {
-				return errors.New("order manager handle order filled event error:order have been cutoff")
+				return fmt.Errorf("order manager handle order filled event error:order have been cutoff")
 			}
 		}
 	}
@@ -263,7 +263,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// judge status
 	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
+		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
 	}
 
 	// calculate remainAmount

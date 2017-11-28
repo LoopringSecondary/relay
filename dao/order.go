@@ -165,7 +165,7 @@ func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
 	return s.db.Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark = ?", 0).Error
 }
 
-func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []types.OrderStatus) ([]Order, error) {
 	var (
 		list []Order
 		err  error
@@ -176,9 +176,13 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus [
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.
-		Where("token_s = ? and token_b = ? and create_time + ttl > ? and status not in (?) and miner_block_mark = ?", tokenS, tokenB, nowtime, filterStatus, 0).
-		Order("price desc").Find(&list).Error
+	err = s.db.Where("token_s = ? and token_b = ?", tokenS, tokenB).
+		       Where("create_time + ttl > ? ", nowtime).
+		       Where("status not in (?) ", filterStatus).
+		       Where("miner_block_mark = ?", 0).
+		       Order("price desc").
+		       Find(list).
+		       Error
 
 	return list, err
 }
@@ -220,7 +224,7 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 }
 
 func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
-	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status.Value()).Error
+	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status).Error
 	return err
 }
 

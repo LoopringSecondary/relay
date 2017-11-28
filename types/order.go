@@ -36,14 +36,6 @@ const (
 	ORDER_CUTOFF
 )
 
-func (s OrderStatus) Name() string {
-	return s.Name()
-}
-
-func (s OrderStatus) Value() uint8 {
-	return s.Value()
-}
-
 //订单原始信息
 /**
 1、是否整体成交

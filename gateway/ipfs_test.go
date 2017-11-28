@@ -70,7 +70,14 @@ func TestSingleOrder(t *testing.T) {
 }
 
 func TestMinerOrders(t *testing.T) {
+	om := test.LoadConfigAndGenerateOrderManager()
+	tokenS := common.HexToAddress(test.TokenAddressB)
+	tokenB := common.HexToAddress(test.TokenAddressA)
 
+	states := om.MinerOrders(tokenS, tokenB, []common.Hash{})
+	for k, v := range states {
+		t.Logf("list number %d, order.hash %s", k, v.RawOrder.Hash.Hex())
+	}
 }
 
 func pubMessage(sh *shell.Shell, data string) {

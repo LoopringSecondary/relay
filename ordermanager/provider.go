@@ -114,7 +114,7 @@ func (p *minerOrdersProvider) unMarkOrders() error {
 func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
-	filterStatus := []uint8{types.ORDER_FINISHED.Value(), types.ORDER_CUTOFF.Value(), types.ORDER_CANCEL.Value()}
+	filterStatus := []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 
 	models, err := p.rds.GetOrdersForMiner(tokenS.Hex(), tokenB.Hex(), filterStatus)
 	if len(models) == 0 || err != nil {
