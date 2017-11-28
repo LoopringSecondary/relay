@@ -22,8 +22,6 @@ import "github.com/ethereum/go-ethereum/accounts"
 
 var crypto Crypto
 
-var TTT string
-
 type Crypto interface {
 	//签名验证
 	ValidateSignatureValues(v byte, r, s []byte) bool
