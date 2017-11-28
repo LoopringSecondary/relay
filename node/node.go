@@ -60,18 +60,18 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.globalConfig = globalConfig
 
 	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
-	if nil != err {
-		panic(err)
-	}
-	n.accessor = accessor
+	//accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
+	//if nil != err {
+	//	panic(err)
+	//}
+	//n.accessor = accessor
 
-	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
-
-	n.registerCrypto(nil)
+	//marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
+	//
+	n.registerCrypto(ks)
 	n.registerMysql()
-	n.registerUserManager()
-	//n.registerIPFSSubService()
+	//n.registerUserManager()
+	n.registerIPFSSubService()
 	n.registerGateway()
 	n.registerAccountManager(accessor)
 	n.registerMiner(accessor, ks, marketCapProvider)
@@ -79,14 +79,13 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerOrderManager()
 	n.registerTrendManager()
 	n.registerJsonRpcService()
-
 	return n
 }
 
 func (n *Node) Start() {
-	//n.rdsService.Prepare()
+	n.rdsService.Prepare()
 	//n.extractorService.Start()
-	//n.ipfsSubService.Start()
+	n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
 	//n.orderManager.Start()
@@ -131,8 +130,8 @@ func (n *Node) registerAccessor() {
 	n.accessor = accessor
 }
 
-func (n *Node) registerExtractor(accessor *ethaccessor.EthNodeAccessor) {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, accessor, n.rdsService)
+func (n *Node) registerExtractor() {
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.accessor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

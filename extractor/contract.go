@@ -41,6 +41,7 @@ type ContractData struct {
 	Event           interface{}
 	ImplAddress     string // lrc合约入口地址
 	ContractAddress string // 某个合约具体地址
+	TxHash          string // transaction hash
 	CAbi            *abi.ABI
 	Id              string
 	Name            string

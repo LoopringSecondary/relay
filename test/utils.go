@@ -86,10 +86,11 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = big.NewInt(1000)
 	order.BuyNoMoreThanAmountB = false
-	order.MarginSplitPercentage = 2
-	order.Hash = order.GenerateHash()
+	order.MarginSplitPercentage = 0
 	order.Owner = owner
-	order.GenerateAndSetSignature(owner)
+	if err := order.GenerateAndSetSignature(owner); nil != err {
+		panic(err.Error())
+	}
 	return order
 }
 

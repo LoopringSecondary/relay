@@ -29,10 +29,12 @@ type RingMined struct {
 	Protocol           string `gorm:"column:contract_address;type:varchar(42)"`
 	RingIndex          []byte `gorm:"column:ring_index;type:varchar(30)"`
 	RingHash           string `gorm:"column:ring_hash;type:varchar(82);unique_index"`
+	TxHash             string `gorm:"column:tx_hash;type:varchar(82)"`
 	Miner              string `gorm:"column:miner;type:varchar(42);"`
 	FeeRecipient       string `gorm:"column:fee_recipient;type:varchar(42)"`
 	IsRinghashReserved bool   `gorm:"column:is_ring_hash_reserved;"`
 	BlockNumber        int64  `gorm:"column:block_number;type:bigint"`
+	TotalLrcFee        []byte `gorm:"column:total_lrc_fee;type:varchar(30)"`
 	Time               int64  `gorm:"column:time;type:bigint"`
 	IsDeleted          bool   `gorm:"column:is_deleted"`
 }
@@ -43,11 +45,16 @@ func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 	if err != nil {
 		return err
 	}
+	r.TotalLrcFee, err = event.TotalLrcFee.MarshalText()
+	if err != nil {
+		return err
+	}
 
 	r.Protocol = event.ContractAddress.Hex()
 	r.Miner = event.Miner.Hex()
 	r.FeeRecipient = event.FeeRecipient.Hex()
 	r.RingHash = event.Ringhash.Hex()
+	r.TxHash = event.TxHash.Hex()
 	r.IsRinghashReserved = event.IsRinghashReserved
 	r.BlockNumber = event.Blocknumber.Int64()
 	r.Time = event.Time.Int64()
@@ -61,8 +68,12 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	if err := event.RingIndex.UnmarshalText(r.RingIndex); err != nil {
 		return err
 	}
+	if err := event.TotalLrcFee.UnmarshalText(r.TotalLrcFee); err != nil {
+		return err
+	}
 
 	event.Ringhash = common.HexToHash(r.RingHash)
+	event.TxHash = common.HexToHash(r.TxHash)
 	event.Miner = common.HexToAddress(r.Miner)
 	event.FeeRecipient = common.HexToAddress(r.FeeRecipient)
 	event.IsRinghashReserved = r.IsRinghashReserved
