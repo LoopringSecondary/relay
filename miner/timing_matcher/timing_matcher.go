@@ -20,7 +20,9 @@ package timing_matcher
 
 import (
 	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -62,7 +64,7 @@ type TimingMatcher struct {
 
 type Market struct {
 	matcher *TimingMatcher
-	//om                        ordermanager.OrderManager
+	om      ordermanager.OrderManager
 
 	TokenA     common.Address
 	TokenB     common.Address
@@ -118,38 +120,45 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
-	//atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
-	//btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
-	atoBOrders := []types.OrderState{}
-	btoAOrders := []types.OrderState{}
+	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
+	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
+	//atoBOrders := []types.OrderState{}
+	//btoAOrders := []types.OrderState{}
 	for _, order := range atoBOrders {
-		market.AtoBOrders[order.RawOrder.Hash] = &order
+		if market.reduceRemainedAmountBeforeMatch(&order) {
+			market.AtoBOrders[order.RawOrder.Hash] = &order
+		}
 	}
 
 	for _, order := range btoAOrders {
-		market.BtoAOrders[order.RawOrder.Hash] = &order
+		if market.reduceRemainedAmountBeforeMatch(&order) {
+			market.BtoAOrders[order.RawOrder.Hash] = &order
+		}
 	}
 
 	market.AtoBNotMatchedOrderHashes = []common.Hash{}
 	market.BtoANotMatchedOrderHashes = []common.Hash{}
 
 	//it should sub the matched amount in last round.
-	market.reduceRemainedAmountBeforeMatch()
 }
 
-func (market *Market) reduceRemainedAmountBeforeMatch() {
-	for orderHash, orderState := range market.AtoBOrders {
-		if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
-			if len(matchedOrder.round) <= 0 {
-				delete(market.AtoBOrders, orderHash)
-			} else {
-				for _, matchedRound := range matchedOrder.round {
-					orderState.RemainedAmountB.Sub(orderState.RemainedAmountB, intFromRat(matchedRound.matchedAmountB))
-					orderState.RemainedAmountS.Sub(orderState.RemainedAmountS, intFromRat(matchedRound.matchedAmountS))
-				}
+func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) bool {
+	orderHash := orderState.RawOrder.Hash
+	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
+		if len(matchedOrder.round) <= 0 {
+			delete(market.AtoBOrders, orderHash)
+		} else {
+			for _, matchedRound := range matchedOrder.round {
+				orderState.RemainedAmountB.Sub(orderState.RemainedAmountB, intFromRat(matchedRound.matchedAmountB))
+				orderState.RemainedAmountS.Sub(orderState.RemainedAmountS, intFromRat(matchedRound.matchedAmountS))
+			}
+			if orderState.RemainedAmountB.Cmp(big.NewInt(int64(0))) <= 0 && orderState.RemainedAmountS.Cmp(big.NewInt(int64(0))) <= 0 {
+				//todo
+				return true
 			}
 		}
 	}
+	return true
 }
 
 func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledOrder) {
@@ -178,12 +187,14 @@ func (market *Market) match() {
 				ringTmp := &types.Ring{}
 				ringTmp.Orders = []*types.FilledOrder{convertOrderStateToFilledOrder(a2BOrder), convertOrderStateToFilledOrder(b2AOrder)}
 
-				ringStateTmp := &types.Ring{}
-				market.matcher.evaluator.ComputeRing(ringStateTmp)
-				ringForSubmit, _ := market.matcher.submitter.GenerateRingSubmitArgs(ringStateTmp)
-				if nil == ringForSubmit || ringForSubmit.RawRing.LegalFee.Cmp(ringStateTmp.LegalFee) < 0 {
+				market.matcher.evaluator.ComputeRing(ringTmp)
+				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitArgs(ringTmp)
+				if nil != err {
+					log.Errorf("err: %s", err.Error())
+				}
+				if nil == ringForSubmit || ringForSubmit.RawRing.LegalFee.Cmp(ringTmp.LegalFee) < 0 {
 					//todo: 需要确定花费的gas等是多少，来确定是否生成该环路
-					ringForSubmit.RawRing = ringStateTmp
+					ringForSubmit = ringForSubmitTmp
 				}
 
 			}
@@ -196,8 +207,8 @@ func (market *Market) match() {
 				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = true
 				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
 			}
+			ringStates = append(ringStates, ringForSubmit)
 		}
-		ringStates = append(ringStates, ringForSubmit)
 	}
 
 	for orderHash, _ := range market.AtoBOrders {

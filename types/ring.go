@@ -38,8 +38,8 @@ type Ring struct {
 	Orders      []*FilledOrder `json:"orderes"`
 	Miner       common.Address `json:"miner"`
 	V           uint8          `json:"v"`
-	R           Sign           `json:"r"`
-	S           Sign           `json:"s"`
+	R           Bytes32        `json:"r"`
+	S           Bytes32        `json:"s"`
 	Hash        common.Hash    `json:"hash"`
 	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
@@ -48,16 +48,16 @@ type Ring struct {
 
 func (ring *Ring) GenerateHash() common.Hash {
 	vBytes := []byte{byte(ring.Orders[0].OrderState.RawOrder.V)}
-	rBytes := ring.Orders[0].OrderState.RawOrder.R.Bytes()
-	sBytes := ring.Orders[0].OrderState.RawOrder.S.Bytes()
+	rBytes32 := ring.Orders[0].OrderState.RawOrder.R.Bytes()
+	sBytes32 := ring.Orders[0].OrderState.RawOrder.S.Bytes()
 	for idx, order := range ring.Orders {
 		if idx > 0 {
 			vBytes = Xor(vBytes, []byte{byte(order.OrderState.RawOrder.V)})
-			rBytes = Xor(rBytes, order.OrderState.RawOrder.R.Bytes())
-			sBytes = Xor(sBytes, order.OrderState.RawOrder.S.Bytes())
+			rBytes32 = Xor(rBytes32, order.OrderState.RawOrder.R.Bytes())
+			sBytes32 = Xor(sBytes32, order.OrderState.RawOrder.S.Bytes())
 		}
 	}
-	hashBytes := crypto.GenerateHash(vBytes, rBytes, sBytes)
+	hashBytes := crypto.GenerateHash(vBytes, rBytes32, sBytes32)
 	return common.BytesToHash(hashBytes)
 }
 
@@ -71,8 +71,8 @@ func (ring *Ring) GenerateAndSetSignature(signerAddr common.Address) error {
 	} else {
 		v, r, s := crypto.SigToVRS(sig)
 		ring.V = uint8(v)
-		ring.R = BytesToSign(r)
-		ring.S = BytesToSign(s)
+		ring.R = BytesToBytes32(r)
+		ring.S = BytesToBytes32(s)
 		return nil
 	}
 }
@@ -114,16 +114,16 @@ func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Add
 		ringSubmitArgs.BuyNoMoreThanAmountBList = append(ringSubmitArgs.BuyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)
 
 		ringSubmitArgs.VList = append(ringSubmitArgs.VList, order.V)
-		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R.Bytes())
-		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S.Bytes())
+		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R)
+		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S)
 	}
 
 	if err := ring.GenerateAndSetSignature(miner); nil != err {
 		log.Error(err.Error())
 	} else {
 		ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
-		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R.Bytes())
-		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S.Bytes())
+		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
+		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
 	}
 	ringminer, _ := ring.SignerAddress()
 	ringSubmitArgs.Ringminer = ringminer
@@ -165,8 +165,8 @@ type RingSubmitInputs struct {
 	Uint8ArgsList            [][2]uint8          `alias:"uint8ArgsList"`
 	BuyNoMoreThanAmountBList []bool              `alias:"buyNoMoreThanAmountBList"`
 	VList                    []uint8             `alias:"vList"`
-	RList                    [][]byte            `alias:"rList"`
-	SList                    [][]byte            `alias:"sList"`
+	RList                    []Bytes32           `alias:"rList"`
+	SList                    []Bytes32           `alias:"sList"`
 	Ringminer                common.Address      `alias:"ringminer"`
 	FeeRecepient             common.Address      `alias:"feeRecepient"`
 	ThrowIfLRCIsInsuffcient  bool                `alias:"throwIfLRCIsInsuffcient"`
@@ -179,8 +179,8 @@ func emptyRingSubmitArgs() *RingSubmitInputs {
 		Uint8ArgsList:            [][2]uint8{},
 		BuyNoMoreThanAmountBList: []bool{},
 		VList: []uint8{},
-		RList: [][]byte{},
-		SList: [][]byte{},
+		RList: []Bytes32{},
+		SList: []Bytes32{},
 	}
 }
 
