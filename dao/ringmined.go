@@ -34,6 +34,7 @@ type RingMined struct {
 	FeeRecipient       string `gorm:"column:fee_recipient;type:varchar(42)"`
 	IsRinghashReserved bool   `gorm:"column:is_ring_hash_reserved;"`
 	BlockNumber        int64  `gorm:"column:block_number;type:bigint"`
+	TotalLrcFee        []byte `gorm:"column:total_lrc_fee;type:varchar(30)"`
 	Time               int64  `gorm:"column:time;type:bigint"`
 	IsDeleted          bool   `gorm:"column:is_deleted"`
 }
@@ -41,6 +42,10 @@ type RingMined struct {
 func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 	var err error
 	r.RingIndex, err = event.RingIndex.MarshalText()
+	if err != nil {
+		return err
+	}
+	r.TotalLrcFee, err = event.TotalLrcFee.MarshalText()
 	if err != nil {
 		return err
 	}
@@ -61,6 +66,9 @@ func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	event.RingIndex = new(types.Big)
 	if err := event.RingIndex.UnmarshalText(r.RingIndex); err != nil {
+		return err
+	}
+	if err := event.TotalLrcFee.UnmarshalText(r.TotalLrcFee); err != nil {
 		return err
 	}
 
