@@ -49,6 +49,7 @@ func LoadConfig(file string) *GlobalConfig {
 	if c.Common.Develop {
 		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/"
 		c.Database.DataDir = basedir + c.Database.Name
+		c.Keystore.Keydir = basedir + c.Keystore.Keydir
 
 		for idx, path := range c.Log.ZapOpts.OutputPaths {
 			if !strings.HasPrefix(path, "std") {
@@ -146,7 +147,6 @@ type MinerOptions struct {
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
 	RateProvider            struct {
-		LrcAddress    string
 		BaseUrl       string
 		Currency      string
 		CurrenciesMap map[string]string //address -> name

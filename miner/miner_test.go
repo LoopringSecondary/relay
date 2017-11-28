@@ -20,12 +20,16 @@ package miner_test
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
-	"github.com/Loopring/ringminer/types"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
 	"strings"
@@ -40,20 +44,48 @@ func loadConfig() *config.GlobalConfig {
 
 	return c
 }
+
 func TestMatch(t *testing.T) {
-
 	cfg := loadConfig()
-	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, nil)
-	submitter := miner.NewSubmitter(cfg.Miner, nil, accessor)
 
-	evaluator := &miner.Evaluator{}
+	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 
+	acc1 := accounts.Account{Address: common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")}
+	acc2 := accounts.Account{Address: common.HexToAddress("0x48ff2269e58a373120ffdbbdee3fbcea854ac30a")}
+	ks.Unlock(acc1, "1")
+	ks.Unlock(acc2, "1")
+	c := crypto.NewCrypto(false, ks)
+	crypto.Initialize(c)
+
+	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, ks)
+
+	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor)
+
+	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
+	evaluator := miner.NewEvaluator(marketCapProvider, int64(1000000000000000), accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
-	marketCapProvider := &market.MarketCapProvider{}
 
 	m := miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 	m.Start()
 	time.Sleep(1 * time.Minute)
+}
 
-	//matcher.Start()
+func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.Int, owner common.Address) *types.Order {
+	order := &types.Order{}
+	order.Protocol = protocol
+	order.TokenS = tokenS
+	order.TokenB = tokenB
+	order.AmountS = amountS
+	order.AmountB = amountB
+	order.Timestamp = big.NewInt(time.Now().Unix())
+	order.Ttl = big.NewInt(10000)
+	order.Salt = big.NewInt(1000)
+	order.LrcFee = big.NewInt(1000)
+	order.BuyNoMoreThanAmountB = false
+	order.MarginSplitPercentage = 0
+	order.Owner = owner
+	if err := order.GenerateAndSetSignature(owner); nil != err {
+		println(err.Error())
+	}
+	return order
 }

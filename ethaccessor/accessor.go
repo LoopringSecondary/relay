@@ -71,14 +71,21 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 		}
 
 		callMethod := accessor.ContractCallMethod(impl.ProtocolImplAbi, impl.ContractAddress)
-		if err := callMethod(&impl.LrcTokenAddress, "lrcTokenAddress", "latest"); nil != err {
+		var addr string
+		if err := callMethod(&addr, "lrcTokenAddress", "latest"); nil != err {
 			return nil, err
+		} else {
+			impl.LrcTokenAddress = common.HexToAddress(addr)
 		}
-		if err := callMethod(&impl.RinghashRegistryAddress, "ringhashRegistryAddress", "latest"); nil != err {
+		if err := callMethod(&addr, "ringhashRegistryAddress", "latest"); nil != err {
 			return nil, err
+		} else {
+			impl.RinghashRegistryAddress = common.HexToAddress(addr)
 		}
-		if err := callMethod(&impl.DelegateAddress, "delegateAddress", "latest"); nil != err {
+		if err := callMethod(&addr, "delegateAddress", "latest"); nil != err {
 			return nil, err
+		} else {
+			impl.DelegateAddress = common.HexToAddress(addr)
 		}
 		accessor.ProtocolImpls[impl.ContractAddress] = impl
 	}

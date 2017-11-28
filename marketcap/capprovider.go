@@ -56,7 +56,6 @@ const (
 )
 
 type MarketCapProvider struct {
-	LRC_ADDRESS   string
 	baseUrl       string
 	currenciesMap map[common.Address]*CurrencyMarketCap
 	currency      LegalCurrency
@@ -123,11 +122,11 @@ func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
 	}
 }
 
-func (p *MarketCapProvider) stop() {
+func (p *MarketCapProvider) Stop() {
 	//todo:
 }
 
-func (p *MarketCapProvider) start() {
+func (p *MarketCapProvider) Start() {
 	go func() {
 		for {
 			for _, c := range p.currenciesMap {
@@ -161,7 +160,6 @@ func (p *MarketCapProvider) start() {
 func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
 	provider := &MarketCapProvider{}
 	provider.baseUrl = options.RateProvider.BaseUrl
-	provider.LRC_ADDRESS = options.RateProvider.LrcAddress
 	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
 	provider.currenciesMap = make(map[common.Address]*CurrencyMarketCap)
 

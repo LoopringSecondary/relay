@@ -20,10 +20,10 @@ package miner
 
 import (
 	"errors"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 )
@@ -31,9 +31,11 @@ import (
 type Evaluator struct {
 	marketCapProvider     *marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
+	accessor              *ethaccessor.EthNodeAccessor
 }
 
 func availableAmountS(filledOrder *types.FilledOrder) error {
+
 	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountS)
 	filledOrder.AvailableAmountB = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountB)
 	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
@@ -43,6 +45,8 @@ func availableAmountS(filledOrder *types.FilledOrder) error {
 	} else {
 		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountB, new(big.Rat).Inv(sellPrice))
 	}
+	//todo:根据avalableamount，计算filledAmount时有bug
+
 	return nil
 }
 
@@ -76,7 +80,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	ringState.ReducedRate = new(big.Rat)
 	ringState.ReducedRate.Inv(rate)
-	log.Debugf("priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%d ", priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
+	log.Debugf("rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
@@ -190,9 +194,8 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 	}
 
 	for _, filledOrder := range ringState.Orders {
-		lrcAddress := &common.Address{}
+		lrcAddress := e.accessor.ProtocolImpls[filledOrder.OrderState.RawOrder.Protocol].LrcTokenAddress
 
-		lrcAddress.SetBytes([]byte(e.marketCapProvider.LRC_ADDRESS))
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)
 		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -220,7 +223,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(e.marketCapProvider.GetMarketCap(*lrcAddress), filledOrder.LrcFee)
+		legalAmountOfLrc := new(big.Rat).Mul(e.marketCapProvider.GetMarketCap(lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -232,12 +235,14 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, e.marketCapProvider.GetMarketCap(*lrcAddress))
+			lrcReward.Quo(lrcReward, e.marketCapProvider.GetMarketCap(lrcAddress))
 			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
+
 	}
+
 }
 
 //成环之后才可计算能否成交，否则不需计算，判断是否能够成交，不能使用除法计算
@@ -290,6 +295,7 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
-	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold}
+func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64, accessor *ethaccessor.EthNodeAccessor) *Evaluator {
+
+	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, accessor: accessor}
 }
