@@ -59,22 +59,22 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.globalConfig = globalConfig
 
 	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	//accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
-	//if nil != err {
-	//	panic(err)
-	//}
-	//n.accessor = accessor
+	accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
+	if nil != err {
+		panic(err)
+	}
+	n.accessor = accessor
 
 	//marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
-	//
+
 	n.registerCrypto(ks)
 	n.registerMysql()
-	//n.registerUserManager()
+	n.registerUserManager()
 	n.registerIPFSSubService()
 	n.registerGateway()
 	//n.registerMiner(accessor, ks, marketCapProvider)
 	//n.registerExtractor()
-	//n.registerOrderManager()
+	n.registerOrderManager()
 	//n.registerTrendManager()
 	//n.registerJsonRpcService()
 
@@ -82,12 +82,11 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 }
 
 func (n *Node) Start() {
-	n.rdsService.Prepare()
 	//n.extractorService.Start()
 	n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
-	//n.orderManager.Start()
+	n.orderManager.Start()
 }
 
 func (n *Node) Wait() {
@@ -122,6 +121,7 @@ func (n *Node) registerCrypto(ks *keystore.KeyStore) {
 
 func (n *Node) registerMysql() {
 	n.rdsService = dao.NewRdsService(n.globalConfig.Mysql)
+	n.rdsService.Prepare()
 }
 
 func (n *Node) registerAccessor() {
@@ -138,7 +138,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, &n.globalConfig.Common, n.rdsService, n.userManager, n.accessor)
 }
 
 func (n *Node) registerTrendManager() {
