@@ -112,7 +112,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if f.MinLrcFee.Cmp(o.LrcFee) >= 0 {
 		return false, errors.New("order " + o.Hash.Hex() + " lrcFee too tiny")
 	}
-	if len(o.Owner) != 42 {
+	if len(o.Owner) != 20 {
 		return false, errors.New("order " + o.Hash.Hex() + " owner address length error")
 	}
 
