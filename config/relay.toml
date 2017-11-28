@@ -23,14 +23,6 @@ block_period = 5
 	    encode_level = "lowercase"
 	    encode_time = "iso8601"
 
-[database]
-    server = "localhost"
-    port = 8001
-    data_dir = "./lrcleveldb"
-    name = "lrcleveldb"
-    cache_capacity = 8
-    buffer_capacity = 4
-
 [mysql]
     user = "root"
     password = "111111"
