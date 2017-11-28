@@ -27,6 +27,7 @@ type CancelEvent struct {
 	ID              int    `gorm:"column:id;primary_key;"`
 	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
 	OrderHash       string `gorm:"column:order_hash;varchar(82);unique_index"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber     int64  `gorm:"column:block_number"`
 	CreateTime      int64  `gorm:"column:create_time"`
 	AmountCancelled []byte `gorm:"column:amount_cancelled;type:varchar(30)"`
@@ -42,6 +43,7 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	}
 
 	e.OrderHash = src.OrderHash.Hex()
+	e.TxHash = src.TxHash.Hex()
 	e.Protocol = src.ContractAddress.Hex()
 	e.CreateTime = src.Time.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()

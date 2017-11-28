@@ -105,6 +105,7 @@ type OrderFilledEvent struct {
 	PreOrderHash    common.Hash
 	OrderHash       common.Hash
 	NextOrderHash   common.Hash
+	TxHash          common.Hash
 	ContractAddress common.Address
 	RingIndex       *Big
 	Time            *Big
@@ -118,6 +119,7 @@ type OrderFilledEvent struct {
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash
+	TxHash          common.Hash
 	ContractAddress common.Address
 	Time            *Big
 	Blocknumber     *Big
@@ -128,6 +130,7 @@ type OrderCancelledEvent struct {
 type CutoffEvent struct {
 	Owner           common.Address
 	ContractAddress common.Address
+	TxHash          common.Hash
 	Time            *Big
 	Blocknumber     *Big
 	Cutoff          *Big
@@ -139,6 +142,7 @@ type RingMinedEvent struct {
 	Time               *Big
 	Blocknumber        *Big
 	Ringhash           common.Hash
+	TxHash             common.Hash
 	Miner              common.Address
 	FeeRecipient       common.Address
 	ContractAddress    common.Address
