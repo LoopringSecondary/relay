@@ -119,16 +119,19 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 }
 
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
-	if err = accessor.Call(&gasPrice, "eth_GasPrice"); nil != err {
+	var gasBig, gasPriceBig types.Big
+	if err = accessor.Call(&gasPriceBig, "eth_gasPrice"); nil != err {
 		return
 	}
 	callArg := &CallArg{}
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)
-	callArg.GasPrice = *types.NewBigPtr(gasPrice)
-	if err = accessor.Call(&gas, "eth_EstimateGas", callArg); nil != err {
+	callArg.GasPrice = gasPriceBig
+	if err = accessor.Call(&gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
+	gasPrice = gasPriceBig.BigInt()
+	gas = gasBig.BigInt()
 	return
 }
 
@@ -170,7 +173,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	}
 	var txHash string
 	var nonce types.Big
-	if err := accessor.Call(&nonce, "eth_GetTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+	if err := accessor.Call(&nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
 		return "", err
 	}
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),

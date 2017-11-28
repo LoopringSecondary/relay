@@ -26,8 +26,8 @@ func (o Order) MarshalJSON() ([]byte, error) {
 		BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"`
 		V                     uint8          `json:"v" gencodec:"required"`
-		R                     Sign           `json:"r" gencodec:"required"`
-		S                     Sign           `json:"s" gencodec:"required"`
+		R                     Bytes32        `json:"r" gencodec:"required"`
+		S                     Bytes32        `json:"s" gencodec:"required"`
 		Price                 *big.Rat       `json:"price"`
 		Owner                 common.Address `json:"owner"`
 		Hash                  common.Hash    `json:"hash"`
@@ -67,8 +67,8 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		BuyNoMoreThanAmountB  *bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage *uint8          `json:"marginSplitPercentage" gencodec:"required"`
 		V                     *uint8          `json:"v" gencodec:"required"`
-		R                     *Sign           `json:"r" gencodec:"required"`
-		S                     *Sign           `json:"s" gencodec:"required"`
+		R                     *Bytes32        `json:"r" gencodec:"required"`
+		S                     *Bytes32        `json:"s" gencodec:"required"`
 		Price                 *big.Rat        `json:"price"`
 		Owner                 *common.Address `json:"owner"`
 		Hash                  *common.Hash    `json:"hash"`

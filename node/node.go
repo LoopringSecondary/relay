@@ -157,7 +157,7 @@ func (n *Node) registerJsonRpcService() {
 
 func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
 	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
-	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
+	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
 	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 }

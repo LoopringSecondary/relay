@@ -138,8 +138,8 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
 	dst.V = o.V
-	dst.S = types.HexToSign(o.S)
-	dst.R = types.HexToSign(o.R)
+	dst.S = types.HexToBytes32(o.S)
+	dst.R = types.HexToBytes32(o.R)
 	dst.Owner = common.HexToAddress(o.Owner)
 
 	dst.Hash = common.HexToHash(o.OrderHash)

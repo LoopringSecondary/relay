@@ -67,8 +67,8 @@ type Order struct {
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
 	V                     uint8          `json:"v" gencodec:"required"`
-	R                     Sign           `json:"r" gencodec:"required"`
-	S                     Sign           `json:"s" gencodec:"required"`
+	R                     Bytes32        `json:"r" gencodec:"required"`
+	S                     Bytes32        `json:"s" gencodec:"required"`
 	Price                 *big.Rat       `json:"price"`
 	Owner                 common.Address `json:"owner"`
 	Hash                  common.Hash    `json:"hash"`
@@ -120,8 +120,8 @@ func (o *Order) GenerateAndSetSignature(singerAddr common.Address) error {
 	} else {
 		v, r, s := crypto.SigToVRS(sig)
 		o.V = uint8(v)
-		o.R = BytesToSign(r)
-		o.S = BytesToSign(s)
+		o.R = BytesToBytes32(r)
+		o.S = BytesToBytes32(s)
 		return nil
 	}
 }

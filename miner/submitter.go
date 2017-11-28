@@ -181,7 +181,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	protocolAbi := submitter.Accessor.ProtocolImpls[protocolAddress].ProtocolImplAbi
 
-	ringForSubmit := &types.RingForSubmit{}
+	ringForSubmit := &types.RingForSubmit{RawRing: ringState}
 	ringForSubmit.ProtocolAddress = protocolAddress
 	ringForSubmit.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
 	ringForSubmit.Ringhash = ringState.Hash
@@ -190,7 +190,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*
 		ringhashRegistryAbi := submitter.Accessor.ProtocolImpls[protocolAddress].RinghashRegistryAbi
 		ringhashRegistryAddress := submitter.Accessor.ProtocolImpls[protocolAddress].RinghashRegistryAddress
 
-		ringForSubmit.RegistryData, err = ringhashRegistryAbi.Pack("submitRinghash", ringForSubmit.OrdersCount,
+		ringForSubmit.RegistryData, err = ringhashRegistryAbi.Pack("submitRinghash",
 			submitter.miner.Address,
 			ringForSubmit.Ringhash)
 		if nil != err {
