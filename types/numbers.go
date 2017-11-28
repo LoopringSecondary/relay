@@ -25,9 +25,15 @@ import (
 type Big big.Int
 
 func NewBigPtr(v *big.Int) *Big {
-	h := new(Big)
-	(*big.Int)(h).Set(v)
-	return h
+	n := new(Big)
+	n.SetInt(v)
+	return n
+}
+
+func NewBigWithInt(v int) *Big {
+	n := new(Big)
+	n.SetInt(big.NewInt(int64(v)))
+	return n
 }
 
 func (h *Big) UnmarshalText(input []byte) error {

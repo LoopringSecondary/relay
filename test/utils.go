@@ -19,25 +19,25 @@
 package test
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/relay/crypto"
 )
 
 type TestParams struct {
-	Accessor 			 *ethaccessor.EthNodeAccessor
+	Accessor             *ethaccessor.EthNodeAccessor
 	ImplAddress          common.Address
 	MinerPrivateKey      []byte
 	DelegateAddress      common.Address
@@ -106,6 +106,7 @@ func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, err
 	}
 	return accessor, nil
 }
+
 //
 //func (testParams *TestParams) PrepareTestData() {
 //	var err error

@@ -22,15 +22,18 @@ import (
 	"encoding/json"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //var testParams *test.TestParams
 
-const suffix = "0"
+const (
+	suffix   = "0"
+	account1 = "0x94306b845fedfeaf4145c21bd289db0d387ce3a2"
+)
 
 func TestOrdersOfRing(t *testing.T) {
 	sh := shell.NewLocalShell()
@@ -73,7 +76,7 @@ func setOrder2() *types.Order {
 		common.HexToAddress(test.TokenAddressB),
 		common.HexToAddress(test.TokenAddressA),
 		common.HexToAddress(protocol),
-		common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
+		common.HexToAddress("0x94306b845fedfeaf4145c21bd289db0d387ce3a2"),
 		amountS2,
 		amountB2,
 	)

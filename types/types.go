@@ -30,8 +30,8 @@ const (
 
 type Bytes32 [Bytes32Length]byte
 
-func BitToBytes32(b *big.Int) Bytes32  { return BytesToBytes32(b.Bytes()[:]) }
-func HexToBytes32(s string) Bytes32 { return BytesToBytes32(common.FromHex(s)) }
+func BitToBytes32(b *big.Int) Bytes32 { return BytesToBytes32(b.Bytes()[:]) }
+func HexToBytes32(s string) Bytes32   { return BytesToBytes32(common.FromHex(s)) }
 
 //MarshalJson
 func (a *Bytes32) MarshalText() ([]byte, error) {
@@ -57,9 +57,9 @@ func BytesToBytes32(b []byte) Bytes32 {
 
 func (s *Bytes32) SetBytes(b []byte) {
 	if len(b) > len(s) {
-		b = b[len(b)- Bytes32Length:]
+		b = b[len(b)-Bytes32Length:]
 	}
-	copy(s[Bytes32Length -len(b):], b)
+	copy(s[Bytes32Length-len(b):], b)
 }
 
 func IsZeroHash(hash common.Hash) bool {

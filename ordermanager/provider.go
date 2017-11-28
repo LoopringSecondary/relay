@@ -19,6 +19,7 @@
 package ordermanager
 
 import (
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -29,33 +30,51 @@ import (
 )
 
 type minerOrdersProvider struct {
-	dao                dao.RdsService
+	commonOpts         *config.CommonOptions
+	rds                dao.RdsService
 	ticker             *time.Ticker
-	tick               time.Duration
+	tick               int
+	lastBlockNumber    *types.Big
 	currentBlockNumber *types.Big
 	blockNumberPeriod  *types.Big
 	mtx                sync.Mutex
 	quit               chan struct{}
 }
 
-func newMinerOrdersProvider(clearTick time.Duration, blockNumberPeriod *types.Big) *minerOrdersProvider {
+func newMinerOrdersProvider(clearTick, blockNumberPeriod int, commonOpts *config.CommonOptions, rds dao.RdsService) *minerOrdersProvider {
 	provider := &minerOrdersProvider{}
 	provider.tick = clearTick
-	provider.blockNumberPeriod = blockNumberPeriod
+	provider.blockNumberPeriod = types.NewBigWithInt(blockNumberPeriod)
+	provider.commonOpts = commonOpts
+	provider.rds = rds
+	provider.currentBlockNumber = types.NewBigPtr(provider.commonOpts.DefaultBlockNumber)
+
+	if entity, err := provider.rds.FindLatestBlock(); err == nil {
+		var block types.Block
+		if err := entity.ConvertDown(&block); err != nil {
+			log.Fatalf("ordermanager: orders provider,error%s", err.Error())
+		}
+		provider.currentBlockNumber = types.NewBigPtr(block.BlockNumber)
+	}
+	provider.lastBlockNumber = provider.currentBlockNumber
 
 	return provider
 }
 
 func (p *minerOrdersProvider) start() {
 	p.quit = make(chan struct{})
-	p.ticker = time.NewTicker(p.tick)
+	// todo : get ticker time from config
+	p.ticker = time.NewTicker(10 * time.Second)
 
-	for {
-		select {
-		case <-p.ticker.C:
-			p.unMarkOrders()
+	log.Debugf("ordermanager provider ticker period %d", p.tick)
+	go func() {
+		for {
+			select {
+			case <-p.ticker.C:
+				p.unMarkOrders()
+			}
 		}
-	}
+	}()
 }
 
 func (p *minerOrdersProvider) stop() {
@@ -77,16 +96,19 @@ func (p *minerOrdersProvider) markOrders(orderhashs []common.Hash) error {
 		orderhashstrs = append(orderhashstrs, v.Hex())
 	}
 
-	return p.dao.MarkMinerOrders(orderhashstrs, p.currentBlockNumber.Int64())
+	return p.rds.MarkMinerOrders(orderhashstrs, p.currentBlockNumber.Int64())
 }
 
 func (p *minerOrdersProvider) unMarkOrders() error {
-	des := new(big.Int).Sub(p.currentBlockNumber.BigInt(), p.blockNumberPeriod.BigInt())
+	cmp := big.NewInt(0).Add(p.blockNumberPeriod.BigInt(), p.lastBlockNumber.BigInt())
+	des := new(big.Int).Sub(p.currentBlockNumber.BigInt(), cmp)
 	if des.Cmp(big.NewInt(1)) < 0 {
 		return nil
 	}
 
-	return p.dao.UnMarkMinerOrders(des.Int64())
+	log.Debugf("current block number:%s,last block number period:%s,period block number", p.currentBlockNumber.BigInt().String(), p.lastBlockNumber.BigInt().String(), p.blockNumberPeriod.BigInt().String())
+
+	return p.rds.UnMarkMinerOrders(des.Int64())
 }
 
 func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhashs []common.Hash) []types.OrderState {
@@ -94,7 +116,7 @@ func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhash
 
 	filterStatus := []uint8{types.ORDER_FINISHED.Value(), types.ORDER_CUTOFF.Value(), types.ORDER_CANCEL.Value()}
 
-	models, err := p.dao.GetOrdersForMiner(tokenS.Hex(), tokenB.Hex(), filterStatus)
+	models, err := p.rds.GetOrdersForMiner(tokenS.Hex(), tokenB.Hex(), filterStatus)
 	if len(models) == 0 || err != nil {
 		return list
 	}
@@ -106,6 +128,8 @@ func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhash
 		}
 		list = append(list, state)
 	}
+
+	p.lastBlockNumber = p.currentBlockNumber
 
 	return list
 }
