@@ -48,7 +48,6 @@ func LoadConfig(file string) *GlobalConfig {
 
 	if c.Common.Develop {
 		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/"
-		c.Database.DataDir = basedir + c.Database.Name
 		c.Keystore.Keydir = basedir + c.Keystore.Keydir
 
 		for idx, path := range c.Log.ZapOpts.OutputPaths {
@@ -66,7 +65,6 @@ type GlobalConfig struct {
 	Owner struct {
 		Name string
 	}
-	Database       DbOptions
 	Mysql          MysqlOptions
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
@@ -93,15 +91,6 @@ type IpfsOptions struct {
 	ListenTopics    []string
 	BroadcastTopics []string
 	IsBroadcast     bool
-}
-
-type DbOptions struct {
-	Server         string `required:"true"`
-	Port           int    `required:"true"`
-	Name           string `required:"true"`
-	DataDir        string `required:"true"`
-	CacheCapacity  int
-	BufferCapacity int
 }
 
 type AccessorOptions struct {
