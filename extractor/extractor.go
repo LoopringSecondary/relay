@@ -172,6 +172,8 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			contract.BlockNumber = &evtLog.BlockNumber
 			contract.Time = &block.Timestamp
 			contract.ContractAddress = evtLog.Address
+			contract.TxHash = tx.Hash
+
 			eventemitter.Emit(contract.Key, contract)
 		}
 	}
@@ -207,6 +209,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		return err
 	}
 	ringmined.ContractAddress = common.HexToAddress(contractData.ContractAddress)
+	ringmined.TxHash = common.HexToHash(contractData.TxHash)
 	ringmined.Time = contractData.Time
 	ringmined.Blocknumber = contractData.BlockNumber
 	ringmined.IsDeleted = false
@@ -222,6 +225,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
 	for _, fill := range fills {
+		fill.TxHash = common.HexToHash(contractData.TxHash)
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
@@ -259,9 +263,11 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.TxHash = common.HexToHash(contractData.TxHash)
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+
 	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
@@ -288,6 +294,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.TxHash = common.HexToHash(contractData.TxHash)
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber

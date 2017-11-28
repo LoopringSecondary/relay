@@ -27,6 +27,7 @@ type CutOffEvent struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
 	Owner       string `gorm:"column:owner;type:varchar(42);unique_index"`
+	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
 	CreateTime  int64  `gorm:"column:create_time"`
@@ -37,6 +38,7 @@ type CutOffEvent struct {
 func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.ContractAddress.Hex()
+	e.TxHash = src.TxHash.Hex()
 	e.Cutoff = src.Cutoff.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
 	e.CreateTime = src.Time.Int64()

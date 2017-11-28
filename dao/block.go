@@ -100,6 +100,7 @@ func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
 		err   error
 	)
 
+	println("-----tttttt")
 	err = s.db.Order("create_time, desc").First(&block).Error
 
 	return &block, err

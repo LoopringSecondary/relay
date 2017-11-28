@@ -30,6 +30,7 @@ type FillEvent struct {
 	BlockNumber   int64  `gorm:"column:block_number"`
 	CreateTime    int64  `gorm:"column:create_time"`
 	RingHash      string `gorm:"column:ring_hash;varchar(82)"`
+	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
 	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)"`
 	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)"`
 	OrderHash     string `gorm:"column:order_hash;type:varchar(82)"`
@@ -64,6 +65,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.BlockNumber = src.Blocknumber.Int64()
 	f.CreateTime = src.Time.Int64()
 	f.RingHash = src.Ringhash.Hex()
+	f.TxHash = src.TxHash.Hex()
 	f.PreOrderHash = src.PreOrderHash.Hex()
 	f.NextOrderHash = src.NextOrderHash.Hex()
 	f.OrderHash = src.OrderHash.Hex()

@@ -87,6 +87,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt.IsRinghashReserved = e.IsRingHashReserved
 
 	var list []*types.OrderFilledEvent
+	lrcFee := big.NewInt(0)
 	for i := 0; i < length; i++ {
 		var (
 			fill                        types.OrderFilledEvent
@@ -116,8 +117,11 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.LrcReward = types.NewBigPtr(e.AmountsList[i][2])
 		fill.LrcFee = types.NewBigPtr(e.AmountsList[i][3])
 
+		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee.BigInt())
 		list = append(list, &fill)
 	}
+
+	evt.TotalLrcFee = types.NewBigPtr(lrcFee)
 
 	return evt, list, nil
 }
