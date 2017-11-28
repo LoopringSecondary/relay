@@ -81,6 +81,10 @@ type RdsService interface {
 
 	// white list
 	GetWhiteList() ([]WhiteList, error)
+
+	//ringSubmitInfo
+	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
+	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error
 }
 
 type PageResult struct {
@@ -126,6 +130,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &CutOffEvent{})
 	tables = append(tables, &Trend{})
 	tables = append(tables, &WhiteList{})
+	tables = append(tables, &RingSubmitInfo{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

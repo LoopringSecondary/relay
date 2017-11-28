@@ -31,6 +31,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/marketcap"
 )
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
@@ -46,7 +48,11 @@ type RingSubmitter struct {
 	mtx *sync.RWMutex
 
 	//todo:
-	registeredRings map[common.Hash]types.RingForSubmit
+	registeredRings map[common.Hash]types.RingSubmitInfo
+
+	dbService dao.RdsService
+	marketCapProvider *marketcap.MarketCapProvider
+
 }
 
 type RingSubmitFailed struct {
@@ -54,8 +60,10 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *ethaccessor.EthNodeAccessor) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
+	submitter.dbService = dbService
+	submitter.marketCapProvider = marketCapProvider
 	submitter.Accessor = accessor
 	submitter.mtx = &sync.RWMutex{}
 	submitter.ks = ks
@@ -64,7 +72,7 @@ func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *
 	submitter.feeReceipt = common.HexToAddress(options.FeeRecepient)
 	submitter.ifRegistryRingHash = options.IfRegistryRingHash
 
-	submitter.registeredRings = make(map[common.Hash]types.RingForSubmit)
+	submitter.registeredRings = make(map[common.Hash]types.RingSubmitInfo)
 
 	return submitter
 }
@@ -73,15 +81,21 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 	submitter.mtx.Lock()
 	defer submitter.mtx.Unlock()
 
-	rings := eventData.([]*types.RingForSubmit)
+	ringInfos := eventData.([]*types.RingSubmitInfo)
+
+	for _,info := range ringInfos {
+		if err := submitter.dbService.Add(info); nil != err {
+			log.Errorf("err:%s", err.Error())
+		}
+	}
 	if submitter.ifRegistryRingHash {
-		if len(rings) == 1 {
-			return submitter.ringhashRegistry(rings[0])
+		if len(ringInfos) == 1 {
+			return submitter.ringhashRegistry(ringInfos[0])
 		} else {
-			return submitter.batchRinghashRegistry(rings)
+			return submitter.batchRinghashRegistry(ringInfos)
 		}
 	} else {
-		for _, ringState := range rings {
+		for _, ringState := range ringInfos {
 			if err := submitter.submitRing(ringState); nil != err {
 				//todo:index
 				return err
@@ -92,30 +106,68 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 }
 
 //todo: 不在submit中的才会提交
-func (submitter *RingSubmitter) canSubmit(ringState *types.RingForSubmit) error {
+func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error {
 	return errors.New("had been processed")
 }
 
-func (submitter *RingSubmitter) batchRinghashRegistry(ringState []*types.RingForSubmit) error {
+func (submitter *RingSubmitter) batchRinghashRegistry(ringInfos []*types.RingSubmitInfo) error {
+	infosMap := make(map[common.Address][]*types.RingSubmitInfo)
+	for _, info := range ringInfos {
+		if _,ok := infosMap[info.ProtocolAddress]; !ok {
+			infosMap[info.ProtocolAddress] = []*types.RingSubmitInfo{}
+		}
+		infosMap[info.ProtocolAddress] = append(infosMap[info.ProtocolAddress], info)
+	}
+	for protocolAddr,infos := range infosMap {
+		contractAddress := protocolAddr
+		miners := []common.Address{}
+		ringhashes := []common.Hash{}
+		for _, info := range infos {
+			miners = append(miners, info.RawRing.Miner)
+			ringhashes = append(ringhashes, info.Ringhash)
+		}
+		ringhashRegistryAbi := submitter.Accessor.ProtocolImpls[contractAddress].RinghashRegistryAbi
+		ringhashRegistryAddress := submitter.Accessor.ProtocolImpls[contractAddress].RinghashRegistryAddress
+
+		if registryData, err := ringhashRegistryAbi.Pack("submitRinghash",
+			miners,
+			ringhashes); nil != err {
+			return err
+		} else {
+			if gas, gasPrice, err1 := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
+				return err1
+			} else {
+				if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, gas, gasPrice, registryData); nil != err {
+					return err
+				} else {
+					submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash)
+				}
+			}
+		}
+
+	}
+
 	return nil
 }
 
-func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingForSubmit) error {
+func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo) error {
 	contractAddress := ringState.ProtocolAddress
 	ringhashRegistryAddress := submitter.Accessor.ProtocolImpls[contractAddress].RinghashRegistryAddress
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, ringState.RegistryData); nil != err {
 		return err
 	} else {
 		ringState.RegistryTxHash = common.HexToHash(txHash)
+		submitter.dbService.UpdateRingSubmitInfoRegistryTxHash([]common.Hash{ringState.Ringhash}, txHash)
 	}
 	return nil
 }
 
-func (submitter *RingSubmitter) submitRing(ringSate *types.RingForSubmit) error {
+func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, ringSate.ProtocolData); nil != err {
 		return err
 	} else {
 		ringSate.SubmitTxHash = common.HexToHash(txHash)
+		submitter.dbService.UpdateRingSubmitInfoSubmitTxHash(ringSate.Ringhash, txHash)
 	}
 	return nil
 }
@@ -159,7 +211,7 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 		//todo:change to dao
 		ringData := []byte{}
 		if nil != ringData {
-			ringState := &types.RingForSubmit{}
+			ringState := &types.RingSubmitInfo{}
 			if err := json.Unmarshal(ringData, ringState); nil != err {
 				log.Errorf("error:%s", err.Error())
 			} else {
@@ -176,12 +228,13 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 	return nil
 }
 
-func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*types.RingForSubmit, error) {
+func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*types.RingSubmitInfo, error) {
 	var err error
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	protocolAbi := submitter.Accessor.ProtocolImpls[protocolAddress].ProtocolImplAbi
 
-	ringForSubmit := &types.RingForSubmit{RawRing: ringState}
+	ringForSubmit := &types.RingSubmitInfo{RawRing: ringState}
+	ringForSubmit.Miner = ringState.Miner
 	ringForSubmit.ProtocolAddress = protocolAddress
 	ringForSubmit.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
 	ringForSubmit.Ringhash = ringState.Hash
@@ -221,6 +274,16 @@ func (submitter *RingSubmitter) GenerateRingSubmitArgs(ringState *types.Ring) (*
 	ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice, err = submitter.Accessor.EstimateGas(ringForSubmit.ProtocolData, protocolAddress)
 	if nil != err {
 		return nil, err
+	}
+
+	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)
+	registryCost := new(big.Int).Mul(ringForSubmit.RegistryGas, ringForSubmit.RegistryGasPrice)
+	cost := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))
+	cost = cost.Mul(cost, submitter.marketCapProvider.GetEthCap())
+	received := new(big.Rat).Sub(ringState.LegalFee, cost)
+	ringForSubmit.Received = received
+	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
+		return nil, errors.New("received can't be less than 0")
 	}
 	return ringForSubmit, nil
 }
