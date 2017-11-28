@@ -75,11 +75,12 @@ type Market struct {
 	BtoANotMatchedOrderHashes []common.Hash
 }
 
-func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator) *TimingMatcher {
+func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager) *TimingMatcher {
 	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	//todo:get markets from market.Allmarket
 	m := &Market{}
+	m.om = om
 	m.matcher = matcher
 	m.AtoBNotMatchedOrderHashes = []common.Hash{}
 	m.BtoANotMatchedOrderHashes = []common.Hash{}
@@ -179,24 +180,23 @@ func (market *Market) match() {
 	market.getOrdersForMatching()
 
 	matchedOrderHashes := make(map[common.Hash]bool)
-	ringStates := []*types.RingForSubmit{}
+	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
-		var ringForSubmit *types.RingForSubmit
+		var ringForSubmit *types.RingSubmitInfo
 		for _, b2AOrder := range market.BtoAOrders {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
 				ringTmp := &types.Ring{}
 				ringTmp.Orders = []*types.FilledOrder{convertOrderStateToFilledOrder(a2BOrder), convertOrderStateToFilledOrder(b2AOrder)}
 
 				market.matcher.evaluator.ComputeRing(ringTmp)
-				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitArgs(ringTmp)
+				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
 				if nil != err {
 					log.Errorf("err: %s", err.Error())
+				} else {
+					if nil == ringForSubmit || ringForSubmit.Received.Cmp(ringForSubmitTmp.Received) < 0 {
+						ringForSubmit = ringForSubmitTmp
+					}
 				}
-				if nil == ringForSubmit || ringForSubmit.RawRing.LegalFee.Cmp(ringTmp.LegalFee) < 0 {
-					//todo: 需要确定花费的gas等是多少，来确定是否生成该环路
-					ringForSubmit = ringForSubmitTmp
-				}
-
 			}
 		}
 
@@ -223,7 +223,7 @@ func (market *Market) match() {
 		}
 	}
 
-	eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
+	//eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
 }
 
 func (matcher *TimingMatcher) afterSubmit(eventData eventemitter.EventData) error {
