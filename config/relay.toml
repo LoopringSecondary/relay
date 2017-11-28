@@ -89,3 +89,6 @@ block_period = 5
     [gateway_filters.token_b_filter]
         allow = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
         denied = []
+
+[keystore]
+    keydir = "ks_dir"

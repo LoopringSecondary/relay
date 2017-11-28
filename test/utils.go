@@ -19,8 +19,7 @@
 package test
 
 import (
-	"github.com/Loopring/relay/chainclient"
-	"github.com/Loopring/relay/chainclient/eth"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/extractor"
@@ -30,20 +29,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 	"time"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/usermanager"
+	"github.com/Loopring/relay/crypto"
 )
 
 type TestParams struct {
-	Client               *chainclient.Client
-	Imp                  *chainclient.LoopringProtocolImpl
-	ImplAddress          types.Address
-	Registry             *chainclient.LoopringRinghashRegistry
+	Accessor 			 *ethaccessor.EthNodeAccessor
+	ImplAddress          common.Address
 	MinerPrivateKey      []byte
-	DelegateAddress      types.Address
-	Owner                types.Address
-	TokenRegistryAddress types.Address
+	DelegateAddress      common.Address
+	Owner                common.Address
+	TokenRegistryAddress common.Address
 	Accounts             map[string]string
 	TokenAddrs           []string
 	Config               *config.GlobalConfig
@@ -68,7 +67,14 @@ var (
 	testTokens = []string{TokenAddressA, TokenAddressB}
 )
 
-func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.Int, pkBytes []byte, owner types.Address) *types.Order {
+func Initialize() {
+	c := loadConfig()
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+}
+
+func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
 	order.TokenS = tokenS
@@ -80,9 +86,10 @@ func CreateOrder(tokenS, tokenB, protocol types.Address, amountS, amountB *big.I
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = big.NewInt(1000)
 	order.BuyNoMoreThanAmountB = false
-	order.MarginSplitPercentage = 0
+	order.MarginSplitPercentage = 2
+	order.Hash = order.GenerateHash()
 	order.Owner = owner
-	order.GenerateAndSetSignature(pkBytes)
+	order.GenerateAndSetSignature(owner)
 	return order
 }
 
@@ -90,162 +97,124 @@ func LoadConfig() *config.GlobalConfig {
 	return loadConfig()
 }
 
-func LoadConfigAndGenerateTestParams() *TestParams {
-	params := &TestParams{Imp: &chainclient.LoopringProtocolImpl{}, Registry: &chainclient.LoopringRinghashRegistry{}}
-	params.Accounts = testAccounts
-	params.TokenAddrs = testTokens
-
-	globalConfig := loadConfig()
-	params.Config = globalConfig
-
-	ethClient := generateEthClient(globalConfig)
-	params.Client = ethClient.Client
-	params.Client.NewContract(params.Imp, params.ImplAddress.Hex(), chainclient.ImplAbiStr)
-
-	var lrcTokenAddressHex string
-	params.Imp.LrcTokenAddress.Call(&lrcTokenAddressHex, "pending")
-	lrcTokenAddress := types.HexToAddress(lrcTokenAddressHex)
-	lrcToken := &chainclient.Erc20Token{}
-	params.Client.NewContract(lrcToken, lrcTokenAddress.Hex(), chainclient.Erc20TokenAbiStr)
-
-	var registryAddressHex string
-	params.Imp.RinghashRegistryAddress.Call(&registryAddressHex, "pending")
-	registryAddress := types.HexToAddress(registryAddressHex)
-	params.Client.NewContract(params.Registry, registryAddress.Hex(), chainclient.RinghashRegistryAbiStr)
-
-	var delegateAddressHex string
-	params.Imp.DelegateAddress.Call(&delegateAddressHex, "pending")
-	params.DelegateAddress = types.HexToAddress(delegateAddressHex)
-	var tokenRegistryAddressHex string
-	params.Imp.TokenRegistryAddress.Call(&tokenRegistryAddressHex, "pending")
-	params.TokenRegistryAddress = types.HexToAddress(tokenRegistryAddressHex)
-
-	//passphrase := &types.Passphrase{}
-	//passphrase.SetBytes([]byte(globalConfig.Common.Passphrase))
-	//var err error
-	//params.MinerPrivateKey, err = crypto.AesDecrypted(passphrase.Bytes(), types.FromHex(globalConfig.Miner.Miner))
-	//if nil != err {
-	//	panic(err)
-	//}
-
-	var implOwners []string
-	if err := params.Client.Accounts(&implOwners); nil != err {
-		panic(err)
-	}
-	params.Owner = types.HexToAddress(implOwners[0])
-	return params
-}
-
-func (testParams *TestParams) PrepareTestData() {
-
-	var err error
-	var hash string
-	accounts := []string{}
-	for k, _ := range testParams.Accounts {
-		accounts = append(accounts, k)
-	}
-
-	//delegate registry
-	delegateContract := &chainclient.TransferDelegate{}
-	testParams.Client.NewContract(delegateContract, testParams.DelegateAddress.Hex(), chainclient.TransferDelegateAbiStr)
-
-	hash, err = delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
+func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, error) {
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common, ks)
 	if nil != err {
-		log.Errorf("delegate add version error:%s", err.Error())
-	} else {
-		log.Infof("delegate add version hash:%s", hash)
+		return nil, err
 	}
-	//
-	//tokenregistry
-	tokenRegistry := &chainclient.TokenRegistry{}
-	testParams.Client.NewContract(tokenRegistry, testParams.TokenRegistryAddress.Hex(), chainclient.TokenRegistryAbiStr)
-	for idx, tokenAddr := range testParams.TokenAddrs {
-		hash, err = tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token"+strconv.Itoa(idx))
-		if nil != err {
-			log.Errorf("register token error:%s", err.Error())
-		} else {
-			log.Infof("register token hash:%s", hash)
-		}
-	}
-	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
+	return accessor, nil
 }
+//
+//func (testParams *TestParams) PrepareTestData() {
+//	var err error
+//	var hash string
+//	accounts := []string{}
+//	for k, _ := range testParams.Accounts {
+//		accounts = append(accounts, k)
+//	}
+//
+//	//delegate registry
+//	delegateContract := &chainclient.TransferDelegate{}
+//	testParams.Client.NewContract(delegateContract, testParams.DelegateAddress.Hex(), chainclient.TransferDelegateAbiStr)
+//
+//	hash, err = delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
+//	if nil != err {
+//		log.Errorf("delegate add version error:%s", err.Error())
+//	} else {
+//		log.Infof("delegate add version hash:%s", hash)
+//	}
+//	//
+//	//tokenregistry
+//	tokenRegistry := &chainclient.TokenRegistry{}
+//	testParams.Client.NewContract(tokenRegistry, testParams.TokenRegistryAddress.Hex(), chainclient.TokenRegistryAbiStr)
+//	for idx, tokenAddr := range testParams.TokenAddrs {
+//		hash, err = tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token"+strconv.Itoa(idx))
+//		if nil != err {
+//			log.Errorf("register token error:%s", err.Error())
+//		} else {
+//			log.Infof("register token hash:%s", hash)
+//		}
+//	}
+//	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
+//}
+//
+//func (testParams *TestParams) IsTestDataReady() {
+//
+//	accounts := []string{}
+//	for k, _ := range testParams.Accounts {
+//		accounts = append(accounts, k)
+//	}
+//
+//	testParams.allowanceToLoopring(accounts, testParams.TokenAddrs)
+//}
+//
+//func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs []string) {
+//	token := &chainclient.Erc20Token{}
+//	for _, tokenAddr := range tokenAddrs {
+//		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
+//		for _, account := range accounts {
+//			balance := &types.Big{}
+//			if err := token.BalanceOf.Call(balance, "latest", common.HexToAddress(account)); nil != err {
+//				log.Error(err.Error())
+//			} else {
+//				log.Infof("token: %s, balance %s : %s", tokenAddr, account, balance.BigInt().String())
+//			}
+//			if err := token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress); nil != err {
+//				log.Error(err.Error())
+//			} else {
+//				log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr, account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
+//			}
+//		}
+//	}
+//}
+//
+//func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []string, amount *big.Int) {
+//	token := &chainclient.Erc20Token{}
+//	for _, tokenAddr := range tokenAddrs {
+//		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
+//		for _, account := range accounts {
+//			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.DelegateAddress, amount); nil != err {
+//				log.Error(err.Error())
+//			} else {
+//				log.Info(txHash)
+//			}
+//		}
+//
+//	}
+//}
+//
+//func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
+//	var result types.Big
+//	token := &chainclient.Erc20Token{}
+//	testParams.Client.NewContract(token, tokenAddress, chainclient.Erc20TokenAbiStr)
+//	if err := token.Allowance.Call(&result, "pending", types.HexToAddress(account), testParams.DelegateAddress); err != nil {
+//		panic(err)
+//	} else {
+//		println(result.BigInt().String())
+//	}
+//}
 
-func (testParams *TestParams) IsTestDataReady() {
-
-	accounts := []string{}
-	for k, _ := range testParams.Accounts {
-		accounts = append(accounts, k)
-	}
-
-	testParams.allowanceToLoopring(accounts, testParams.TokenAddrs)
-}
-
-func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs []string) {
-	token := &chainclient.Erc20Token{}
-	for _, tokenAddr := range tokenAddrs {
-		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
-		for _, account := range accounts {
-			balance := &types.Big{}
-			if err := token.BalanceOf.Call(balance, "latest", common.HexToAddress(account)); nil != err {
-				log.Error(err.Error())
-			} else {
-				log.Infof("token: %s, balance %s : %s", tokenAddr, account, balance.BigInt().String())
-			}
-			if err := token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress); nil != err {
-				log.Error(err.Error())
-			} else {
-				log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr, account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
-			}
-		}
-	}
-}
-
-func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []string, amount *big.Int) {
-	token := &chainclient.Erc20Token{}
-	for _, tokenAddr := range tokenAddrs {
-		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
-		for _, account := range accounts {
-			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.DelegateAddress, amount); nil != err {
-				log.Error(err.Error())
-			} else {
-				log.Info(txHash)
-			}
-		}
-
-	}
-}
-
-func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
-	var result types.Big
-	token := &chainclient.Erc20Token{}
-	testParams.Client.NewContract(token, tokenAddress, chainclient.Erc20TokenAbiStr)
-	if err := token.Allowance.Call(&result, "pending", types.HexToAddress(account), testParams.DelegateAddress); err != nil {
-		panic(err)
-	} else {
-		println(result.BigInt().String())
-	}
-}
-
-func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
-	c := config.LoadConfig(path)
-	log.Initialize(c.Log)
-
-	return c
-}
-
-func LoadConfigAndGenerateSimpleEthListener() *extractor.ExtractorServiceImpl {
+func LoadConfigAndGenerateExtractor() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
 	rds := LoadConfigAndGenerateDaoService()
-	ethClient := generateEthClient(c)
-	l := extractor.NewExtractorService(c.Accessor, c.Common, ethClient, rds)
+	accessor, err := GenerateAccessor(c)
+	if err != nil {
+		panic(err)
+	}
+	l := extractor.NewExtractorService(c.Accessor, c.Common, accessor, rds)
 	return l
 }
 
-func LoadConfigAndGenerateOrderBook() *ordermanager.OrderManagerImpl {
+func LoadConfigAndGenerateOrderManager() *ordermanager.OrderManagerImpl {
 	c := loadConfig()
 	rds := LoadConfigAndGenerateDaoService()
-	ob := ordermanager.NewOrderManager(c.OrderManager, rds, nil)
+	um := usermanager.NewUserManager(rds)
+	accessor, err := GenerateAccessor(c)
+	if err != nil {
+		panic(err)
+	}
+	ob := ordermanager.NewOrderManager(c.OrderManager, rds, um, accessor)
 	return ob
 }
 
@@ -254,6 +223,10 @@ func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
 	return dao.NewRdsService(c.Mysql)
 }
 
-func generateEthClient(c *config.GlobalConfig) *eth.EthClient {
-	return eth.NewChainClient(c.Accessor, []byte("sa"))
+func loadConfig() *config.GlobalConfig {
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
+	c := config.LoadConfig(path)
+	log.Initialize(c.Log)
+
+	return c
 }
