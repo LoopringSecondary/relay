@@ -68,7 +68,7 @@ func accountCommands() cli.Command {
 					},
 					cli.StringFlag{
 						Name:  "private-key,pk",
-						Usage: "the private key to be encrypted",
+						Usage: "the private key to imported",
 					},
 				},
 			},
@@ -116,7 +116,10 @@ func importAccount(ctx *cli.Context) {
 	}
 
 	pk := ctx.String("private-key")
-	if !common.IsHex(pk) {
+	if "0x" == pk[0:2] {
+		pk = pk[2:]
+	}
+	if !common.IsHex("0x" + pk) {
 		exitWithErr(errors.New("the private-key must be hex"), ctx.App.Writer)
 	}
 	if privateKey, err := crypto.ToECDSA(common.Hex2Bytes(pk)); nil != err {

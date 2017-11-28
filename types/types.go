@@ -25,41 +25,41 @@ import (
 )
 
 const (
-	SignLength = 32
+	Bytes32Length = 32
 )
 
-type Sign [SignLength]byte
+type Bytes32 [Bytes32Length]byte
 
-func StringToSign(s string) Sign { return BytesToSign([]byte(s)) }
-func BitToSign(b *big.Int) Sign  { return BytesToSign(b.Bytes()) }
-func HexToSign(s string) Sign    { return BytesToSign(common.FromHex(s)) }
+func BitToBytes32(b *big.Int) Bytes32  { return BytesToBytes32(b.Bytes()[:]) }
+func HexToBytes32(s string) Bytes32 { return BytesToBytes32(common.FromHex(s)) }
 
 //MarshalJson
-func (a *Sign) MarshalText() ([]byte, error) {
+func (a *Bytes32) MarshalText() ([]byte, error) {
 	return []byte(a.Hex()), nil
 }
 
-func (a *Sign) UnmarshalText(input []byte) error {
-	a.SetBytes(HexToSign(string(input)).Bytes())
+func (a *Bytes32) UnmarshalText(input []byte) error {
+	a.SetBytes(HexToBytes32(string(input)).Bytes())
 	return nil
 }
 
-func (s Sign) Str() string   { return string(s[:]) }
-func (s Sign) Bytes() []byte { return s[:] }
-func (s Sign) Big() *big.Int { return new(big.Int).SetBytes(s[:]) }
-func (s Sign) Hex() string   { return common.ToHex(s[:]) }
+func (s Bytes32) Str() string       { return string(s[:]) }
+func (s Bytes32) Bytes() []byte     { return s[:] }
+func (s Bytes32) Bytes32() [32]byte { return s }
+func (s Bytes32) Big() *big.Int     { return new(big.Int).SetBytes(s[:]) }
+func (s Bytes32) Hex() string       { return common.ToHex(s[:]) }
 
-func BytesToSign(b []byte) Sign {
-	var s Sign
+func BytesToBytes32(b []byte) Bytes32 {
+	var s Bytes32
 	s.SetBytes(b)
 	return s
 }
 
-func (s *Sign) SetBytes(b []byte) {
+func (s *Bytes32) SetBytes(b []byte) {
 	if len(b) > len(s) {
-		b = b[len(b)-SignLength:]
+		b = b[len(b)- Bytes32Length:]
 	}
-	copy(s[SignLength-len(b):], b)
+	copy(s[Bytes32Length -len(b):], b)
 }
 
 func IsZeroHash(hash common.Hash) bool {
