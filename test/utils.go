@@ -65,12 +65,14 @@ var (
 	}
 
 	testTokens = []string{TokenAddressA, TokenAddressB}
+
+	Ks *keystore.KeyStore
 )
 
 func Initialize() {
 	c := loadConfig()
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	cyp := crypto.NewCrypto(true, ks)
+	Ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	cyp := crypto.NewCrypto(true, Ks)
 	crypto.Initialize(cyp)
 }
 
@@ -88,6 +90,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
+	println(owner.Hex())
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		panic(err.Error())
 	}
@@ -216,7 +219,7 @@ func LoadConfigAndGenerateOrderManager() *ordermanager.OrderManagerImpl {
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(c.OrderManager, rds, um, accessor)
+	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor)
 	return ob
 }
 

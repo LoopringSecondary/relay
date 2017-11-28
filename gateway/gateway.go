@@ -20,6 +20,7 @@ package gateway
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -106,16 +107,32 @@ type BaseFilter struct {
 }
 
 func (f *BaseFilter) filter(o *types.Order) (bool, error) {
+	const (
+		addrLength = 20
+		hashLength = 32
+	)
+
+	if len(o.Hash) != hashLength {
+		return false, fmt.Errorf("gateway base filter,order %s length error", o.Hash.Hex())
+	}
+	if len(o.TokenB) != addrLength {
+		return false, fmt.Errorf("gateway base filter,order %s tokenB %s address length error", o.Hash.Hex(), o.TokenB.Hex())
+	}
+	if len(o.TokenS) != addrLength {
+		return false, fmt.Errorf("gateway base filter,order %s tokenS %s address length error", o.Hash.Hex(), o.TokenS.Hex())
+	}
 	if o.TokenB == o.TokenS {
-		return false, errors.New("order " + o.Hash.Hex() + " tokenB == tokenS")
+		return false, fmt.Errorf("gateway base filter,order %s tokenB == tokenS", o.Hash.Hex())
 	}
 	if f.MinLrcFee.Cmp(o.LrcFee) >= 0 {
-		return false, errors.New("order " + o.Hash.Hex() + " lrcFee too tiny")
+		return false, fmt.Errorf("gateway base filter,order %s lrc fee %s invalid", o.Hash.Hex(), o.LrcFee.String())
 	}
-	if len(o.Owner) != 20 {
-		return false, errors.New("order " + o.Hash.Hex() + " owner address length error")
+	if len(o.Owner) != addrLength {
+		return false, fmt.Errorf("gateway base filter,order %s owner %s address length error", o.Hash.Hex(), o.Owner.Hex())
 	}
-
+	if len(o.Protocol) != addrLength {
+		return false, fmt.Errorf("gateway base filter,order %s protocol %s address length error", o.Hash.Hex(), o.Owner.Hex())
+	}
 	return true, nil
 }
 
@@ -124,14 +141,6 @@ type SignFilter struct {
 
 func (f *SignFilter) filter(o *types.Order) (bool, error) {
 	o.Hash = o.GenerateHash()
-
-	//if hash != o.Hash {
-	//	return false
-	//}
-
-	//if valid := o.ValidateSignatureValues(); !valid {
-	//	return false, nil
-	//}
 
 	if addr, err := o.SignerAddress(); nil != err {
 		return false, err

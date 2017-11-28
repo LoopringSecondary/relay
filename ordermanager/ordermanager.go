@@ -118,8 +118,14 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state := input.(*types.OrderState)
 	state.Status = types.ORDER_NEW
 	model := &dao.Order{}
-	model.ConvertDown(state)
 
+	log.Debugf("ordermanager handle gateway order,order.hash:%s", state.RawOrder.Hash.Hex())
+	log.Debugf("ordermanager handle gateway order,order.amounts:%s", state.RawOrder.AmountS.String())
+
+	if err := model.ConvertDown(state); err != nil {
+		log.Error(err.Error())
+		return err
+	}
 	if err := om.rds.Add(model); err != nil {
 		return err
 	}
