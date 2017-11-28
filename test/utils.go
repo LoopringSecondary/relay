@@ -53,11 +53,6 @@ const (
 	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
 )
 
-//const (
-//	TokenAddressA = "0x359bbea6ade5155bce1e95918879903d3e93365f"
-//	TokenAddressB = "0xc85819398e4043f3d951367d6d97bb3257b862e0"
-//)
-
 var (
 	testAccounts = map[string]string{
 		"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A": "07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e",
@@ -109,96 +104,6 @@ func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, err
 	}
 	return accessor, nil
 }
-
-//
-//func (testParams *TestParams) PrepareTestData() {
-//	var err error
-//	var hash string
-//	accounts := []string{}
-//	for k, _ := range testParams.Accounts {
-//		accounts = append(accounts, k)
-//	}
-//
-//	//delegate registry
-//	delegateContract := &chainclient.TransferDelegate{}
-//	testParams.Client.NewContract(delegateContract, testParams.DelegateAddress.Hex(), chainclient.TransferDelegateAbiStr)
-//
-//	hash, err = delegateContract.AddVersion.SendTransaction(testParams.Owner, common.HexToAddress(testParams.ImplAddress.Hex()))
-//	if nil != err {
-//		log.Errorf("delegate add version error:%s", err.Error())
-//	} else {
-//		log.Infof("delegate add version hash:%s", hash)
-//	}
-//	//
-//	//tokenregistry
-//	tokenRegistry := &chainclient.TokenRegistry{}
-//	testParams.Client.NewContract(tokenRegistry, testParams.TokenRegistryAddress.Hex(), chainclient.TokenRegistryAbiStr)
-//	for idx, tokenAddr := range testParams.TokenAddrs {
-//		hash, err = tokenRegistry.RegisterToken.SendTransaction(testParams.Owner, common.HexToAddress(tokenAddr), "token"+strconv.Itoa(idx))
-//		if nil != err {
-//			log.Errorf("register token error:%s", err.Error())
-//		} else {
-//			log.Infof("register token hash:%s", hash)
-//		}
-//	}
-//	testParams.approveToLoopring(accounts, testParams.TokenAddrs, big.NewInt(30000000))
-//}
-//
-//func (testParams *TestParams) IsTestDataReady() {
-//
-//	accounts := []string{}
-//	for k, _ := range testParams.Accounts {
-//		accounts = append(accounts, k)
-//	}
-//
-//	testParams.allowanceToLoopring(accounts, testParams.TokenAddrs)
-//}
-//
-//func (testParams *TestParams) allowanceToLoopring(accounts []string, tokenAddrs []string) {
-//	token := &chainclient.Erc20Token{}
-//	for _, tokenAddr := range tokenAddrs {
-//		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
-//		for _, account := range accounts {
-//			balance := &types.Big{}
-//			if err := token.BalanceOf.Call(balance, "latest", common.HexToAddress(account)); nil != err {
-//				log.Error(err.Error())
-//			} else {
-//				log.Infof("token: %s, balance %s : %s", tokenAddr, account, balance.BigInt().String())
-//			}
-//			if err := token.Allowance.Call(balance, "latest", common.HexToAddress(account), testParams.DelegateAddress); nil != err {
-//				log.Error(err.Error())
-//			} else {
-//				log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr, account, testParams.DelegateAddress.Hex(), balance.BigInt().String())
-//			}
-//		}
-//	}
-//}
-//
-//func (testParams *TestParams) approveToLoopring(accounts []string, tokenAddrs []string, amount *big.Int) {
-//	token := &chainclient.Erc20Token{}
-//	for _, tokenAddr := range tokenAddrs {
-//		testParams.Client.NewContract(token, tokenAddr, chainclient.Erc20TokenAbiStr)
-//		for _, account := range accounts {
-//			if txHash, err := token.Approve.SendTransaction(types.HexToAddress(account), testParams.DelegateAddress, amount); nil != err {
-//				log.Error(err.Error())
-//			} else {
-//				log.Info(txHash)
-//			}
-//		}
-//
-//	}
-//}
-//
-//func (testParams *TestParams) CheckAllowance(tokenAddress, account string) {
-//	var result types.Big
-//	token := &chainclient.Erc20Token{}
-//	testParams.Client.NewContract(token, tokenAddress, chainclient.Erc20TokenAbiStr)
-//	if err := token.Allowance.Call(&result, "pending", types.HexToAddress(account), testParams.DelegateAddress); err != nil {
-//		panic(err)
-//	} else {
-//		println(result.BigInt().String())
-//	}
-//}
 
 func LoadConfigAndGenerateExtractor() *extractor.ExtractorServiceImpl {
 	c := loadConfig()
