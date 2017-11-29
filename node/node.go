@@ -50,6 +50,7 @@ type Node struct {
 	lock             sync.RWMutex
 	logger           *zap.Logger
 	trendManager     market.TrendManager
+	accountManager   market.AccountManager
 	jsonRpcService   gateway.JsonrpcServiceImpl
 }
 
@@ -74,10 +75,12 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor()
 	n.registerGateway()
+	n.registerAccountManager(accessor)
+	n.registerMiner(accessor, ks, marketCapProvider)
+	n.registerExtractor()
 	n.registerOrderManager()
-	//n.registerTrendManager()
+	n.registerTrendManager()
 	n.registerJsonRpcService()
-
 	return n
 }
 
@@ -145,8 +148,12 @@ func (n *Node) registerTrendManager() {
 	n.trendManager = market.NewTrendManager(n.rdsService)
 }
 
+func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
+	n.accountManager = market.NewAccountManager(accessor)
+}
+
 func (n *Node) registerJsonRpcService() {
-	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
+	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager)
 }
 
 func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
@@ -157,7 +164,7 @@ func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager)
 }
 
 func (n *Node) registerUserManager() {

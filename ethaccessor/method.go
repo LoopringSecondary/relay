@@ -67,6 +67,20 @@ func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
+func (accessor *EthNodeAccessor) GetCutoff(contractAddress common.Address, owner common.Address, blockNumStr string) (int, error) {
+	var cutoff int
+	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
+	if !ok {
+		return cutoff, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&cutoff, "cutoffs", blockNumStr, owner); err != nil {
+		return cutoff, err
+	}
+
+	return cutoff, nil
+}
+
 func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc20Req) error {
 	reqElems := make([]rpc.BatchElem, 2*len(reqs))
 	erc20Abi := accessor.Erc20Abi
