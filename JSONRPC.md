@@ -22,18 +22,18 @@ Websocket : wss://{hostname}:{port}/ws
 ## JSON-RPC Methods 
 
 * The relay supports all Ethereum standard JSON-PRCs, please refer to [eth JSON-RPC](https://github.com/ethereum/wiki/wiki/JSON-RPC).
-* [submitOrder](#submitorder)
-* [cancelOrder](#cancelorder)
-* [getOrders](#getorders)
-* [getDepth](#getdepth)
-* [getTicker](#ticker)
-* [getFills](#getfills)
-* [getCandleTicks](#getcandleticks)
-* [getRingsMined](#getringsmined)
+* [loopring_submitOrder](#loopring_submitorder)
+* [loopring_cancelOrder](#loopring_cancelorder)
+* [loopring_getOrders](#loopring_getorders)
+* [loopring_getDepth](#loopring_getdepth)
+* [loopring_getTicker](#loopring_ticker)
+* [loopring_getFills](#loopring_getfills)
+* [loopring_getCandleTicks](#loopring_getcandleticks)
+* [loopring_getRingsMined](#loopring_getringsmined)
 
 ## Websocket APIs
-* [subscribeDepth](#subdepth)
-* [subscribeCandleTick](#subscribecandletick)
+* [loopring_subscribeDepth](#loopring_subdepth)
+* [loopring_subscribeCandleTick](#loopring_subscribecandletick)
 
 
 ## JSON RPC API Reference
@@ -41,7 +41,7 @@ Websocket : wss://{hostname}:{port}/ws
 
 ***
 
-#### submitOrder
+#### loopring_submitOrder
 
 Submit an order. The order is submitted to relay as a JSON object, this JSON will be broadcasted into peer-to-peer network for off-chain order-book maintainance and ring-ming. Once mined, the ring will be serialized into a transaction and submitted to Ethereum blockchain.
 
@@ -89,7 +89,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"submitOrder","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_submitOrder","params":{see above},"id":64}'
 
 // Result
 {
@@ -101,7 +101,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"submitOrder","params":{see above
 
 ***
 
-#### cancelOrder
+#### loopring_cancelOrder
 
 Cancel an order.
 
@@ -129,7 +129,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"cancelOrder","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_cancelOrder","params":{see above},"id":64}'
 
 // Result
 {
@@ -141,7 +141,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"cancelOrder","params":{see above
 
 ***
 
-#### getOrderByHash
+#### loopring_getOrderByHash
 
 Get order details info by order hash.
 
@@ -180,7 +180,7 @@ params: ["0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad"]
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"getOrderByHash","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params":{see above},"id":64}'
 
 // Result
 {
@@ -232,7 +232,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"getOrderByHash","params":{see ab
 
 ***
 
-#### getOrders
+#### loopring_getOrders
 
 Get loopring order list.
 
@@ -280,7 +280,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"getOrderByHash","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params":{see above},"id":64}'
 
 // Result
 {
@@ -337,7 +337,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"getOrderByHash","params":{see ab
 
 ***
 
-#### getDepth
+#### loopring_getDepth
 
 Get depth and accuracy by token pair
 
@@ -364,7 +364,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"getDepth","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see above},"id":64}'
 
 // Result
 {
@@ -387,7 +387,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"getDepth","params":{see above},"
 ***
 
 
-#### getTicker
+#### loopring_getTicker
 
 Get 24hr merged ticker info from loopring relay.
 
@@ -416,7 +416,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"ticker","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":{see above},"id":64}'
 
 // Result
 {
@@ -436,7 +436,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"ticker","params":{see above},"id"
 
 ***
 
-#### getFills
+#### loopring_getFills
 
 Get order fill history. This hisotry consists of OrderFilled events.
 
@@ -474,7 +474,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"getFills","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getFills","params":{see above},"id":64}'
 
 // Result
 {
@@ -498,7 +498,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"getFills","params":{see above},"i
 
 ***
 
-#### getCandleTicks
+#### loopring_getCandleTicks
 
 Get tick infos for kline.
 
@@ -534,7 +534,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"getCandleTicks","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params":{see above},"id":64}'
 
 // Result
 {
@@ -558,7 +558,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"getCandleTicks","params":{see abo
 
 ***
 
-#### getRingMined
+#### loopring_getRingMined
 
 Get all mined rings.
 
@@ -592,7 +592,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"getCandleTicks","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params":{see above},"id":64}'
 
 // Result
 {
@@ -631,7 +631,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"getCandleTicks","params":{see abo
 
 ***
 
-#### subscribeDepth
+#### loopring_subscribeDepth
 
 subscribe depth data with websocket. after connected, client sends this message to server side.
 
@@ -674,7 +674,7 @@ subscribe depth data with websocket. after connected, client sends this message 
 
 ***
 
-#### subscribeCandleTick
+#### loopring_subscribeCandleTick
 
 subscribe candle tick data with websocket. after connected, client sends this message to server side. 
 
