@@ -42,3 +42,16 @@ func TestOrderManagerImpl_MinerOrders(t *testing.T) {
 		t.Logf("list number %d, order.tokenS %s", k, v.RawOrder.TokenS.Hex())
 	}
 }
+
+func TestOrderManagerImpl_GetOrderByHash(t *testing.T) {
+	c := test.LoadConfig()
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	om := test.LoadConfigAndGenerateOrderManager()
+	states, _ := om.GetOrderByHash(common.HexToHash("0xaaa99b5c64fe1f6ae594994d1f6c252dc49c2d0db6bb185df99f5ffa8de64fdb"))
+
+	t.Logf("order.hash %s", states.RawOrder.Hash.Hex())
+	t.Logf("order.tokenS %s", states.RawOrder.TokenS.Hex())
+}
