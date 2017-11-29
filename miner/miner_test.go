@@ -21,12 +21,15 @@ package miner_test
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -56,14 +59,16 @@ func TestMatch(t *testing.T) {
 	ks.Unlock(acc2, "1")
 	c := crypto.NewCrypto(false, ks)
 	crypto.Initialize(c)
-
+	rdsService := dao.NewRdsService(cfg.Mysql)
+	userManager := usermanager.NewUserManager(rdsService)
 	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, ks)
+	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor)
 
-	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor)
+	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor, rdsService)
 
 	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
 	evaluator := miner.NewEvaluator(marketCapProvider, int64(1000000000000000), accessor)
-	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, om)
 
 	m := miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 	m.Start()
@@ -88,4 +93,10 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 		println(err.Error())
 	}
 	return order
+}
+
+func TestA(t *testing.T) {
+	b := new(big.Int)
+	b.SetString("1094661166836035356286", 0)
+	println(common.ToHex(b.Bytes()))
 }

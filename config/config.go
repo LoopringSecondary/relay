@@ -69,6 +69,7 @@ type GlobalConfig struct {
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
 	GatewayFilters GatewayFiltersOptions
+	Gateway        GateWayOptions
 	Accessor       AccessorOptions
 	Common         CommonOptions
 	Miner          MinerOptions
@@ -90,7 +91,6 @@ type IpfsOptions struct {
 	Port            int
 	ListenTopics    []string
 	BroadcastTopics []string
-	IsBroadcast     bool
 }
 
 type AccessorOptions struct {
@@ -160,6 +160,11 @@ type GatewayFiltersOptions struct {
 		Allow  []string
 		Denied []string
 	}
+}
+
+type GateWayOptions struct {
+	IsBroadcast      bool
+	MaxBroadcastTime int
 }
 
 type MysqlOptions struct {

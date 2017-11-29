@@ -50,6 +50,7 @@ type Node struct {
 	lock             sync.RWMutex
 	logger           *zap.Logger
 	trendManager     market.TrendManager
+	accountManager   market.AccountManager
 	jsonRpcService   gateway.JsonrpcServiceImpl
 }
 
@@ -65,28 +66,30 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	}
 	n.accessor = accessor
 
-	//marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
+	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
 
 	n.registerCrypto(ks)
 	n.registerMysql()
 	n.registerUserManager()
-	n.registerIPFSSubService()
+	//n.registerIPFSSubService()
+	n.registerMiner(accessor, ks, marketCapProvider)
+	n.registerExtractor()
 	n.registerGateway()
-	//n.registerMiner(accessor, ks, marketCapProvider)
-	//n.registerExtractor()
+	n.registerAccountManager(accessor)
+	n.registerMiner(accessor, ks, marketCapProvider)
+	n.registerExtractor()
 	n.registerOrderManager()
-	//n.registerTrendManager()
-	//n.registerJsonRpcService()
-
+	n.registerTrendManager()
+	n.registerJsonRpcService()
 	return n
 }
 
 func (n *Node) Start() {
 	//n.extractorService.Start()
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
-	n.orderManager.Start()
+	//n.orderManager.Start()
 }
 
 func (n *Node) Wait() {
@@ -145,19 +148,23 @@ func (n *Node) registerTrendManager() {
 	n.trendManager = market.NewTrendManager(n.rdsService)
 }
 
+func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
+	n.accountManager = market.NewAccountManager(accessor)
+}
+
 func (n *Node) registerJsonRpcService() {
-	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager)
+	n.jsonRpcService = *gateway.NewJsonrpcService(string(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager)
 }
 
 func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor, n.rdsService, marketCapProvider)
 	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
-	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, n.orderManager)
 	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager)
 }
 
 func (n *Node) registerUserManager() {

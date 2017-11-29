@@ -89,12 +89,25 @@ func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill
 	return
 }
 
-func (s *RdsServiceImpl) QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills []FillEvent, err error) {
-	if end != 0 {
-		err = s.db.Where("token_s = ? and token_b = ? and create_time > ? and create_time <= ?", tokenS, tokenB, start, end).Order("create_time desc").Limit(100).Find(&fills).Error
-	} else {
-		err = s.db.Where("token_s = ? and token_b = ? and create_time > ?", tokenS, tokenB, start).Order("create_time desc").Limit(100).Find(&fills).Error
+func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
+
+	if tokenS != "" {
+		s.db = s.db.Where("token_s = ", tokenS)
 	}
+
+	if tokenB != "" {
+		s.db = s.db.Where("token_b = ", tokenB)
+	}
+
+	if owner != "" {
+		s.db = s.db.Where("owner = ", owner)
+	}
+
+	if start != 0 {
+		s.db = s.db.Where("create_time > ", start)
+	}
+
+	err = s.db.Order("create_time desc").Limit(100).Find(&fills).Error
 	return
 }
 

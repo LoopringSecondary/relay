@@ -105,6 +105,11 @@ func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
+func (p *MarketCapProvider) GetEthCap() *big.Rat {
+	//todo:
+	return new(big.Rat).SetInt64(int64(1))
+}
+
 func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)

@@ -54,6 +54,7 @@ type RdsService interface {
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
+	UpdateBroadcastTimeByHash(hash string, bt int) error
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)
@@ -64,7 +65,7 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
-	QueryRecentFills(tokenS string, tokenB string, start int64, end int64) (fills []FillEvent, err error)
+	QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error)
 	RollBackFill(from, to int64) error
 
 	// cancel event table
@@ -81,6 +82,10 @@ type RdsService interface {
 
 	// white list
 	GetWhiteList() ([]WhiteList, error)
+
+	//ringSubmitInfo
+	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
+	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error
 }
 
 type PageResult struct {
@@ -126,6 +131,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &CutOffEvent{})
 	tables = append(tables, &Trend{})
 	tables = append(tables, &WhiteList{})
+	tables = append(tables, &RingSubmitInfo{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

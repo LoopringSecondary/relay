@@ -24,41 +24,53 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
-var filters []Filter
+type Gateway struct {
+	filters          []Filter
+	om               ordermanager.OrderManager
+	isBroadcast      bool
+	maxBroadcastTime int
+	ipfsPubService   IPFSPubService
+}
+
+var gateway Gateway
 
 type Filter interface {
 	filter(o *types.Order) (bool, error)
 }
 
-func Initialize(options *config.GatewayFiltersOptions) {
+func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager) {
 	// add gateway watcher
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
 	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
 
+	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
+	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
+
 	// add filters
-	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(options.BaseFilter.MinLrcFee)}
+	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee)}
 
 	tokenSFilter := &TokenSFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
-	for _, v := range options.TokenSFilter.Allow {
+	for _, v := range filterOptions.TokenSFilter.Allow {
 		address := common.HexToAddress(v)
 		tokenSFilter.AllowTokens[address] = true
 	}
-	for _, v := range options.TokenSFilter.Denied {
+	for _, v := range filterOptions.TokenSFilter.Denied {
 		address := common.HexToAddress(v)
 		tokenSFilter.DeniedTokens[address] = true
 	}
 
 	tokenBFilter := &TokenBFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
-	for _, v := range options.TokenBFilter.Allow {
+	for _, v := range filterOptions.TokenBFilter.Allow {
 		address := common.HexToAddress(v)
 		tokenBFilter.AllowTokens[address] = true
 	}
-	for _, v := range options.TokenBFilter.Denied {
+	for _, v := range filterOptions.TokenBFilter.Denied {
 		address := common.HexToAddress(v)
 		tokenBFilter.DeniedTokens[address] = true
 	}
@@ -67,38 +79,53 @@ func Initialize(options *config.GatewayFiltersOptions) {
 
 	//cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
 
-	filters = append(filters, baseFilter)
-	filters = append(filters, signFilter)
-	filters = append(filters, tokenSFilter)
-	filters = append(filters, tokenBFilter)
+	gateway.filters = append(gateway.filters, baseFilter)
+	gateway.filters = append(gateway.filters, signFilter)
+	gateway.filters = append(gateway.filters, tokenSFilter)
+	gateway.filters = append(gateway.filters, tokenBFilter)
 	//filters = append(filters, cutoffFilter)
 }
 
 func HandleOrder(input eventemitter.EventData) error {
 	ord := input.(*types.Order)
 
-	orderhash := ord.GenerateHash()
-	ord.Hash = orderhash
-	ord.GeneratePrice()
+	orderHash := ord.GenerateHash()
+	ord.Hash = orderHash
 
-	for _, v := range filters {
-		valid, err := v.filter(ord)
-		if !valid {
-			log.Errorf("gateway filter order error:%s", err.Error())
-			return err
+	orderState, err := gateway.om.GetOrderByHash(ord.Hash)
+
+	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
+	if err != nil {
+		ord.GeneratePrice()
+
+		for _, v := range gateway.filters {
+			valid, err := v.filter(ord)
+			if !valid {
+				log.Errorf("gateway filter order error:%s", err.Error())
+				return err
+			}
 		}
+
+		state := &types.OrderState{}
+		state.RawOrder = *ord
+
+		log.Debugf("gateway accept new order hash:%s", orderHash.Hex())
+		log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
+		log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
+
+		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
+	} else if gateway.isBroadcast && orderState.BroadcastTime < gateway.maxBroadcastTime {
+		//broadcast
+		go func() {
+			pubErr := gateway.ipfsPubService.PublishOrder(*ord)
+			if pubErr != nil {
+				log.Error("publish order failed, orderHash : " + ord.Hash.Str())
+			} else {
+				gateway.om.UpdateBroadcastTimeByHash(orderState.RawOrder.Hash, orderState.BroadcastTime+1)
+			}
+		}()
 	}
 
-	state := &types.OrderState{}
-	state.RawOrder = *ord
-
-	log.Debugf("gateway accept new order hash:%s", orderhash.Hex())
-	log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
-	log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
-
-	eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
-
-	// todo: broadcast
 	return nil
 }
 

@@ -53,6 +53,7 @@ type Order struct {
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
+	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 }
 
 // convert types/orderState to dao/order
@@ -97,6 +98,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
+	o.BroadcastTime = state.BroadcastTime
 
 	return nil
 }
@@ -138,12 +140,14 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.R = types.HexToBytes32(o.R)
 	state.RawOrder.Owner = common.HexToAddress(o.Owner)
 	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
-	state.BlockNumber = big.NewInt(o.BlockNumber)
-	state.Status = types.OrderStatus(o.Status)
 
 	if state.RawOrder.Hash != state.RawOrder.GenerateHash() {
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
+
+	state.BlockNumber = big.NewInt(o.BlockNumber)
+	state.Status = types.OrderStatus(o.Status)
+	state.BroadcastTime = o.BroadcastTime
 
 	return nil
 }
@@ -263,4 +267,8 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 
 	pageResult := PageResult{data, pageIndex, pageSize, 0}
 	return pageResult, err
+}
+
+func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
+	return s.db.Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }

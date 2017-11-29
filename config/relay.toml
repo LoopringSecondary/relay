@@ -35,7 +35,10 @@ block_period = 5
     port = 8080
     listen_topics = ["test1_topic"]
     broadcast_topics = ["test11_topic"]
+
+[gateway]
     is_broadcast = false
+    max_broadcast_time = 3
 
 [accessor]
     raw_url = "http://127.0.0.1:8545"
