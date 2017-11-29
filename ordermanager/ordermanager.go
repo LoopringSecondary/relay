@@ -36,7 +36,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState
+	MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -362,14 +362,14 @@ func (om *OrderManagerImpl) orderFullFinished(state *types.OrderState) {
 	}
 }
 
-func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
 		log.Debugf("get miner orders error:%s", err.Error())
 	}
 
-	filterList := om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+	filterList := om.provider.getOrders(tokenS, tokenB, length, filterOrderhashs)
 
 	for _, v := range filterList {
 		if !om.um.InWhiteList(v.RawOrder.TokenS) {

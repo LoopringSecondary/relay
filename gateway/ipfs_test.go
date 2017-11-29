@@ -48,7 +48,7 @@ func TestSingleOrder(t *testing.T) {
 	// set order and marshal to json
 	impl, _ := c.Common.ProtocolImpls["v_0_1"]
 
-	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountS1, _ := new(big.Int).SetString("3"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 
 	order := test.CreateOrder(

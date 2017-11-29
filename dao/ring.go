@@ -78,9 +78,9 @@ func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.H
 	for _, h := range ringhashs {
 		hashes = append(hashes, h.Hex())
 	}
-	return s.db.Where("hash in (?)", hashes).Update(" registry_tx_hash = ?", txHash).Error
+	return s.db.Model(&Ring{}).Where("hash in (?)", hashes).Update(" registry_tx_hash", txHash).Error
 }
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error {
-	return s.db.Where("hash = ?", ringhash.Hex()).Update(" submit_tx_hash = ?", txHash).Error
+	return s.db.Model(&Ring{}).Where("hash = ?", ringhash.Hex()).Update(" submit_tx_hash", txHash).Error
 }

@@ -36,10 +36,11 @@ func TestOrderManagerImpl_MinerOrders(t *testing.T) {
 	tokenS := common.HexToAddress(test.TokenAddressA)
 	tokenB := common.HexToAddress(test.TokenAddressB)
 
-	states := om.MinerOrders(tokenS, tokenB, []common.Hash{})
+	states := om.MinerOrders(tokenS, tokenB, 10, []common.Hash{})
 	for k, v := range states {
 		t.Logf("list number %d, order.hash %s", k, v.RawOrder.Hash.Hex())
 		t.Logf("list number %d, order.tokenS %s", k, v.RawOrder.TokenS.Hex())
+		t.Logf("list number %d, order.price %s", k, v.RawOrder.Price.String())
 	}
 }
 

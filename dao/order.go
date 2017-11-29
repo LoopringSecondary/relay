@@ -170,7 +170,7 @@ func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
 	return s.db.Model(&Order{}).Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark", 0).Error
 }
 
-func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []types.OrderStatus) ([]*Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error) {
 	var (
 		list []*Order
 		err  error
@@ -186,6 +186,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus [
 		Where("status not in (?) ", filterStatus).
 		Where("miner_block_mark = ?", 0).
 		Order("price desc").
+		Limit(length).
 		Find(&list).
 		Error
 

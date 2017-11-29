@@ -121,8 +121,9 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
-	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
-	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
+	// todo: get length from config
+	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
+	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoANotMatchedOrderHashes)
 	//atoBOrders := []types.OrderState{}
 	//btoAOrders := []types.OrderState{}
 	for _, order := range atoBOrders {

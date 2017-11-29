@@ -64,5 +64,5 @@ func (s *RdsServiceImpl) FindCancelEventByOrderhash(orderhash common.Hash) (*Can
 }
 
 func (s *RdsServiceImpl) RollBackCancel(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
+	return s.db.Model(&CancelEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
 }

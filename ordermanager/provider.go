@@ -111,12 +111,12 @@ func (p *minerOrdersProvider) unMarkOrders() error {
 	return p.rds.UnMarkMinerOrders(des.Int64())
 }
 
-func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, orderhashs []common.Hash) []types.OrderState {
+func (p *minerOrdersProvider) getOrders(tokenS, tokenB common.Address, length int, orderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	filterStatus := []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 
-	models, err := p.rds.GetOrdersForMiner(tokenS.Hex(), tokenB.Hex(), filterStatus)
+	models, err := p.rds.GetOrdersForMiner(tokenS.Hex(), tokenB.Hex(), length, filterStatus)
 	if len(models) == 0 || err != nil {
 		return list
 	}

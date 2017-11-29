@@ -71,25 +71,25 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerCrypto(ks)
 	n.registerMysql()
 	n.registerUserManager()
-	//n.registerIPFSSubService()
+	n.registerIPFSSubService()
 	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor()
-	n.registerGateway()
 	n.registerAccountManager(accessor)
 	n.registerMiner(accessor, ks, marketCapProvider)
 	n.registerExtractor()
 	n.registerOrderManager()
-	n.registerTrendManager()
-	n.registerJsonRpcService()
+	n.registerGateway()
+	//n.registerTrendManager()
+	//n.registerJsonRpcService()
 	return n
 }
 
 func (n *Node) Start() {
 	//n.extractorService.Start()
-	//n.ipfsSubService.Start()
+	n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
-	//n.orderManager.Start()
+	n.orderManager.Start()
 }
 
 func (n *Node) Wait() {
