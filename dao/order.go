@@ -193,6 +193,24 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, fi
 	return list, err
 }
 
+func (s *RdsServiceImpl) GetOrdersByHash(orderhashs []string) (map[string]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	ret := make(map[string]Order)
+	if err = s.db.Where("order_hash in (?)", orderhashs).Find(&list).Error; err != nil {
+		return ret, err
+	}
+
+	for _, v := range list {
+		ret[v.OrderHash] = v
+	}
+
+	return ret, err
+}
+
 func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error) {
 	var (
 		list []Order
