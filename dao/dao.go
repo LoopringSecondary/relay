@@ -47,7 +47,7 @@ type RdsService interface {
 	GetOrderByHash(orderhash common.Hash) (*Order, error)
 	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
 	UnMarkMinerOrders(blockNumber int64) error
-	GetOrdersForMiner(tokenS, tokenB string, filterStatus []types.OrderStatus) ([]Order, error)
+	GetOrdersForMiner(tokenS, tokenB string, filterStatus []types.OrderStatus) ([]*Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error

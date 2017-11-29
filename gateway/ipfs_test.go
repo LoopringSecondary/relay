@@ -39,21 +39,18 @@ func TestSingleOrder(t *testing.T) {
 	c := test.LoadConfig()
 
 	// get keystore and unlock account
+	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks.Unlock(acc1, pwd1)
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
-	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
-	if err := ks.Unlock(acc1, pwd1); err != nil {
-		panic(err.Error())
-	}
 
 	// set order and marshal to json
+	impl, _ := c.Common.ProtocolImpls["v_0_1"]
+
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
-	impl, ok := c.Common.ProtocolImpls["v_0_1"]
-	if !ok {
-		panic("protocol version not exists")
-	}
+
 	order := test.CreateOrder(
 		common.HexToAddress(test.TokenAddressA),
 		common.HexToAddress(test.TokenAddressB),
@@ -67,17 +64,6 @@ func TestSingleOrder(t *testing.T) {
 	// get ipfs shell and sub order
 	sh := shell.NewLocalShell()
 	pubMessage(sh, string(bs))
-}
-
-func TestMinerOrders(t *testing.T) {
-	om := test.LoadConfigAndGenerateOrderManager()
-	tokenS := common.HexToAddress(test.TokenAddressB)
-	tokenB := common.HexToAddress(test.TokenAddressA)
-
-	states := om.MinerOrders(tokenS, tokenB, []common.Hash{})
-	for k, v := range states {
-		t.Logf("list number %d, order.hash %s", k, v.RawOrder.Hash.Hex())
-	}
 }
 
 func pubMessage(sh *shell.Shell, data string) {

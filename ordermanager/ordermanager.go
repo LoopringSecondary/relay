@@ -19,6 +19,7 @@
 package ordermanager
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -30,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
-	"fmt"
 )
 
 type OrderManager interface {
@@ -117,6 +117,8 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 	state := input.(*types.OrderState)
 	state.Status = types.ORDER_NEW
+	state.RemainedAmountB = big.NewInt(0)
+	state.RemainedAmountS = state.RawOrder.AmountS
 	model := &dao.Order{}
 
 	log.Debugf("ordermanager handle gateway order,order.hash:%s", state.RawOrder.Hash.Hex())

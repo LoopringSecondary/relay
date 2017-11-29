@@ -61,7 +61,7 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 
 func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
 	s := test.LoadConfigAndGenerateDaoService()
-	order, err := s.GetOrderByHash(common.HexToHash("0x5187cde2ebd86d9c02ecbb3ba31437e4d1d17f8089a834bc943fa618d800aea9"))
+	order, err := s.GetOrderByHash(common.HexToHash("0x7ee8521eabd792fb539975718c0e2433dba0fc3683d8c7d22a7ab1784e1ad383"))
 
 	if err != nil {
 		t.Fatal(err)
@@ -73,8 +73,8 @@ func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
 func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
 	s := test.LoadConfigAndGenerateDaoService()
 
-	filters := []common.Hash{}
-	list, err := s.GetOrdersForMiner(filters)
+	filters := []types.OrderStatus{types.ORDER_CUTOFF, types.ORDER_FINISHED}
+	list, err := s.GetOrdersForMiner(test.TokenAddressA, test.TokenAddressB, filters)
 	if err != nil {
 		t.Fatal(err)
 	}
