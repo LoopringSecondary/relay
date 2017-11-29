@@ -189,12 +189,19 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	}
 }
 
-func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+//gas, gasPrice can be set to nil
+func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
 	return func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
+			if nil == gas || nil == gasPrice {
+				if gas, gasPrice, err = accessor.EstimateGas(callData, contractAddress); nil != err {
+					return "", err
+				}
+			}
 			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
+
 		}
 	}
 }

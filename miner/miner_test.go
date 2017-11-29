@@ -64,9 +64,8 @@ func TestMatch(t *testing.T) {
 	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, ks)
 	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor)
 
-	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor, rdsService)
-
 	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
+	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor, rdsService, marketCapProvider)
 	evaluator := miner.NewEvaluator(marketCapProvider, int64(1000000000000000), accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, om)
 
@@ -96,7 +95,7 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 }
 
 func TestA(t *testing.T) {
-	b := new(big.Int)
-	b.SetString("1094661166836035356286", 0)
-	println(common.ToHex(b.Bytes()))
+	addr1 := common.HexToAddress("0x0C0b638FFcCB4bDC4C0D0D5Fef062fC512C92511")
+	addr2 := common.HexToAddress("0x0C0b638FFcCB4bDC4C0D0D5Fef062fC512C92511")
+	println(addr1 == addr2)
 }

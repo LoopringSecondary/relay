@@ -83,7 +83,9 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 	ringInfos := eventData.([]*types.RingSubmitInfo)
 
 	for _, info := range ringInfos {
-		if err := submitter.dbService.Add(info); nil != err {
+		daoInfo := &dao.RingSubmitInfo{}
+		daoInfo.ConvertDown(info)
+		if err := submitter.dbService.Add(daoInfo); nil != err {
 			log.Errorf("err:%s", err.Error())
 		}
 	}
@@ -233,6 +235,9 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	protocolAbi := submitter.Accessor.ProtocolImpls[protocolAddress].ProtocolImplAbi
 
 	ringForSubmit := &types.RingSubmitInfo{RawRing: ringState}
+	if types.IsZeroHash(ringState.Hash) {
+		ringState.Hash = ringState.GenerateHash()
+	}
 	ringForSubmit.Miner = ringState.Miner
 	ringForSubmit.ProtocolAddress = protocolAddress
 	ringForSubmit.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
