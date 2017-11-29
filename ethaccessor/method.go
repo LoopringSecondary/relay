@@ -200,6 +200,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contr
 					return "", err
 				}
 			}
+			gas.Add(gas, big.NewInt(int64(10000)))
 			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
 		}
 	}
