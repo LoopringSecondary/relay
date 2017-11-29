@@ -20,17 +20,26 @@ package gateway_test
 
 import (
 	"encoding/json"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 //var testParams *test.TestParams
 
-const suffix = "0"
+const (
+	suffix   = "0"
+	account1 = "0xf6c399d9b5bba8f91d000107a21d05913bf7e47f" // pwd 101
+	account2 = "0xc70f0ff6315d8b1ea39ec5294b9021e999cfe498" // pwd 202
+	pwd1     = "101"
+	pwd2     = "202"
+)
 
 func TestOrdersOfRing(t *testing.T) {
 	sh := shell.NewLocalShell()
@@ -48,17 +57,28 @@ func TestOrdersOfRing(t *testing.T) {
 
 func setOrder1() *types.Order {
 	c := test.LoadConfig()
+
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	impl, ok := c.Common.ProtocolImpls["v_0_1"]
 	if !ok {
 		panic("protocol version not exists")
 	}
+
+	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
+	if err := ks.Unlock(acc1, pwd1); err != nil {
+		panic(err.Error())
+	}
+
 	return test.CreateOrder(
 		common.HexToAddress(test.TokenAddressA),
 		common.HexToAddress(test.TokenAddressB),
 		common.HexToAddress(impl.Address),
-		common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
+		acc1.Address,
 		amountS1,
 		amountB1,
 	)
@@ -73,7 +93,7 @@ func setOrder2() *types.Order {
 		common.HexToAddress(test.TokenAddressB),
 		common.HexToAddress(test.TokenAddressA),
 		common.HexToAddress(protocol),
-		common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
+		common.HexToAddress(account1),
 		amountS2,
 		amountB2,
 	)
@@ -93,7 +113,6 @@ func pubMessage(sh *shell.Shell, data string) {
 //}
 
 func TestPrepareTestData(t *testing.T) {
-	test.Initialize()
 	sh := shell.NewLocalShell()
 
 	order1, _ := setOrder1().MarshalJSON()

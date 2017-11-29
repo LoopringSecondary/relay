@@ -143,9 +143,11 @@ func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Add
 //	FeeMode        int      `json:"feeMode"`     //收费方式，0 lrc 1 share
 //}
 
-type RingForSubmit struct {
+type RingSubmitInfo struct {
 	RawRing *Ring
 
+	//todo:remove it
+	Miner common.Address
 	ProtocolAddress  common.Address
 	Ringhash         common.Hash
 	OrdersCount      *big.Int
@@ -157,6 +159,7 @@ type RingForSubmit struct {
 	RegistryGasPrice *big.Int
 	SubmitTxHash     common.Hash
 	RegistryTxHash   common.Hash
+	Received *big.Rat
 }
 
 type RingSubmitInputs struct {

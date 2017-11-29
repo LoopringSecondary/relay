@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
-	"time"
 )
 
 type OrderManager interface {
@@ -45,27 +44,31 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options   config.OrderManagerOptions
-	dao       dao.RdsService
-	lock      sync.RWMutex
-	processor *forkProcessor
-	provider  *minerOrdersProvider
-	um        usermanager.UserManager
-	mc        *marketcap.MarketCapProvider
+	options    config.OrderManagerOptions
+	commonOpts *config.CommonOptions
+	rds        dao.RdsService
+	lock       sync.RWMutex
+	processor  *forkProcessor
+	provider   *minerOrdersProvider
+	um         usermanager.UserManager
+	mc         *marketcap.MarketCapProvider
 }
 
-func NewOrderManager(options config.OrderManagerOptions, dao dao.RdsService, userManager usermanager.UserManager, accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
-	om := &OrderManagerImpl{}
+func NewOrderManager(options config.OrderManagerOptions,
+	commonOpts *config.CommonOptions,
+	rds dao.RdsService,
+	userManager usermanager.UserManager,
+	accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
 
+	om := &OrderManagerImpl{}
 	om.options = options
-	om.dao = dao
-	om.processor = newForkProcess(om.dao, accessor)
+	om.commonOpts = commonOpts
+	om.rds = rds
+	om.processor = newForkProcess(om.rds, accessor)
 	om.um = userManager
 
 	// new miner orders provider
-	duration := time.Duration(options.TickerDuration)
-	blockPeriod := types.NewBigPtr(big.NewInt(int64(options.BlockPeriod)))
-	om.provider = newMinerOrdersProvider(duration, blockPeriod)
+	om.provider = newMinerOrdersProvider(options.TickerDuration, options.BlockPeriod, om.commonOpts, om.rds)
 
 	return om
 }
@@ -117,9 +120,15 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state := input.(*types.OrderState)
 	state.Status = types.ORDER_NEW
 	model := &dao.Order{}
-	model.ConvertDown(state)
 
-	if err := om.dao.Add(model); err != nil {
+	log.Debugf("ordermanager handle gateway order,order.hash:%s", state.RawOrder.Hash.Hex())
+	log.Debugf("ordermanager handle gateway order,order.amounts:%s", state.RawOrder.AmountS.String())
+
+	if err := model.ConvertDown(state); err != nil {
+		log.Error(err.Error())
+		return err
+	}
+	if err := om.rds.Add(model); err != nil {
 		return err
 	}
 
@@ -129,14 +138,14 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
-	model, err := om.dao.FindRingMinedByRingHash(event.Ringhash.Hex())
+	model, err := om.rds.FindRingMinedByRingHash(event.Ringhash.Hex())
 	if err != nil {
 		model = &dao.RingMined{}
 		if err := model.ConvertDown(event); err != nil {
 			return err
 		}
 
-		om.dao.Add(model)
+		om.rds.Add(model)
 	} else {
 		modelConvertEvent := &types.RingMinedEvent{}
 		if err := model.ConvertUp(modelConvertEvent); err != nil {
@@ -144,7 +153,7 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 		}
 
 		if modelConvertEvent.RingIndex.BigInt().Cmp(event.RingIndex.BigInt()) != 0 {
-			om.dao.Add(model)
+			om.rds.Add(model)
 		}
 	}
 
@@ -158,21 +167,21 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
-	_, err := om.dao.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
+	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
 	if err != nil {
 		newFillModel := &dao.FillEvent{}
 		if err := newFillModel.ConvertDown(event); err != nil {
 			return err
 		}
-		if err := om.dao.Add(newFillModel); err != nil {
+		if err := om.rds.Add(newFillModel); err != nil {
 			return err
 		}
 	}
 
-	// get dao.Order and types.OrderState
+	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
 	orderhash := event.OrderHash
-	model, err := om.dao.GetOrderByHash(orderhash)
+	model, err := om.rds.GetOrderByHash(orderhash)
 	if err != nil {
 		return err
 	}
@@ -188,9 +197,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// validate cutoff
-	if cutoffModel, err := om.dao.FindCutoffEventByOwnerAddress(state.RawOrder.TokenS); err == nil {
-		if beenCutoff := om.dao.CheckOrderCutoff(orderhash.Hex(), cutoffModel.Cutoff); beenCutoff {
-			if err := om.dao.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
+	if cutoffModel, err := om.rds.FindCutoffEventByOwnerAddress(state.RawOrder.TokenS); err == nil {
+		if beenCutoff := om.rds.CheckOrderCutoff(orderhash.Hex(), cutoffModel.Cutoff); beenCutoff {
+			if err := om.rds.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
 				return err
 			} else {
 				return errors.New("order manager handle order filled event error:order have been cutoff")
@@ -213,11 +222,11 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	// update order status
 	om.orderFullFinished(state)
 
-	// update dao.Order
+	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.dao.Update(state); err != nil {
+	if err := om.rds.Update(state); err != nil {
 		return err
 	}
 
@@ -232,20 +241,20 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
-	_, err := om.dao.FindCancelEventByOrderhash(orderhash)
+	_, err := om.rds.FindCancelEventByOrderhash(orderhash)
 	if err != nil {
 		newCancelEventModel := &dao.CancelEvent{}
 		if err := newCancelEventModel.ConvertDown(event); err != nil {
 			return err
 		}
-		if err := om.dao.Add(newCancelEventModel); err != nil {
+		if err := om.rds.Add(newCancelEventModel); err != nil {
 			return err
 		}
 	}
 
-	// get dao.Order and types.OrderState
+	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
-	model, err := om.dao.GetOrderByHash(orderhash)
+	model, err := om.rds.GetOrderByHash(orderhash)
 	if err != nil {
 		return err
 	}
@@ -277,11 +286,11 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// update order status
 	om.orderFullFinished(state)
 
-	// update dao.Order
+	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.dao.Update(state); err != nil {
+	if err := om.rds.Update(state); err != nil {
 		return err
 	}
 
@@ -295,26 +304,26 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
-	model, err := om.dao.FindCutoffEventByOwnerAddress(event.Owner)
+	model, err := om.rds.FindCutoffEventByOwnerAddress(event.Owner)
 	if err != nil {
 		model = &dao.CutOffEvent{}
 		if err := model.ConvertDown(event); err != nil {
 			return err
 		}
-		if err := om.dao.Add(model); err != nil {
+		if err := om.rds.Add(model); err != nil {
 			return err
 		}
 	} else {
 		if err := model.ConvertDown(event); err != nil {
 			return err
 		}
-		if err := om.dao.Update(model); err != nil {
+		if err := om.rds.Update(model); err != nil {
 			return err
 		}
 	}
 
 	// get order list
-	list, err := om.dao.GetCutoffOrders(model.Cutoff)
+	list, err := om.rds.GetCutoffOrders(model.Cutoff)
 	if err != nil {
 		return err
 	}
@@ -324,7 +333,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	for _, order := range list {
 		orderhashs = append(orderhashs, order.OrderHash)
 	}
-	if err := om.dao.SettleOrdersStatus(orderhashs, types.ORDER_CUTOFF); err != nil {
+	if err := om.rds.SettleOrdersStatus(orderhashs, types.ORDER_CUTOFF); err != nil {
 		return err
 	}
 
@@ -371,7 +380,7 @@ func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrd
 
 func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error) {
 	var list []types.OrderState
-	models, err := om.dao.GetOrderBook(protocol, tokenS, tokenB, length)
+	models, err := om.rds.GetOrderBook(protocol, tokenS, tokenB, length)
 	if err != nil {
 		return list, err
 	}
@@ -391,7 +400,7 @@ func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int)
 	var (
 		pageRes dao.PageResult
 	)
-	tmp, err := om.dao.OrderPageQuery(query, pageIndex, pageSize)
+	tmp, err := om.rds.OrderPageQuery(query, pageIndex, pageSize)
 	if err != nil {
 		return pageRes, err
 	}

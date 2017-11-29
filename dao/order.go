@@ -90,7 +90,9 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
-	o.BlockNumber = state.BlockNumber.Int64()
+	if state.BlockNumber != nil {
+		o.BlockNumber = state.BlockNumber.Int64()
+	}
 	o.Status = uint8(state.Status)
 	o.V = src.V
 	o.S = src.S.Hex()

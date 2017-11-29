@@ -19,25 +19,25 @@
 package test
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/relay/crypto"
 )
 
 type TestParams struct {
-	Accessor 			 *ethaccessor.EthNodeAccessor
+	Accessor             *ethaccessor.EthNodeAccessor
 	ImplAddress          common.Address
 	MinerPrivateKey      []byte
 	DelegateAddress      common.Address
@@ -65,12 +65,14 @@ var (
 	}
 
 	testTokens = []string{TokenAddressA, TokenAddressB}
+
+	Ks *keystore.KeyStore
 )
 
 func Initialize() {
 	c := loadConfig()
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	cyp := crypto.NewCrypto(true, ks)
+	Ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	cyp := crypto.NewCrypto(true, Ks)
 	crypto.Initialize(cyp)
 }
 
@@ -88,6 +90,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
+	println(owner.Hex())
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		panic(err.Error())
 	}
@@ -106,6 +109,7 @@ func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, err
 	}
 	return accessor, nil
 }
+
 //
 //func (testParams *TestParams) PrepareTestData() {
 //	var err error
@@ -215,7 +219,7 @@ func LoadConfigAndGenerateOrderManager() *ordermanager.OrderManagerImpl {
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(c.OrderManager, rds, um, accessor)
+	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor)
 	return ob
 }
 

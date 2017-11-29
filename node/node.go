@@ -60,18 +60,20 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.globalConfig = globalConfig
 
 	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	//accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
-	//if nil != err {
-	//	panic(err)
-	//}
-	//n.accessor = accessor
+	accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
+	if nil != err {
+		panic(err)
+	}
+	n.accessor = accessor
 
-	//marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
-	//
+	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
+
 	n.registerCrypto(ks)
 	n.registerMysql()
-	//n.registerUserManager()
-	n.registerIPFSSubService()
+	n.registerUserManager()
+	//n.registerIPFSSubService()
+	n.registerMiner(accessor, ks, marketCapProvider)
+	n.registerExtractor()
 	n.registerGateway()
 	n.registerAccountManager(accessor)
 	n.registerMiner(accessor, ks, marketCapProvider)
@@ -83,9 +85,8 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 }
 
 func (n *Node) Start() {
-	n.rdsService.Prepare()
 	//n.extractorService.Start()
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
 	//n.orderManager.Start()
@@ -123,6 +124,7 @@ func (n *Node) registerCrypto(ks *keystore.KeyStore) {
 
 func (n *Node) registerMysql() {
 	n.rdsService = dao.NewRdsService(n.globalConfig.Mysql)
+	n.rdsService.Prepare()
 }
 
 func (n *Node) registerAccessor() {
@@ -139,7 +141,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, &n.globalConfig.Common, n.rdsService, n.userManager, n.accessor)
 }
 
 func (n *Node) registerTrendManager() {
@@ -155,9 +157,9 @@ func (n *Node) registerJsonRpcService() {
 }
 
 func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor, n.rdsService, marketCapProvider)
 	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
-	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator)
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, n.orderManager)
 	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 }
 
