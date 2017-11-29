@@ -201,7 +201,6 @@ func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contr
 				}
 			}
 			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
-
 		}
 	}
 }
