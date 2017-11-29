@@ -19,7 +19,7 @@
 package gateway
 
 import (
-	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -85,11 +85,11 @@ func (l *IPFSSubServiceImpl) Register(topic string) error {
 	)
 
 	if proxy, ok = l.subs[topic]; ok {
-		return errors.New("ipfs sub topic " + topic + " already exist")
+		return fmt.Errorf("ipfs sub,topic %s already exist", topic)
 	}
 
 	if proxy, err = l.newSubProxy(topic); err != nil {
-		return errors.New("ipfs sub register new topic " + topic + " error")
+		return fmt.Errorf("ipfs sub,register new topic %s error %s", topic, err.Error())
 	}
 
 	proxy.listen()
@@ -109,7 +109,7 @@ func (l *IPFSSubServiceImpl) Unregister(topic string) error {
 	)
 
 	if proxy, ok = l.subs[topic]; !ok {
-		return errors.New("ipfs sub topic " + topic + " do not exist")
+		return fmt.Errorf("ipfs sub, topic %s do not exist", topic)
 	}
 
 	proxy.quit()
@@ -160,17 +160,22 @@ func (p *subProxy) listen() {
 	p.stop = make(chan struct{})
 
 	go func() {
-		if record, err := p.iterator.Next(); nil != err {
-			log.Errorf("err:%s", err.Error())
-		} else {
+		for {
+			record, err := p.iterator.Next()
+			if err != nil {
+				log.Errorf("ipfs sub,iterator next err:%s", err.Error())
+				continue
+			}
+
 			data := record.Data()
 			ord := &types.Order{}
 			if err := ord.UnmarshalJSON(data); err != nil {
-				log.Errorf("failed to accept data %s", err.Error())
-			} else {
-				log.Debugf("accept data from topic %s and data is %s", p.topic, string(data))
-				eventemitter.Emit(eventemitter.Gateway, ord)
+				log.Errorf("ipfs sub,failed to accept data %s", err.Error())
+				continue
 			}
+
+			log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(data))
+			eventemitter.Emit(eventemitter.Gateway, ord)
 		}
 	}()
 }

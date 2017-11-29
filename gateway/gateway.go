@@ -24,18 +24,18 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/ordermanager"
 )
 
 type Gateway struct {
-	filters []Filter
-	om ordermanager.OrderManager
-	isBroadcast bool
+	filters          []Filter
+	om               ordermanager.OrderManager
+	isBroadcast      bool
 	maxBroadcastTime int
-	ipfsPubService IPFSPubService
+	ipfsPubService   IPFSPubService
 }
 
 var gateway Gateway
@@ -49,7 +49,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
 	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
 
-	gateway = Gateway{filters:make([]Filter, 0), om:om, isBroadcast:options.IsBroadcast, maxBroadcastTime:options.MaxBroadcastTime}
+	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	// add filters
@@ -121,13 +121,10 @@ func HandleOrder(input eventemitter.EventData) error {
 			if pubErr != nil {
 				log.Error("publish order failed, orderHash : " + ord.Hash.Str())
 			} else {
-				gateway.om.UpdateBroadcastTimeByHash(orderState.RawOrder.Hash, orderState.BroadcastTime + 1)
+				gateway.om.UpdateBroadcastTimeByHash(orderState.RawOrder.Hash, orderState.BroadcastTime+1)
 			}
 		}()
 	}
-
-
-
 
 	return nil
 }

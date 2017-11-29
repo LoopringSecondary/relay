@@ -163,10 +163,9 @@ type GatewayFiltersOptions struct {
 }
 
 type GateWayOptions struct {
-	IsBroadcast bool
+	IsBroadcast      bool
 	MaxBroadcastTime int
 }
-
 
 type MysqlOptions struct {
 	User        string

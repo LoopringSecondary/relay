@@ -96,7 +96,7 @@ func (s *RdsServiceImpl) FindRingMinedByRingHash(ringhash string) (*RingMined, e
 }
 
 func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
-	err := s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
+	err := s.db.Model(&RingMined{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
 
 	return err
 }

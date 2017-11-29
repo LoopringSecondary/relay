@@ -91,7 +91,6 @@ func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill
 
 func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
 
-
 	if tokenS != "" {
 		s.db = s.db.Where("token_s = ", tokenS)
 	}
@@ -112,7 +111,6 @@ func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start in
 	return
 }
 
-
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
+	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
 }

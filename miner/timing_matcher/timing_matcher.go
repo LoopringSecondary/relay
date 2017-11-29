@@ -21,6 +21,7 @@ package timing_matcher
 import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	marketLib "github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
@@ -78,13 +79,23 @@ type Market struct {
 func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager) *TimingMatcher {
 	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
-	//todo:get markets from market.Allmarket
-	m := &Market{}
-	m.om = om
-	m.matcher = matcher
-	m.AtoBNotMatchedOrderHashes = []common.Hash{}
-	m.BtoANotMatchedOrderHashes = []common.Hash{}
-	matcher.markets = []*Market{m}
+	matcher.markets = []*Market{}
+	pairs := make(map[common.Address]common.Address)
+	for _, pair := range marketLib.AllTokenPairs {
+		if addr, ok := pairs[pair.TokenS]; !ok || addr != pair.TokenB {
+			if addr1, ok1 := pairs[pair.TokenB]; !ok1 || addr1 != pair.TokenS {
+				pairs[pair.TokenS] = pair.TokenB
+				m := &Market{}
+				m.om = om
+				m.matcher = matcher
+				m.TokenA = pair.TokenS
+				m.TokenB = pair.TokenB
+				m.AtoBNotMatchedOrderHashes = []common.Hash{}
+				m.BtoANotMatchedOrderHashes = []common.Hash{}
+				matcher.markets = append(matcher.markets, m)
+			}
+		}
+	}
 
 	return matcher
 }
@@ -121,10 +132,9 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
-	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, market.AtoBNotMatchedOrderHashes)
-	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, market.BtoANotMatchedOrderHashes)
-	//atoBOrders := []types.OrderState{}
-	//btoAOrders := []types.OrderState{}
+	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
+	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50,market.BtoANotMatchedOrderHashes)
+
 	for _, order := range atoBOrders {
 		if market.reduceRemainedAmountBeforeMatch(&order) {
 			market.AtoBOrders[order.RawOrder.Hash] = &order
@@ -140,7 +150,7 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBNotMatchedOrderHashes = []common.Hash{}
 	market.BtoANotMatchedOrderHashes = []common.Hash{}
 
-	//it should sub the matched amount in last round.
+	//it should sub the matched amount in next round.
 }
 
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) bool {
@@ -223,7 +233,7 @@ func (market *Market) match() {
 		}
 	}
 
-	//eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
+	eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
 }
 
 func (matcher *TimingMatcher) afterSubmit(eventData eventemitter.EventData) error {

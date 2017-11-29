@@ -1,7 +1,5 @@
 package gateway
 
-
-
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/types"

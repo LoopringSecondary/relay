@@ -147,7 +147,7 @@ type RingSubmitInfo struct {
 	RawRing *Ring
 
 	//todo:remove it
-	Miner common.Address
+	Miner            common.Address
 	ProtocolAddress  common.Address
 	Ringhash         common.Hash
 	OrdersCount      *big.Int
@@ -159,7 +159,7 @@ type RingSubmitInfo struct {
 	RegistryGasPrice *big.Int
 	SubmitTxHash     common.Hash
 	RegistryTxHash   common.Hash
-	Received *big.Rat
+	Received         *big.Rat
 }
 
 type RingSubmitInputs struct {

@@ -19,16 +19,16 @@
 package dao_test
 
 import (
-	"testing"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
-	"github.com/ethereum/go-ethereum/common"
-	"strings"
-	"os"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"os"
+	"strings"
+	"testing"
 )
 
 func loadConfig() *config.GlobalConfig {
@@ -59,9 +59,7 @@ func TestNewRing(t *testing.T) {
 	info.ProtocolAddress = common.HexToAddress("0xB5FAB0B11776AAD5cE60588C16bd59DCfd61a1c2").Hex()
 	info.ProtocolData = "0x9812ad890"
 
-	if err := s.Add(info); nil != err {
+	if err := s.UpdateRingSubmitInfoRegistryTxHash([]common.Hash{common.HexToHash(info.Hash)}, "0x3c88ebf05254fb82e7ecd10c237036eb4cd0846e1ad8059ca72af40344a9d7d2"); nil != err {
 		t.Error(err)
 	}
-
 }
-
