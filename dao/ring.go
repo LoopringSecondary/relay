@@ -49,11 +49,11 @@ func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
 	info.ProtocolAddress = typesInfo.ProtocolAddress.Hex()
 	info.OrdersCount = typesInfo.OrdersCount.Int64()
 	info.ProtocolData = common.ToHex(typesInfo.ProtocolData)
-	info.ProtocolGas = typesInfo.ProtocolGas.Bytes()
-	info.ProtocolGasPrice = typesInfo.ProtocolGasPrice.Bytes()
+	info.ProtocolGas, _ = typesInfo.ProtocolGas.MarshalText()
+	info.ProtocolGasPrice, _ = typesInfo.ProtocolGasPrice.MarshalText()
 	info.RegistryData = common.ToHex(typesInfo.RegistryData)
-	info.RegistryGas = typesInfo.RegistryGas.Bytes()
-	info.RegistryGasPrice = typesInfo.RegistryGasPrice.Bytes()
+	info.RegistryGas, _ = typesInfo.RegistryGas.MarshalText()
+	info.RegistryGasPrice, _ = typesInfo.RegistryGasPrice.MarshalText()
 
 	return nil
 }
@@ -63,11 +63,15 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 	typesInfo.ProtocolAddress = common.HexToAddress(info.ProtocolAddress)
 	typesInfo.OrdersCount = big.NewInt(info.OrdersCount)
 	typesInfo.ProtocolData = common.FromHex(info.ProtocolData)
-	typesInfo.ProtocolGas = new(big.Int).SetBytes(info.ProtocolGas)
-	typesInfo.ProtocolGasPrice = new(big.Int).SetBytes(info.ProtocolGasPrice)
+	typesInfo.ProtocolGas = new(big.Int)
+	typesInfo.ProtocolGas.UnmarshalText(info.ProtocolGas)
+	typesInfo.ProtocolGasPrice = new(big.Int)
+	typesInfo.ProtocolGasPrice.UnmarshalText(info.ProtocolGasPrice)
 	typesInfo.RegistryData = common.FromHex(info.RegistryData)
-	typesInfo.RegistryGas = new(big.Int).SetBytes(info.RegistryGas)
-	typesInfo.RegistryGasPrice = new(big.Int).SetBytes(info.RegistryGasPrice)
+	typesInfo.RegistryGas = new(big.Int)
+	typesInfo.RegistryGas.UnmarshalText(info.RegistryGas)
+	typesInfo.RegistryGasPrice = new(big.Int)
+	typesInfo.RegistryGasPrice.UnmarshalText(info.RegistryGasPrice)
 	typesInfo.SubmitTxHash = common.HexToHash(info.SubmitTxHash)
 	typesInfo.RegistryTxHash = common.HexToHash(info.RegistryTxHash)
 	return nil
@@ -78,9 +82,9 @@ func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.H
 	for _, h := range ringhashs {
 		hashes = append(hashes, h.Hex())
 	}
-	return s.db.Model(&Ring{}).Where("hash in (?)", hashes).Update(" registry_tx_hash", txHash).Error
+	return s.db.Model(&RingSubmitInfo{}).Where("hash in (?)", hashes).Update("registry_tx_hash", txHash).Error
 }
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error {
-	return s.db.Model(&Ring{}).Where("hash = ?", ringhash.Hex()).Update(" submit_tx_hash", txHash).Error
+	return s.db.Model(&RingSubmitInfo{}).Where("hash = ?", ringhash.Hex()).Update("submit_tx_hash", txHash).Error
 }
