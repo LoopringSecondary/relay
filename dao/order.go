@@ -52,6 +52,7 @@ type Order struct {
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
+	BroadcastTime		  int     `gorm:"column:broadcast_time;type:bigint"`
 }
 
 // convert types/orderState to dao/order
@@ -96,6 +97,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
+	o.BroadcastTime = state.BroadcastTime
 
 	return nil
 }
@@ -136,6 +138,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	dst.MarginSplitPercentage = o.MarginSplitPercentage
 	state.BlockNumber = big.NewInt(o.BlockNumber)
 	state.Status = types.OrderStatus(o.Status)
+	state.BroadcastTime = o.BroadcastTime
 	dst.V = o.V
 	dst.S = types.HexToBytes32(o.S)
 	dst.R = types.HexToBytes32(o.R)
@@ -258,4 +261,8 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 
 	pageResult := PageResult{data, pageIndex, pageSize, 0}
 	return pageResult, err
+}
+
+func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
+	return s.db.Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }

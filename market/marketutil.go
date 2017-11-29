@@ -23,11 +23,17 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const weiToEther = 1e18
 
-func ByteToFloat(amount []byte) float64 {
+type TokenPair struct {
+	TokenS common.Address
+	TokenB common.Address
+}
+
+func ByteToFloat(amount [] byte) float64 {
 	var rst big.Int
 	rst.UnmarshalText(amount)
 	return float64(rst.Int64()) / weiToEther
@@ -47,6 +53,11 @@ var SupportMarket = map[string]string{
 	"weth": "0xsldkfjsdkfj",
 }
 
+var ContractVersionConfig = map[string] string {
+	"v1.0" : "0x39kdjfskdfjsdfj",
+	"v1.2" : "0x39kdjfskdfjsdfj",
+}
+
 var AllTokens = func() map[string]string {
 	all := make(map[string]string)
 	for k, v := range SupportMarket {
@@ -59,6 +70,22 @@ var AllTokens = func() map[string]string {
 }()
 
 var AllMarkets = AllMarket()
+
+var AllTokenPairs = func() []TokenPair {
+	pairsMap := make(map[string]TokenPair, 0)
+	for _,v := range SupportMarket {
+		for _, vv := range SupportTokens {
+			pairsMap[v + "-" + vv] = TokenPair{common.StringToAddress(v), common.StringToAddress(vv)}
+			pairsMap[vv + "-" + v] = TokenPair{common.StringToAddress(vv), common.StringToAddress(v)}
+		}
+	}
+	pairs := make([]TokenPair, 0)
+	for _,v := range pairsMap {
+		pairs = append(pairs, v)
+	}
+
+	return pairs
+}()
 
 func WrapMarket(s, b string) (market string, err error) {
 
@@ -78,15 +105,19 @@ func WrapMarketByAddress(s, b string) (market string, err error) {
 	return WrapMarket(AddressToAlias(s), AddressToAlias(b))
 }
 
-func UnWrap(market string) (s, b string, err error) {
+func UnWrap(market string) (s, b string) {
 	mkt := strings.Split(strings.TrimSpace(market), "-")
 	if len(mkt) != 2 {
-		err = errors.New("only support market format like tokenS-tokenB")
-		return
+		return "", ""
 	}
 
 	s, b = strings.ToLower(mkt[0]), strings.ToLower(mkt[1])
 	return
+}
+
+func UnWrapToAddress(market string) (s, b common.Address) {
+	sa, sb := UnWrap(market)
+	return common.StringToAddress(sa), common.StringToAddress(sb)
 }
 
 func IsSupportedToken(token string) bool {
@@ -145,4 +176,17 @@ func IsBuy(s string) bool {
 
 func IsAddress(token string) bool {
 	return strings.HasPrefix(token, "0x")
+}
+
+func getContractVersion(address string) string {
+	for k, v := range ContractVersionConfig {
+		if v == address {
+			return k
+		}
+	}
+	return ""
+}
+
+func IsSupportedContract(address string) bool {
+	return getContractVersion(address) != ""
 }

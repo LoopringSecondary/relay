@@ -22,19 +22,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/gorilla/mux"
-	gorillaRpc "github.com/gorilla/rpc"
-	"github.com/gorilla/rpc/json"
 	"github.com/powerman/rpc-codec/jsonrpc2"
 	"net"
 	"net/http"
 	"net/rpc"
-	"os"
-	"strings"
+	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/ordermanager"
+	"math/big"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gorilla/rpc/v2/json2"
+	rpc2 "github.com/gorilla/rpc/v2"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -49,6 +49,31 @@ type PageResult struct {
 	Total     int
 }
 
+type Depth struct {
+	contractVersion string
+	market string
+	Depth AskBid
+}
+
+type AskBid struct {
+	Buy [][]string
+	Sell [][]string
+}
+
+type CommonTokenRequest struct {
+	contractVersion string
+	owner string
+}
+
+type OrderQuery struct {
+	Status int
+	PageIndex int
+	PageSize  int
+	ContractVersion string
+	Owner string
+
+}
+
 var RemoteAddrContextKey = "RemoteAddr"
 
 type JsonrpcService interface {
@@ -59,12 +84,16 @@ type JsonrpcService interface {
 type JsonrpcServiceImpl struct {
 	port         string
 	trendManager market.TrendManager
+	orderManager ordermanager.OrderManager
+	accountManager market.AccountManager
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
+	l.orderManager = orderManager
+	l.accountManager = accountManager
 	return l
 }
 
@@ -114,55 +143,95 @@ func (j *JsonrpcServiceImpl) Start2() {
 }
 
 func (j *JsonrpcServiceImpl) Start() {
-	s := gorillaRpc.NewServer()
-	s.RegisterCodec(json.NewCodec(), "application/json")
-	s.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
+
+	s := rpc2.NewServer()
+	s.RegisterCodec(json2.NewCodec(), "application/json")
+	s.RegisterCodec(json2.NewCodec(), "application/json;charset=UTF-8")
 	jsonrpc := new(JsonrpcServiceImpl)
-	s.RegisterService(jsonrpc, "")
+	s.RegisterService(jsonrpc, "jsonrpc")
 	r := mux.NewRouter()
 	r.Handle("/rpc", s)
 	http.ListenAndServe(":"+j.port, r)
 }
 
-func (*JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res *string) error {
+func (j *JsonrpcServiceImpl) SubmitOrder(r *http.Request, order *types.Order, res *string) error {
 	HandleOrder(order)
 	*res = "SUBMIT_SUCCESS"
 	return nil
 }
 
-func (*JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface{}, res *dao.PageResult) error {
+func (j *JsonrpcServiceImpl) getOrders(r *http.Request, query map[string]interface{}, res *dao.PageResult) error {
 
 	orderQuery, pi, ps, err := convertFromMap(query)
-
 	if err != nil {
 		return err
 	}
 
-	//TODO(xiaolu) finish the connect get . not use this
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
-	c := config.LoadConfig(path)
-	daoServiceImpl := dao.NewRdsService(c.Mysql)
-	result, queryErr := daoServiceImpl.OrderPageQuery(&orderQuery, pi, ps)
+	result, queryErr := j.orderManager.GetOrders(&orderQuery, pi, ps)
 	res = &result
 	return queryErr
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getDepth(r *http.Request, market string, res *map[string]int) error {
-	// not support now
+func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interface{}, res *Depth) error {
+
+	mkt := query["market"].(string)
+	protocol := query["contractVersion"].(string)
+	length := query["length"].(int)
+
+	if mkt == "" || protocol == "" || market.ContractVersionConfig[protocol] == "" {
+		return errors.New("market and correct contract version must be applied")
+	}
+
+	if length <= 0 || length > 20 {
+		length = 20
+	}
+
+	a, b := market.UnWrap(mkt)
+	if market.SupportTokens[a] == "" || market.SupportMarket[b] == "" {
+		return errors.New("unsupported market type")
+	}
+
+	empty := make([][]string, 0)
+	for i := range empty {
+		empty[i] = make([]string, 0)
+	}
+	askBid := AskBid{Buy:empty, Sell:empty}
+	depth := Depth{contractVersion:market.ContractVersionConfig[protocol], market:mkt, Depth:askBid}
+
+	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
+	asks, askErr := j.orderManager.GetOrderBook(
+		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(a),
+		common.StringToAddress(b), length * 2)
+
+	if askErr != nil {
+		return errors.New("get depth error , please refresh again")
+	}
+
+	depth.Depth.Sell = calculateDepth(asks, length)
+
+	bids, bidErr := j.orderManager.GetOrderBook(
+		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(b),
+		common.StringToAddress(a), length * 2)
+
+	if bidErr != nil {
+		return errors.New("get depth error , please refresh again")
+	}
+
+	depth.Depth.Buy = calculateDepth(bids, length)
+
 	return nil
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
-	// not support now
+func (j *JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
 	return nil
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *map[string]int) error {
-	// not support now
-	return nil
+func (j *JsonrpcServiceImpl) getTicker(r *http.Request, market string, res *[]market.Ticker) error {
+	tickers, err := j.trendManager.GetTicker()
+	res = &tickers
+	return err
 }
 
 func (j *JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *[]market.Trend) error {
@@ -171,19 +240,44 @@ func (j *JsonrpcServiceImpl) getTrend(r *http.Request, market string, res *[]mar
 	return err
 }
 
-//TODO
 func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map[string]int) error {
 	// not support now
 	return nil
 }
 
-//TODO
-func (*JsonrpcServiceImpl) getBalance(r *http.Request, market string, res *map[string]int) error {
-	// not support now
+func (j *JsonrpcServiceImpl) getBalance(r *http.Request, balanceQuery CommonTokenRequest, res *market.AccountJson) error {
+	account := j.accountManager.GetBalance(balanceQuery.contractVersion, balanceQuery.owner)
+	accountJson := account.ToJsonObject(balanceQuery.contractVersion)
+	res = &accountJson
 	return nil
 }
 
 func convertFromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
+
+	for k, v := range src {
+		switch k {
+		//TODO(xiaolu) change status to string not uint8
+		case "status":
+			query.Status = v.(uint8)
+		case "pageIndex":
+			pageIndex = v.(int)
+		case "pageSize":
+			pageSize = v.(int)
+		case "owner":
+			query.Owner = v.(string)
+		case "contractVersion":
+			query.Protocol = v.(string)
+		default:
+			err = errors.New("unsupported query found " + k)
+			return
+		}
+	}
+
+	return
+
+}
+
+func FromMap(src map[string]interface{}) (query dao.Order, pageIndex int, pageSize int, err error) {
 
 	for k, v := range src {
 		switch k {
@@ -216,9 +310,45 @@ type Arith int
 
 type Result int
 
-func (t *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) error {
+func (j *JsonrpcServiceImpl) Multiply(r *http.Request, args *Args, result *int) error {
 	fmt.Printf("Multiplying %d with %d\n", args.A, args.B)
 
 	*result = args.A * args.B
 	return nil
+}
+
+func calculateDepth(states []types.OrderState, length int) [][]string {
+
+	if len(states) == 0 {
+		return [][]string{}
+	}
+
+	depth := make([][]string, 0)
+	for i := range depth {
+		depth[i] = make([]string, 0)
+	}
+
+	var tempSumAmountS, tempSumAmountB big.Int
+	var lastPrice big.Rat
+
+	for i,s := range states {
+
+		if i == 0 {
+			lastPrice = *s.RawOrder.Price
+			tempSumAmountS = *s.RawOrder.AmountS
+			tempSumAmountB = *s.RawOrder.AmountB
+		} else {
+			if lastPrice.Cmp(s.RawOrder.Price) != 0 {
+				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
+				tempSumAmountS.Set(big.NewInt(0))
+				tempSumAmountB.Set(big.NewInt(0))
+				lastPrice = *s.RawOrder.Price
+			} else {
+				tempSumAmountS.Add(&tempSumAmountS, s.RawOrder.AmountS)
+				tempSumAmountB.Add(&tempSumAmountB, s.RawOrder.AmountB)
+			}
+		}
+	}
+
+	return depth[:length]
 }
