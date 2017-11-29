@@ -4,8 +4,6 @@ package gateway
 
 import (
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ipfs/go-ipfs-api"
 )

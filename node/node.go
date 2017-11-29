@@ -77,7 +77,7 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerGateway()
 	n.registerAccountManager(accessor)
 	n.registerMiner(accessor, ks, marketCapProvider)
-	n.registerExtractor(accessor)
+	n.registerExtractor()
 	n.registerOrderManager()
 	n.registerTrendManager()
 	n.registerJsonRpcService()

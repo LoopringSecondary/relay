@@ -39,8 +39,8 @@ type OrderManager interface {
 	MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
-	GetOrderByHash(hash types.Hash) (types.OrderState, error)
-	UpdateBroadcastTimeByHash(hash types.Hash, bt int) error
+	GetOrderByHash(hash common.Hash) (types.OrderState, error)
+	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 }
 
 type OrderManagerImpl struct {
@@ -420,8 +420,8 @@ func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int)
 	return pageRes, nil
 }
 
-func (om *OrderManagerImpl) GetOrderByHash(hash types.Hash) (orderState types.OrderState, err error) {
-	order, err := om.dao.GetOrderByHash(hash)
+func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState types.OrderState, err error) {
+	order, err := om.rds.GetOrderByHash(hash)
 	if err != nil {
 		return
 	}
@@ -430,6 +430,6 @@ func (om *OrderManagerImpl) GetOrderByHash(hash types.Hash) (orderState types.Or
 	return *result, nil
 }
 
-func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash types.Hash, bt int) error {
-	return om.dao.UpdateBroadcastTimeByHash(hash.Str(), bt)
+func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) error {
+	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
 }
