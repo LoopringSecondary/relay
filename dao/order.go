@@ -20,6 +20,7 @@ package dao
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -52,7 +53,7 @@ type Order struct {
 	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
-	BroadcastTime		  int     `gorm:"column:broadcast_time;type:bigint"`
+	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 }
 
 // convert types/orderState to dao/order
@@ -62,22 +63,22 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	var err error
 	o.Price, _ = src.Price.Float64()
 	if o.Price > 1e12 || o.Price < 0.0000000000000001 {
-		return errors.New("price is out of range")
+		return fmt.Errorf("dao order convert down,price out of range")
 	}
 	if o.AmountB, err = src.AmountB.MarshalText(); err != nil {
-		return err
+		return fmt.Errorf("dao order convert down, marshal order amountB error:%s", err.Error())
 	}
 	if o.AmountS, err = src.AmountS.MarshalText(); err != nil {
-		return err
+		return fmt.Errorf("dao order convert down, marshal order amountS error:%s", err.Error())
 	}
 	if o.RemainAmountB, err = state.RemainedAmountB.MarshalText(); err != nil {
-		return err
+		return fmt.Errorf("dao order convert down, marshal order remainAmountB error:%s", err.Error())
 	}
 	if o.RemainAmountS, err = state.RemainedAmountS.MarshalText(); err != nil {
-		return err
+		return fmt.Errorf("dao order convert down, marshal order remainAmountS error:%s", err.Error())
 	}
 	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
-		return err
+		return fmt.Errorf("dao order convert down, marshal order lrcFee error:%s", err.Error())
 	}
 
 	o.Protocol = src.Protocol.Hex()
@@ -104,50 +105,49 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 
 // convert dao/order to types/orderState
 func (o *Order) ConvertUp(state *types.OrderState) error {
-	dst := state.RawOrder
-
-	dst.AmountS = new(big.Int)
-	if err := dst.AmountS.UnmarshalText(o.AmountS); err != nil {
-		return err
+	state.RawOrder.AmountS = new(big.Int)
+	if err := state.RawOrder.AmountS.UnmarshalText(o.AmountS); err != nil {
+		return fmt.Errorf("dao order convert up,unmarshal amountS error:%s", err.Error())
 	}
-	dst.AmountB = new(big.Int)
-	if err := dst.AmountB.UnmarshalText(o.AmountB); err != nil {
-		return err
+	state.RawOrder.AmountB = new(big.Int)
+	if err := state.RawOrder.AmountB.UnmarshalText(o.AmountB); err != nil {
+		return fmt.Errorf("dao order convert up,unmarshal amountB error:%s", err.Error())
 	}
 	state.RemainedAmountS = new(big.Int)
 	if err := state.RemainedAmountS.UnmarshalText(o.RemainAmountS); err != nil {
-		return err
+		return fmt.Errorf("dao order convert up,unmarshal remainAmountS error:%s", err.Error())
 	}
 	state.RemainedAmountB = new(big.Int)
 	if err := state.RemainedAmountB.UnmarshalText(o.RemainAmountB); err != nil {
-		return err
+		return fmt.Errorf("dao order convert up,unmarshal remainAmountB error:%s", err.Error())
 	}
-	dst.LrcFee = new(big.Int)
-	if err := dst.LrcFee.UnmarshalText(o.LrcFee); err != nil {
-		return err
+	state.RawOrder.LrcFee = new(big.Int)
+	if err := state.RawOrder.LrcFee.UnmarshalText(o.LrcFee); err != nil {
+		return fmt.Errorf("dao order convert up,unmarshal lrcFee error:%s", err.Error())
 	}
-	dst.GeneratePrice()
 
-	dst.Protocol = common.HexToAddress(o.Protocol)
-	dst.TokenS = common.HexToAddress(o.TokenS)
-	dst.TokenB = common.HexToAddress(o.TokenB)
-	dst.Timestamp = big.NewInt(o.CreateTime)
-	dst.Ttl = big.NewInt(o.Ttl)
-	dst.Salt = big.NewInt(o.Salt)
-	dst.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
-	dst.MarginSplitPercentage = o.MarginSplitPercentage
+	state.RawOrder.GeneratePrice()
+	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
+	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
+	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
+	state.RawOrder.Timestamp = big.NewInt(o.CreateTime)
+	state.RawOrder.Ttl = big.NewInt(o.Ttl)
+	state.RawOrder.Salt = big.NewInt(o.Salt)
+	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
+	state.RawOrder.MarginSplitPercentage = o.MarginSplitPercentage
+	state.RawOrder.V = o.V
+	state.RawOrder.S = types.HexToBytes32(o.S)
+	state.RawOrder.R = types.HexToBytes32(o.R)
+	state.RawOrder.Owner = common.HexToAddress(o.Owner)
+	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
+
+	if state.RawOrder.Hash != state.RawOrder.GenerateHash() {
+		return fmt.Errorf("dao order convert down generate hash error")
+	}
+
 	state.BlockNumber = big.NewInt(o.BlockNumber)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
-	dst.V = o.V
-	dst.S = types.HexToBytes32(o.S)
-	dst.R = types.HexToBytes32(o.R)
-	dst.Owner = common.HexToAddress(o.Owner)
-
-	dst.Hash = common.HexToHash(o.OrderHash)
-	if dst.Hash != dst.GenerateHash() {
-		return errors.New("dao order convert down generate hash error")
-	}
 
 	return nil
 }
@@ -159,18 +159,20 @@ func (s *RdsServiceImpl) GetOrderByHash(orderhash common.Hash) (*Order, error) {
 }
 
 func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error {
-	err := s.db.Where("order_hash in (?)", filterOrderhashs).Update("miner_block_mark = ?", blockNumber).Error
+	err := s.db.Model(&Order{}).
+		Where("order_hash in (?)", filterOrderhashs).
+		Update("miner_block_mark", blockNumber).Error
 
 	return err
 }
 
 func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
-	return s.db.Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark = ?", 0).Error
+	return s.db.Model(&Order{}).Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark", 0).Error
 }
 
-func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []uint8) ([]Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error) {
 	var (
-		list []Order
+		list []*Order
 		err  error
 	)
 
@@ -179,9 +181,14 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus [
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.
-		Where("token_s = ? and token_b = ? and create_time + ttl > ? and status not in (?) and miner_block_mark = ?", tokenS, tokenB, nowtime, filterStatus, 0).
-		Order("price desc").Find(&list).Error
+	err = s.db.Where("token_s = ? and token_b = ?", tokenS, tokenB).
+		Where("create_time + ttl > ? ", nowtime).
+		Where("status not in (?) ", filterStatus).
+		Where("miner_block_mark = ?", 0).
+		Order("price desc").
+		Limit(length).
+		Find(&list).
+		Error
 
 	return list, err
 }
@@ -193,7 +200,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	)
 
 	if from < to {
-		return list, errors.New("dao/order GetOrdersWithBlockNumberRange invalid block number")
+		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
 	err = s.db.Where("block_num between ? and ?", from, to).Find(&list).Error
@@ -223,7 +230,7 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 }
 
 func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
-	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status.Value()).Error
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", orderhashs).Update("status", status).Error
 	return err
 }
 
@@ -264,5 +271,5 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 }
 
 func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
-	return s.db.Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
+	return s.db.Model(&Order{}).Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }

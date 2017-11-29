@@ -21,9 +21,9 @@ package market
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 const weiToEther = 1e18
@@ -33,7 +33,7 @@ type TokenPair struct {
 	TokenB common.Address
 }
 
-func ByteToFloat(amount [] byte) float64 {
+func ByteToFloat(amount []byte) float64 {
 	var rst big.Int
 	rst.UnmarshalText(amount)
 	return float64(rst.Int64()) / weiToEther
@@ -53,9 +53,9 @@ var SupportMarket = map[string]string{
 	"weth": "0xsldkfjsdkfj",
 }
 
-var ContractVersionConfig = map[string] string {
-	"v1.0" : "0x39kdjfskdfjsdfj",
-	"v1.2" : "0x39kdjfskdfjsdfj",
+var ContractVersionConfig = map[string]string{
+	"v1.0": "0x39kdjfskdfjsdfj",
+	"v1.2": "0x39kdjfskdfjsdfj",
 }
 
 var AllTokens = func() map[string]string {
@@ -73,14 +73,14 @@ var AllMarkets = AllMarket()
 
 var AllTokenPairs = func() []TokenPair {
 	pairsMap := make(map[string]TokenPair, 0)
-	for _,v := range SupportMarket {
+	for _, v := range SupportMarket {
 		for _, vv := range SupportTokens {
-			pairsMap[v + "-" + vv] = TokenPair{common.StringToAddress(v), common.StringToAddress(vv)}
-			pairsMap[vv + "-" + v] = TokenPair{common.StringToAddress(vv), common.StringToAddress(v)}
+			pairsMap[v+"-"+vv] = TokenPair{common.StringToAddress(v), common.StringToAddress(vv)}
+			pairsMap[vv+"-"+v] = TokenPair{common.StringToAddress(vv), common.StringToAddress(v)}
 		}
 	}
 	pairs := make([]TokenPair, 0)
-	for _,v := range pairsMap {
+	for _, v := range pairsMap {
 		pairs = append(pairs, v)
 	}
 

@@ -21,12 +21,15 @@ package miner_test
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,9 +38,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"github.com/Loopring/relay/ordermanager"
-	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/relay/dao"
 )
 
 func loadConfig() *config.GlobalConfig {

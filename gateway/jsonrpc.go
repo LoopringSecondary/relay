@@ -23,18 +23,18 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/mux"
+	rpc2 "github.com/gorilla/rpc/v2"
+	"github.com/gorilla/rpc/v2/json2"
 	"github.com/powerman/rpc-codec/jsonrpc2"
+	"math/big"
 	"net"
 	"net/http"
 	"net/rpc"
-	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/ordermanager"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/gorilla/rpc/v2/json2"
-	rpc2 "github.com/gorilla/rpc/v2"
 )
 
 func (*JsonrpcServiceImpl) Ping(val [1]string, res *string) error {
@@ -51,27 +51,26 @@ type PageResult struct {
 
 type Depth struct {
 	contractVersion string
-	market string
-	Depth AskBid
+	market          string
+	Depth           AskBid
 }
 
 type AskBid struct {
-	Buy [][]string
+	Buy  [][]string
 	Sell [][]string
 }
 
 type CommonTokenRequest struct {
 	contractVersion string
-	owner string
+	owner           string
 }
 
 type OrderQuery struct {
-	Status int
-	PageIndex int
-	PageSize  int
+	Status          int
+	PageIndex       int
+	PageSize        int
 	ContractVersion string
-	Owner string
-
+	Owner           string
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -82,9 +81,9 @@ type JsonrpcService interface {
 }
 
 type JsonrpcServiceImpl struct {
-	port         string
-	trendManager market.TrendManager
-	orderManager ordermanager.OrderManager
+	port           string
+	trendManager   market.TrendManager
+	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
 }
 
@@ -195,14 +194,14 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 	for i := range empty {
 		empty[i] = make([]string, 0)
 	}
-	askBid := AskBid{Buy:empty, Sell:empty}
-	depth := Depth{contractVersion:market.ContractVersionConfig[protocol], market:mkt, Depth:askBid}
+	askBid := AskBid{Buy: empty, Sell: empty}
+	depth := Depth{contractVersion: market.ContractVersionConfig[protocol], market: mkt, Depth: askBid}
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := j.orderManager.GetOrderBook(
 		common.StringToAddress(market.ContractVersionConfig[protocol]),
 		common.StringToAddress(a),
-		common.StringToAddress(b), length * 2)
+		common.StringToAddress(b), length*2)
 
 	if askErr != nil {
 		return errors.New("get depth error , please refresh again")
@@ -213,7 +212,7 @@ func (j *JsonrpcServiceImpl) getDepth(r *http.Request, query map[string]interfac
 	bids, bidErr := j.orderManager.GetOrderBook(
 		common.StringToAddress(market.ContractVersionConfig[protocol]),
 		common.StringToAddress(b),
-		common.StringToAddress(a), length * 2)
+		common.StringToAddress(a), length*2)
 
 	if bidErr != nil {
 		return errors.New("get depth error , please refresh again")
@@ -331,7 +330,7 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 	var tempSumAmountS, tempSumAmountB big.Int
 	var lastPrice big.Rat
 
-	for i,s := range states {
+	for i, s := range states {
 
 		if i == 0 {
 			lastPrice = *s.RawOrder.Price

@@ -19,7 +19,7 @@
 package ordermanager
 
 import (
-	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -36,10 +36,10 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState
+	MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
-	GetOrderByHash(hash common.Hash) (types.OrderState, error)
+	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 }
 
@@ -119,6 +119,8 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 	state := input.(*types.OrderState)
 	state.Status = types.ORDER_NEW
+	state.RemainedAmountB = big.NewInt(0)
+	state.RemainedAmountS = state.RawOrder.AmountS
 	model := &dao.Order{}
 
 	log.Debugf("ordermanager handle gateway order,order.hash:%s", state.RawOrder.Hash.Hex())
@@ -193,7 +195,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	om.orderFullFinished(state)
 
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
+		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
 	}
 
 	// validate cutoff
@@ -202,7 +204,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 			if err := om.rds.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
 				return err
 			} else {
-				return errors.New("order manager handle order filled event error:order have been cutoff")
+				return fmt.Errorf("order manager handle order filled event error:order have been cutoff")
 			}
 		}
 	}
@@ -265,7 +267,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// judge status
 	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return errors.New("order manager handle order filled event error:order status is " + state.Status.Name())
+		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
 	}
 
 	// calculate remainAmount
@@ -360,14 +362,14 @@ func (om *OrderManagerImpl) orderFullFinished(state *types.OrderState) {
 	}
 }
 
-func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, filterOrderhashs []common.Hash) []types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
 	var list []types.OrderState
 
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
 		log.Debugf("get miner orders error:%s", err.Error())
 	}
 
-	filterList := om.provider.getOrders(tokenS, tokenB, filterOrderhashs)
+	filterList := om.provider.getOrders(tokenS, tokenB, length, filterOrderhashs)
 
 	for _, v := range filterList {
 		if !om.um.InWhiteList(v.RawOrder.TokenS) {
@@ -420,14 +422,18 @@ func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int)
 	return pageRes, nil
 }
 
-func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState types.OrderState, err error) {
+func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.OrderState, err error) {
+	var result types.OrderState
 	order, err := om.rds.GetOrderByHash(hash)
 	if err != nil {
-		return
+		return nil, err
 	}
-	result := &types.OrderState{}
-	order.ConvertUp(result)
-	return *result, nil
+
+	if err := order.ConvertUp(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) error {

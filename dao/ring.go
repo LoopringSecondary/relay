@@ -25,23 +25,23 @@ import (
 )
 
 type Ring struct {
-	ID                    int     `gorm:"column:id;primary_key;"`
-	Hash	string	`gorm:"column:hash;type:varchar(82)"`
+	ID   int    `gorm:"column:id;primary_key;"`
+	Hash string `gorm:"column:hash;type:varchar(82)"`
 }
 
 type RingSubmitInfo struct {
-	ID                    int     `gorm:"column:id;primary_key;"`
-	Hash	string	`gorm:"column:hash;type:varchar(82)"`
+	ID               int    `gorm:"column:id;primary_key;"`
+	Hash             string `gorm:"column:hash;type:varchar(82)"`
 	ProtocolAddress  string `gorm:"column:protocol_address;type:varchar(42)"`
-	OrdersCount      int64 `gorm:"column:order_count;type:bigint"`
+	OrdersCount      int64  `gorm:"column:order_count;type:bigint"`
 	ProtocolData     string `gorm:"column:protocol_data;type:text"`
-	ProtocolGas      []byte  `gorm:"column:protocol_gas;type:varchar(30)"`
-	ProtocolGasPrice []byte  `gorm:"column:protocol_gas_price;type:varchar(30)"`
+	ProtocolGas      []byte `gorm:"column:protocol_gas;type:varchar(30)"`
+	ProtocolGasPrice []byte `gorm:"column:protocol_gas_price;type:varchar(30)"`
 	RegistryData     string `gorm:"column:registry_data;type:text"`
-	RegistryGas      []byte  `gorm:"column:registry_gas;type:varchar(30)"`
-	RegistryGasPrice []byte  `gorm:"column:registry_gas_price;type:varchar(30)"`
-	SubmitTxHash     string	`gorm:"column:submit_tx_hash;type:varchar(82)"`
-	RegistryTxHash   string	`gorm:"column:registry_tx_hash;type:varchar(82)"`
+	RegistryGas      []byte `gorm:"column:registry_gas;type:varchar(30)"`
+	RegistryGasPrice []byte `gorm:"column:registry_gas_price;type:varchar(30)"`
+	SubmitTxHash     string `gorm:"column:submit_tx_hash;type:varchar(82)"`
+	RegistryTxHash   string `gorm:"column:registry_tx_hash;type:varchar(82)"`
 }
 
 func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
@@ -73,15 +73,14 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 	return nil
 }
 
-
 func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error {
 	hashes := []string{}
-	for _,h := range ringhashs {
+	for _, h := range ringhashs {
 		hashes = append(hashes, h.Hex())
 	}
-	return s.db.Where("hash in (?)", hashes).Update(" registry_tx_hash = ?", txHash).Error
+	return s.db.Model(&Ring{}).Where("hash in (?)", hashes).Update(" registry_tx_hash", txHash).Error
 }
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error {
-	return s.db.Where("hash = ?", ringhash.Hex()).Update(" submit_tx_hash = ?", txHash).Error
+	return s.db.Model(&Ring{}).Where("hash = ?", ringhash.Hex()).Update(" submit_tx_hash", txHash).Error
 }

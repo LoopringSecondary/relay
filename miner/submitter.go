@@ -22,17 +22,17 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/marketcap"
 )
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
@@ -50,9 +50,8 @@ type RingSubmitter struct {
 	//todo:
 	registeredRings map[common.Hash]types.RingSubmitInfo
 
-	dbService dao.RdsService
+	dbService         dao.RdsService
 	marketCapProvider *marketcap.MarketCapProvider
-
 }
 
 type RingSubmitFailed struct {
@@ -83,7 +82,7 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 
 	ringInfos := eventData.([]*types.RingSubmitInfo)
 
-	for _,info := range ringInfos {
+	for _, info := range ringInfos {
 		if err := submitter.dbService.Add(info); nil != err {
 			log.Errorf("err:%s", err.Error())
 		}
@@ -113,12 +112,12 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 func (submitter *RingSubmitter) batchRinghashRegistry(ringInfos []*types.RingSubmitInfo) error {
 	infosMap := make(map[common.Address][]*types.RingSubmitInfo)
 	for _, info := range ringInfos {
-		if _,ok := infosMap[info.ProtocolAddress]; !ok {
+		if _, ok := infosMap[info.ProtocolAddress]; !ok {
 			infosMap[info.ProtocolAddress] = []*types.RingSubmitInfo{}
 		}
 		infosMap[info.ProtocolAddress] = append(infosMap[info.ProtocolAddress], info)
 	}
-	for protocolAddr,infos := range infosMap {
+	for protocolAddr, infos := range infosMap {
 		contractAddress := protocolAddr
 		miners := []common.Address{}
 		ringhashes := []common.Hash{}

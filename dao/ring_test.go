@@ -19,16 +19,16 @@
 package dao_test
 
 import (
-	"testing"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
-	"github.com/ethereum/go-ethereum/common"
-	"strings"
-	"os"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"os"
+	"strings"
+	"testing"
 )
 
 func loadConfig() *config.GlobalConfig {
@@ -64,4 +64,3 @@ func TestNewRing(t *testing.T) {
 	}
 
 }
-
