@@ -161,13 +161,13 @@ func (s *RdsServiceImpl) GetOrderByHash(orderhash common.Hash) (*Order, error) {
 func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error {
 	err := s.db.Model(&Order{}).
 		Where("order_hash in (?)", filterOrderhashs).
-		Update("miner_block_mark = ?", blockNumber).Error
+		Update("miner_block_mark", blockNumber).Error
 
 	return err
 }
 
 func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
-	return s.db.Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark = ?", 0).Error
+	return s.db.Model(&Order{}).Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark", 0).Error
 }
 
 func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, filterStatus []types.OrderStatus) ([]*Order, error) {
@@ -229,7 +229,7 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 }
 
 func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
-	err := s.db.Where("order_hash in (?)", orderhashs).Update("status = ?", status).Error
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", orderhashs).Update("status", status).Error
 	return err
 }
 
@@ -270,5 +270,5 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 }
 
 func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
-	return s.db.Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
+	return s.db.Model(&Order{}).Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }
