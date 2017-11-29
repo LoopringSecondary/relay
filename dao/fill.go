@@ -112,5 +112,5 @@ func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start in
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted = ?", true).Error
+	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
 }
