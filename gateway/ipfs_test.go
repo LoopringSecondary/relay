@@ -30,22 +30,21 @@ import (
 )
 
 const (
-	suffix        = "000000000000000000"
-	account1      = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
-	account2      = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
-	pwd1          = "201"
-	pwd2          = "202"
-	TokenAddressA = "0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"
-	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
+	suffix = "000000000000000000"
 )
 
 func TestSingleOrder(t *testing.T) {
 	c := test.LoadConfig()
+	entity := test.GenerateTomlEntity(c)
 
 	// get keystore and unlock account
-	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
+	tokenAddressA := entity.Tokens[0]
+	tokenAddressB := entity.Tokens[1]
+	testAcc := entity.Accounts[0]
+
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	ks.Unlock(acc1, pwd1)
+	account := accounts.Account{Address: testAcc.Address}
+	ks.Unlock(account, testAcc.Passphrase)
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
@@ -56,10 +55,10 @@ func TestSingleOrder(t *testing.T) {
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 
 	order := test.CreateOrder(
-		common.HexToAddress(TokenAddressA),
-		common.HexToAddress(TokenAddressB),
+		tokenAddressA,
+		tokenAddressB,
 		common.HexToAddress(impl.Address),
-		acc1.Address,
+		account.Address,
 		amountS1,
 		amountB1,
 	)
@@ -72,13 +71,22 @@ func TestSingleOrder(t *testing.T) {
 
 func TestRing(t *testing.T) {
 	c := test.LoadConfig()
+	entity := test.GenerateTomlEntity(c)
+
+	tokenAddressA := entity.Tokens[0]
+	tokenAddressB := entity.Tokens[1]
+	testAcc1 := entity.Accounts[0]
+	testAcc2 := entity.Accounts[1]
 
 	// get keystore and unlock account
-	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
-	acc2 := accounts.Account{Address: common.HexToAddress(account2)}
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	ks.Unlock(acc1, pwd1)
-	ks.Unlock(acc2, pwd2)
+
+	acc1 := accounts.Account{Address: testAcc1.Address}
+	acc2 := accounts.Account{Address: testAcc2.Address}
+
+	ks.Unlock(acc1, testAcc1.Passphrase)
+	ks.Unlock(acc2, testAcc2.Passphrase)
+
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
@@ -88,8 +96,8 @@ func TestRing(t *testing.T) {
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
-		common.HexToAddress(TokenAddressA),
-		common.HexToAddress(TokenAddressB),
+		tokenAddressA,
+		tokenAddressB,
 		common.HexToAddress(impl.Address),
 		acc1.Address,
 		amountS1,
@@ -100,8 +108,8 @@ func TestRing(t *testing.T) {
 	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
-		common.HexToAddress(TokenAddressB),
-		common.HexToAddress(TokenAddressA),
+		tokenAddressB,
+		tokenAddressA,
 		common.HexToAddress(impl.Address),
 		acc2.Address,
 		amountS2,
