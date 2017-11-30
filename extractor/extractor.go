@@ -262,7 +262,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
 			v.Owner = common.HexToAddress(ord.Owner)
-			v.MarginSplitPercentage = int(ord.MarginSplitPercentage)
 
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {

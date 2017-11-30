@@ -35,15 +35,15 @@ import (
 )
 
 type Account struct {
-	Address string
+	Address    string
 	Passphrase string
 }
 
 type TestData struct {
-	Tokens []string
-	Accounts []Account
-	Creator Account
-	KeystoreDir string
+	Tokens          []string
+	Accounts        []Account
+	Creator         Account
+	KeystoreDir     string
 	AllowanceAmount int64
 }
 
@@ -63,7 +63,7 @@ func PrepareTestData() {
 		//delegate registry
 		callMethod := accessor.ContractCallMethod(impl.DelegateAbi, impl.DelegateAddress)
 		var res types.Big
-		if err := callMethod(&res, "isAddressAuthorized", "latest",protocolAddr);nil != err {
+		if err := callMethod(&res, "isAddressAuthorized", "latest", protocolAddr); nil != err {
 			log.Errorf("err:%s", err.Error())
 		} else {
 			if res.Int() <= 0 {
@@ -82,7 +82,7 @@ func PrepareTestData() {
 		for _, tokenAddr := range tokens {
 			callMethod := accessor.ContractCallMethod(impl.TokenRegistryAbi, impl.TokenRegistryAddress)
 			var res types.Big
-			if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr);nil != err {
+			if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
 				if res.Int() <= 0 {
@@ -121,7 +121,7 @@ func AllowanceToLoopring() {
 			//balance := &types.Big{}
 
 			var balance types.Big
-			if err := callMethod(&balance, "balanceOf", "latest", account.Address);nil != err {
+			if err := callMethod(&balance, "balanceOf", "latest", account.Address); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
 				log.Infof("token: %s, balance %s : %s", tokenAddr.Hex(), account.Address.Hex(), balance.BigInt().String())
@@ -162,7 +162,7 @@ func init() {
 		ks.Unlock(account, accTmp.Passphrase)
 	}
 
-	for _,tokenTmp := range testData.Tokens {
+	for _, tokenTmp := range testData.Tokens {
 		tokens = append(tokens, common.HexToAddress(tokenTmp))
 	}
 
