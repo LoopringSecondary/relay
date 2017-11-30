@@ -21,6 +21,7 @@ package ethaccessor_test
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
@@ -56,4 +57,21 @@ func TestNewAccessor(t *testing.T) {
 
 	t.Log("balance", reqs[0].Balance.BigInt().String())
 	t.Log("balance", reqs[1].Balance.BigInt().String())
+}
+
+func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
+	c := test.LoadConfig()
+	accessor, err := test.GenerateAccessor(c)
+	if err != nil {
+		t.Fatalf("generate accessor error:%s", err.Error())
+	}
+
+	tokenAddress := common.HexToAddress("0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564")
+	owner := common.HexToAddress("0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135")
+	balance, err := accessor.Erc20Balance(tokenAddress, owner, "latest")
+	if err != nil {
+		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
+	}
+
+	t.Log(balance.String())
 }

@@ -1,14 +1,13 @@
-tokens = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
-keystore_dir = "/Users/yuhongyu/myeth/data/keystore"
+tokens = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237"]
+keystore_dir = "/Users/fukun/projects/gohome/src/github.com/dylenfu/eth-libs/build/data/keystore"
 
 [[accounts]]
-address = "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"
-passphrase = "1"
+address = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
+passphrase = "201"
 [[accounts]]
-address = "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"
-passphrase = "1"
+address = "0x2084A83E25025D95848794f23e139AcAa56c7237"
+passphrase = "202"
 
 [creator]
-address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
-passphrase = "1"
-
+address = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
+passphrase = "101"
