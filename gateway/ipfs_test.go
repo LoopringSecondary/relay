@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	suffix = "000000000000000000"
+	suffix = "00"
 )
 
 func TestSingleOrder(t *testing.T) {
