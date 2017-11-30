@@ -41,6 +41,8 @@ type OrderManager interface {
 	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
+	FillsPageQuery(query map[string]string, pageIndex, pageSize int) (dao.PageResult, error)
+
 }
 
 type OrderManagerImpl struct {
@@ -438,4 +440,8 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 
 func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) error {
 	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
+}
+
+func (om *OrderManagerImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (fills []dao.FillEvent, err error) {
+	return om.rds.FillsPageQuery(query, pageIndex, pageSize)
 }

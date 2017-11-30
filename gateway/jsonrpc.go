@@ -216,10 +216,9 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	return depth, err
 }
 
-func (j *JsonrpcServiceImpl) GetFills(market string) (res dao.PageResult, err error) {
-
-
-	return
+func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err error) {
+	fmt.Println(query)
+	return j.orderManager.FillsPageQuery(fillQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(market string) (res []market.Ticker, err error) {
@@ -304,4 +303,36 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 	}
 
 	return depth[:length]
+}
+
+func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
+	rst := make(map[string]string)
+	var pi, ps int
+	if q.Market != "" {
+		rst["market"] = q.Market
+	}
+	if q.PageIndex <= 0 {
+		pi = 1
+	} else {
+		pi = q.PageIndex
+	}
+	if q.PageSize <= 0 || q.PageSize > 20 {
+		ps = 20
+	} else {
+		ps = q.PageIndex
+	}
+	if q.ContractVersion != "" {
+		rst["contract_version"] = market.ContractVersionConfig[q.ContractVersion]
+	}
+	if q.Owner != "" {
+		rst["owner"] = q.Owner
+	}
+	if q.OrderHash != "" {
+		rst["order_hash"] = q.OrderHash
+	}
+	if q.RingHash != "" {
+		rst["ring_hash"] = q.RingHash
+	}
+
+	return rst, pi, ps
 }

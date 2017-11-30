@@ -101,24 +101,25 @@ type ApprovalEvent struct {
 }
 
 type OrderFilledEvent struct {
-	Ringhash              common.Hash
-	PreOrderHash          common.Hash
-	OrderHash             common.Hash
-	NextOrderHash         common.Hash
-	TxHash                common.Hash
-	ContractAddress       common.Address
-	Owner                 common.Address
-	TokenS                common.Address
-	TokenB                common.Address
-	RingIndex             *Big
-	Time                  *Big
-	Blocknumber           *Big
-	AmountS               *Big
-	AmountB               *Big
-	LrcReward             *Big
-	LrcFee                *Big
-	IsDeleted             bool
-	MarginSplitPercentage int
+	Ringhash        common.Hash
+	PreOrderHash    common.Hash
+	OrderHash       common.Hash
+	NextOrderHash   common.Hash
+	TxHash          common.Hash
+	ContractAddress common.Address
+	Owner           common.Address
+	TokenS          common.Address
+	TokenB          common.Address
+	RingIndex       *Big
+	Time            *Big
+	Blocknumber     *Big
+	AmountS         *Big
+	AmountB         *Big
+	LrcReward       *Big
+	LrcFee          *Big
+	IsDeleted       bool
+	SplitS          *Big
+	SplitB          *Big
 }
 
 type OrderCancelledEvent struct {

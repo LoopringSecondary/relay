@@ -69,7 +69,7 @@ type RingMinedEvent struct {
 	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
 	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
 	OrderHashList      []common.Hash  `fieldName:"_orderHashList"`
-	AmountsList        [][4]*big.Int  `fieldName:"_amountsList"`
+	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
@@ -110,12 +110,14 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.OrderHash = e.OrderHashList[i]
 		fill.NextOrderHash = nextOrderHash
 
-		// _amountSList, _amountBList, _lrcRewardList, _lrcFeeList
+		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
 		fill.RingIndex = types.NewBigPtr(e.RingIndex)
 		fill.AmountS = types.NewBigPtr(e.AmountsList[i][0])
 		fill.AmountB = types.NewBigPtr(e.AmountsList[i][1])
 		fill.LrcReward = types.NewBigPtr(e.AmountsList[i][2])
 		fill.LrcFee = types.NewBigPtr(e.AmountsList[i][3])
+		fill.SplitS = types.NewBigPtr(e.AmountsList[i][4])
+		fill.SplitB = types.NewBigPtr(e.AmountsList[i][5])
 
 		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee.BigInt())
 		list = append(list, &fill)
