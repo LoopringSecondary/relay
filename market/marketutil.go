@@ -45,12 +45,11 @@ func FloatToByte(amount float64) []byte {
 }
 
 var SupportTokens = map[string]string{
-	"lrc":  "0xskdfjdkfj",
-	"coss": "0xskdjfskdfj",
+	"lrc":  "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5",
 }
 
 var SupportMarket = map[string]string{
-	"weth": "0xsldkfjsdkfj",
+	"weth": "0x354473d06de0ae6a0a2c92392818e5b304038665",
 }
 
 var ContractVersionConfig = map[string]string{
@@ -75,8 +74,8 @@ var AllTokenPairs = func() []TokenPair {
 	pairsMap := make(map[string]TokenPair, 0)
 	for _, v := range SupportMarket {
 		for _, vv := range SupportTokens {
-			pairsMap[v+"-"+vv] = TokenPair{common.StringToAddress(v), common.StringToAddress(vv)}
-			pairsMap[vv+"-"+v] = TokenPair{common.StringToAddress(vv), common.StringToAddress(v)}
+			pairsMap[v+"-"+vv] = TokenPair{common.HexToAddress(v), common.HexToAddress(vv)}
+			pairsMap[vv+"-"+v] = TokenPair{common.HexToAddress(vv), common.HexToAddress(v)}
 		}
 	}
 	pairs := make([]TokenPair, 0)

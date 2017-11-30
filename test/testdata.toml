@@ -1,5 +1,6 @@
-tokens = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
+tokens = ["0x354473d06de0ae6a0a2c92392818e5b304038665", "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5"]
 keystore_dir = "/Users/yuhongyu/myeth/data/keystore"
+allowance_amount = 100000
 
 [[accounts]]
 address = "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"
