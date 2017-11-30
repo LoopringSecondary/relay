@@ -21,7 +21,7 @@ package timing_matcher
 import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	marketLib "github.com/Loopring/relay/market"
+	marketLib "github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"

@@ -30,6 +30,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"github.com/Loopring/relay/market/util"
 )
 
 const (
@@ -111,7 +112,7 @@ func (t *TrendManager) initCache() {
 
 	trendMap := make(map[string]Cache)
 	tickerMap := make(map[string]Ticker)
-	for _, mkt := range AllMarkets {
+	for _, mkt := range util.AllMarkets {
 		mktCache := Cache{}
 		mktCache.Trends = make([]Trend, 0)
 		mktCache.Fills = make([]dao.FillEvent, 0)
@@ -127,7 +128,7 @@ func (t *TrendManager) initCache() {
 			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
 		}
 
-		tokenS, tokenB := UnWrap(mkt)
+		tokenS, tokenB := util.UnWrap(mkt)
 		now := time.Now()
 		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
 		sbFills, err := t.rds.QueryRecentFills(tokenS, tokenB, "", firstSecondThisHour.Unix(), 0)
@@ -196,15 +197,15 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 
 	for i, data := range fills {
 
-		if IsBuy(data.TokenS) {
-			vol += ByteToFloat(data.AmountB)
-			amount += ByteToFloat(data.AmountS)
+		if util.IsBuy(data.TokenS) {
+			vol += util.ByteToFloat(data.AmountB)
+			amount += util.ByteToFloat(data.AmountS)
 		} else {
-			vol += ByteToFloat(data.AmountS)
-			amount += ByteToFloat(data.AmountB)
+			vol += util.ByteToFloat(data.AmountS)
+			amount += util.ByteToFloat(data.AmountB)
 		}
 
-		price := CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
+		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
 
 		if i == len(fills)-1 {
 			result.Last = price
@@ -238,7 +239,7 @@ func (t *TrendManager) startScheduleUpdate() {
 func (t *TrendManager) insertTrend() {
 	// get latest 24 hour trend if not exist generate
 
-	for _, mkt := range AllMarkets {
+	for _, mkt := range util.AllMarkets {
 		now := time.Now()
 		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
 
@@ -253,7 +254,7 @@ func (t *TrendManager) insertTrend() {
 				return
 			}
 
-			tokenS, tokenB := UnWrap(mkt)
+			tokenS, tokenB := util.UnWrap(mkt)
 			if trends == nil || len(trends) == 0 {
 				fills, _ := t.rds.QueryRecentFills(tokenS, tokenB, "", start, end)
 
@@ -277,15 +278,15 @@ func (t *TrendManager) insertTrend() {
 
 				for _, data := range fills {
 
-					if IsBuy(data.TokenS) {
-						vol += ByteToFloat(data.AmountB)
-						amount += ByteToFloat(data.AmountS)
+					if util.IsBuy(data.TokenS) {
+						vol += util.ByteToFloat(data.AmountB)
+						amount += util.ByteToFloat(data.AmountS)
 					} else {
-						vol += ByteToFloat(data.AmountS)
-						amount += ByteToFloat(data.AmountB)
+						vol += util.ByteToFloat(data.AmountS)
+						amount += util.ByteToFloat(data.AmountB)
 					}
 
-					price := CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
+					price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
 
 					if high == 0 || high < price {
 						high = price
@@ -299,9 +300,9 @@ func (t *TrendManager) insertTrend() {
 				toInsert.Low = low
 
 				openFill := fills[0]
-				toInsert.Open = CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
+				toInsert.Open = util.CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
 				closeFill := fills[len(fills)-1]
-				toInsert.Close = CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
+				toInsert.Close = util.CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
 
 				toInsert.Vol = vol
 				toInsert.Amount = amount
@@ -356,7 +357,7 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 			return
 		}
 
-		market, wrapErr := WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
+		market, wrapErr := util.WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
 
 		if wrapErr != nil {
 			err = wrapErr

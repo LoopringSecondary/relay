@@ -84,13 +84,13 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindRingMinedByRingHash(ringhash string) (*RingMined, error) {
+func (s *RdsServiceImpl) FindRingMinedByRingHash(ringHash string) (*RingMined, error) {
 	var (
 		model RingMined
 		err   error
 	)
 
-	err = s.db.Where("ring_hash = ? and is_deleted = false", ringhash).First(&model).Error
+	err = s.db.Where("ring_hash = ? and is_deleted = false", ringHash).First(&model).Error
 
 	return &model, err
 }
@@ -99,4 +99,22 @@ func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
 	err := s.db.Model(&RingMined{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
 
 	return err
+}
+
+func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
+	ringMined := make([]RingMined, 0)
+	res = PageResult{PageIndex:pageIndex, PageSize:pageSize, Data:make([]interface{}, 0)}
+	err = s.db.Where(query).Order("time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&ringMined).Error
+	if err != nil {
+		return res, err
+	}
+	err = s.db.Model(&RingMined{}).Where(query).Count(&res.Total).Error
+	if err != nil {
+		return res, err
+	}
+
+	for rm := range ringMined {
+		res.Data = append(res.Data, rm)
+	}
+	return
 }
