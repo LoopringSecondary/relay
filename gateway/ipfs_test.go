@@ -30,9 +30,13 @@ import (
 )
 
 const (
-	suffix   = "0"
-	account1 = "0xf6c399d9b5bba8f91d000107a21d05913bf7e47f" // pwd 101
-	pwd1     = "101"
+	suffix        = "000000000000000000"
+	account1      = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
+	account2      = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+	pwd1          = "201"
+	pwd2          = "202"
+	TokenAddressA = "0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"
+	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
 )
 
 func TestSingleOrder(t *testing.T) {
@@ -48,12 +52,12 @@ func TestSingleOrder(t *testing.T) {
 	// set order and marshal to json
 	impl, _ := c.Common.ProtocolImpls["v_0_1"]
 
-	amountS1, _ := new(big.Int).SetString("3"+suffix, 0)
+	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 
 	order := test.CreateOrder(
-		common.HexToAddress(test.TokenAddressA),
-		common.HexToAddress(test.TokenAddressB),
+		common.HexToAddress(TokenAddressA),
+		common.HexToAddress(TokenAddressB),
 		common.HexToAddress(impl.Address),
 		acc1.Address,
 		amountS1,
@@ -64,6 +68,51 @@ func TestSingleOrder(t *testing.T) {
 	// get ipfs shell and sub order
 	sh := shell.NewLocalShell()
 	pubMessage(sh, string(bs))
+}
+
+func TestRing(t *testing.T) {
+	c := test.LoadConfig()
+
+	// get keystore and unlock account
+	acc1 := accounts.Account{Address: common.HexToAddress(account1)}
+	acc2 := accounts.Account{Address: common.HexToAddress(account2)}
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks.Unlock(acc1, pwd1)
+	ks.Unlock(acc2, pwd2)
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	// set order and marshal to json
+	impl, _ := c.Common.ProtocolImpls["v_0_1"]
+
+	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
+	order1 := test.CreateOrder(
+		common.HexToAddress(TokenAddressA),
+		common.HexToAddress(TokenAddressB),
+		common.HexToAddress(impl.Address),
+		acc1.Address,
+		amountS1,
+		amountB1,
+	)
+	bs1, _ := order1.MarshalJSON()
+
+	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
+	order2 := test.CreateOrder(
+		common.HexToAddress(TokenAddressB),
+		common.HexToAddress(TokenAddressA),
+		common.HexToAddress(impl.Address),
+		acc2.Address,
+		amountS2,
+		amountB2,
+	)
+	bs2, _ := order2.MarshalJSON()
+
+	// get ipfs shell and sub order
+	sh := shell.NewLocalShell()
+	pubMessage(sh, string(bs1))
+	pubMessage(sh, string(bs2))
 }
 
 func pubMessage(sh *shell.Shell, data string) {
