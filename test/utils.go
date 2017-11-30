@@ -20,7 +20,6 @@ package test
 
 import (
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
@@ -30,45 +29,95 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/naoina/toml"
 	"math/big"
 	"os"
 	"strings"
 	"time"
 )
 
-type TestParams struct {
-	Accessor             *ethaccessor.EthNodeAccessor
-	ImplAddress          common.Address
-	MinerPrivateKey      []byte
-	DelegateAddress      common.Address
-	Owner                common.Address
-	TokenRegistryAddress common.Address
-	Accounts             map[string]string
-	TokenAddrs           []string
-	Config               *config.GlobalConfig
+type AccountEntity struct {
+	Address    common.Address
+	Passphrase string
 }
 
-const (
-	TokenAddressA = "0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"
-	TokenAddressB = "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"
-)
+type TestEntity struct {
+	Tokens          []common.Address
+	Accounts        []AccountEntity
+	Creator         AccountEntity
+	KeystoreDir     string
+	AllowanceAmount int64
+}
 
-var (
-	testAccounts = map[string]string{
-		"0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A": "07ae9ee56203d29171ce3de536d7742e0af4df5b7f62d298a0445d11e466bf9e",
-		"0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2": "11293da8fdfe3898eae7637e429e7e93d17d0d8293a4d1b58819ac0ca102b446",
+func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
+	var (
+		data   TestData
+		entity TestEntity
+	)
+
+	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/" + "/test/testdata.toml"
+	io, err := os.Open(file)
+	if err != nil {
+		panic(err)
+	}
+	defer io.Close()
+
+	if err := toml.NewDecoder(io).Decode(&data); err != nil {
+		panic(err)
 	}
 
-	testTokens = []string{TokenAddressA, TokenAddressB}
+	for _, v := range data.Tokens {
+		entity.Tokens = append(entity.Tokens, common.HexToAddress(v))
+	}
+	for _, v := range data.Accounts {
+		var acc AccountEntity
+		acc.Address = common.HexToAddress(v.Address)
+		acc.Passphrase = v.Passphrase
+		entity.Accounts = append(entity.Accounts, acc)
+	}
+	entity.Creator = AccountEntity{Address: common.HexToAddress(data.Creator.Address), Passphrase: data.Creator.Passphrase}
+	entity.KeystoreDir = data.KeystoreDir
+	entity.AllowanceAmount = data.AllowanceAmount
 
-	Ks *keystore.KeyStore
-)
+	return &entity
+}
 
-func Initialize() {
-	c := loadConfig()
-	Ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	cyp := crypto.NewCrypto(true, Ks)
-	crypto.Initialize(cyp)
+func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, error) {
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common, ks)
+	if nil != err {
+		return nil, err
+	}
+	return accessor, nil
+}
+
+func GenerateExtractor(c *config.GlobalConfig) *extractor.ExtractorServiceImpl {
+	rds := GenerateDaoService(c)
+	accessor, err := GenerateAccessor(c)
+	if err != nil {
+		panic(err)
+	}
+	l := extractor.NewExtractorService(c.Accessor, c.Common, accessor, rds)
+	return l
+}
+
+func GenerateOrderManager(c *config.GlobalConfig) *ordermanager.OrderManagerImpl {
+	rds := GenerateDaoService(c)
+	um := usermanager.NewUserManager(rds)
+	accessor, err := GenerateAccessor(c)
+	if err != nil {
+		panic(err)
+	}
+	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor)
+	return ob
+}
+
+func GenerateDaoService(c *config.GlobalConfig) *dao.RdsServiceImpl {
+	return dao.NewRdsService(c.Mysql)
+}
+
+func LoadConfig() *config.GlobalConfig {
+	return loadConfig()
 }
 
 func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB *big.Int) *types.Order {
@@ -90,47 +139,6 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 		panic(err.Error())
 	}
 	return order
-}
-
-func LoadConfig() *config.GlobalConfig {
-	return loadConfig()
-}
-
-func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, error) {
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common, ks)
-	if nil != err {
-		return nil, err
-	}
-	return accessor, nil
-}
-
-func LoadConfigAndGenerateExtractor() *extractor.ExtractorServiceImpl {
-	c := loadConfig()
-	rds := LoadConfigAndGenerateDaoService()
-	accessor, err := GenerateAccessor(c)
-	if err != nil {
-		panic(err)
-	}
-	l := extractor.NewExtractorService(c.Accessor, c.Common, accessor, rds)
-	return l
-}
-
-func LoadConfigAndGenerateOrderManager() *ordermanager.OrderManagerImpl {
-	c := loadConfig()
-	rds := LoadConfigAndGenerateDaoService()
-	um := usermanager.NewUserManager(rds)
-	accessor, err := GenerateAccessor(c)
-	if err != nil {
-		panic(err)
-	}
-	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor)
-	return ob
-}
-
-func LoadConfigAndGenerateDaoService() *dao.RdsServiceImpl {
-	c := loadConfig()
-	return dao.NewRdsService(c.Mysql)
 }
 
 func loadConfig() *config.GlobalConfig {
