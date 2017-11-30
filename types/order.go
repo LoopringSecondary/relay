@@ -129,10 +129,9 @@ func (o *Order) SignerAddress() (common.Address, error) {
 	}
 
 	sig, _ := crypto.VRSToSig(o.V, o.R.Bytes(), o.S.Bytes())
-	log.Debugf("orderstate.hash:%s", o.Hash.Hex())
 
 	if addressBytes, err := crypto.SigToAddress(o.Hash.Bytes(), sig); nil != err {
-		log.Errorf("error:%s", err.Error())
+		log.Errorf("type,order signer address error:%s", err.Error())
 		return *address, err
 	} else {
 		address.SetBytes(addressBytes)

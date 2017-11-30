@@ -137,6 +137,8 @@ func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
+	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBNotMatchedOrderHashes), len(market.BtoANotMatchedOrderHashes))
+
 	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
 	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoANotMatchedOrderHashes)
 
