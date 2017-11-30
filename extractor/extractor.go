@@ -521,7 +521,7 @@ func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter
 
 // todo: modify
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
-	var tForkBlock types.Block
+	var ret types.Block
 
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
@@ -529,18 +529,21 @@ func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()
 	if err == nil {
-		forkBlock.ConvertUp(&tForkBlock)
+		forkBlock.ConvertUp(&ret)
 		forkBlock.Fork = false
 		l.dao.Update(forkBlock)
-		return tForkBlock.BlockNumber, end
+		return ret.BlockNumber, end
 	}
 
 	// 寻找最新块
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
+		log.Debugf("extractor,get latest block number error:%s", err.Error())
 		return start, end
 	}
-	latestBlock.ConvertUp(&tForkBlock)
+	if err := latestBlock.ConvertUp(&ret); err != nil {
+		log.Fatalf("extractor,get blocknumber range convert up error:%s", err.Error())
+	}
 
-	return tForkBlock.BlockNumber, end
+	return ret.BlockNumber, end
 }
