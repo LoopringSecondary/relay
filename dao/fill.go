@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/Loopring/relay/market"
 )
 
 type FillEvent struct {
@@ -43,6 +44,7 @@ type FillEvent struct {
 	LrcFee                []byte `gorm:"column:lrc_fee;type:varchar(30)"`
 	MarginSplitPercentage int    `gorm:"column:margin_split_percentage"`
 	IsDeleted             bool   `gorm:"column:is_deleted"`
+	Market        string `gorm:"column:market;type:varchar(42)"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -76,6 +78,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.Owner = src.Owner.Hex()
 	f.MarginSplitPercentage = src.MarginSplitPercentage
 	f.IsDeleted = src.IsDeleted
+	f.Market, _ = market.WrapMarketByAddress(src.TokenS.String(), src.TokenB.String())
 
 	return nil
 }

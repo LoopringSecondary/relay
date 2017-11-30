@@ -24,13 +24,13 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"net"
-	"net/http"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/ordermanager"
 	"math/big"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"strings"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -69,6 +69,29 @@ type OrderQuery struct {
 	PageSize  int
 	ContractVersion string
 	Owner           string
+}
+
+type DepthQuery struct {
+	Length int
+	ContractVersion string
+	Market           string
+}
+
+type FillQuery struct {
+	ContractVersion string
+	Market           string
+	Owner string
+	OrderHash string
+	RingHash string
+	PageIndex int
+	PageSize  int
+}
+
+type RingMinedQuery struct {
+	ContractVersion string
+	RingHash string
+	PageIndex int
+	PageSize  int
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -130,25 +153,18 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res stri
 }
 
 func (j *JsonrpcServiceImpl) GetOrders(query OrderQuery)(res dao.PageResult, err error) {
-
-	fmt.Println(query)
 	orderQuery, pi, ps := convertFromQuery(query)
-	fmt.Println(orderQuery)
-	fmt.Println(pi)
-	fmt.Println(ps)
-	if err != nil {
-		return
-	}
-
 	res, err = j.orderManager.GetOrders(&orderQuery, pi, ps)
-	return
+	return res, err
 }
 
-func (j *JsonrpcServiceImpl) getDepth(query map[string]interface{}) (res Depth, err error) {
+func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
-	mkt := query["market"].(string)
-	protocol := query["contractVersion"].(string)
-	length := query["length"].(int)
+	mkt := strings.ToLower(query.Market)
+	protocol := query.ContractVersion
+	length := query.Length
+
+	fmt.Println(query)
 
 	if mkt == "" || protocol == "" || market.ContractVersionConfig[protocol] == "" {
 		err = errors.New("market and correct contract version must be applied")
@@ -200,26 +216,27 @@ func (j *JsonrpcServiceImpl) getDepth(query map[string]interface{}) (res Depth, 
 	return depth, err
 }
 
-func (j *JsonrpcServiceImpl) getFills(r *http.Request, market string, res *map[string]int) error {
-	return nil
+func (j *JsonrpcServiceImpl) GetFills(market string) (res dao.PageResult, err error) {
+
+
+	return
 }
 
-func (j *JsonrpcServiceImpl) getTicker(market string) (res []market.Ticker, err error) {
+func (j *JsonrpcServiceImpl) GetTicker(market string) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 	return
 }
 
-func (j *JsonrpcServiceImpl) getTrend(market string) (res []market.Trend, err error) {
+func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err error) {
 	res, err = j.trendManager.GetTrends(market)
 	return
 }
 
-func (*JsonrpcServiceImpl) getRingMined(r *http.Request, market string, res *map[string]int) error {
-	// not support now
-	return nil
+func (*JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
+	return
 }
 
-func (j *JsonrpcServiceImpl) getBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
+func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
 	account := j.accountManager.GetBalance(balanceQuery.contractVersion, balanceQuery.owner)
 	res = account.ToJsonObject(balanceQuery.contractVersion)
 	return
