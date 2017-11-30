@@ -6,3 +6,4 @@ lrcleveldb
 config/relay.toml
 dao/err.log
 ks_dir
+test/testdata.toml

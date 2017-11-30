@@ -95,8 +95,8 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 	return order
 }
 
-func TestA(t *testing.T) {
-	test.AllowanceToLoopring()
+func TestPrepareTestData(t *testing.T) {
+	test.PrepareTestData()
 	//ks := keystore.NewKeyStore("/Users/yuhongyu/myeth/data/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
 	////todo:
 	//owner := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
@@ -106,4 +106,8 @@ func TestA(t *testing.T) {
 	//} else {
 	//	t.Log(common.ToHex(bs))
 	//}
+}
+
+func TestAllowance(t *testing.T) {
+	test.AllowanceToLoopring()
 }
