@@ -103,7 +103,7 @@ func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
 
 func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	ringMined := make([]RingMined, 0)
-	res = PageResult{PageIndex:pageIndex, PageSize:pageSize, Data:make([]interface{}, 0)}
+	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 	err = s.db.Where(query).Order("time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&ringMined).Error
 	if err != nil {
 		return res, err

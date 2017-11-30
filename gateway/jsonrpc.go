@@ -22,16 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/types"
-	"net"
-	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/ordermanager"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/log"
-	"github.com/ethereum/go-ethereum/rpc"
-	"strings"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
+	"net"
+	"strings"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -65,34 +65,34 @@ type CommonTokenRequest struct {
 }
 
 type OrderQuery struct {
-	Status string
-	PageIndex int
-	PageSize  int
+	Status          string
+	PageIndex       int
+	PageSize        int
 	ContractVersion string
 	Owner           string
 }
 
 type DepthQuery struct {
-	Length int
+	Length          int
 	ContractVersion string
-	Market           string
+	Market          string
 }
 
 type FillQuery struct {
 	ContractVersion string
-	Market           string
-	Owner string
-	OrderHash string
-	RingHash string
-	PageIndex int
-	PageSize  int
+	Market          string
+	Owner           string
+	OrderHash       string
+	RingHash        string
+	PageIndex       int
+	PageSize        int
 }
 
 type RingMinedQuery struct {
 	ContractVersion string
-	RingHash string
-	PageIndex int
-	PageSize  int
+	RingHash        string
+	PageIndex       int
+	PageSize        int
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -107,7 +107,7 @@ type JsonrpcServiceImpl struct {
 	trendManager   market.TrendManager
 	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
-	ethForwarder *EthForwarder
+	ethForwarder   *EthForwarder
 }
 
 func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
@@ -143,7 +143,7 @@ func (j *JsonrpcServiceImpl) Start() {
 	return
 }
 
-func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res string, err error) {
+func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
 	fmt.Println(*order)
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
@@ -153,7 +153,7 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res stri
 	return res, err
 }
 
-func (j *JsonrpcServiceImpl) GetOrders(query OrderQuery)(res dao.PageResult, err error) {
+func (j *JsonrpcServiceImpl) GetOrders(query OrderQuery) (res dao.PageResult, err error) {
 	orderQuery, pi, ps := convertFromQuery(query)
 	res, err = j.orderManager.GetOrders(&orderQuery, pi, ps)
 	return res, err
@@ -257,16 +257,16 @@ func convertFromQuery(orderQuery OrderQuery) (query dao.Order, pageIndex int, pa
 
 func convertStatus(s string) types.OrderStatus {
 	switch s {
-		case "ORDER_NEW":
-			return types.ORDER_NEW
-		case "ORDER_PARTIAL":
-			return types.ORDER_PARTIAL
-		case "ORDER_FINISHED":
-			return types.ORDER_FINISHED
-		case "ORDER_CANCEL":
-			return types.ORDER_CANCEL
-		case "ORDER_CUTOFF":
-			return types.ORDER_CUTOFF
+	case "ORDER_NEW":
+		return types.ORDER_NEW
+	case "ORDER_PARTIAL":
+		return types.ORDER_PARTIAL
+	case "ORDER_FINISHED":
+		return types.ORDER_FINISHED
+	case "ORDER_CANCEL":
+		return types.ORDER_CANCEL
+	case "ORDER_CUTOFF":
+		return types.ORDER_CUTOFF
 	}
 	return types.ORDER_UNKNOWN
 }
@@ -338,7 +338,6 @@ func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
 
 	return rst, pi, ps
 }
-
 
 func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	rst := make(map[string]interface{})

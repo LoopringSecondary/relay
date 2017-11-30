@@ -19,9 +19,9 @@
 package dao
 
 import (
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/market/util"
 )
 
 type FillEvent struct {
@@ -106,7 +106,7 @@ func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill
 
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
-	res = PageResult{PageIndex:pageIndex, PageSize:pageSize, Data:make([]interface{}, 0)}
+	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 	err = s.db.Where(query).Order("create_time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&fills).Error
 	if err != nil {
 		return res, err
