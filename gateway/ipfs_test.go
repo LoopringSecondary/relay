@@ -123,6 +123,10 @@ func TestRing(t *testing.T) {
 	pubMessage(sh, string(bs2))
 }
 
+func TestPrepareProtocol(t *testing.T) {
+	test.PrepareTestData()
+}
+
 func pubMessage(sh *shell.Shell, data string) {
 	c := test.LoadConfig()
 	topic := c.Ipfs.ListenTopics[0]
