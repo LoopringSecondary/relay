@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron"
@@ -30,7 +31,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/market/util"
 )
 
 const (

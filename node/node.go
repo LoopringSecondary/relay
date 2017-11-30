@@ -33,26 +33,28 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
-	"sync"
+	"log"
 	"strconv"
+	"sync"
 )
 
 // TODO(fk): add services
 type Node struct {
-	globalConfig     *config.GlobalConfig
-	rdsService       dao.RdsService
-	ipfsSubService   gateway.IPFSSubService
-	accessor         *ethaccessor.EthNodeAccessor
-	extractorService extractor.ExtractorService
-	orderManager     ordermanager.OrderManager
-	userManager      usermanager.UserManager
-	miner            *miner.Miner
-	stop             chan struct{}
-	lock             sync.RWMutex
-	logger           *zap.Logger
-	trendManager     market.TrendManager
-	accountManager   market.AccountManager
-	jsonRpcService   gateway.JsonrpcServiceImpl
+	globalConfig      *config.GlobalConfig
+	rdsService        dao.RdsService
+	ipfsSubService    gateway.IPFSSubService
+	accessor          *ethaccessor.EthNodeAccessor
+	extractorService  extractor.ExtractorService
+	orderManager      ordermanager.OrderManager
+	userManager       usermanager.UserManager
+	miner             *miner.Miner
+	stop              chan struct{}
+	lock              sync.RWMutex
+	logger            *zap.Logger
+	trendManager      market.TrendManager
+	accountManager    market.AccountManager
+	jsonRpcService    gateway.JsonrpcServiceImpl
+	marketCapProvider *marketcap.MarketCapProvider
 }
 
 func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
@@ -60,34 +62,49 @@ func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.logger = logger
 	n.globalConfig = globalConfig
 
+	return n
+}
+
+func (n *Node) Start() {
+	if n.globalConfig.Title == "miner" {
+		n.minerStart()
+	} else if n.globalConfig.Title == "relay" {
+		n.relayStart()
+	} else {
+		log.Fatal("relay.toml title error")
+	}
+}
+
+func (n *Node) minerStart() {
 	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	accessor, err := ethaccessor.NewAccessor(globalConfig.Accessor, globalConfig.Common, ks)
+	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, ks)
 	if nil != err {
 		panic(err)
 	}
 	n.accessor = accessor
+	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
 
-	marketCapProvider := marketcap.NewMarketCapProvider(globalConfig.Miner)
-
+	// register services
 	n.registerCrypto(ks)
 	n.registerMysql()
 	n.registerUserManager()
 	n.registerIPFSSubService()
 	n.registerAccountManager(accessor)
 	n.registerOrderManager()
-	n.registerMiner(accessor, ks, marketCapProvider)
+	n.registerMiner(accessor, ks)
 	n.registerExtractor()
 	n.registerGateway()
 	n.registerTrendManager()
 	n.registerJsonRpcService()
-	return n
-}
 
-func (n *Node) Start() {
+	// start services
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
 	n.miner.Start()
+}
+
+func (n *Node) relayStart() {
 	//gateway.NewJsonrpcService("8080").Start()
 	n.jsonRpcService.Start()
 }
@@ -153,15 +170,15 @@ func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
 }
 
 func (n *Node) registerJsonRpcService() {
-	ethForwarder := gateway.EthForwarder{Accessor:*n.accessor}
+	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
 	n.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager, &ethForwarder)
 }
 
-func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor, n.rdsService, marketCapProvider)
-	evaluator := miner.NewEvaluator(marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
+func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore) {
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor, n.rdsService, n.marketCapProvider)
+	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, n.orderManager)
-	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
+	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, n.marketCapProvider)
 }
 
 func (n *Node) registerGateway() {
