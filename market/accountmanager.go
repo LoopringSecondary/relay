@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/patrickmn/go-cache"
 	"math/big"
+	"github.com/Loopring/relay/market/util"
 )
 
 type Account struct {
@@ -91,7 +92,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 		return account
 	} else {
 		account := Account{address: address, balances: make(map[string]Balance), allowances: make(map[string]Allowance)}
-		for k, v := range AllTokens {
+		for k, v := range util.AllTokens {
 			balance := Balance{token: k}
 
 			amount, err := a.GetBalanceFromAccessor(v, address)
@@ -148,11 +149,11 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance(common.StringToAddress(AllTokens[token]), common.StringToAddress(owner), "latest")
+	return a.accessor.Erc20Balance(common.StringToAddress(util.AllTokens[token]), common.StringToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(common.StringToAddress(AllTokens[token]), common.StringToAddress(owner), common.StringToAddress(spender), "latest")
+	return a.accessor.Erc20Allowance(common.StringToAddress(util.AllTokens[token]), common.StringToAddress(owner), common.StringToAddress(spender), "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
@@ -160,7 +161,7 @@ func buildAllowanceKey(version, token string) string {
 }
 
 func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) error {
-	tokenAlias := AddressToAlias(event.ContractAddress.String())
+	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
 
 	var address string
 	if !isAdd {
@@ -201,11 +202,11 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 }
 
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
-	tokenAlias := AddressToAlias(event.ContractAddress.String())
+	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
 	spender := event.Spender.String()
 	address := event.Owner.String()
 
-	if !IsSupportedContract(spender) {
+	if !util.IsSupportedContract(spender) {
 		return errors.New("unsupported contract address : " + spender)
 	}
 

@@ -42,7 +42,7 @@ type OrderManager interface {
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]string, pageIndex, pageSize int) (dao.PageResult, error)
-
+	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 }
 
 type OrderManagerImpl struct {
@@ -442,6 +442,10 @@ func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) 
 	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
 }
 
-func (om *OrderManagerImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (fills []dao.FillEvent, err error) {
+func (om *OrderManagerImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (result dao.PageResult, err error) {
 	return om.rds.FillsPageQuery(query, pageIndex, pageSize)
+}
+
+func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {
+	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
 }

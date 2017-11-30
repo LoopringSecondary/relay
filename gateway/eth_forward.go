@@ -13,8 +13,3 @@ func (e *EthForwarder) GetBalance(address , blockNumber string) (result string, 
 	err = e.Accessor.Call(&result, "eth_getBalance", common.StringToAddress(address), blockNumber)
 	return
 }
-
-func (e *EthForwarder) GetBalance(address , blockNumber string) (result string, err error) {
-	err = e.Accessor.Call(&result, "eth_getBalance", common.StringToAddress(address), blockNumber)
-	return
-}

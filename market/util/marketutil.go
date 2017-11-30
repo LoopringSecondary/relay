@@ -16,7 +16,7 @@
 
 */
 
-package market
+package util
 
 import (
 	"errors"

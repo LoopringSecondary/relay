@@ -21,8 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/market"
-	"fmt"
+	"github.com/Loopring/relay/market/util"
 )
 
 type FillEvent struct {
@@ -85,7 +84,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.IsDeleted = src.IsDeleted
-	f.Market, _ = market.WrapMarketByAddress(src.TokenS.String(), src.TokenB.String())
+	f.Market, _ = util.WrapMarketByAddress(src.TokenS.String(), src.TokenB.String())
 
 	return nil
 }

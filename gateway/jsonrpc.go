@@ -31,6 +31,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"strings"
+	"github.com/Loopring/relay/market/util"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -166,7 +167,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	fmt.Println(query)
 
-	if mkt == "" || protocol == "" || market.ContractVersionConfig[protocol] == "" {
+	if mkt == "" || protocol == "" || util.ContractVersionConfig[protocol] == "" {
 		err = errors.New("market and correct contract version must be applied")
 		return
 	}
@@ -175,8 +176,8 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		length = 20
 	}
 
-	a, b := market.UnWrap(mkt)
-	if market.SupportTokens[a] == "" || market.SupportMarket[b] == "" {
+	a, b := util.UnWrap(mkt)
+	if util.SupportTokens[a] == "" || util.SupportMarket[b] == "" {
 		err = errors.New("unsupported market type")
 		return
 	}
@@ -186,11 +187,11 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		empty[i] = make([]string, 0)
 	}
 	askBid := AskBid{Buy: empty, Sell: empty}
-	depth := Depth{contractVersion: market.ContractVersionConfig[protocol], market: mkt, Depth: askBid}
+	depth := Depth{contractVersion: util.ContractVersionConfig[protocol], market: mkt, Depth: askBid}
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := j.orderManager.GetOrderBook(
-		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(util.ContractVersionConfig[protocol]),
 		common.StringToAddress(a),
 		common.StringToAddress(b), length*2)
 
@@ -202,7 +203,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	depth.Depth.Sell = calculateDepth(asks, length)
 
 	bids, bidErr := j.orderManager.GetOrderBook(
-		common.StringToAddress(market.ContractVersionConfig[protocol]),
+		common.StringToAddress(util.ContractVersionConfig[protocol]),
 		common.StringToAddress(b),
 		common.StringToAddress(a), length*2)
 
@@ -231,8 +232,9 @@ func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err er
 	return
 }
 
-func (*JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
-	return
+func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
+	fmt.Println(query)
+	return j.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
@@ -246,7 +248,7 @@ func convertFromQuery(orderQuery OrderQuery) (query dao.Order, pageIndex int, pa
 	status := convertStatus(orderQuery.Status)
 	query.Status = uint8(status)
 	query.Owner = orderQuery.Owner
-	query.Protocol = market.ContractVersionConfig[orderQuery.ContractVersion]
+	query.Protocol = util.ContractVersionConfig[orderQuery.ContractVersion]
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
@@ -322,13 +324,37 @@ func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
 		ps = q.PageIndex
 	}
 	if q.ContractVersion != "" {
-		rst["contract_version"] = market.ContractVersionConfig[q.ContractVersion]
+		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner
 	}
 	if q.OrderHash != "" {
 		rst["order_hash"] = q.OrderHash
+	}
+	if q.RingHash != "" {
+		rst["ring_hash"] = q.RingHash
+	}
+
+	return rst, pi, ps
+}
+
+
+func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
+	rst := make(map[string]interface{})
+	var pi, ps int
+	if q.PageIndex <= 0 {
+		pi = 1
+	} else {
+		pi = q.PageIndex
+	}
+	if q.PageSize <= 0 || q.PageSize > 20 {
+		ps = 20
+	} else {
+		ps = q.PageIndex
+	}
+	if q.ContractVersion != "" {
+		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.RingHash != "" {
 		rst["ring_hash"] = q.RingHash
