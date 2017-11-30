@@ -36,6 +36,8 @@ import (
 	"log"
 	"strconv"
 	"sync"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // TODO(fk): add services
@@ -83,6 +85,9 @@ func (n *Node) minerStart() {
 	}
 	n.accessor = accessor
 	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
+
+	// todo: unlock miner account
+	ks.Unlock(accounts.Account{Address: common.HexToAddress(n.globalConfig.Miner.Miner)}, "101")
 
 	// register services
 	n.registerCrypto(ks)

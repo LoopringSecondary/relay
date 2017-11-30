@@ -76,7 +76,7 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 		entity.Accounts = append(entity.Accounts, acc)
 	}
 	entity.Creator = AccountEntity{Address: common.HexToAddress(data.Creator.Address), Passphrase: data.Creator.Passphrase}
-	entity.KeystoreDir = data.KeystoreDir
+	entity.KeystoreDir = cfg.Keystore.Keydir
 	entity.AllowanceAmount = data.AllowanceAmount
 
 	return &entity
