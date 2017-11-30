@@ -88,8 +88,13 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 				m := &Market{}
 				m.om = om
 				m.matcher = matcher
-				m.TokenA = pair.TokenS
-				m.TokenB = pair.TokenB
+
+				// todo(fukun): use pair address after debug
+				//m.TokenA = pair.TokenS
+				//m.TokenB = pair.TokenB
+				m.TokenA = common.HexToAddress("0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564")
+				m.TokenB = common.HexToAddress("0x2084A83E25025D95848794f23e139AcAa56c7237")
+
 				m.AtoBNotMatchedOrderHashes = []common.Hash{}
 				m.BtoANotMatchedOrderHashes = []common.Hash{}
 				matcher.markets = append(matcher.markets, m)
@@ -131,6 +136,8 @@ func (matcher *TimingMatcher) Start() {
 func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
+
+	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBNotMatchedOrderHashes), len(market.BtoANotMatchedOrderHashes))
 
 	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
 	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoANotMatchedOrderHashes)

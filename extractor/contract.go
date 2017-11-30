@@ -20,6 +20,7 @@ package extractor
 
 import (
 	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -51,7 +52,7 @@ type ContractData struct {
 	Topics          []string
 }
 
-func (c ContractData) generateSymbol(id, name string) {
+func (c *ContractData) generateSymbol(id, name string) {
 	c.Name = name
 	c.Id = id
 	c.Key = generateKey(c.ImplAddress, c.Id)
@@ -100,6 +101,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
+			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
 		}
 	}
 }
@@ -129,6 +131,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
+			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
 		}
 	}
 }
@@ -157,6 +160,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
+			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
 		}
 	}
 }
@@ -180,6 +184,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 			eventemitter.On(contract.Key, watcher)
 
 			l.events[contract.Key] = contract
+			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
 		}
 	}
 }
@@ -208,6 +213,7 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
+			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
 		}
 	}
 }

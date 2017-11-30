@@ -89,10 +89,9 @@ func (ring *Ring) SignerAddress() (common.Address, error) {
 	}
 
 	sig, _ := crypto.VRSToSig(ring.V, ring.R.Bytes(), ring.S.Bytes())
-	log.Debugf("orderstate.hash:%s", hash.Hex())
 
 	if addressBytes, err := crypto.SigToAddress(hash.Bytes(), sig); nil != err {
-		log.Errorf("error:%s", err.Error())
+		log.Errorf("type,signer address error:%s", err.Error())
 		return *address, err
 	} else {
 		address.SetBytes(addressBytes)

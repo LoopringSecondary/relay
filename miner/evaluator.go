@@ -80,7 +80,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	ringState.ReducedRate = new(big.Rat)
 	ringState.ReducedRate.Inv(rate)
-	log.Debugf("rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
+	log.Debugf("miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
@@ -173,11 +173,11 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	if cvs, err := PriceRateCVSquare(ringState); nil != err {
 		return err
 	} else {
-		log.Debugf("ringState.length:%d ,  cvs:%s", len(ringState.Orders), cvs.String())
+		log.Debugf("miner,ringState.length:%d ,  cvs:%s", len(ringState.Orders), cvs.String())
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
-			return errors.New("cvs must less than RateRatioCVSThreshold")
+			return errors.New("miner,cvs must less than RateRatioCVSThreshold")
 		}
 	}
 }
@@ -208,7 +208,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
 			legalAmountOfSaving.Mul(filledOrder.FeeS, e.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenS))
-			log.Debugf("savingAmount:%s", savingAmount.FloatString(10))
+			log.Debugf("miner,savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
@@ -236,7 +236,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
 			lrcReward.Quo(lrcReward, e.marketCapProvider.GetMarketCap(lrcAddress))
-			log.Debugf("lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+			log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
@@ -257,18 +257,18 @@ func PriceRateCVSquare(ringState *types.Ring) (*big.Int, error) {
 	scale, _ := new(big.Int).SetString("10000", 0)
 	for _, filledOrder := range ringState.Orders {
 		rawOrder := filledOrder.OrderState.RawOrder
-		log.Debugf("rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.FloatString(10))
+		log.Debugf("miner,rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.FloatString(10))
 		s1b0, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
 		//s1b0 = s1b0.Mul(s1b0, rawOrder.AmountB)
 
 		s0b1 := new(big.Int).SetBytes(rawOrder.AmountS.Bytes())
 		//s0b1 = s0b1.Mul(s0b1, rawOrder.AmountB)
 		if s1b0.Cmp(s0b1) > 0 {
-			return nil, errors.New("rateAmountS must less than amountS")
+			return nil, errors.New("miner,rateAmountS must less than amountS")
 		}
 		ratio := new(big.Int).Set(scale)
 		ratio.Mul(ratio, s1b0).Div(ratio, s0b1)
-		log.Debugf("ratio:%s", ratio.String())
+		log.Debugf("miner,ratio:%s", ratio.String())
 		rateRatios = append(rateRatios, ratio)
 	}
 	return CVSquare(rateRatios, scale), nil

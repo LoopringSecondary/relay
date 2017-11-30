@@ -45,7 +45,7 @@ func FloatToByte(amount float64) []byte {
 }
 
 var SupportTokens = map[string]string{
-	"lrc":  "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5",
+	"lrc": "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5",
 }
 
 var SupportMarket = map[string]string{
