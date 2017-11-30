@@ -87,7 +87,7 @@ func PrepareTestData() {
 			} else {
 				if res.Int() <= 0 {
 					registryMethod := accessor.ContractSendTransactionMethod(impl.TokenRegistryAbi, impl.TokenRegistryAddress)
-					if hash, err := registryMethod(creator, "registerToken", nil, nil, tokenAddr, "token"+strconv.Itoa(rand.Int())); nil != err {
+					if hash, err := registryMethod(creator, "registerToken", nil, nil, tokenAddr, strconv.Itoa(rand.Intn(100000))); nil != err {
 						log.Errorf("token registry error:%s", err.Error())
 					} else {
 						log.Infof("token registry hash:%s", hash)
@@ -127,11 +127,12 @@ func AllowanceToLoopring() {
 				log.Infof("token: %s, balance %s : %s", tokenAddr.Hex(), account.Address.Hex(), balance.BigInt().String())
 			}
 
+			var allowance types.Big
 			for _, impl := range accessor.ProtocolImpls {
-				if err := callMethod(balance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
+				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
 					log.Error(err.Error())
 				} else {
-					log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), balance.BigInt().String())
+					log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), allowance.BigInt().String())
 				}
 			}
 		}
