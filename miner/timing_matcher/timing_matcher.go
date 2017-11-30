@@ -133,7 +133,7 @@ func (market *Market) getOrdersForMatching() {
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
 	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
-	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50,market.BtoANotMatchedOrderHashes)
+	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoANotMatchedOrderHashes)
 
 	for _, order := range atoBOrders {
 		if market.reduceRemainedAmountBeforeMatch(&order) {

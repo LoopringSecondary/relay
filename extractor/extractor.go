@@ -224,6 +224,10 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
+	var (
+		fillList      []*types.OrderFilledEvent
+		orderhashList []string
+	)
 	for _, fill := range fills {
 		fill.TxHash = common.HexToHash(contractData.TxHash)
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
@@ -245,7 +249,25 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			log.Debugf("extractor order filled event ringindex -> %s", fill.RingIndex.BigInt().String())
 		}
 
-		eventemitter.Emit(eventemitter.OrderManagerExtractorFill, fill)
+		fillList = append(fillList, fill)
+		orderhashList = append(orderhashList, fill.OrderHash.Hex())
+	}
+
+	ordermap, err := l.dao.GetOrdersByHash(orderhashList)
+	if err != nil {
+		return err
+	}
+	for _, v := range fillList {
+		if ord, ok := ordermap[v.OrderHash.Hex()]; ok {
+			v.TokenS = common.HexToAddress(ord.TokenS)
+			v.TokenB = common.HexToAddress(ord.TokenB)
+			v.Owner = common.HexToAddress(ord.Owner)
+			v.MarginSplitPercentage = int(ord.MarginSplitPercentage)
+
+			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
+		} else {
+			log.Debugf("extractor order filled event cann't match order %s", ord.OrderHash)
+		}
 	}
 
 	return nil

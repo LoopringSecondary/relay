@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -95,7 +96,14 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 }
 
 func TestA(t *testing.T) {
-	addr1 := common.HexToAddress("0x0C0b638FFcCB4bDC4C0D0D5Fef062fC512C92511")
-	addr2 := common.HexToAddress("0x0C0b638FFcCB4bDC4C0D0D5Fef062fC512C92511")
-	println(addr1 == addr2)
+	test.AllowanceToLoopring()
+	//ks := keystore.NewKeyStore("/Users/yuhongyu/myeth/data/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
+	////todo:
+	//owner := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	//ks.Unlock(owner, "1")
+	//if bs,err := ks.SignHash(owner, common.FromHex("0x585c8da34ce874803ecbede5baf6b5d97d3f9cbd2ab94de042bae3eaf63e73c9")); nil != err {
+	//	t.Error(err)
+	//} else {
+	//	t.Log(common.ToHex(bs))
+	//}
 }

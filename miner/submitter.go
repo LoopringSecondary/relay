@@ -243,6 +243,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	ringForSubmit.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
 	ringForSubmit.Ringhash = ringState.Hash
 
+	registryCost := big.NewInt(int64(0))
 	if submitter.ifRegistryRingHash {
 		ringhashRegistryAbi := submitter.Accessor.ProtocolImpls[protocolAddress].RinghashRegistryAbi
 		ringhashRegistryAddress := submitter.Accessor.ProtocolImpls[protocolAddress].RinghashRegistryAddress
@@ -258,6 +259,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		if nil != err {
 			return nil, err
 		}
+		registryCost.Mul(ringForSubmit.RegistryGas, ringForSubmit.RegistryGasPrice)
 	}
 
 	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address, submitter.feeReceipt)
@@ -281,7 +283,6 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	}
 
 	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)
-	registryCost := new(big.Int).Mul(ringForSubmit.RegistryGas, ringForSubmit.RegistryGasPrice)
 	cost := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))
 	cost = cost.Mul(cost, submitter.marketCapProvider.GetEthCap())
 	received := new(big.Rat).Sub(ringState.LegalFee, cost)

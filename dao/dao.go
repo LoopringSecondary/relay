@@ -45,6 +45,7 @@ type RdsService interface {
 
 	// order table
 	GetOrderByHash(orderhash common.Hash) (*Order, error)
+	GetOrdersByHash(orderhashs []string) (map[string]Order, error)
 	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
 	UnMarkMinerOrders(blockNumber int64) error
 	GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error)

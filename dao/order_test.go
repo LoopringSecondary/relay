@@ -74,7 +74,7 @@ func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
 	s := test.LoadConfigAndGenerateDaoService()
 
 	filters := []types.OrderStatus{types.ORDER_CUTOFF, types.ORDER_FINISHED}
-	list, err := s.GetOrdersForMiner(test.TokenAddressA, test.TokenAddressB, filters)
+	list, err := s.GetOrdersForMiner(test.TokenAddressA, test.TokenAddressB, 10, filters)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,5 +83,22 @@ func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
 
 	for _, v := range list {
 		t.Log(v.OrderHash)
+	}
+}
+
+func TestRdsServiceImpl_GetOrdersByHash(t *testing.T) {
+	s := test.LoadConfigAndGenerateDaoService()
+	hashList := []string{
+		"0xb617960a443c1f351e2e7a90b5005953744c411ee99fae34f3c2f509f8c1a1f5",
+		"0xdb14bf9c71b6b026127f72b1efdd270c8940a6300fc6a2ce411eda492ded1c7c",
+		"0xce99ebf9f517ba2a6e87925f578994d762b8d581c02492beac50c92a91854968",
+	}
+	ordMap, err := s.GetOrdersByHash(hashList)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	for _, v := range ordMap {
+		t.Logf("order owner:%s", v.Owner)
 	}
 }
