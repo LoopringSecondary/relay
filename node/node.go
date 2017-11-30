@@ -94,8 +94,6 @@ func (n *Node) minerStart() {
 	n.registerMiner(accessor, ks)
 	n.registerExtractor()
 	n.registerGateway()
-	n.registerTrendManager()
-	n.registerJsonRpcService()
 
 	// start services
 	n.orderManager.Start()
