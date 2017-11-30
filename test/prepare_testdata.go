@@ -106,7 +106,6 @@ func PrepareTestData() {
 					log.Errorf("token approve error:%s", err.Error())
 				} else {
 					log.Infof("token approve hash:%s", hash)
-
 				}
 			}
 		}
@@ -153,7 +152,7 @@ func init() {
 	}
 
 	cfg := loadConfig()
-	ks := keystore.NewKeyStore(testData.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	creator = accounts.Account{Address: common.HexToAddress(testData.Creator.Address)}
 	ks.Unlock(creator, testData.Creator.Passphrase)
