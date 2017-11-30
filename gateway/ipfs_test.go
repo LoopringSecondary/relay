@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	suffix = "000000000000000000"
+	suffix = "00"
 )
 
 func TestSingleOrder(t *testing.T) {
@@ -121,6 +121,10 @@ func TestRing(t *testing.T) {
 	sh := shell.NewLocalShell()
 	pubMessage(sh, string(bs1))
 	pubMessage(sh, string(bs2))
+}
+
+func TestPrepareProtocol(t *testing.T) {
+	test.PrepareTestData()
 }
 
 func pubMessage(sh *shell.Shell, data string) {
