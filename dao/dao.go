@@ -54,7 +54,7 @@ type RdsService interface {
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
-	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
+	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 
 	// block table
@@ -116,6 +116,8 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 	if err != nil {
 		log.Fatalf("mysql connection error:%s", err.Error())
 	}
+
+	db.LogMode(true)
 
 	impl.db = db
 

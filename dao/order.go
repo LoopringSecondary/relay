@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"github.com/Loopring/relay/market/util"
 )
 
 // order amountS 上限1e30
@@ -54,6 +55,7 @@ type Order struct {
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
+	Market                string  `gorm:"column:market;type:varchar(40)"`
 }
 
 // convert types/orderState to dao/order
@@ -99,7 +101,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
 	o.BroadcastTime = state.BroadcastTime
-
+	o.Market, _ = util.WrapMarketByAddress(o.TokenB, o.TokenS)
 	return nil
 }
 
@@ -264,7 +266,7 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 	return list, err
 }
 
-func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error) {
+func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
 	var (
 		orders []Order
 		err    error
@@ -279,12 +281,18 @@ func (s *RdsServiceImpl) OrderPageQuery(query *Order, pageIndex, pageSize int) (
 		pageSize = 20
 	}
 
-	err = s.db.Where(&query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
-	for i, v := range orders {
-		data[i] = v
+	err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
+	fmt.Println(err)
+	fmt.Println(orders)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, v := range orders {
+		data = append(data, v)
 	}
 
 	pageResult := PageResult{data, pageIndex, pageSize, 0}
+	fmt.Println(pageResult)
 	return pageResult, err
 }
 

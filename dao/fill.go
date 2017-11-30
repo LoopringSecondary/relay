@@ -123,20 +123,25 @@ func (s *RdsServiceImpl) FillsPageQuery(query map[string]string, pageIndex, page
 }
 
 func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
+
 	if tokenS != "" {
-		s.db = s.db.Where("token_s = ", tokenS)
+		s.db = s.db.Where("token_s = ?", tokenS)
 	}
 
 	if tokenB != "" {
-		s.db = s.db.Where("token_b = ", tokenB)
+		s.db = s.db.Where("token_b = ?", tokenB)
 	}
 
 	if owner != "" {
-		s.db = s.db.Where("owner = ", owner)
+		s.db = s.db.Where("owner = ?", owner)
 	}
 
 	if start != 0 {
-		s.db = s.db.Where("create_time > ", start)
+		s.db = s.db.Where("create_time > ?", start)
+	}
+
+	if end != 0 {
+		s.db = s.db.Where("create_time <= ?", end)
 	}
 
 	err = s.db.Order("create_time desc").Limit(100).Find(&fills).Error

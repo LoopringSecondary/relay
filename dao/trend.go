@@ -38,6 +38,8 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 
 	var result PageResult
 
+	trends := make([]Trend,0)
+
 	if pageIndex <= 0 {
 		pageIndex = 1
 	}
@@ -46,10 +48,14 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 		pageSize = 50
 	}
 
+	for t := range trends {
+		pageResult.Data = append(pageResult.Data, t)
+	}
+
 	result.PageIndex = pageIndex
 	result.PageSize = pageSize
 
-	if err = s.db.Model(&Trend{}).Where(query).Order("start desc").Offset(pageIndex * pageSize).Limit(pageSize).Find(&result.Data).Error; err != nil {
+	if err = s.db.Where(query).Order("start desc").Offset(pageIndex * pageSize).Limit(pageSize).Find(&trends).Error; err != nil {
 		return
 	}
 

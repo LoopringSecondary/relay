@@ -88,7 +88,7 @@ func (n *Node) Start() {
 	n.ipfsSubService.Start()
 	//n.miner.Start()
 	//gateway.NewJsonrpcService("8080").Start()
-	//n.orderManager.Start()
+	n.orderManager.Start()
 	n.jsonRpcService.Start()
 }
 
@@ -154,7 +154,7 @@ func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
 
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{Accessor:*n.accessor}
-	n.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager, &ethForwarder)
+	n.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.trendManager, &n.orderManager, n.accountManager, &ethForwarder)
 }
 
 func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore, marketCapProvider *marketcap.MarketCapProvider) {

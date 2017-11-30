@@ -91,7 +91,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 	once.Do(func() {
 		trendManager = TrendManager{rds: dao, cron: cron.New()}
 		trendManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
-		trendManager.initCache()
+		//trendManager.initCache()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
 		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 		//trendManager.startScheduleUpdate()
@@ -166,6 +166,10 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 
 	var result = Ticker{Market: market}
 
+	if len(fills) == 0 && len(trends) == 0 {
+		return result
+	}
+
 	before24Hour := now.Unix() - 24*60*60
 
 	var (
@@ -232,8 +236,8 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 * * * * *", t.insertTrend)
-	t.cron.Start()
+	//t.cron.AddFunc("10 * * * * *", t.insertTrend)
+	//t.cron.Start()
 }
 
 func (t *TrendManager) insertTrend() {

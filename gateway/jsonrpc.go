@@ -70,6 +70,7 @@ type OrderQuery struct {
 	PageSize  int
 	ContractVersion string
 	Owner           string
+	Market string
 }
 
 type DepthQuery struct {
@@ -105,12 +106,12 @@ type JsonrpcService interface {
 type JsonrpcServiceImpl struct {
 	port           string
 	trendManager   market.TrendManager
-	orderManager   ordermanager.OrderManager
+	orderManager   *ordermanager.OrderManager
 	accountManager market.AccountManager
 	ethForwarder *EthForwarder
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager *ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
@@ -122,7 +123,7 @@ func NewJsonrpcService(port string, trendManager market.TrendManager, orderManag
 
 func (j *JsonrpcServiceImpl) Start() {
 	handler := rpc.NewServer()
-	if err := handler.RegisterName("loopring", &JsonrpcServiceImpl{}); err != nil {
+	if err := handler.RegisterName("loopring", j); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -145,6 +146,7 @@ func (j *JsonrpcServiceImpl) Start() {
 
 func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res string, err error) {
 	fmt.Println(*order)
+
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
 		fmt.Println(err)
@@ -153,9 +155,13 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res stri
 	return res, err
 }
 
-func (j *JsonrpcServiceImpl) GetOrders(query OrderQuery)(res dao.PageResult, err error) {
+func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery)(res dao.PageResult, err error) {
+	om := *j.orderManager
 	orderQuery, pi, ps := convertFromQuery(query)
-	res, err = j.orderManager.GetOrders(&orderQuery, pi, ps)
+	res, err = om.GetOrders(orderQuery, pi, ps)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return res, err
 }
 
@@ -190,7 +196,8 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	depth := Depth{contractVersion: util.ContractVersionConfig[protocol], market: mkt, Depth: askBid}
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
-	asks, askErr := j.orderManager.GetOrderBook(
+	tt := *j.orderManager
+	asks, askErr := tt.GetOrderBook(
 		common.StringToAddress(util.ContractVersionConfig[protocol]),
 		common.StringToAddress(a),
 		common.StringToAddress(b), length*2)
@@ -202,7 +209,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	depth.Depth.Sell = calculateDepth(asks, length)
 
-	bids, bidErr := j.orderManager.GetOrderBook(
+	bids, bidErr := tt.GetOrderBook(
 		common.StringToAddress(util.ContractVersionConfig[protocol]),
 		common.StringToAddress(b),
 		common.StringToAddress(a), length*2)
@@ -218,8 +225,9 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 }
 
 func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err error) {
+	om := *j.orderManager
 	fmt.Println(query)
-	return j.orderManager.FillsPageQuery(fillQueryToMap(query))
+	return om.FillsPageQuery(fillQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(market string) (res []market.Ticker, err error) {
@@ -233,8 +241,9 @@ func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err er
 }
 
 func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
+	om := *j.orderManager
 	fmt.Println(query)
-	return j.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
+	return om.RingMinedPageQuery(ringMinedQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
@@ -243,12 +252,22 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	return
 }
 
-func convertFromQuery(orderQuery OrderQuery) (query dao.Order, pageIndex int, pageSize int) {
+func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
 
+	query = make(map[string]interface{})
 	status := convertStatus(orderQuery.Status)
-	query.Status = uint8(status)
-	query.Owner = orderQuery.Owner
-	query.Protocol = util.ContractVersionConfig[orderQuery.ContractVersion]
+	if uint8(status) != 0 {
+		query["status"] = uint8(status)
+	}
+	if orderQuery.Owner != "" {
+		query["owner"] = orderQuery.Owner
+	}
+	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
+		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
+	}
+	if orderQuery.Market != "" {
+		query["market"] = orderQuery.Market
+	}
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
@@ -308,6 +327,38 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 }
 
 func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
+	rst := make(map[string]string)
+	var pi, ps int
+	if q.Market != "" {
+		rst["market"] = q.Market
+	}
+	if q.PageIndex <= 0 {
+		pi = 1
+	} else {
+		pi = q.PageIndex
+	}
+	if q.PageSize <= 0 || q.PageSize > 20 {
+		ps = 20
+	} else {
+		ps = q.PageIndex
+	}
+	if q.ContractVersion != "" {
+		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
+	}
+	if q.Owner != "" {
+		rst["owner"] = q.Owner
+	}
+	if q.OrderHash != "" {
+		rst["order_hash"] = q.OrderHash
+	}
+	if q.RingHash != "" {
+		rst["ring_hash"] = q.RingHash
+	}
+
+	return rst, pi, ps
+}
+
+func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
 	rst := make(map[string]string)
 	var pi, ps int
 	if q.Market != "" {

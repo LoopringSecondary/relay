@@ -37,7 +37,7 @@ block_period = 5
     broadcast_topics = ["test11_topic"]
 
 [gateway]
-    is_broadcast = false
+    is_broadcast = true
     max_broadcast_time = 3
 
 [accessor]
@@ -77,10 +77,10 @@ block_period = 5
     [gateway_filters.base_filter]
         min_lrc_fee = 10
     [gateway_filters.token_s_filter]
-        allow = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237"]
+        allow = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237", "0x2956356cD2a2bf3202F771F50D3D14A367b48070"]
         denied = []
     [gateway_filters.token_b_filter]
-        allow = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237"]
+        allow = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237", "0xEF68e7C694F40c8202821eDF525dE3782458639f"]
         denied = []
 
 [keystore]
