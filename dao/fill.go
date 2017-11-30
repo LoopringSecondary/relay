@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/Loopring/relay/market/util"
 )
 
 type FillEvent struct {
@@ -43,6 +44,7 @@ type FillEvent struct {
 	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
 	SplitS        []byte `gorm:"column:split_s;type:varchar(30)"`
 	SplitB        []byte `gorm:"column:split_b;type:varchar(30)"`
+	Market        string `gorm:"column:market;type:varchar(42)"`
 	IsDeleted     bool   `gorm:"column:is_deleted"`
 }
 
@@ -82,6 +84,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.IsDeleted = src.IsDeleted
+	f.Market, _ = util.WrapMarketByAddress(src.TokenS.String(), src.TokenB.String())
 
 	return nil
 }
@@ -101,8 +104,25 @@ func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill
 	return
 }
 
-func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
+func (s *RdsServiceImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (res PageResult, err error) {
+	fills := make([]FillEvent, 0)
+	res = PageResult{PageIndex:pageIndex, PageSize:pageSize, Data:make([]interface{}, 0)}
+	err = s.db.Where(query).Order("create_time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&fills).Error
+	if err != nil {
+		return res, err
+	}
+	err = s.db.Where(query).Count(&res.Total).Error
+	if err != nil {
+		return res, err
+	}
 
+	for fill := range fills {
+		res.Data = append(res.Data, fill)
+	}
+	return
+}
+
+func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
 	if tokenS != "" {
 		s.db = s.db.Where("token_s = ", tokenS)
 	}

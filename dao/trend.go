@@ -49,11 +49,11 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	result.PageIndex = pageIndex
 	result.PageSize = pageSize
 
-	if err = s.db.Where(query).Order("start desc").Offset(pageIndex * pageSize).Limit(pageSize).Find(&result.Data).Error; err != nil {
+	if err = s.db.Model(&Trend{}).Where(query).Order("start desc").Offset(pageIndex * pageSize).Limit(pageSize).Find(&result.Data).Error; err != nil {
 		return
 	}
 
-	err = s.db.Where(query).Count(&result.Total).Error
+	err = s.db.Model(&Trend{}).Where(query).Count(&result.Total).Error
 	return
 }
 

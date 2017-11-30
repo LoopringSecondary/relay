@@ -109,6 +109,16 @@ func HandleOrder(input eventemitter.EventData) error {
 		state := &types.OrderState{}
 		state.RawOrder = *ord
 
+		if gateway.isBroadcast && gateway.maxBroadcastTime > 0 {
+			state.BroadcastTime = 1
+			go func() {
+				pubErr := gateway.ipfsPubService.PublishOrder(*ord)
+				if pubErr != nil {
+					log.Error("publish order failed, orderHash : " + ord.Hash.Str())
+				}
+			}()
+		}
+
 		log.Debugf("gateway accept new order hash:%s", orderHash.Hex())
 		log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
 		log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
