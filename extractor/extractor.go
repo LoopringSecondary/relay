@@ -97,13 +97,22 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Infof("extractor,get block transaction list length %d", txcnt)
 			}
 
-			checkForkBlock := types.Block{}
-			checkForkBlock.BlockNumber = block.Number.BigInt()
-			checkForkBlock.ParentHash = block.ParentHash
-			checkForkBlock.BlockHash = block.Hash
-			checkForkBlock.CreateTime = block.Timestamp.Int64()
-			if err := l.detectFork(&checkForkBlock); err != nil {
+			currentBlock := &types.Block{}
+			currentBlock.BlockNumber = block.Number.BigInt()
+			currentBlock.ParentHash = block.ParentHash
+			currentBlock.BlockHash = block.Hash
+			currentBlock.CreateTime = block.Timestamp.Int64()
+
+			var entity dao.Block
+			if err := entity.ConvertDown(currentBlock); err != nil {
+				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())
+			} else {
+				l.dao.Add(&entity)
+			}
+
+			if err := l.detectFork(currentBlock); err != nil {
 				log.Debugf("extractor,detect fork error:%s", err.Error())
+				continue
 			}
 
 			l.doBlock(*block)
