@@ -1,4 +1,4 @@
-tokens = ["0x0c0b638ffccb4bdc4c0d0d5fef062fc512c92511", "0x96124db0972e3522a9b3910578b3f2e1a50159c7"]
+tokens = ["0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e", "0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f"]
 keystore_dir = "/Users/yuhongyu/myeth/data/keystore"
 
 [[accounts]]

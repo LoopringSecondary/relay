@@ -82,6 +82,11 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 		} else {
 			impl.RinghashRegistryAddress = common.HexToAddress(addr)
 		}
+		if err := callMethod(&addr, "tokenRegistryAddress", "latest"); nil != err {
+			return nil, err
+		} else {
+			impl.TokenRegistryAddress = common.HexToAddress(addr)
+		}
 		if err := callMethod(&addr, "delegateAddress", "latest"); nil != err {
 			return nil, err
 		} else {
