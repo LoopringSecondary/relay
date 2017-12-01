@@ -35,9 +35,7 @@ import (
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/usermanager"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/zap"
 )
 

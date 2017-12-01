@@ -188,7 +188,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 }
 
 func (l *ExtractorServiceImpl) doMethod(input string) error {
-	return methodid
+	return nil
 }
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
