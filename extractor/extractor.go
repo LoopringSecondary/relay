@@ -137,7 +137,6 @@ func (l *ExtractorServiceImpl) Restart() {
 func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 	for _, tx := range block.Transactions {
 		log.Debugf("extractor,get transaction hash:%s", tx.Hash)
-		log.Debugf("extractor,get transaction input:%s", tx.Input)
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
 		l.doMethod(tx.Input)
@@ -189,7 +188,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 }
 
 func (l *ExtractorServiceImpl) doMethod(input string) error {
-	return nil
+	return methodid
 }
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
