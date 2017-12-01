@@ -19,6 +19,12 @@
 package test
 
 import (
+	"math/big"
+	"math/rand"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
@@ -27,11 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/naoina/toml"
-	"math/big"
-	"math/rand"
-	"os"
-	"strconv"
-	"strings"
 )
 
 type Account struct {
@@ -43,7 +44,6 @@ type TestData struct {
 	Tokens          []string
 	Accounts        []Account
 	Creator         Account
-	KeystoreDir     string
 	AllowanceAmount int64
 }
 
@@ -168,6 +168,6 @@ func init() {
 
 	c := crypto.NewCrypto(false, ks)
 	crypto.Initialize(c)
-	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, ks)
+	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
 
 }

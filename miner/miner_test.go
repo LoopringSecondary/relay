@@ -62,11 +62,11 @@ func TestMatch(t *testing.T) {
 	crypto.Initialize(c)
 	rdsService := dao.NewRdsService(cfg.Mysql)
 	userManager := usermanager.NewUserManager(rdsService)
-	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, ks)
+	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
 	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor)
 
 	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
-	submitter := miner.NewSubmitter(cfg.Miner, ks, accessor, rdsService, marketCapProvider)
+	submitter := miner.NewSubmitter(cfg.Miner, accessor, rdsService, marketCapProvider)
 	evaluator := miner.NewEvaluator(marketCapProvider, int64(1000000000000000), accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, om)
 

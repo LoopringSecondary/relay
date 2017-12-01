@@ -18,7 +18,11 @@
 
 package crypto
 
-import "github.com/ethereum/go-ethereum/accounts"
+import (
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
+)
 
 var crypto Crypto
 
@@ -35,4 +39,8 @@ type Crypto interface {
 	VRSToSig(v byte, r, s []byte) ([]byte, error)
 
 	SigToVRS(sig []byte) (v byte, r []byte, s []byte)
+
+	UnlockAccount(acc accounts.Account, passphrase string) error
+
+	SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }

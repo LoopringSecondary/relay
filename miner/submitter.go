@@ -59,13 +59,12 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
 	submitter.Accessor = accessor
 	submitter.mtx = &sync.RWMutex{}
-	submitter.ks = ks
 	submitter.miner = accounts.Account{Address: common.HexToAddress(options.Miner)}
 
 	submitter.feeReceipt = common.HexToAddress(options.FeeRecepient)
