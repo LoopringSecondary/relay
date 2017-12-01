@@ -20,21 +20,21 @@ package main
 
 import (
 	"fmt"
-	"github.com/Loopring/relay/params"
-	"gopkg.in/urfave/cli.v1"
 	"os"
-	"path/filepath"
 	"runtime"
 	"sort"
+
+	"github.com/Loopring/relay/cmd/utils"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func main() {
-	app := newApp()
-	app.Action = minerNode
+	app := utils.NewApp()
+	app.Action = startNode
 	app.HideVersion = true // we have a command to print the version
 	app.Copyright = "Copyright 2013-2017 The Loopring Authors"
-	globalFlags := GlobalFlags()
-	minerFlags := MinerFlags()
+	globalFlags := utils.GlobalFlags()
+	minerFlags := utils.MinerFlags()
 	//todo:need to group flags
 	app.Flags = append(app.Flags, globalFlags...)
 	app.Flags = append(app.Flags, minerFlags...)
@@ -59,14 +59,4 @@ func main() {
 		os.Exit(1)
 	}
 
-}
-
-func newApp() *cli.App {
-	app := cli.NewApp()
-	app.Name = filepath.Base(os.Args[0])
-	app.Version = params.Version
-	app.Usage = "the Loopring/relay command line interface"
-	app.Author = ""
-	app.Email = ""
-	return app
 }

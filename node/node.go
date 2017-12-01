@@ -19,12 +19,16 @@
 package node
 
 import (
+	"strconv"
+	"sync"
+
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
@@ -33,9 +37,6 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
-	"log"
-	"strconv"
-	"sync"
 )
 
 // TODO(fk): add services
@@ -47,64 +48,87 @@ type Node struct {
 	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
-	miner             *miner.Miner
-	stop              chan struct{}
-	lock              sync.RWMutex
-	logger            *zap.Logger
-	trendManager      market.TrendManager
-	accountManager    market.AccountManager
-	jsonRpcService    gateway.JsonrpcServiceImpl
 	marketCapProvider *marketcap.MarketCapProvider
+	relayNode         *RelayNode
+	mineNode          *MineNode
+
+	stop   chan struct{}
+	lock   sync.RWMutex
+	logger *zap.Logger
 }
 
-func NewEthNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
+type RelayNode struct {
+	trendManager   market.TrendManager
+	accountManager market.AccountManager
+	jsonRpcService gateway.JsonrpcServiceImpl
+}
+
+func (n *RelayNode) Start() {
+	//gateway.NewJsonrpcService("8080").Start()
+	n.jsonRpcService.Start()
+}
+
+type MineNode struct {
+	miner *miner.Miner
+}
+
+func (n *MineNode) Start() {
+	n.miner.Start()
+}
+
+func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
 	n.globalConfig = globalConfig
 
-	return n
-}
-
-func (n *Node) Start() {
-	if n.globalConfig.Title == "miner" {
-		n.minerStart()
-	} else if n.globalConfig.Title == "relay" {
-		n.relayStart()
-	} else {
-		log.Fatal("relay.toml title error")
-	}
-}
-
-func (n *Node) minerStart() {
-	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, ks)
-	if nil != err {
-		panic(err)
-	}
-	n.accessor = accessor
+	// register
 	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
-
-	// register services
-	n.registerCrypto(ks)
+	n.registerAccessor()
 	n.registerMysql()
 	n.registerUserManager()
-	n.registerIPFSSubService()
-	n.registerAccountManager(accessor)
+	//n.registerIPFSSubService()
 	n.registerOrderManager()
-	n.registerMiner(accessor, ks)
 	n.registerExtractor()
 	n.registerGateway()
 
-	// start services
-	n.orderManager.Start()
-	n.extractorService.Start()
-	n.ipfsSubService.Start()
-	n.miner.Start()
+	if "relay" == globalConfig.Mode {
+		n.registerRelayNode()
+	} else if "miner" == globalConfig.Mode {
+		n.registerMineNode()
+	} else {
+		n.registerMineNode()
+		n.registerRelayNode()
+	}
+
+	return n
 }
 
-func (n *Node) relayStart() {
-	//gateway.NewJsonrpcService("8080").Start()
-	n.jsonRpcService.Start()
+func (n *Node) registerRelayNode() {
+	n.relayNode = &RelayNode{}
+	n.registerAccountManager()
+}
+
+func (n *Node) registerMineNode() {
+	n.mineNode = &MineNode{}
+	ks := keystore.NewKeyStore(n.globalConfig.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	n.registerCrypto(ks)
+	n.registerMiner()
+}
+
+func (n *Node) Start() {
+	n.orderManager.Start()
+	n.extractorService.Start()
+	//n.ipfsSubService.Start()
+	n.marketCapProvider.Start()
+
+	if "relay" == n.globalConfig.Mode {
+		n.relayNode.Start()
+	} else if "miner" == n.globalConfig.Mode {
+		n.mineNode.Start()
+	} else {
+		n.relayNode.Start()
+		n.mineNode.Start()
+	}
 }
 
 func (n *Node) Wait() {
@@ -143,7 +167,10 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerAccessor() {
-	accessor, _ := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, nil)
+	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common)
+	if nil != err {
+		log.Fatalf("err:%s", err.Error())
+	}
 	n.accessor = accessor
 }
 
@@ -160,23 +187,23 @@ func (n *Node) registerOrderManager() {
 }
 
 func (n *Node) registerTrendManager() {
-	n.trendManager = market.NewTrendManager(n.rdsService)
+	n.relayNode.trendManager = market.NewTrendManager(n.rdsService)
 }
 
-func (n *Node) registerAccountManager(accessor *ethaccessor.EthNodeAccessor) {
-	n.accountManager = market.NewAccountManager(accessor)
+func (n *Node) registerAccountManager() {
+	n.relayNode.accountManager = market.NewAccountManager(n.accessor)
 }
 
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
-	n.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.trendManager, n.orderManager, n.accountManager, &ethForwarder)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder)
 }
 
-func (n *Node) registerMiner(accessor *ethaccessor.EthNodeAccessor, ks *keystore.KeyStore) {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, ks, accessor, n.rdsService, n.marketCapProvider)
-	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, accessor)
+func (n *Node) registerMiner() {
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.accessor, n.rdsService, n.marketCapProvider)
+	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, n.accessor)
 	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, n.orderManager)
-	n.miner = miner.NewMiner(submitter, matcher, evaluator, accessor, n.marketCapProvider)
+	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.accessor, n.marketCapProvider)
 }
 
 func (n *Node) registerGateway() {

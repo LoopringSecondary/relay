@@ -21,7 +21,6 @@ package ethaccessor
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -29,11 +28,10 @@ import (
 type EthNodeAccessor struct {
 	Erc20Abi      *abi.ABI
 	ProtocolImpls map[common.Address]*ProtocolImpl
-	ks            *keystore.KeyStore
 	*rpc.Client
 }
 
-func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, ks *keystore.KeyStore) (*EthNodeAccessor, error) {
+func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions) (*EthNodeAccessor, error) {
 	var err error
 	accessor := &EthNodeAccessor{}
 	accessor.Client, err = rpc.Dial(accessorOptions.RawUrl)
@@ -41,7 +39,6 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 		return nil, err
 	}
 
-	accessor.ks = ks
 	if accessor.Erc20Abi, err = NewAbi(commonOptions.Erc20Abi); nil != err {
 		return nil, err
 	}

@@ -29,9 +29,9 @@ import (
 
 func TestNewAccessor(t *testing.T) {
 	cfg := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/relay.toml")
-	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, nil)
+	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
 	if nil != err {
-		println(err.Error())
+		t.Log(err.Error())
 	}
 	var b types.Big
 	if err := accessor.Call(&b, "eth_getBalance", common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259"), "pending"); nil != err {

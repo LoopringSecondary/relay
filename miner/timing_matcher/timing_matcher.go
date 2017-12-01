@@ -108,7 +108,7 @@ func (matcher *TimingMatcher) Start() {
 	go func() {
 		for {
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(10 * time.Second):
 				var wg sync.WaitGroup
 				matcher.round += 1
 				for _, market := range matcher.markets {

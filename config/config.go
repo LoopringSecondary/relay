@@ -20,12 +20,13 @@ package config
 
 import (
 	"errors"
-	"github.com/naoina/toml"
-	"go.uber.org/zap"
 	"math/big"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/naoina/toml"
+	"go.uber.org/zap"
 )
 
 func LoadConfig(file string) *GlobalConfig {
@@ -62,6 +63,7 @@ func LoadConfig(file string) *GlobalConfig {
 
 type GlobalConfig struct {
 	Title string `required:"true"`
+	Mode  string `required:"true"`
 	Owner struct {
 		Name string
 	}

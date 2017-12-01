@@ -21,6 +21,8 @@ package crypto
 import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 )
 
 func ValidateSignatureValues(v byte, r, s []byte) bool {
@@ -48,6 +50,13 @@ func SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	return crypto.SigToVRS(sig)
 }
 
+func UnlockAccount(acc accounts.Account, passphrase string) error {
+	return crypto.UnlockAccount(acc, passphrase)
+}
+
+func SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	return crypto.SignTx(a, tx, chainID)
+}
 func Initialize(c Crypto) {
 	crypto = c
 }

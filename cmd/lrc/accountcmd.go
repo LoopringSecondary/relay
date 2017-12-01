@@ -22,14 +22,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"syscall"
+
+	"github.com/Loopring/relay/cmd/utils"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/urfave/cli.v1"
-	"io"
-	"os"
-	"syscall"
 )
 
 func accountCommands() cli.Command {
@@ -91,19 +92,19 @@ func accountCommands() cli.Command {
 func createAccount(ctx *cli.Context) {
 	dir := ctx.String("datadir")
 	if "" == dir {
-		exitWithErr(errors.New("keystore file can't empty"), ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, errors.New("keystore file can't empty"))
 	}
 
 	var passphrase string
 	if passphrase = ctx.String("passphrase"); "" == passphrase {
 		var err error
 		if passphrase, err = getPassphraseFromTeminal(true, ctx.App.Writer); nil != err {
-			exitWithErr(err, ctx.App.Writer)
+			utils.ExitWithErr(ctx.App.Writer, err)
 		}
 	}
 	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
 	if account, err := ks.NewAccount(passphrase); nil != err {
-		exitWithErr(err, ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, err)
 	} else {
 		fmt.Fprintf(ctx.App.Writer, "create address:%x \n", account.Address)
 	}
@@ -112,7 +113,7 @@ func createAccount(ctx *cli.Context) {
 func importAccount(ctx *cli.Context) {
 	dir := ctx.String("datadir")
 	if "" == dir {
-		exitWithErr(errors.New("keystore file can't empty"), ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, errors.New("keystore file can't empty"))
 	}
 
 	pk := ctx.String("private-key")
@@ -120,22 +121,22 @@ func importAccount(ctx *cli.Context) {
 		pk = pk[2:]
 	}
 	if !common.IsHex("0x" + pk) {
-		exitWithErr(errors.New("the private-key must be hex"), ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, errors.New("the private-key must be hex"))
 	}
 	if privateKey, err := crypto.ToECDSA(common.Hex2Bytes(pk)); nil != err {
-		exitWithErr(err, ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, err)
 	} else {
 		var passphrase string
 		if passphrase = ctx.String("passphrase"); "" == passphrase {
 			var err error
 			if passphrase, err = getPassphraseFromTeminal(true, ctx.App.Writer); nil != err {
-				exitWithErr(err, ctx.App.Writer)
+				utils.ExitWithErr(ctx.App.Writer, err)
 			}
 		}
 
 		ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
 		if account, err := ks.ImportECDSA(privateKey, passphrase); nil != err {
-			exitWithErr(err, ctx.App.Writer)
+			utils.ExitWithErr(ctx.App.Writer, err)
 		} else {
 			fmt.Fprintf(ctx.App.Writer, "create address:%x \n", account.Address)
 		}
@@ -145,7 +146,7 @@ func importAccount(ctx *cli.Context) {
 func listAccounts(ctx *cli.Context) {
 	dir := ctx.String("datadir")
 	if "" == dir {
-		exitWithErr(errors.New("keystore file can't empty"), ctx.App.Writer)
+		utils.ExitWithErr(ctx.App.Writer, errors.New("keystore file can't empty"))
 	}
 	ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
 
@@ -179,9 +180,4 @@ func getPassphraseFromTeminal(confirm bool, writer io.Writer) (string, error) {
 		}
 	}
 	return string(passphrase), nil
-}
-
-func exitWithErr(err error, writer io.Writer) {
-	fmt.Fprintf(writer, "error:%s \n", err.Error())
-	os.Exit(1)
 }
