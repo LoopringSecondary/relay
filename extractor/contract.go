@@ -110,7 +110,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s, id:%s, key %s", contract.Name, contract.Id, contract.Key)
+			log.Debugf("extracotr,contract event name %s, key %s", contract.Name, contract.Key)
 		}
 	}
 }
@@ -142,7 +142,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
+			log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Key)
 		}
 	}
 }
@@ -173,7 +173,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
+			log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Key)
 		}
 	}
 }
@@ -198,7 +198,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 			eventemitter.On(contract.Key, watcher)
 
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
+			log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Key)
 		}
 	}
 }
@@ -229,7 +229,7 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
+			log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Key)
 		}
 	}
 }

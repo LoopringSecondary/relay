@@ -206,8 +206,8 @@ func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) err
 
 	contractEvent := input.(ContractData).Event.(*ethaccessor.TestEvent)
 	if l.commOpts.Develop {
-		log.Debugf("extractor,test event mark:%s", contractEvent.Mark)
-		log.Debugf("extractor,test event number:%s", contractEvent.Number.String())
+		log.Debugf("=========== extractor,test event mark:%s", contractEvent.Mark)
+		log.Debugf("=========== extractor,test event number:%s", contractEvent.Number.String())
 	}
 
 	return nil
