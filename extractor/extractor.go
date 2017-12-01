@@ -89,14 +89,6 @@ func (l *ExtractorServiceImpl) Start() {
 			block := inter.(*ethaccessor.BlockWithTxObject)
 			log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
-			txcnt := len(block.Transactions)
-			if txcnt < 1 {
-				log.Debugf("extractor,get none block transaction")
-				continue
-			} else {
-				log.Infof("extractor,get block transaction list length %d", txcnt)
-			}
-
 			currentBlock := &types.Block{}
 			currentBlock.BlockNumber = block.Number.BigInt()
 			currentBlock.ParentHash = block.ParentHash
@@ -108,6 +100,14 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())
 			} else {
 				l.dao.Add(&entity)
+			}
+
+			txcnt := len(block.Transactions)
+			if txcnt < 1 {
+				log.Infof("extractor,get none block transaction")
+				continue
+			} else {
+				log.Infof("extractor,get block transaction list length %d", txcnt)
 			}
 
 			if err := l.detectFork(currentBlock); err != nil {
@@ -164,7 +164,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 
 			data := hexutil.MustDecode(evtLog.Data)
 			id := evtLog.Topics[0]
-			key := generateKey(receipt.To, id)
+			key := generateKey(evtLog.Address, id)
 			if contract, ok = l.events[key]; !ok {
 				log.Debugf("extractor,contract event id error:%s", id)
 				continue
