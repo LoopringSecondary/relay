@@ -21,6 +21,7 @@ package ethaccessor
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -151,7 +152,7 @@ func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 
 func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
 	var err error
-	if tx, err = ethAccessor.ks.SignTx(sender, tx, nil); nil != err {
+	if tx, err = crypto.SignTx(sender, tx, nil); nil != err {
 		return err
 	}
 	if txData, err := rlp.EncodeToBytes(tx); nil != err {
