@@ -201,6 +201,16 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	return nil
 }
 
+func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor,log event:test")
+
+	if l.commOpts.Develop {
+		// log.Debugf()
+	}
+
+	return nil
+}
+
 func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor,log event:ringMined")
 
@@ -392,7 +402,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		log.Debugf("extractor,approval event value -> %s", evt.Value.BigInt().String())
 	}
 
-	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+	eventemitter.Emit(eventemitter.AccountApproval, evt)
 
 	return nil
 }
@@ -455,7 +465,8 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
-
+	evt.TxHash = common.HexToHash(contractData.TxHash)
+	
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ringhash submit event ringhash -> %s", evt.RingHash.Hex())
 		log.Debugf("extractor,ringhash submit event ringminer -> %s", evt.RingMiner.Hex())

@@ -40,6 +40,7 @@ type RinghashSubmittedEvent struct {
 	RingHash        common.Hash
 	RingMiner       common.Address
 	ContractAddress common.Address
+	TxHash			common.Hash
 	Blocknumber     *Big
 	Time            *Big
 }
