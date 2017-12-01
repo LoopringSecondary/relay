@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -94,12 +95,16 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 			switch contract.Name {
 			case RINGMINED_EVT_NAME:
+				contract.Event = &ethaccessor.RingMinedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRingMinedEvent}
 			case CANCEL_EVT_NAME:
+				contract.Event = &ethaccessor.OrderCancelledEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 			case CUTOFF_EVT_NAME:
+				contract.Event = &ethaccessor.CutoffTimestampChangedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
 			case TEST_EVT_NAME:
+				contract.Event = &ethaccessor.TestEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTestEvent}
 			}
 
@@ -128,8 +133,10 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 
 			switch contract.Name {
 			case TRANSFER_EVT_NAME:
+				contract.Event = &ethaccessor.TransferEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTransferEvent}
 			case APPROVAL_EVT_NAME:
+				contract.Event = &ethaccessor.ApprovalEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleApprovalEvent}
 			}
 
@@ -157,8 +164,10 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 
 			switch contract.Name {
 			case TOKENREGISTERED_EVT_NAME:
+				contract.Event = &ethaccessor.TokenRegisteredEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenRegisteredEvent}
 			case TOKENUNREGISTERED_EVT_NAME:
+				contract.Event = &ethaccessor.TokenUnRegisteredEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTokenUnRegisteredEvent}
 			}
 
@@ -183,6 +192,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 			contract.ImplAddress = impl.RinghashRegistryAddress.Hex()
 			contract.CAbi = impl.RinghashRegistryAbi
 			contract.generateSymbol(event.Id().Hex(), name)
+			contract.Event = &ethaccessor.RingHashSubmittedEvent{}
 
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
 			eventemitter.On(contract.Key, watcher)
@@ -210,8 +220,10 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 
 			switch contract.Name {
 			case ADDRESSAUTHORIZED_EVT_NAME:
+				contract.Event = &ethaccessor.AddressAuthorizedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleAddressAuthorizedEvent}
 			case ADDRESSDEAUTHORIZED_EVT_NAME:
+				contract.Event = &ethaccessor.AddressDeAuthorizedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleAddressDeAuthorizedEvent}
 			}
 

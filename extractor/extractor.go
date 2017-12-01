@@ -204,8 +204,10 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor,log event:test")
 
+	contractEvent := input.(ContractData).Event.(*ethaccessor.TestEvent)
 	if l.commOpts.Develop {
-		// log.Debugf()
+		log.Debugf("extractor,test event mark:%s", contractEvent.Mark)
+		log.Debugf("extractor,test event number:%s", contractEvent.Number.String())
 	}
 
 	return nil
@@ -219,7 +221,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		return fmt.Errorf("extractor,ring mined event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.RingMinedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[1])
 
 	ringmined, fills, err := contractEvent.ConvertDown()
@@ -298,7 +300,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 		return fmt.Errorf("extractor,order cancelled event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.OrderCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.OrderCancelledEvent)
 	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -329,7 +331,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 		return fmt.Errorf("extractor,cutoff timestamp changed event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.CutoffTimestampChangedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffTimestampChangedEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -359,7 +361,7 @@ func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData)
 		return fmt.Errorf("extractor,token transfer event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.TransferEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
 	contractEvent.From = common.HexToAddress(contractData.Topics[1])
 	contractEvent.To = common.HexToAddress(contractData.Topics[2])
 
@@ -387,7 +389,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		return fmt.Errorf("extractor,token approval event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.ApprovalEvent)
+	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
 
@@ -411,7 +413,7 @@ func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.Eve
 	log.Debugf("extractor,log event:token registered event")
 
 	contractData := input.(ContractData)
-	contractEvent := contractData.Event.(ethaccessor.TokenRegisteredEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TokenRegisteredEvent)
 
 	evt := contractEvent.ConvertDown()
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
@@ -432,7 +434,7 @@ func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.E
 	log.Debugf("extractor,log event:token unregistered event")
 
 	contractData := input.(ContractData)
-	contractEvent := contractData.Event.(ethaccessor.TokenUnRegisteredEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TokenUnRegisteredEvent)
 
 	evt := contractEvent.ConvertDown()
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
@@ -457,7 +459,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 		return fmt.Errorf("extractor,ringhash registered event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.RingHashSubmittedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.RingHashSubmittedEvent)
 	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
 
@@ -466,7 +468,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 	evt.TxHash = common.HexToHash(contractData.TxHash)
-	
+
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ringhash submit event ringhash -> %s", evt.RingHash.Hex())
 		log.Debugf("extractor,ringhash submit event ringminer -> %s", evt.RingMiner.Hex())
@@ -485,7 +487,7 @@ func (l *ExtractorServiceImpl) handleAddressAuthorizedEvent(input eventemitter.E
 		return fmt.Errorf("extractor,address authorized event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.AddressAuthorizedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.AddressAuthorizedEvent)
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -511,7 +513,7 @@ func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter
 		return fmt.Errorf("extractor,address deauthorized event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.AddressDeAuthorizedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.AddressDeAuthorizedEvent)
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
