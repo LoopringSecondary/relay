@@ -75,6 +75,7 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 		entity.Accounts = append(entity.Accounts, acc)
 	}
 	entity.Creator = AccountEntity{Address: common.HexToAddress(data.Creator.Address), Passphrase: data.Creator.Passphrase}
+	entity.KeystoreDir = cfg.Keystore.Keydir
 	entity.AllowanceAmount = data.AllowanceAmount
 
 	return &entity
@@ -127,7 +128,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(1000)
+	order.LrcFee = big.NewInt(120701538919177881)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner

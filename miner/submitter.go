@@ -287,7 +287,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	received := new(big.Rat).Sub(ringState.LegalFee, cost)
 	ringForSubmit.Received = received
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
-		return nil, errors.New("received can't be less than 0")
+		// todo: warning
+		//return nil, errors.New("received can't be less than 0")
 	}
 	return ringForSubmit, nil
 }

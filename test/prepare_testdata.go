@@ -106,7 +106,6 @@ func PrepareTestData() {
 					log.Errorf("token approve error:%s", err.Error())
 				} else {
 					log.Infof("token approve hash:%s", hash)
-
 				}
 			}
 		}

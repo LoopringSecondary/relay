@@ -86,7 +86,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerAccessor()
 	n.registerMysql()
 	n.registerUserManager()
-	//n.registerIPFSSubService()
+	n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
 	n.registerGateway()
@@ -118,7 +118,7 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
-	//n.ipfsSubService.Start()
+	n.ipfsSubService.Start()
 	n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {

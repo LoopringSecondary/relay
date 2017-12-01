@@ -97,13 +97,22 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Infof("extractor,get block transaction list length %d", txcnt)
 			}
 
-			checkForkBlock := types.Block{}
-			checkForkBlock.BlockNumber = block.Number.BigInt()
-			checkForkBlock.ParentHash = block.ParentHash
-			checkForkBlock.BlockHash = block.Hash
-			checkForkBlock.CreateTime = block.Timestamp.Int64()
-			if err := l.detectFork(&checkForkBlock); err != nil {
+			currentBlock := &types.Block{}
+			currentBlock.BlockNumber = block.Number.BigInt()
+			currentBlock.ParentHash = block.ParentHash
+			currentBlock.BlockHash = block.Hash
+			currentBlock.CreateTime = block.Timestamp.Int64()
+
+			var entity dao.Block
+			if err := entity.ConvertDown(currentBlock); err != nil {
+				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())
+			} else {
+				l.dao.Add(&entity)
+			}
+
+			if err := l.detectFork(currentBlock); err != nil {
 				log.Debugf("extractor,detect fork error:%s", err.Error())
+				continue
 			}
 
 			l.doBlock(*block)
@@ -128,7 +137,6 @@ func (l *ExtractorServiceImpl) Restart() {
 func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 	for _, tx := range block.Transactions {
 		log.Debugf("extractor,get transaction hash:%s", tx.Hash)
-		log.Debugf("extractor,get transaction input:%s", tx.Input)
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
 		l.doMethod(tx.Input)
@@ -193,6 +201,18 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	return nil
 }
 
+func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) error {
+	log.Debugf("extractor,log event:test")
+
+	contractEvent := input.(ContractData).Event.(*ethaccessor.TestEvent)
+	if l.commOpts.Develop {
+		log.Debugf("=========== extractor,test event mark:%s", contractEvent.Mark)
+		log.Debugf("=========== extractor,test event number:%s", contractEvent.Number.String())
+	}
+
+	return nil
+}
+
 func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
 	log.Debugf("extractor,log event:ringMined")
 
@@ -201,7 +221,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		return fmt.Errorf("extractor,ring mined event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.RingMinedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[1])
 
 	ringmined, fills, err := contractEvent.ConvertDown()
@@ -280,7 +300,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 		return fmt.Errorf("extractor,order cancelled event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.OrderCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.OrderCancelledEvent)
 	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -311,7 +331,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 		return fmt.Errorf("extractor,cutoff timestamp changed event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.CutoffTimestampChangedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffTimestampChangedEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -341,7 +361,7 @@ func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData)
 		return fmt.Errorf("extractor,token transfer event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.TransferEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
 	contractEvent.From = common.HexToAddress(contractData.Topics[1])
 	contractEvent.To = common.HexToAddress(contractData.Topics[2])
 
@@ -369,7 +389,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		return fmt.Errorf("extractor,token approval event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.ApprovalEvent)
+	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
 
@@ -384,7 +404,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 		log.Debugf("extractor,approval event value -> %s", evt.Value.BigInt().String())
 	}
 
-	eventemitter.Emit(eventemitter.TokenRegistered, evt)
+	eventemitter.Emit(eventemitter.AccountApproval, evt)
 
 	return nil
 }
@@ -393,7 +413,7 @@ func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.Eve
 	log.Debugf("extractor,log event:token registered event")
 
 	contractData := input.(ContractData)
-	contractEvent := contractData.Event.(ethaccessor.TokenRegisteredEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TokenRegisteredEvent)
 
 	evt := contractEvent.ConvertDown()
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
@@ -414,7 +434,7 @@ func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.E
 	log.Debugf("extractor,log event:token unregistered event")
 
 	contractData := input.(ContractData)
-	contractEvent := contractData.Event.(ethaccessor.TokenUnRegisteredEvent)
+	contractEvent := contractData.Event.(*ethaccessor.TokenUnRegisteredEvent)
 
 	evt := contractEvent.ConvertDown()
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
@@ -439,7 +459,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 		return fmt.Errorf("extractor,ringhash registered event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.RingHashSubmittedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.RingHashSubmittedEvent)
 	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
 
@@ -447,6 +467,7 @@ func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.Even
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
+	evt.TxHash = common.HexToHash(contractData.TxHash)
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ringhash submit event ringhash -> %s", evt.RingHash.Hex())
@@ -466,7 +487,7 @@ func (l *ExtractorServiceImpl) handleAddressAuthorizedEvent(input eventemitter.E
 		return fmt.Errorf("extractor,address authorized event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.AddressAuthorizedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.AddressAuthorizedEvent)
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -492,7 +513,7 @@ func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter
 		return fmt.Errorf("extractor,address deauthorized event indexed fields number error")
 	}
 
-	contractEvent := contractData.Event.(ethaccessor.AddressDeAuthorizedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.AddressDeAuthorizedEvent)
 	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -512,7 +533,7 @@ func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter
 
 // todo: modify
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
-	var tForkBlock types.Block
+	var ret types.Block
 
 	start := l.commOpts.DefaultBlockNumber
 	end := l.commOpts.EndBlockNumber
@@ -520,18 +541,21 @@ func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()
 	if err == nil {
-		forkBlock.ConvertUp(&tForkBlock)
+		forkBlock.ConvertUp(&ret)
 		forkBlock.Fork = false
 		l.dao.Update(forkBlock)
-		return tForkBlock.BlockNumber, end
+		return ret.BlockNumber, end
 	}
 
 	// 寻找最新块
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
+		log.Debugf("extractor,get latest block number error:%s", err.Error())
 		return start, end
 	}
-	latestBlock.ConvertUp(&tForkBlock)
+	if err := latestBlock.ConvertUp(&ret); err != nil {
+		log.Fatalf("extractor,get blocknumber range convert up error:%s", err.Error())
+	}
 
-	return tForkBlock.BlockNumber, end
+	return ret.BlockNumber, end
 }

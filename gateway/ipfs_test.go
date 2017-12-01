@@ -79,7 +79,7 @@ func TestRing(t *testing.T) {
 	testAcc2 := entity.Accounts[1]
 
 	// get keystore and unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	acc1 := accounts.Account{Address: testAcc1.Address}
 	acc2 := accounts.Account{Address: testAcc2.Address}

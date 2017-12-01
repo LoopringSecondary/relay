@@ -51,7 +51,7 @@ func newMinerOrdersProvider(clearTick, blockNumberPeriod int, commonOpts *config
 
 	if entity, err := provider.rds.FindLatestBlock(); err == nil {
 		var block types.Block
-		if err := entity.ConvertDown(&block); err != nil {
+		if err := entity.ConvertUp(&block); err != nil {
 			log.Fatalf("ordermanager: orders provider,error%s", err.Error())
 		}
 		provider.currentBlockNumber = types.NewBigPtr(block.BlockNumber)

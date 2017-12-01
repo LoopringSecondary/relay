@@ -220,6 +220,11 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
+type TestEvent struct {
+	Mark   string   `fieldName:"_mark"`
+	Number *big.Int `fieldName:"_data"`
+}
+
 type ForkedEvent struct {
 	DetectedBlock *big.Int
 	DetectedHash  common.Hash
