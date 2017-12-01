@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"strings"
 )
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
@@ -59,7 +60,7 @@ func (c *ContractData) generateSymbol(id, name string) {
 }
 
 func generateKey(addr string, id string) string {
-	return addr + "-" + id
+	return strings.ToLower(addr) + "-" + strings.ToLower(id)
 }
 
 const (
@@ -73,12 +74,13 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
+	TEST_EVT_NAME                = "TestEvent"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
 	for _, impl := range l.accessor.ProtocolImpls {
 		for name, event := range impl.ProtocolImplAbi.Events {
-			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
+			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME && name != TEST_EVT_NAME {
 				continue
 			}
 
@@ -97,11 +99,13 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleOrderCancelledEvent}
 			case CUTOFF_EVT_NAME:
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
+			case TEST_EVT_NAME:
+				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTestEvent}
 			}
 
 			eventemitter.On(contract.Key, watcher)
 			l.events[contract.Key] = contract
-			log.Debugf("extracotr,contract event name %s -> id:%s", contract.Name, contract.Id)
+			log.Debugf("extracotr,contract event name %s, id:%s, key %s", contract.Name, contract.Id, contract.Key)
 		}
 	}
 }
