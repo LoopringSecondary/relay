@@ -148,14 +148,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			continue
 		}
 
-		if len(receipt.Logs) == 0 {
-			// todo
-		}
-
-		log.Debugf("extractor,transaction receipt  event logs number:%d", len(receipt.Logs))
-
-		// todo 是否需要存储transaction
-
+		// todo:判断transactionRecipient.to地址是否是合约地址
 		for _, evtLog := range receipt.Logs {
 			var (
 				contract ContractData
@@ -193,23 +186,7 @@ func (l *ExtractorServiceImpl) doMethod(input string) error {
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
 func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
-	println("doMethoddoMethoddoMethoddoMethoddoMethoddoMethod")
-	//println(input.(string))
 	// todo: unpack method
-	// input := tx.Input
-	// l.ethClient
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) error {
-	log.Debugf("extractor,log event:test")
-
-	contractEvent := input.(ContractData).Event.(*ethaccessor.TestEvent)
-	if l.commOpts.Develop {
-		log.Debugf("=========== extractor,test event mark:%s", contractEvent.Mark)
-		log.Debugf("=========== extractor,test event number:%s", contractEvent.Number.String())
-	}
-
 	return nil
 }
 

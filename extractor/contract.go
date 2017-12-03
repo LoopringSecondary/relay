@@ -37,7 +37,9 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.loadTokenTransferDelegateProtocol()
 
 	// todo: get erc20 token address and former abi
-	l.loadErc20Contract([]common.Address{})
+	tokenAddressA := common.HexToAddress("0xfc2cbce778ddbc4d50bb5b2fc91afe14a8e3953d")
+	tokenAddressB := common.HexToAddress("0x876c8b6ff4a8e87dc6d5e3f64715b58be7d5ab55")
+	l.loadErc20Contract([]common.Address{tokenAddressA, tokenAddressB})
 }
 
 type ContractData struct {
@@ -75,13 +77,12 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
-	TEST_EVT_NAME                = "TestEvent"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
 	for _, impl := range l.accessor.ProtocolImpls {
 		for name, event := range impl.ProtocolImplAbi.Events {
-			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME && name != TEST_EVT_NAME {
+			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
 				continue
 			}
 
@@ -103,9 +104,6 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 			case CUTOFF_EVT_NAME:
 				contract.Event = &ethaccessor.CutoffTimestampChangedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
-			case TEST_EVT_NAME:
-				contract.Event = &ethaccessor.TestEvent{}
-				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTestEvent}
 			}
 
 			eventemitter.On(contract.Key, watcher)
