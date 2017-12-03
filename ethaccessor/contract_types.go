@@ -68,7 +68,7 @@ type RingMinedEvent struct {
 	Miner              common.Address `fieldName:"_miner"`
 	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
 	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
-	OrderHashList      []common.Hash  `fieldName:"_orderHashList"`
+	OrderHashList      [][32]uint8    `fieldName:"_orderHashList"`
 	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
 }
 
@@ -95,19 +95,19 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		)
 
 		if i == 0 {
-			preOrderHash = e.OrderHashList[length-1]
-			nextOrderHash = e.OrderHashList[1]
+			preOrderHash = common.Hash(e.OrderHashList[length-1])
+			nextOrderHash = common.Hash(e.OrderHashList[1])
 		} else if i == length-1 {
-			preOrderHash = e.OrderHashList[length-2]
-			nextOrderHash = e.OrderHashList[0]
+			preOrderHash = common.Hash(e.OrderHashList[length-2])
+			nextOrderHash = common.Hash(e.OrderHashList[0])
 		} else {
-			preOrderHash = e.OrderHashList[i-1]
-			nextOrderHash = e.OrderHashList[i+1]
+			preOrderHash = common.Hash(e.OrderHashList[i-1])
+			nextOrderHash = common.Hash(e.OrderHashList[i+1])
 		}
 
 		fill.Ringhash = e.RingHash
 		fill.PreOrderHash = preOrderHash
-		fill.OrderHash = e.OrderHashList[i]
+		fill.OrderHash = common.Hash(e.OrderHashList[i])
 		fill.NextOrderHash = nextOrderHash
 
 		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
@@ -218,11 +218,6 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	evt.Number = e.Number
 
 	return evt
-}
-
-type TestEvent struct {
-	Mark   string   `fieldName:"_mark"`
-	Number *big.Int `fieldName:"_data"`
 }
 
 type ForkedEvent struct {
