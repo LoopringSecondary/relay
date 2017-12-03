@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/naoina/toml"
 	"math/big"
@@ -76,15 +75,14 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 		entity.Accounts = append(entity.Accounts, acc)
 	}
 	entity.Creator = AccountEntity{Address: common.HexToAddress(data.Creator.Address), Passphrase: data.Creator.Passphrase}
-	entity.KeystoreDir = data.KeystoreDir
+	entity.KeystoreDir = cfg.Keystore.Keydir
 	entity.AllowanceAmount = data.AllowanceAmount
 
 	return &entity
 }
 
 func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, error) {
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common, ks)
+	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common)
 	if nil != err {
 		return nil, err
 	}
@@ -130,7 +128,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(1000)
+	order.LrcFee = big.NewInt(120701538919177881)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner

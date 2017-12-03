@@ -28,13 +28,14 @@ import (
 
 func TestOrderManagerImpl_MinerOrders(t *testing.T) {
 	c := test.LoadConfig()
+	entity := test.GenerateTomlEntity(c)
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
-	om := test.LoadConfigAndGenerateOrderManager()
-	tokenS := common.HexToAddress(test.TokenAddressA)
-	tokenB := common.HexToAddress(test.TokenAddressB)
+	om := test.GenerateOrderManager(c)
+	tokenS := entity.Tokens[0]
+	tokenB := entity.Tokens[1]
 
 	states := om.MinerOrders(tokenS, tokenB, 10, []common.Hash{})
 	for k, v := range states {
@@ -50,7 +51,7 @@ func TestOrderManagerImpl_GetOrderByHash(t *testing.T) {
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
-	om := test.LoadConfigAndGenerateOrderManager()
+	om := test.GenerateOrderManager(c)
 	states, _ := om.GetOrderByHash(common.HexToHash("0xaaa99b5c64fe1f6ae594994d1f6c252dc49c2d0db6bb185df99f5ffa8de64fdb"))
 
 	t.Logf("order.hash %s", states.RawOrder.Hash.Hex())

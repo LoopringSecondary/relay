@@ -22,16 +22,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/types"
-	"net"
-	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/ordermanager"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/log"
-	"github.com/ethereum/go-ethereum/rpc"
-	"strings"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
+	"math/big"
+	"net"
+	"strings"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -65,35 +65,35 @@ type CommonTokenRequest struct {
 }
 
 type OrderQuery struct {
-	Status string
-	PageIndex int
-	PageSize  int
+	Status          string
+	PageIndex       int
+	PageSize        int
 	ContractVersion string
 	Owner           string
 	Market string
 }
 
 type DepthQuery struct {
-	Length int
+	Length          int
 	ContractVersion string
-	Market           string
+	Market          string
 }
 
 type FillQuery struct {
 	ContractVersion string
-	Market           string
-	Owner string
-	OrderHash string
-	RingHash string
-	PageIndex int
-	PageSize  int
+	Market          string
+	Owner           string
+	OrderHash       string
+	RingHash        string
+	PageIndex       int
+	PageSize        int
 }
 
 type RingMinedQuery struct {
 	ContractVersion string
-	RingHash string
-	PageIndex int
-	PageSize  int
+	RingHash        string
+	PageIndex       int
+	PageSize        int
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -108,7 +108,7 @@ type JsonrpcServiceImpl struct {
 	trendManager   market.TrendManager
 	orderManager   *ordermanager.OrderManager
 	accountManager market.AccountManager
-	ethForwarder *EthForwarder
+	ethForwarder   *EthForwarder
 }
 
 func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager *ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
@@ -144,7 +144,7 @@ func (j *JsonrpcServiceImpl) Start() {
 	return
 }
 
-func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest)(res string, err error) {
+func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
 	fmt.Println(*order)
 
 	err = HandleOrder(types.ToOrder(order))
@@ -276,16 +276,16 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pag
 
 func convertStatus(s string) types.OrderStatus {
 	switch s {
-		case "ORDER_NEW":
-			return types.ORDER_NEW
-		case "ORDER_PARTIAL":
-			return types.ORDER_PARTIAL
-		case "ORDER_FINISHED":
-			return types.ORDER_FINISHED
-		case "ORDER_CANCEL":
-			return types.ORDER_CANCEL
-		case "ORDER_CUTOFF":
-			return types.ORDER_CUTOFF
+	case "ORDER_NEW":
+		return types.ORDER_NEW
+	case "ORDER_PARTIAL":
+		return types.ORDER_PARTIAL
+	case "ORDER_FINISHED":
+		return types.ORDER_FINISHED
+	case "ORDER_CANCEL":
+		return types.ORDER_CANCEL
+	case "ORDER_CUTOFF":
+		return types.ORDER_CUTOFF
 	}
 	return types.ORDER_UNKNOWN
 }

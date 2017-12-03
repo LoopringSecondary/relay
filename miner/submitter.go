@@ -59,13 +59,12 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, ks *keystore.KeyStore, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
 	submitter.Accessor = accessor
 	submitter.mtx = &sync.RWMutex{}
-	submitter.ks = ks
 	submitter.miner = accounts.Account{Address: common.HexToAddress(options.Miner)}
 
 	submitter.feeReceipt = common.HexToAddress(options.FeeRecepient)
@@ -288,7 +287,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	received := new(big.Rat).Sub(ringState.LegalFee, cost)
 	ringForSubmit.Received = received
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
-		return nil, errors.New("received can't be less than 0")
+		// todo: warning
+		//return nil, errors.New("received can't be less than 0")
 	}
 	return ringForSubmit, nil
 }

@@ -1,15 +1,13 @@
-tokens = ["0x354473d06de0ae6a0a2c92392818e5b304038665", "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5"]
-keystore_dir = "/Users/yuhongyu/myeth/data/keystore"
-allowance_amount = 100000
+tokens = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237"]
+allowance_amount = 1000000
 
 [[accounts]]
-address = "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"
-passphrase = "1"
+address = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
+passphrase = "201"
 [[accounts]]
-address = "0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"
-passphrase = "1"
+address = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+passphrase = "202"
 
 [creator]
-address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
-passphrase = "1"
-
+address = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
+passphrase = "101"

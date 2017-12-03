@@ -21,6 +21,7 @@ package crypto
 import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )
@@ -75,6 +76,13 @@ func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	copy(r, sig[0:32])
 	copy(s, sig[32:64])
 	return v, r, s
+}
+
+func (c EthCrypto) UnlockAccount(acc accounts.Account, passphrase string) error {
+	return c.ks.Unlock(acc, passphrase)
+}
+func (c EthCrypto) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	return c.ks.SignTx(a, tx, chainID)
 }
 
 func NewCrypto(homestead bool, ks *keystore.KeyStore) EthCrypto {

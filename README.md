@@ -30,5 +30,5 @@ git clone https://github.com/Loopring/relay.git
 
 ## run
 ```
-go run cmd/lrc/*
+go run cmd/lrc/* --unlocks "0x750ad4351bb728cec7d639a9511f9d6488f1e259,0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2,0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" --mode=(full, miner, relayer)
 ```
