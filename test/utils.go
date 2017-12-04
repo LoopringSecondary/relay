@@ -69,7 +69,7 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 	rds := GenerateDaoService(cfg)
 	util.Initialize(rds)
 	for _, v := range util.SupportTokens {
-		entity.Tokens = append(entity.Tokens, common.HexToAddress(v))
+		entity.Tokens = append(entity.Tokens, v.Protocol)
 	}
 
 	for _, v := range data.Accounts {

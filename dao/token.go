@@ -60,7 +60,7 @@ func (s *RdsServiceImpl) FindUnDeniedTokens() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = ", false).Find(&list).Error
+	err = s.db.Where("deny = (?)", false).Find(&list).Error
 
 	return list, err
 }
@@ -71,7 +71,7 @@ func (s *RdsServiceImpl) FindDeniedTokens() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = ?", true).Find(&list).Error
+	err = s.db.Where("deny = (?)", true).Find(&list).Error
 
 	return list, err
 }

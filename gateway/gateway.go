@@ -109,9 +109,7 @@ func HandleOrder(input eventemitter.EventData) error {
 			}()
 		}
 
-		log.Debugf("gateway accept new order hash:%s", orderHash.Hex())
-		log.Debugf("gateway accept new order amountS:%s", ord.AmountS.String())
-		log.Debugf("gateway accept new order amountB:%s", ord.AmountB.String())
+		log.Debugf("gateway accept new order hash:%s,amountS:%s,amountB:%s", orderHash.Hex(), ord.AmountS.String(), ord.AmountB.String())
 
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else if gateway.isBroadcast && orderState.BroadcastTime < gateway.maxBroadcastTime {

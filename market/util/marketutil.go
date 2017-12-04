@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -49,6 +50,7 @@ func FloatToByte(amount float64) []byte {
 var (
 	SupportTokens  map[string]types.Token // token symbol to entity
 	SupportMarkets map[string]string      // token symbol to address hex
+	AllTokens      map[string]types.Token
 )
 
 var ContractVersionConfig = map[string]string{
@@ -58,20 +60,27 @@ var ContractVersionConfig = map[string]string{
 
 func Initialize(rds dao.RdsService) {
 	SupportTokens = make(map[string]types.Token)
-	tokens, _ := rds.FindUnDeniedTokens()
+	SupportMarkets = make(map[string]string)
+	AllTokens = make(map[string]types.Token)
+
+	tokens, err := rds.FindUnDeniedTokens()
+	if err != nil {
+		panic(err)
+	}
+
+	// set support tokens
 	for _, v := range tokens {
 		var token types.Token
 		v.ConvertUp(&token)
+		SupportTokens[v.Symbol] = token
+		log.Infof("market supported token %s->%s", token.Symbol, token.Protocol.Hex())
+	}
+
+	// set all tokens
+	for k, v := range SupportTokens {
+		AllTokens[k] = v
 	}
 }
-
-var AllTokens = func() map[string]types.Token {
-	all := make(map[string]types.Token)
-	for k, v := range SupportTokens {
-		all[k] = v
-	}
-	return all
-}()
 
 var AllMarkets = AllMarket()
 
