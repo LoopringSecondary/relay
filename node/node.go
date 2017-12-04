@@ -93,6 +93,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
+		//n.registerCrypto(keystore.NewKeyStore("", 0, 0))
 	} else if "miner" == globalConfig.Mode {
 		n.registerMineNode()
 	} else {
@@ -106,6 +107,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerAccountManager()
+	n.registerJsonRpcService()
 }
 
 func (n *Node) registerMineNode() {
@@ -119,7 +121,6 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
-	n.jsonRpcService.Start()
 	n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {

@@ -106,12 +106,12 @@ type JsonrpcService interface {
 type JsonrpcServiceImpl struct {
 	port           string
 	trendManager   market.TrendManager
-	orderManager   *ordermanager.OrderManager
+	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
 	ethForwarder   *EthForwarder
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager *ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
@@ -156,9 +156,8 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res str
 }
 
 func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery)(res dao.PageResult, err error) {
-	om := *j.orderManager
 	orderQuery, pi, ps := convertFromQuery(query)
-	res, err = om.GetOrders(orderQuery, pi, ps)
+	res, err = j.orderManager.GetOrders(orderQuery, pi, ps)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -189,6 +188,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	empty := make([][]string, 0)
+
 	for i := range empty {
 		empty[i] = make([]string, 0)
 	}
@@ -196,11 +196,13 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	depth := Depth{contractVersion: util.ContractVersionConfig[protocol], market: mkt, Depth: askBid}
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
-	tt := *j.orderManager
-	asks, askErr := tt.GetOrderBook(
-		common.StringToAddress(util.ContractVersionConfig[protocol]),
-		common.StringToAddress(a),
-		common.StringToAddress(b), length*2)
+	asks, askErr := j.orderManager.GetOrderBook(
+		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		common.HexToAddress(util.AllTokens[a]),
+		common.HexToAddress(util.AllTokens[b]), length*2)
+
+	fmt.Println(asks)
+	fmt.Println(askErr)
 
 	if askErr != nil {
 		err = errors.New("get depth error , please refresh again")
@@ -209,10 +211,13 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	depth.Depth.Sell = calculateDepth(asks, length)
 
-	bids, bidErr := tt.GetOrderBook(
-		common.StringToAddress(util.ContractVersionConfig[protocol]),
-		common.StringToAddress(b),
-		common.StringToAddress(a), length*2)
+	bids, bidErr := j.orderManager.GetOrderBook(
+		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		common.HexToAddress(util.AllTokens[b]),
+		common.HexToAddress(util.AllTokens[a]), length*2)
+
+	fmt.Println(bids)
+	fmt.Println(bidErr)
 
 	if bidErr != nil {
 		err = errors.New("get depth error , please refresh again")
@@ -220,14 +225,14 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	depth.Depth.Buy = calculateDepth(bids, length)
+	fmt.Print(depth)
 
 	return depth, err
 }
 
 func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err error) {
-	om := *j.orderManager
 	fmt.Println(query)
-	return om.FillsPageQuery(fillQueryToMap(query))
+	return j.orderManager.FillsPageQuery(fillQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(market string) (res []market.Ticker, err error) {
@@ -241,9 +246,8 @@ func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err er
 }
 
 func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
-	om := *j.orderManager
 	fmt.Println(query)
-	return om.RingMinedPageQuery(ringMinedQueryToMap(query))
+	return j.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
@@ -310,6 +314,9 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 			lastPrice = *s.RawOrder.Price
 			tempSumAmountS = *s.RawOrder.AmountS
 			tempSumAmountB = *s.RawOrder.AmountB
+			if len(states) == 1 {
+				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
+			}
 		} else {
 			if lastPrice.Cmp(s.RawOrder.Price) != 0 {
 				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
@@ -323,7 +330,10 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 		}
 	}
 
-	return depth[:length]
+	if length < len(depth) {
+		return depth[:length]
+	}
+	return depth
 }
 
 func fillQueryToMap(q FillQuery) (map[string]string, int, int) {

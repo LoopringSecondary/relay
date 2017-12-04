@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+	"fmt"
 )
 
 func ValidateSignatureValues(v byte, r, s []byte) bool {
@@ -30,6 +31,7 @@ func ValidateSignatureValues(v byte, r, s []byte) bool {
 }
 
 func GenerateHash(data ...[]byte) []byte {
+	fmt.Print(crypto)
 	return crypto.GenerateHash(data...)
 }
 
@@ -58,5 +60,7 @@ func SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types
 	return crypto.SignTx(a, tx, chainID)
 }
 func Initialize(c Crypto) {
+	fmt.Print("cccccc")
+	fmt.Print(c)
 	crypto = c
 }

@@ -46,14 +46,15 @@ func FloatToByte(amount float64) []byte {
 
 var SupportTokens = map[string]string{
 	"lrc": "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5",
+	"coss" : "0xEF68e7C694F40c8202821eDF525dE3782458639f",
 }
 
 var SupportMarket = map[string]string{
-	"weth": "0x354473d06de0ae6a0a2c92392818e5b304038665",
+	"weth": "0x2956356cD2a2bf3202F771F50D3D14A367b48070",
 }
 
 var ContractVersionConfig = map[string]string{
-	"v1.0": "0x39kdjfskdfjsdfj",
+	"v1.0": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
 	"v1.2": "0x39kdjfskdfjsdfj",
 	"v0.1": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
 }

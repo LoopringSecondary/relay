@@ -87,16 +87,13 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 }
 
 func HandleOrder(input eventemitter.EventData) error {
-	fmt.Println("xxxxxxxxxxxxxxxxxx11")
 	ord := input.(*types.Order)
 
-	fmt.Println("xxxxxxxxxxxxxxxxxx1")
 	orderHash := ord.GenerateHash()
 	ord.Hash = orderHash
 
 	orderState, err := gateway.om.GetOrderByHash(ord.Hash)
 
-	fmt.Println("xxxxxxxxxxxxxxxxxx2")
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if err != nil {
 		ord.GeneratePrice()
@@ -117,7 +114,6 @@ func HandleOrder(input eventemitter.EventData) error {
 		if gateway.isBroadcast && gateway.maxBroadcastTime > 0 {
 			state.BroadcastTime = 1
 			go func() {
-				fmt.Println("xxxxxxxxxxxxxxxxxx3")
 				pubErr := gateway.ipfsPubService.PublishOrder(*ord)
 				if pubErr != nil {
 					log.Error("publish order failed, orderHash : " + ord.Hash.Str())
