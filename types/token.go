@@ -26,4 +26,5 @@ type Token struct {
 	Source   string
 	Time     int64
 	Deny     bool
+	IsMarket bool
 }

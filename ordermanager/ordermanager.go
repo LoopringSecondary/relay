@@ -105,7 +105,7 @@ func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	om.Stop()
 
 	if err := om.processor.fork(input.(*ethaccessor.ForkedEvent)); err != nil {
-		log.Errorf("order manager handle fork error:%s", err.Error())
+		log.Errorf("order manager,handle fork error:%s", err.Error())
 	}
 
 	om.Start()
@@ -125,8 +125,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state.RemainedAmountS = state.RawOrder.AmountS
 	model := &dao.Order{}
 
-	log.Debugf("ordermanager handle gateway order,order.hash:%s", state.RawOrder.Hash.Hex())
-	log.Debugf("ordermanager handle gateway order,order.amounts:%s", state.RawOrder.AmountS.String())
+	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	if err := model.ConvertDown(state); err != nil {
 		log.Error(err.Error())
@@ -197,7 +196,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	om.orderFullFinished(state)
 
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
+		return fmt.Errorf("order manager,handle order filled event error:order status is %d ", state.Status)
 	}
 
 	// validate cutoff
@@ -206,7 +205,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 			if err := om.rds.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
 				return err
 			} else {
-				return fmt.Errorf("order manager handle order filled event error:order have been cutoff")
+				return fmt.Errorf("order manager,handle order filled event error:order %s have been cutoff", orderhash.Hex())
 			}
 		}
 	}
@@ -269,20 +268,20 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// judge status
 	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager handle order filled event error:order status is %d ", state.Status)
+		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", orderhash.Hex(), state.Status)
 	}
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
 		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled.BigInt())
 		if state.RemainedAmountB.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order:%s cancel amountB:%s error", orderhash.Hex(), event.AmountCancelled.BigInt().String())
+			log.Errorf("order manager,handle order filled event error:order %s cancel amountB:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
 			state.RemainedAmountB = big.NewInt(0)
 		}
 	} else {
 		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled.BigInt())
 		if state.RemainedAmountS.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order:%s cancel amountS:%s error", orderhash.Hex(), event.AmountCancelled.BigInt().String())
+			log.Errorf("order manager,handle order filled event error:order %s cancel amountS:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
 			state.RemainedAmountS = big.NewInt(0)
 		}
 	}
@@ -368,7 +367,7 @@ func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length in
 	var list []types.OrderState
 
 	if err := om.provider.markOrders(filterOrderhashs); err != nil {
-		log.Debugf("get miner orders error:%s", err.Error())
+		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
 	filterList := om.provider.getOrders(tokenS, tokenB, length, filterOrderhashs)

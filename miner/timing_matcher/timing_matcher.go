@@ -106,7 +106,6 @@ func (matcher *TimingMatcher) Start() {
 	watcher := &eventemitter.Watcher{Concurrent: false, Handle: matcher.afterSubmit}
 	//todo:the topic should contain submit success
 	eventemitter.On(eventemitter.RingMined, watcher)
-
 	go func() {
 		for {
 			select {
@@ -190,9 +189,7 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 }
 
 func (market *Market) match() {
-
 	market.getOrdersForMatching()
-
 	matchedOrderHashes := make(map[common.Hash]bool)
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
