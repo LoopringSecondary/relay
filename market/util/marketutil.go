@@ -21,6 +21,8 @@ package util
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
@@ -44,24 +46,27 @@ func FloatToByte(amount float64) []byte {
 	return rst
 }
 
-var SupportTokens = map[string]string{
-	"lrc": "0x6d7ed7941918d2926a1f43fc60075f7df6b18dd5",
-}
-
-var SupportMarket = map[string]string{
-	"weth": "0x354473d06de0ae6a0a2c92392818e5b304038665",
-}
+var (
+	SupportTokens  map[string]types.Token // token symbol to entity
+	SupportMarkets map[string]string      // token symbol to address hex
+)
 
 var ContractVersionConfig = map[string]string{
 	"v1.0": "0x39kdjfskdfjsdfj",
 	"v1.2": "0x39kdjfskdfjsdfj",
 }
 
-var AllTokens = func() map[string]string {
-	all := make(map[string]string)
-	for k, v := range SupportMarket {
-		all[k] = v
+func Initialize(rds dao.RdsService) {
+	SupportTokens = make(map[string]types.Token)
+	tokens, _ := rds.FindUnDeniedTokens()
+	for _, v := range tokens {
+		var token types.Token
+		v.ConvertUp(&token)
 	}
+}
+
+var AllTokens = func() map[string]types.Token {
+	all := make(map[string]types.Token)
 	for k, v := range SupportTokens {
 		all[k] = v
 	}
@@ -72,10 +77,10 @@ var AllMarkets = AllMarket()
 
 var AllTokenPairs = func() []TokenPair {
 	pairsMap := make(map[string]TokenPair, 0)
-	for _, v := range SupportMarket {
+	for _, v := range SupportMarkets {
 		for _, vv := range SupportTokens {
-			pairsMap[v+"-"+vv] = TokenPair{common.HexToAddress(v), common.HexToAddress(vv)}
-			pairsMap[vv+"-"+v] = TokenPair{common.HexToAddress(vv), common.HexToAddress(v)}
+			pairsMap[v+"-"+vv.Symbol] = TokenPair{common.HexToAddress(v), common.HexToAddress(vv.Symbol)}
+			pairsMap[vv.Symbol+"-"+v] = TokenPair{common.HexToAddress(vv.Symbol), common.HexToAddress(v)}
 		}
 	}
 	pairs := make([]TokenPair, 0)
@@ -90,9 +95,9 @@ func WrapMarket(s, b string) (market string, err error) {
 
 	s, b = strings.ToLower(s), strings.ToLower(b)
 
-	if SupportMarket[s] != "" && SupportTokens[b] != "" {
+	if IsSupportedMarket(s) && IsSupportedToken(b) {
 		market = fmt.Sprintf("%s-%s", b, s)
-	} else if SupportMarket[b] != "" && SupportTokens[s] != "" {
+	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
 		market = fmt.Sprintf("%s-%s", s, b)
 	} else {
 		err = errors.New(fmt.Sprintf("not supported market type : %s-%s", s, b))
@@ -119,17 +124,23 @@ func UnWrapToAddress(market string) (s, b common.Address) {
 	return common.StringToAddress(sa), common.StringToAddress(sb)
 }
 
-func IsSupportedToken(token string) bool {
-	return SupportTokens[token] != ""
+func IsSupportedMarket(market string) bool {
+	_, ok := SupportMarkets[market]
+	return ok
 }
 
-func AliasToAddress(t string) string {
-	return AllTokens[t]
+func IsSupportedToken(token string) bool {
+	_, ok := SupportTokens[token]
+	return ok
+}
+
+func AliasToAddress(t string) common.Address {
+	return AllTokens[t].Protocol
 }
 
 func AddressToAlias(t string) string {
 	for k, v := range AllTokens {
-		if t == v {
+		if t == v.Protocol.Hex() {
 			return k
 		}
 	}
@@ -139,7 +150,7 @@ func AddressToAlias(t string) string {
 func AllMarket() []string {
 	mkts := make([]string, 0)
 	for k := range SupportTokens {
-		for kk := range SupportMarket {
+		for kk := range SupportMarkets {
 			mkts = append(mkts, k+"-"+kk)
 		}
 	}
@@ -167,7 +178,7 @@ func IsBuy(s string) bool {
 	if IsAddress(s) {
 		s = AddressToAlias(s)
 	}
-	if SupportTokens[s] != "" {
+	if _, ok := SupportTokens[s]; !ok {
 		return false
 	}
 	return true

@@ -105,7 +105,7 @@ func TestRing(t *testing.T) {
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
 		tokenAddressB,
@@ -125,6 +125,10 @@ func TestRing(t *testing.T) {
 
 func TestPrepareProtocol(t *testing.T) {
 	test.PrepareTestData()
+}
+
+func TestAllowance(t *testing.T) {
+	test.AllowanceToLoopring()
 }
 
 func pubMessage(sh *shell.Shell, data string) {

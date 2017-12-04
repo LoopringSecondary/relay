@@ -154,14 +154,6 @@ type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee int64
 	}
-	TokenSFilter struct {
-		Allow  []string
-		Denied []string
-	}
-	TokenBFilter struct {
-		Allow  []string
-		Denied []string
-	}
 }
 
 type GateWayOptions struct {

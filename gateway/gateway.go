@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -55,24 +56,14 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// add filters
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee)}
 
-	tokenSFilter := &TokenSFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
-	for _, v := range filterOptions.TokenSFilter.Allow {
-		address := common.HexToAddress(v)
-		tokenSFilter.AllowTokens[address] = true
-	}
-	for _, v := range filterOptions.TokenSFilter.Denied {
-		address := common.HexToAddress(v)
-		tokenSFilter.DeniedTokens[address] = true
-	}
-
-	tokenBFilter := &TokenBFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
-	for _, v := range filterOptions.TokenBFilter.Allow {
-		address := common.HexToAddress(v)
-		tokenBFilter.AllowTokens[address] = true
-	}
-	for _, v := range filterOptions.TokenBFilter.Denied {
-		address := common.HexToAddress(v)
-		tokenBFilter.DeniedTokens[address] = true
+	tokenFilter := &TokenFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
+	for _, v := range util.AllTokens {
+		address := common.HexToAddress(v.Protocol.Hex())
+		if v.Deny {
+			tokenFilter.DeniedTokens[address] = true
+		} else {
+			tokenFilter.AllowTokens[address] = true
+		}
 	}
 
 	signFilter := &SignFilter{}
@@ -81,8 +72,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 
 	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
-	gateway.filters = append(gateway.filters, tokenSFilter)
-	gateway.filters = append(gateway.filters, tokenBFilter)
+	gateway.filters = append(gateway.filters, tokenFilter)
 	//filters = append(filters, cutoffFilter)
 }
 
@@ -188,32 +178,17 @@ func (f *SignFilter) filter(o *types.Order) (bool, error) {
 	return true, nil
 }
 
-type TokenSFilter struct {
+type TokenFilter struct {
 	AllowTokens  map[common.Address]bool
 	DeniedTokens map[common.Address]bool
 }
 
-func (f *TokenSFilter) filter(o *types.Order) (bool, error) {
+func (f *TokenFilter) filter(o *types.Order) (bool, error) {
 	if _, ok := f.AllowTokens[o.TokenS]; !ok {
-		return false, errors.New("tokenS filter allowTokens do not contain " + o.TokenS.Hex())
+		return false, fmt.Errorf("token filter allowTokens do not contain:%s", o.TokenS.Hex())
 	}
 	if _, ok := f.DeniedTokens[o.TokenS]; ok {
-		return false, errors.New("tokenS filter deniedTokens contain " + o.TokenS.Hex())
-	}
-	return true, nil
-}
-
-type TokenBFilter struct {
-	AllowTokens  map[common.Address]bool
-	DeniedTokens map[common.Address]bool
-}
-
-func (f *TokenBFilter) filter(o *types.Order) (bool, error) {
-	if _, ok := f.AllowTokens[o.TokenB]; !ok {
-		return false, errors.New("tokenB filter allowTokens do not contain " + o.TokenB.Hex())
-	}
-	if _, ok := f.DeniedTokens[o.TokenB]; ok {
-		return false, errors.New("tokenB filter deniedTokens contain " + o.TokenB.Hex())
+		return false, fmt.Errorf("token filter deniedTokens contain:%s", o.TokenS.Hex())
 	}
 	return true, nil
 }

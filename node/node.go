@@ -30,6 +30,7 @@ import (
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
@@ -73,7 +74,7 @@ type MineNode struct {
 }
 
 func (n *MineNode) Start() {
-	n.miner.Start()
+	// n.miner.Start()
 }
 
 func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
@@ -82,9 +83,11 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.globalConfig = globalConfig
 
 	// register
+	n.registerMysql()
+	util.Initialize(n.rdsService)
+
 	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
 	n.registerAccessor()
-	n.registerMysql()
 	n.registerUserManager()
 	n.registerIPFSSubService()
 	n.registerOrderManager()
@@ -119,7 +122,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
-	n.marketCapProvider.Start()
+	//n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {
 		n.relayNode.Start()

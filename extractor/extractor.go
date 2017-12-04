@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -89,14 +90,6 @@ func (l *ExtractorServiceImpl) Start() {
 			block := inter.(*ethaccessor.BlockWithTxObject)
 			log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
-			txcnt := len(block.Transactions)
-			if txcnt < 1 {
-				log.Debugf("extractor,get none block transaction")
-				continue
-			} else {
-				log.Infof("extractor,get block transaction list length %d", txcnt)
-			}
-
 			currentBlock := &types.Block{}
 			currentBlock.BlockNumber = block.Number.BigInt()
 			currentBlock.ParentHash = block.ParentHash
@@ -108,6 +101,14 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())
 			} else {
 				l.dao.Add(&entity)
+			}
+
+			txcnt := len(block.Transactions)
+			if txcnt < 1 {
+				log.Infof("extractor,get none block transaction")
+				continue
+			} else {
+				log.Infof("extractor,get block transaction list length %d", txcnt)
 			}
 
 			if err := l.detectFork(currentBlock); err != nil {
@@ -148,14 +149,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			continue
 		}
 
-		if len(receipt.Logs) == 0 {
-			// todo
-		}
-
-		log.Debugf("extractor,transaction receipt  event logs number:%d", len(receipt.Logs))
-
-		// todo 是否需要存储transaction
-
+		// todo:判断transactionRecipient.to地址是否是合约地址
 		for _, evtLog := range receipt.Logs {
 			var (
 				contract ContractData
@@ -164,7 +158,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 
 			data := hexutil.MustDecode(evtLog.Data)
 			id := evtLog.Topics[0]
-			key := generateKey(receipt.To, id)
+			key := generateKey(evtLog.Address, id)
 			if contract, ok = l.events[key]; !ok {
 				log.Debugf("extractor,contract event id error:%s", id)
 				continue
@@ -193,23 +187,7 @@ func (l *ExtractorServiceImpl) doMethod(input string) error {
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
 func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
-	println("doMethoddoMethoddoMethoddoMethoddoMethoddoMethod")
-	//println(input.(string))
 	// todo: unpack method
-	// input := tx.Input
-	// l.ethClient
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleTestEvent(input eventemitter.EventData) error {
-	log.Debugf("extractor,log event:test")
-
-	contractEvent := input.(ContractData).Event.(*ethaccessor.TestEvent)
-	if l.commOpts.Develop {
-		log.Debugf("=========== extractor,test event mark:%s", contractEvent.Mark)
-		log.Debugf("=========== extractor,test event number:%s", contractEvent.Number.String())
-	}
-
 	return nil
 }
 
@@ -282,6 +260,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
 			v.Owner = common.HexToAddress(ord.Owner)
+			v.Market, _ = util.WrapMarketByAddress(v.TokenS.Hex(), v.TokenB.Hex())
 
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {

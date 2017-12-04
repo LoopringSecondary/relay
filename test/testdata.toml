@@ -1,4 +1,3 @@
-tokens = ["0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564", "0x2084A83E25025D95848794f23e139AcAa56c7237"]
 allowance_amount = 1000000
 
 [[accounts]]

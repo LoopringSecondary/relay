@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -162,8 +163,11 @@ func init() {
 		ks.Unlock(account, accTmp.Passphrase)
 	}
 
-	for _, tokenTmp := range testData.Tokens {
-		tokens = append(tokens, common.HexToAddress(tokenTmp))
+	// set supported tokens
+	rds := GenerateDaoService(cfg)
+	util.Initialize(rds)
+	for _, token := range util.SupportTokens {
+		tokens = append(tokens, token.Protocol)
 	}
 
 	c := crypto.NewCrypto(false, ks)

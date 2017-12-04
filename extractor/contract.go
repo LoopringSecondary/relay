@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -36,8 +37,11 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.loadRingHashRegisteredContract()
 	l.loadTokenTransferDelegateProtocol()
 
-	// todo: get erc20 token address and former abi
-	l.loadErc20Contract([]common.Address{})
+	var tokens []common.Address
+	for _, v := range util.SupportTokens {
+		tokens = append(tokens, v.Protocol)
+	}
+	l.loadErc20Contract(tokens)
 }
 
 type ContractData struct {
@@ -75,13 +79,12 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
-	TEST_EVT_NAME                = "TestEvent"
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
 	for _, impl := range l.accessor.ProtocolImpls {
 		for name, event := range impl.ProtocolImplAbi.Events {
-			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME && name != TEST_EVT_NAME {
+			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
 				continue
 			}
 
@@ -103,9 +106,6 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 			case CUTOFF_EVT_NAME:
 				contract.Event = &ethaccessor.CutoffTimestampChangedEvent{}
 				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCutoffTimestampEvent}
-			case TEST_EVT_NAME:
-				contract.Event = &ethaccessor.TestEvent{}
-				watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleTestEvent}
 			}
 
 			eventemitter.On(contract.Key, watcher)
