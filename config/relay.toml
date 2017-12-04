@@ -76,12 +76,6 @@ block_period = 5
 [gateway_filters]
     [gateway_filters.base_filter]
         min_lrc_fee = 10
-    [gateway_filters.token_s_filter]
-        allow = ["0xfc2cbce778ddbc4d50bb5b2fc91afe14a8e3953d", "0x876c8b6ff4a8e87dc6d5e3f64715b58be7d5ab55"]
-        denied = []
-    [gateway_filters.token_b_filter]
-        allow = ["0xfc2cbce778ddbc4d50bb5b2fc91afe14a8e3953d", "0x876c8b6ff4a8e87dc6d5e3f64715b58be7d5ab55"]
-        denied = []
 
 [keystore]
     keydir = "ks_dir"
