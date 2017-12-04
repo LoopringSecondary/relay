@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -259,6 +260,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
 			v.Owner = common.HexToAddress(ord.Owner)
+			v.Market, _ = util.WrapMarketByAddress(v.TokenS.Hex(), v.TokenB.Hex())
 
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {
