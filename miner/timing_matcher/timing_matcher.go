@@ -89,11 +89,8 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 				m.om = om
 				m.matcher = matcher
 
-				// todo(fukun): use pair address after debug
-				//m.TokenA = pair.TokenS
-				//m.TokenB = pair.TokenB
-				m.TokenA = common.HexToAddress("0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564")
-				m.TokenB = common.HexToAddress("0x2084A83E25025D95848794f23e139AcAa56c7237")
+				m.TokenA = pair.TokenS
+				m.TokenB = pair.TokenB
 
 				m.AtoBNotMatchedOrderHashes = []common.Hash{}
 				m.BtoANotMatchedOrderHashes = []common.Hash{}
@@ -113,7 +110,7 @@ func (matcher *TimingMatcher) Start() {
 	go func() {
 		for {
 			select {
-			case <-time.After(60 * time.Second):
+			case <-time.After(30 * time.Second):
 				var wg sync.WaitGroup
 				matcher.round += 1
 				for _, market := range matcher.markets {

@@ -180,10 +180,11 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if err := accessor.Call(&nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
 		return "", err
 	}
+	// todo: modify gas
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		big.NewInt(0),
-		gas,
+		big.NewInt(1000000), //gas,
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {

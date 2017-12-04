@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -36,10 +37,11 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.loadRingHashRegisteredContract()
 	l.loadTokenTransferDelegateProtocol()
 
-	// todo: get erc20 token address and former abi
-	tokenAddressA := common.HexToAddress("0xfc2cbce778ddbc4d50bb5b2fc91afe14a8e3953d")
-	tokenAddressB := common.HexToAddress("0x876c8b6ff4a8e87dc6d5e3f64715b58be7d5ab55")
-	l.loadErc20Contract([]common.Address{tokenAddressA, tokenAddressB})
+	var tokens []common.Address
+	for _, v := range util.SupportTokens {
+		tokens = append(tokens, v.Protocol)
+	}
+	l.loadErc20Contract(tokens)
 }
 
 type ContractData struct {

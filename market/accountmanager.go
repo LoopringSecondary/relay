@@ -95,9 +95,9 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 		for k, v := range util.AllTokens {
 			balance := Balance{token: k}
 
-			amount, err := a.GetBalanceFromAccessor(v, address)
+			amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
 			if err != nil {
-				log.Info("get balance failed , token : " + v)
+				log.Infof("get balance failed, token:%s", v.Symbol)
 			} else {
 				balance.balance = amount
 				account.balances[k] = balance
@@ -105,9 +105,9 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 			allowance := Allowance{contractVersion: contractVersion, token: k}
 
-			allowanceAmount, err := a.GetAllowanceFromAccessor(v, address, contractVersion)
+			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
-				log.Info("get allowance failed , token : " + v)
+				log.Infof("get allowance failed, token:%s", v.Symbol)
 			} else {
 				allowance.allowance = allowanceAmount
 				account.allowances[buildAllowanceKey(contractVersion, k)] = allowance
@@ -149,11 +149,11 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance(common.StringToAddress(util.AllTokens[token]), common.StringToAddress(owner), "latest")
+	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.StringToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(common.StringToAddress(util.AllTokens[token]), common.StringToAddress(owner), common.StringToAddress(spender), "latest")
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.StringToAddress(owner), common.StringToAddress(spender), "latest")
 }
 
 func buildAllowanceKey(version, token string) string {

@@ -177,7 +177,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	a, b := util.UnWrap(mkt)
-	if util.SupportTokens[a] == "" || util.SupportMarket[b] == "" {
+	if util.IsSupportedToken(a) || util.IsSupportedToken(b) {
 		err = errors.New("unsupported market type")
 		return
 	}
