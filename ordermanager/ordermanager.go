@@ -60,7 +60,8 @@ func NewOrderManager(options config.OrderManagerOptions,
 	commonOpts *config.CommonOptions,
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
-	accessor *ethaccessor.EthNodeAccessor) *OrderManagerImpl {
+	accessor *ethaccessor.EthNodeAccessor,
+	market *marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
 	om.options = options
@@ -68,6 +69,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor)
 	om.um = userManager
+	om.mc = market
 
 	// new miner orders provider
 	om.provider = newMinerOrdersProvider(options.TickerDuration, options.BlockPeriod, om.commonOpts, om.rds)

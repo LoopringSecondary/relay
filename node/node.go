@@ -123,7 +123,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
-	//n.marketCapProvider.Start()
+	n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {
 		n.relayNode.Start()
@@ -187,7 +187,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, &n.globalConfig.Common, n.rdsService, n.userManager, n.accessor)
+	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, &n.globalConfig.Common, n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
 }
 
 func (n *Node) registerTrendManager() {

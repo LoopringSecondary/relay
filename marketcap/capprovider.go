@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"math/big"
@@ -168,11 +169,11 @@ func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
 	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
 	provider.currenciesMap = make(map[common.Address]*CurrencyMarketCap)
 
-	for addr, name := range options.RateProvider.CurrenciesMap {
+	for _, v := range util.AllTokens {
 		c := &CurrencyMarketCap{}
-		c.Address = common.HexToAddress(addr)
-		c.Id = name
-		c.Name = name
+		c.Address = v.Protocol
+		c.Id = v.Symbol
+		c.Name = v.Symbol
 		provider.currenciesMap[c.Address] = c
 	}
 	return provider
