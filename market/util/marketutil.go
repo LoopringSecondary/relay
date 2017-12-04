@@ -86,6 +86,9 @@ func Initialize(rds dao.RdsService) {
 	for k, v := range SupportTokens {
 		AllTokens[k] = v
 	}
+	for k, v := range SupportMarkets {
+		AllTokens[k] = v
+	}
 
 	// set support markets
 	for _, v := range markets {
