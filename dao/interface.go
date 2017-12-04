@@ -89,4 +89,6 @@ type RdsService interface {
 	// token
 	FindUnDeniedTokens() ([]Token, error)
 	FindDeniedTokens() ([]Token, error)
+	FindUnDeniedMarkets() ([]Token, error)
+	FindDeniedMarkets() ([]Token, error)
 }

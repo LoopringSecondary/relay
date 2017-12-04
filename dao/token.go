@@ -30,6 +30,7 @@ type Token struct {
 	Source     string `gorm:"column:source;type:varchar(200)"`
 	CreateTime int64  `gorm:"column:create_time"`
 	Deny       bool   `gorm:"column:deny"`
+	IsMarket   bool   `gorm:"column:is_market"`
 }
 
 // convert types/token to dao/token
@@ -39,6 +40,7 @@ func (t *Token) ConvertDown(src *types.Token) error {
 	t.Source = src.Source
 	t.CreateTime = src.Time
 	t.Deny = src.Deny
+	t.IsMarket = src.IsMarket
 
 	return nil
 }
@@ -50,6 +52,7 @@ func (t *Token) ConvertUp(dst *types.Token) error {
 	dst.Source = t.Source
 	dst.Time = t.CreateTime
 	dst.Deny = t.Deny
+	dst.IsMarket = t.IsMarket
 
 	return nil
 }
@@ -72,6 +75,28 @@ func (s *RdsServiceImpl) FindDeniedTokens() ([]Token, error) {
 	)
 
 	err = s.db.Where("deny = (?)", true).Find(&list).Error
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) FindUnDeniedMarkets() ([]Token, error) {
+	var (
+		list []Token
+		err  error
+	)
+
+	err = s.db.Where("deny = (?) and is_market = (?)", false, true).Find(&list).Error
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) FindDeniedMarkets() ([]Token, error) {
+	var (
+		list []Token
+		err  error
+	)
+
+	err = s.db.Where("deny = (?) and is_market = (?)", true, true).Find(&list).Error
 
 	return list, err
 }
