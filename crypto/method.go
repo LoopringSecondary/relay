@@ -57,6 +57,7 @@ func UnlockAccount(acc accounts.Account, passphrase string) error {
 func SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return crypto.SignTx(a, tx, chainID)
 }
+
 func Initialize(c Crypto) {
 	crypto = c
 }

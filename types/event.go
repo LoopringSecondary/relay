@@ -158,13 +158,7 @@ type RingMinedEvent struct {
 	IsDeleted          bool
 }
 
-type SubmitRingEvent struct {
-	TxHash common.Hash
-}
-
-type RingHashRegistryEvent struct {
+type RingSubmitFailedEvent struct {
 	RingHash        common.Hash
-	TxHash          common.Hash
-	RingMiner       common.Address
-	ContractAddress common.Address
+	Err 	error
 }

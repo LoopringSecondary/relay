@@ -111,3 +111,11 @@ func TestPrepareTestData(t *testing.T) {
 func TestAllowance(t *testing.T) {
 	test.AllowanceToLoopring()
 }
+
+func TestB(t *testing.T) {
+	suffix := "000000000000000000"
+	bi := new(big.Int)
+	bi.SetString("88000" + suffix, 0)
+	println(common.ToHex(bi.Bytes()))
+
+}

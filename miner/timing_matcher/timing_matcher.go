@@ -88,10 +88,8 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 				m := &Market{}
 				m.om = om
 				m.matcher = matcher
-
 				m.TokenA = pair.TokenS
 				m.TokenB = pair.TokenB
-
 				m.AtoBNotMatchedOrderHashes = []common.Hash{}
 				m.BtoANotMatchedOrderHashes = []common.Hash{}
 				matcher.markets = append(matcher.markets, m)
@@ -105,7 +103,9 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 func (matcher *TimingMatcher) Start() {
 	watcher := &eventemitter.Watcher{Concurrent: false, Handle: matcher.afterSubmit}
 	//todo:the topic should contain submit success
-	eventemitter.On(eventemitter.RingMined, watcher)
+	eventemitter.On(eventemitter.Miner_RingMined, watcher)
+	eventemitter.On(eventemitter.Miner_RingSubmitFailed, watcher)
+
 	go func() {
 		for {
 			select {
@@ -198,7 +198,6 @@ func (market *Market) match() {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
 				ringTmp := &types.Ring{}
 				ringTmp.Orders = []*types.FilledOrder{convertOrderStateToFilledOrder(a2BOrder), convertOrderStateToFilledOrder(b2AOrder)}
-
 				market.matcher.evaluator.ComputeRing(ringTmp)
 				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
 				if nil != err {
@@ -233,14 +232,15 @@ func (market *Market) match() {
 			market.BtoANotMatchedOrderHashes = append(market.BtoANotMatchedOrderHashes, orderHash)
 		}
 	}
-
 	eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
 }
 
 func (matcher *TimingMatcher) afterSubmit(eventData eventemitter.EventData) error {
 	matcher.mtx.Lock()
 	defer matcher.mtx.Unlock()
-	ringHash := eventData.(common.Hash)
+
+	e := eventData.(*types.RingMinedEvent)
+	ringHash := e.Ringhash
 	if ringState, ok := matcher.MinedRings[ringHash]; ok {
 		delete(matcher.MinedRings, ringHash)
 		for _, orderHash := range ringState.orderHashes {
