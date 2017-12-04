@@ -97,10 +97,6 @@ type IpfsOptions struct {
 
 type AccessorOptions struct {
 	RawUrl string `required:"true"`
-	Eth    struct {
-		GasPrice int
-		GasLimit int
-	}
 }
 
 type KeyStoreOptions struct {
@@ -137,6 +133,7 @@ type MinerOptions struct {
 	FeeRecepient            string //address the recepient of fee
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
+	GasLimit int64
 	RateProvider            struct {
 		BaseUrl       string
 		Currency      string

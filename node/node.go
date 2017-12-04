@@ -93,6 +93,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerOrderManager()
 	n.registerExtractor()
 	n.registerGateway()
+	n.registerCrypto(nil)
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()

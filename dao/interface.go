@@ -82,8 +82,11 @@ type RdsService interface {
 	GetWhiteList() ([]WhiteList, error)
 
 	//ringSubmitInfo
-	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
-	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error
+	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash, err string) error
+	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash, err string) error
+	UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
+	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
+	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// token

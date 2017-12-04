@@ -27,7 +27,6 @@ import (
 type Topic string
 
 const (
-	RingMined                      = "RingMined"
 	OrderCanceled                  = "OrderCanceled"
 	OrderFilled                    = "OrderFilled"
 	ExtractorFork                  = "ExtractorFork" //chain forked
@@ -53,6 +52,9 @@ const (
 	Miner_DeleteOrderState = "Miner_DeleteOrderState"
 	Miner_NewOrderState    = "Miner_NewOrderState"
 	Miner_NewRing          = "Miner_NewRing"
+	Miner_RingMined        = "Miner_RingMined"
+	Miner_RingSubmitFailed        = "Miner_RingSubmitFailed"
+
 )
 
 var watchers map[string][]*Watcher

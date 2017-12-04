@@ -164,10 +164,12 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 				continue
 			}
 
-			// 解析事件
-			if err := contract.CAbi.Unpack(contract.Event, contract.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
-				log.Errorf("extractor,unpack event error:%s", err.Error())
-				continue
+			if nil != data && len(data) > 0 {
+				// 解析事件
+				if err := contract.CAbi.Unpack(contract.Event, contract.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
+					log.Errorf("extractor,unpack event error:%s", err.Error())
+					continue
+				}
 			}
 
 			contract.Topics = evtLog.Topics
