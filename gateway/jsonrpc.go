@@ -60,8 +60,8 @@ type AskBid struct {
 }
 
 type CommonTokenRequest struct {
-	contractVersion string
-	owner           string
+	ContractVersion string
+	Owner           string
 }
 
 type OrderQuery struct {
@@ -148,10 +148,13 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res str
 	fmt.Println(*order)
 
 	err = HandleOrder(types.ToOrder(order))
+	fmt.Print("return result is ")
+	fmt.Print(err)
 	if err != nil {
 		fmt.Println(err)
 	}
 	res = "SUBMIT_SUCCESS"
+	fmt.Print(res)
 	return res, err
 }
 
@@ -251,8 +254,8 @@ func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageRes
 }
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
-	account := j.accountManager.GetBalance(balanceQuery.contractVersion, balanceQuery.owner)
-	res = account.ToJsonObject(balanceQuery.contractVersion)
+	account := j.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
 }
 
@@ -336,8 +339,8 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 	return depth
 }
 
-func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
-	rst := make(map[string]string)
+func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
+	rst := make(map[string]interface{})
 	var pi, ps int
 	if q.Market != "" {
 		rst["market"] = q.Market
@@ -353,7 +356,7 @@ func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
 		ps = q.PageIndex
 	}
 	if q.ContractVersion != "" {
-		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
+		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner

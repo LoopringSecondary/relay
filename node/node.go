@@ -93,7 +93,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
-		//n.registerCrypto(keystore.NewKeyStore("", 0, 0))
+		n.registerCrypto(keystore.NewKeyStore("", 0, 0))
 	} else if "miner" == globalConfig.Mode {
 		n.registerMineNode()
 	} else {
