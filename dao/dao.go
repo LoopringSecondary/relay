@@ -51,6 +51,8 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 		log.Fatalf("mysql connection error:%s", err.Error())
 	}
 
+	db.LogMode(true)
+
 	impl.db = db
 
 	return impl

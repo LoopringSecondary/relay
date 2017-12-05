@@ -226,8 +226,8 @@ func (ord *OrderState) SettleStatus() {
 
 }
 
-func ToOrder(request *OrderJsonRequest) Order {
-	order := Order{}
+func ToOrder(request *OrderJsonRequest) *Order {
+	order := &Order{}
 	order.Protocol = request.Protocol
 	order.TokenS = request.TokenS
 	order.TokenB = request.TokenB

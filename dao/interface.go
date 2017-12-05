@@ -50,7 +50,7 @@ type RdsService interface {
 	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
-	OrderPageQuery(query *Order, pageIndex, pageSize int) (PageResult, error)
+	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 
 	// block table
@@ -62,9 +62,9 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
-	QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error)
+	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
 	RollBackFill(from, to int64) error
-	FillsPageQuery(query map[string]string, pageIndex, pageSize int) (res PageResult, err error)
+	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// cancel event table
 	FindCancelEventByOrderhash(orderhash common.Hash) (*CancelEvent, error)
@@ -82,8 +82,11 @@ type RdsService interface {
 	GetWhiteList() ([]WhiteList, error)
 
 	//ringSubmitInfo
-	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
-	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash string) error
+	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash, err string) error
+	UpdateRingSubmitInfoSubmitTxHash(ringhash common.Hash, txHash, err string) error
+	UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
+	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
+	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// token

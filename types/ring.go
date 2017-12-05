@@ -124,10 +124,9 @@ func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Add
 		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
 		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
 	}
-	ringminer, _ := ring.SignerAddress()
-	ringSubmitArgs.Ringminer = ringminer
+	ringSubmitArgs.Ringminer = miner
 	if IsZeroAddress(feeReceipt) {
-		ringSubmitArgs.FeeRecepient = ringminer
+		ringSubmitArgs.FeeRecepient = miner
 	} else {
 		ringSubmitArgs.FeeRecepient = feeReceipt
 	}

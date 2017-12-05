@@ -73,8 +73,6 @@ type Trend struct {
 
 type TrendManager struct {
 	c             *cache.Cache
-	IsTickerReady bool
-	IsTrendReady  bool
 	cacheReady    bool
 	rds           dao.RdsService
 	cron          *cron.Cron
@@ -128,30 +126,24 @@ func (t *TrendManager) initCache() {
 			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
 		}
 
-		tokenS, tokenB := util.UnWrap(mkt)
 		now := time.Now()
 		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
-		sbFills, err := t.rds.QueryRecentFills(tokenS, tokenB, "", firstSecondThisHour.Unix(), 0)
+		fills, err := t.rds.QueryRecentFills(mkt, "", firstSecondThisHour.Unix(), 0)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		bsFills, err := t.rds.QueryRecentFills(tokenB, tokenS, "", firstSecondThisHour.Unix(), 0)
-
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		for _, f := range sbFills {
-			mktCache.Fills = append(mktCache.Fills, f)
-		}
-		for _, f := range bsFills {
+		for _, f := range fills {
 			mktCache.Fills = append(mktCache.Fills, f)
 		}
 
 		trendMap[mkt] = mktCache
 
-		ticker := calculateTicker(mkt, mktCache.Fills, mktCache.Trends, firstSecondThisHour)
+		ticker := calculateTicker(mkt, fills, mktCache.Trends, firstSecondThisHour)
 		tickerMap[mkt] = ticker
 	}
 	t.c.Set(trendKey, trendMap, cache.NoExpiration)
@@ -165,6 +157,10 @@ func (t *TrendManager) initCache() {
 func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now time.Time) Ticker {
 
 	var result = Ticker{Market: market}
+
+	if len(fills) == 0 && len(trends) == 0 {
+		return result
+	}
 
 	before24Hour := now.Unix() - 24*60*60
 
@@ -222,8 +218,15 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 	result.High = high
 	result.Low = low
 
-	result.Open = trends[0].Open
-	result.Close = trends[len(trends)-1].Close
+	if len(trends) == 0 {
+		lastFill := fills[len(fills) - 1]
+		result.Open = util.CalculatePrice(lastFill.AmountS, lastFill.AmountB, lastFill.TokenS, lastFill.TokenB)
+		firstFill := fills[0]
+		result.Close = util.CalculatePrice(firstFill.AmountS, firstFill.AmountB, firstFill.TokenS, firstFill.TokenB)
+	} else {
+		result.Open = trends[0].Open
+		result.Close = trends[len(trends)-1].Close
+	}
 	result.Change = fmt.Sprintf("%.2f%%", 100*result.Last/result.Open)
 
 	result.Vol = vol
@@ -232,12 +235,14 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 * * * * *", t.insertTrend)
+	t.cron.AddFunc("10 1 * * * *", t.insertTrend)
 	t.cron.Start()
 }
 
 func (t *TrendManager) insertTrend() {
 	// get latest 24 hour trend if not exist generate
+
+	fmt.Println("start insert trend cron job")
 
 	for _, mkt := range util.AllMarkets {
 		now := time.Now()
@@ -254,11 +259,14 @@ func (t *TrendManager) insertTrend() {
 				return
 			}
 
-			tokenS, tokenB := util.UnWrap(mkt)
 			if trends == nil || len(trends) == 0 {
-				fills, _ := t.rds.QueryRecentFills(tokenS, tokenB, "", start, end)
+				fills, fillsErr := t.rds.QueryRecentFills(mkt, "", start, end)
 
-				toInsert := dao.Trend{
+				if fillsErr != nil || len(fills) == 0 {
+					continue
+				}
+
+				toInsert := &dao.Trend{
 					Interval:   OneHour,
 					Market:     mkt,
 					CreateTime: time.Now().Unix(),
@@ -316,13 +324,89 @@ func (t *TrendManager) insertTrend() {
 	}
 }
 
+func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error) {
+
+	if len(fills) == 0 {
+		err = errors.New("fills can't be nil")
+		return
+	}
+
+	now := time.Now()
+	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
+	lastSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 59, 59, 0, time.UTC)
+
+	trend = Trend{
+		Interval:   OneHour,
+		Market:     fills[0].Market,
+		CreateTime: time.Now().Unix(),
+		Start:      firstSecondThisHour.Unix(),
+		End:        lastSecondThisHour.Unix(),
+	}
+
+
+
+	var (
+		high   float64
+		low    float64
+		vol    float64
+		amount float64
+	)
+
+	sort.Slice(fills, func(i, j int) bool {
+		return fills[i].CreateTime < fills[j].CreateTime
+	})
+
+	for _, data := range fills {
+
+		if util.IsBuy(data.TokenS) {
+			vol += util.ByteToFloat(data.AmountB)
+			amount += util.ByteToFloat(data.AmountS)
+		} else {
+			vol += util.ByteToFloat(data.AmountS)
+			amount += util.ByteToFloat(data.AmountB)
+		}
+
+		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
+
+		if high == 0 || high < price {
+			high = price
+		}
+		if low == 0 || low < price {
+			low = price
+		}
+	}
+
+	trend.High = high
+	trend.Low = low
+
+	openFill := fills[0]
+	trend.Open = util.CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
+	closeFill := fills[len(fills)-1]
+	trend.Close = util.CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
+
+
+	trend.Vol = vol
+	trend.Amount = amount
+
+	return
+}
+
 func (t *TrendManager) GetTrends(market string) (trends []Trend, err error) {
 
 	if t.cacheReady {
 		if trendCache, ok := t.c.Get(trendKey); !ok {
 			err = errors.New("can't found trends by key : " + trendKey)
 		} else {
-			trends = trendCache.(map[string][]Trend)[market]
+			tc := trendCache.(map[string]Cache)[market]
+			trends = make([]Trend, 0)
+			trendInFills, aggErr := t.aggregate(tc.Fills)
+			if aggErr == nil {
+				trends = append(trends, trendInFills)
+			}
+			for _, t := range tc.Trends {
+				trends = append(trends, t)
+			}
+
 		}
 	} else {
 		err = errors.New("cache is not ready , please access later")
@@ -335,7 +419,7 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 	if t.cacheReady {
 		if tickerInCache, ok := t.c.Get(tickerKey); ok {
 			tickerMap := tickerInCache.(map[string]Ticker)
-			tickers = make([]Ticker, len(tickerMap))
+			tickers = make([]Ticker, 0)
 			for _, v := range tickerMap {
 				tickers = append(tickers, v)
 			}
@@ -349,6 +433,7 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 }
 
 func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err error) {
+
 	if t.cacheReady {
 
 		event := input.(*types.OrderFilledEvent)

@@ -21,6 +21,8 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"fmt"
+	"github.com/Loopring/relay/market/util"
 )
 
 type FillEvent struct {
@@ -82,6 +84,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenS = src.TokenS.Hex()
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
+	f.Market, _ = util.WrapMarketByAddress(f.TokenS, f.TokenB)
 	f.IsDeleted = src.IsDeleted
 
 	return nil
@@ -102,43 +105,57 @@ func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill Fill
 	return
 }
 
-func (s *RdsServiceImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (res PageResult, err error) {
+func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 	err = s.db.Where(query).Order("create_time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&fills).Error
 	if err != nil {
 		return res, err
 	}
-	err = s.db.Where(query).Count(&res.Total).Error
+	err = s.db.Model(&FillEvent{}).Where(query).Count(&res.Total).Error
 	if err != nil {
 		return res, err
 	}
 
-	for fill := range fills {
+	for _, fill := range fills {
 		res.Data = append(res.Data, fill)
 	}
 	return
 }
 
-func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
-	if tokenS != "" {
-		s.db = s.db.Where("token_s = ", tokenS)
-	}
+func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end int64) (fills []FillEvent, err error) {
 
-	if tokenB != "" {
-		s.db = s.db.Where("token_b = ", tokenB)
+
+	query := make(map[string]interface{})
+
+	if market != "" {
+		query["market"] = market
 	}
 
 	if owner != "" {
-		s.db = s.db.Where("owner = ", owner)
+		query["owner"] = owner
 	}
 
-	if start != 0 {
-		s.db = s.db.Where("create_time > ", start)
-	}
+	timeQuery := buildTimeQueryString(start, end)
 
-	err = s.db.Order("create_time desc").Limit(100).Find(&fills).Error
+	if timeQuery != "" {
+		err = s.db.Where(query).Where(timeQuery).Order("create_time desc").Limit(100).Find(&fills).Error
+	} else {
+		err = s.db.Where(query).Where("is_delete = false").Order("create_time desc").Limit(100).Find(&fills).Error
+	}
 	return
+}
+
+func buildTimeQueryString(start, end int64) string {
+	rst := ""
+	if start != 0 && end == 0 {
+		rst += "create_time > " + fmt.Sprintf("%v", start)
+	} else if start != 0 && end != 0 {
+		rst += "create_time > " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
+	} else if start == 0 && end != 0 {
+		rst += "create_time <= " + fmt.Sprintf("%v", end)
+	}
+	return rst
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {

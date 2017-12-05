@@ -60,8 +60,8 @@ type AskBid struct {
 }
 
 type CommonTokenRequest struct {
-	contractVersion string
-	owner           string
+	ContractVersion string
+	Owner           string
 }
 
 type OrderQuery struct {
@@ -70,6 +70,7 @@ type OrderQuery struct {
 	PageSize        int
 	ContractVersion string
 	Owner           string
+	Market string
 }
 
 type DepthQuery struct {
@@ -122,7 +123,7 @@ func NewJsonrpcService(port string, trendManager market.TrendManager, orderManag
 
 func (j *JsonrpcServiceImpl) Start() {
 	handler := rpc.NewServer()
-	if err := handler.RegisterName("loopring", &JsonrpcServiceImpl{}); err != nil {
+	if err := handler.RegisterName("loopring", j); err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -144,7 +145,6 @@ func (j *JsonrpcServiceImpl) Start() {
 }
 
 func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
-	fmt.Println(*order)
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
 		fmt.Println(err)
@@ -153,9 +153,12 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res str
 	return res, err
 }
 
-func (j *JsonrpcServiceImpl) GetOrders(query OrderQuery) (res dao.PageResult, err error) {
+func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery)(res dao.PageResult, err error) {
 	orderQuery, pi, ps := convertFromQuery(query)
-	res, err = j.orderManager.GetOrders(&orderQuery, pi, ps)
+	res, err = j.orderManager.GetOrders(orderQuery, pi, ps)
+	if err != nil {
+		fmt.Println(err)
+	}
 	return res, err
 }
 
@@ -183,6 +186,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	empty := make([][]string, 0)
+
 	for i := range empty {
 		empty[i] = make([]string, 0)
 	}
@@ -191,9 +195,12 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := j.orderManager.GetOrderBook(
-		common.StringToAddress(util.ContractVersionConfig[protocol]),
-		common.StringToAddress(a),
-		common.StringToAddress(b), length*2)
+		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		util.AllTokens[a].Protocol,
+		util.AllTokens[b].Protocol, length*2)
+
+	fmt.Println(asks)
+	fmt.Println(askErr)
 
 	if askErr != nil {
 		err = errors.New("get depth error , please refresh again")
@@ -203,9 +210,12 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	depth.Depth.Sell = calculateDepth(asks, length)
 
 	bids, bidErr := j.orderManager.GetOrderBook(
-		common.StringToAddress(util.ContractVersionConfig[protocol]),
-		common.StringToAddress(b),
-		common.StringToAddress(a), length*2)
+		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		util.AllTokens[b].Protocol,
+		util.AllTokens[a].Protocol, length*2)
+
+	fmt.Println(bids)
+	fmt.Println(bidErr)
 
 	if bidErr != nil {
 		err = errors.New("get depth error , please refresh again")
@@ -213,6 +223,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	depth.Depth.Buy = calculateDepth(bids, length)
+	fmt.Print(depth)
 
 	return depth, err
 }
@@ -233,22 +244,31 @@ func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err er
 }
 
 func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
-	fmt.Println(query)
 	return j.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
 }
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
-	account := j.accountManager.GetBalance(balanceQuery.contractVersion, balanceQuery.owner)
-	res = account.ToJsonObject(balanceQuery.contractVersion)
+	account := j.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
 }
 
-func convertFromQuery(orderQuery OrderQuery) (query dao.Order, pageIndex int, pageSize int) {
+func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
 
+	query = make(map[string]interface{})
 	status := convertStatus(orderQuery.Status)
-	query.Status = uint8(status)
-	query.Owner = orderQuery.Owner
-	query.Protocol = util.ContractVersionConfig[orderQuery.ContractVersion]
+	if uint8(status) != 0 {
+		query["status"] = uint8(status)
+	}
+	if orderQuery.Owner != "" {
+		query["owner"] = orderQuery.Owner
+	}
+	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
+		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
+	}
+	if orderQuery.Market != "" {
+		query["market"] = orderQuery.Market
+	}
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
@@ -291,6 +311,9 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 			lastPrice = *s.RawOrder.Price
 			tempSumAmountS = *s.RawOrder.AmountS
 			tempSumAmountB = *s.RawOrder.AmountB
+			if len(states) == 1 {
+				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
+			}
 		} else {
 			if lastPrice.Cmp(s.RawOrder.Price) != 0 {
 				depth = append(depth, []string{tempSumAmountS.String(), tempSumAmountB.String()})
@@ -304,10 +327,45 @@ func calculateDepth(states []types.OrderState, length int) [][]string {
 		}
 	}
 
-	return depth[:length]
+	if length < len(depth) {
+		return depth[:length]
+	}
+	return depth
 }
 
-func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
+func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
+	rst := make(map[string]interface{})
+	var pi, ps int
+	if q.Market != "" {
+		rst["market"] = q.Market
+	}
+	if q.PageIndex <= 0 {
+		pi = 1
+	} else {
+		pi = q.PageIndex
+	}
+	if q.PageSize <= 0 || q.PageSize > 20 {
+		ps = 20
+	} else {
+		ps = q.PageIndex
+	}
+	if q.ContractVersion != "" {
+		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
+	}
+	if q.Owner != "" {
+		rst["owner"] = q.Owner
+	}
+	if q.OrderHash != "" {
+		rst["order_hash"] = q.OrderHash
+	}
+	if q.RingHash != "" {
+		rst["ring_hash"] = q.RingHash
+	}
+
+	return rst, pi, ps
+}
+
+func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
 	rst := make(map[string]string)
 	var pi, ps int
 	if q.Market != "" {
@@ -339,6 +397,7 @@ func fillQueryToMap(q FillQuery) (map[string]string, int, int) {
 	return rst, pi, ps
 }
 
+
 func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	rst := make(map[string]interface{})
 	var pi, ps int
@@ -350,10 +409,10 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if q.PageSize <= 0 || q.PageSize > 20 {
 		ps = 20
 	} else {
-		ps = q.PageIndex
+		ps = q.PageSize
 	}
 	if q.ContractVersion != "" {
-		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
+		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.RingHash != "" {
 		rst["ring_hash"] = q.RingHash
