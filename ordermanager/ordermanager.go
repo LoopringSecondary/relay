@@ -122,8 +122,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
-	fmt.Println(".....................................")
-	fmt.Println(state)
 	state.Status = types.ORDER_NEW
 	state.RemainedAmountB = big.NewInt(0)
 	state.RemainedAmountS = state.RawOrder.AmountS
@@ -132,12 +130,11 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	if err := model.ConvertDown(state); err != nil {
-		fmt.Println("3.....................................")
-		log.Error(err.Error())
+		log.Debugf("order manager,handle gateway order,convert order state to order error:%s", err.Error())
 		return err
 	}
 	if err := om.rds.Add(model); err != nil {
-		fmt.Println("4.....................................")
+		log.Debugf("order manager,handle gateway order,insert order error:%s", err.Error())
 		return err
 	}
 

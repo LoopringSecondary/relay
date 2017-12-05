@@ -38,7 +38,7 @@ block_period = 5
     broadcast_topics = ["test_topic_broad_fk"]
 
 [gateway]
-    is_broadcast = true
+    is_broadcast = false
     max_broadcast_time = 3
 
 [accessor]

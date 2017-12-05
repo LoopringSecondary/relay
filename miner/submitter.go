@@ -86,7 +86,7 @@ func (submitter *RingSubmitter) newRings(eventData eventemitter.EventData) error
 		daoInfo := &dao.RingSubmitInfo{}
 		daoInfo.ConvertDown(info)
 		if err := submitter.dbService.Add(daoInfo); nil != err {
-			log.Errorf("err:%s", err.Error())
+			log.Errorf("miner submitter,insert new ring err:%s", err.Error())
 		}
 	}
 	if submitter.ifRegistryRingHash {

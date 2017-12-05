@@ -203,7 +203,14 @@ func (n *Node) initMarkets() {
 		var token types.Token
 		v.ConvertUp(&token)
 		util.SupportTokens[v.Symbol] = token
-		log.Infof("supported token %s->%s", token.Symbol, token.Protocol.Hex())
+		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
+	}
+
+	// set support markets
+	for _, v := range markets {
+		var token types.Token
+		v.ConvertUp(&token)
+		util.SupportMarkets[token.Symbol] = token
 	}
 
 	// set all tokens
@@ -214,19 +221,12 @@ func (n *Node) initMarkets() {
 		util.AllTokens[k] = v
 	}
 
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportMarkets[token.Symbol] = token
-	}
-
 	// set all markets
 	for _, k := range util.SupportTokens { // lrc,omg
 		for _, kk := range util.SupportMarkets { //eth
 			symbol := k.Symbol + "-" + kk.Symbol
 			util.AllMarkets = append(util.AllMarkets, symbol)
-			log.Infof("supported market:%s", symbol)
+			log.Infof("market util,supported market:%s", symbol)
 		}
 	}
 

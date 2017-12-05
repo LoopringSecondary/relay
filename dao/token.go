@@ -63,7 +63,7 @@ func (s *RdsServiceImpl) FindUnDeniedTokens() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = (?)", false).Find(&list).Error
+	err = s.db.Where("deny = (?)", false).Where("is_market = (?)", false).Find(&list).Error
 
 	return list, err
 }
@@ -74,7 +74,7 @@ func (s *RdsServiceImpl) FindDeniedTokens() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = (?)", true).Find(&list).Error
+	err = s.db.Where("deny = (?)", true).Where("is_market = (?)", false).Find(&list).Error
 
 	return list, err
 }
@@ -85,7 +85,7 @@ func (s *RdsServiceImpl) FindUnDeniedMarkets() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = (?) and is_market = (?)", false, true).Find(&list).Error
+	err = s.db.Where("deny = (?)", false).Where("is_market = (?)", true).Find(&list).Error
 
 	return list, err
 }
@@ -96,7 +96,7 @@ func (s *RdsServiceImpl) FindDeniedMarkets() ([]Token, error) {
 		err  error
 	)
 
-	err = s.db.Where("deny = (?) and is_market = (?)", true, true).Find(&list).Error
+	err = s.db.Where("deny = (?)", true).Where("is_market = (?)", true).Find(&list).Error
 
 	return list, err
 }
