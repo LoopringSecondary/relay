@@ -145,16 +145,11 @@ func (j *JsonrpcServiceImpl) Start() {
 }
 
 func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
-	fmt.Println(*order)
-
 	err = HandleOrder(types.ToOrder(order))
-	fmt.Print("return result is ")
-	fmt.Print(err)
 	if err != nil {
 		fmt.Println(err)
 	}
 	res = "SUBMIT_SUCCESS"
-	fmt.Print(res)
 	return res, err
 }
 
@@ -249,7 +244,6 @@ func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err er
 }
 
 func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
-	fmt.Println(query)
 	return j.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
 }
 
@@ -415,10 +409,10 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if q.PageSize <= 0 || q.PageSize > 20 {
 		ps = 20
 	} else {
-		ps = q.PageIndex
+		ps = q.PageSize
 	}
 	if q.ContractVersion != "" {
-		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
+		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.RingHash != "" {
 		rst["ring_hash"] = q.RingHash

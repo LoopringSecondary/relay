@@ -66,7 +66,7 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	FirstPreMarket(tokenS, tokenB string) (fill FillEvent, err error)
-	QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error)
+	QueryRecentFills(market, owner string, start int64, end int64) (fills []FillEvent, err error)
 	RollBackFill(from, to int64) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 

@@ -107,6 +107,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerAccountManager()
+	n.registerTrendManager()
 	n.registerJsonRpcService()
 }
 

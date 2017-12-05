@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"fmt"
 )
 
 type FillEvent struct {
@@ -122,30 +123,39 @@ func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex,
 	return
 }
 
-func (s *RdsServiceImpl) QueryRecentFills(tokenS, tokenB, owner string, start int64, end int64) (fills []FillEvent, err error) {
+func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end int64) (fills []FillEvent, err error) {
 
-	if tokenS != "" {
-		s.db = s.db.Where("token_s = ?", tokenS)
-	}
 
-	if tokenB != "" {
-		s.db = s.db.Where("token_b = ?", tokenB)
+	query := make(map[string]interface{})
+
+	if market != "" {
+		query["market"] = market
 	}
 
 	if owner != "" {
-		s.db = s.db.Where("owner = ?", owner)
+		query["owner"] = owner
 	}
 
-	if start != 0 {
-		s.db = s.db.Where("create_time > ?", start)
-	}
+	timeQuery := buildTimeQueryString(start, end)
 
-	if end != 0 {
-		s.db = s.db.Where("create_time <= ?", end)
+	if timeQuery != "" {
+		err = s.db.Where(query).Where(timeQuery).Order("create_time desc").Limit(100).Find(&fills).Error
+	} else {
+		err = s.db.Where(query).Where("is_delete = false").Order("create_time desc").Limit(100).Find(&fills).Error
 	}
-
-	err = s.db.Order("create_time desc").Limit(100).Find(&fills).Error
 	return
+}
+
+func buildTimeQueryString(start, end int64) string {
+	rst := ""
+	if start != 0 && end == 0 {
+		rst += "create_time > " + fmt.Sprintf("%v", start)
+	} else if start != 0 && end != 0 {
+		rst += "create_time > " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
+	} else if start == 0 && end != 0 {
+		rst += "create_time <= " + fmt.Sprintf("%v", end)
+	}
+	return rst
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
