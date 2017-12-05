@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 type CancelEvent struct {
@@ -30,35 +31,28 @@ type CancelEvent struct {
 	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber     int64  `gorm:"column:block_number"`
 	CreateTime      int64  `gorm:"column:create_time"`
-	AmountCancelled []byte `gorm:"column:amount_cancelled;type:varchar(30)"`
-	IsDeleted       bool   `gorm:"column:is_deleted"`
+	AmountCancelled string `gorm:"column:amount_cancelled;type:varchar(30)"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
 func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
-	var err error
-	e.AmountCancelled, err = src.AmountCancelled.MarshalText()
-	if err != nil {
-		return err
-	}
-
+	e.AmountCancelled = src.AmountCancelled.String()
 	e.OrderHash = src.OrderHash.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Protocol = src.ContractAddress.Hex()
 	e.CreateTime = src.Time.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
-	e.IsDeleted = src.IsDeleted
 
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCancelEventByOrderhash(orderhash common.Hash) (*CancelEvent, error) {
+func (s *RdsServiceImpl) FindCancelEvent(orderhash common.Hash, cancelledAmount *big.Int) (*CancelEvent, error) {
 	var (
 		model CancelEvent
 		err   error
 	)
 
-	err = s.db.Where("order_hash = ? and is_deleted = false", orderhash.Hex()).First(&model).Error
+	err = s.db.Where("order_hash = (?)", orderhash.Hex()).Where("amount_cancelled = (?)", cancelledAmount.String()).First(&model).Error
 
 	return &model, err
 }

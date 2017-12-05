@@ -19,7 +19,6 @@
 package gateway
 
 import (
-	"errors"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
@@ -58,11 +57,10 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 
 	tokenFilter := &TokenFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
 	for _, v := range util.AllTokens {
-		address := common.HexToAddress(v.Protocol.Hex())
 		if v.Deny {
-			tokenFilter.DeniedTokens[address] = true
+			tokenFilter.DeniedTokens[v.Protocol] = true
 		} else {
-			tokenFilter.AllowTokens[address] = true
+			tokenFilter.AllowTokens[v.Protocol] = true
 		}
 	}
 
@@ -76,33 +74,33 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	//filters = append(filters, cutoffFilter)
 }
 
-func HandleOrder(input eventemitter.EventData) (err error) {
-	ord := input.(*types.Order)
+func HandleOrder(input eventemitter.EventData) error {
+	var (
+		state *types.OrderState
+		err   error
+	)
 
-	fmt.Println("xxxxxxxxxx")
-	orderHash := ord.GenerateHash()
-	ord.Hash = orderHash
-
-	fmt.Println("xxxxxxxxxx2")
-	orderState, queryErr := gateway.om.GetOrderByHash(ord.Hash)
+	order := input.(*types.Order)
+	order.Hash = order.GenerateHash()
 
 	var broadcastTime int
 
 	fmt.Println("xxxxxxxxxx3")
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
-	if queryErr != nil {
-		ord.GeneratePrice()
+	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil {
+		order.GeneratePrice()
+		// todo judge price
 
 		for _, v := range gateway.filters {
-			valid, err := v.filter(ord)
+			valid, err := v.filter(order)
 			if !valid {
-				log.Errorf("gateway filter order error:%s", err.Error())
+				log.Errorf(err.Error())
 				return err
 			}
 		}
 
 		state := &types.OrderState{}
-		state.RawOrder = *ord
+		state.RawOrder = *order
 
 		broadcastTime = 0
 
@@ -110,27 +108,31 @@ func HandleOrder(input eventemitter.EventData) (err error) {
 			state.BroadcastTime = 1
 		}
 
-		log.Debugf("gateway accept new order hash:%s,amountS:%s,amountB:%s", orderHash.Hex(), ord.AmountS.String(), ord.AmountB.String())
+		state = &types.OrderState{}
+		state.RawOrder = *order
 
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else {
-		broadcastTime = orderState.BroadcastTime
-		err = errors.New("order was exist. please don't submit again")
+		broadcastTime = state.BroadcastTime
+		return fmt.Errorf("gateway,order %s exist,will not insert again", order.Hash.Hex())
 	}
 
-	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
+	gateway.broadcast(state, broadcastTime)
+	return nil
+}
+
+func (g *Gateway) broadcast(state *types.OrderState, bt int) {
+	if gateway.isBroadcast && bt < gateway.maxBroadcastTime {
 		//broadcast
 		go func() {
-			pubErr := gateway.ipfsPubService.PublishOrder(*ord)
+			pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
 			if pubErr != nil {
-				log.Error("publish order failed, orderHash : " + ord.Hash.Str())
+				log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.Hex())
 			} else {
-				gateway.om.UpdateBroadcastTimeByHash(orderState.RawOrder.Hash, orderState.BroadcastTime+1)
+				gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1)
 			}
 		}()
 	}
-
-	return err
 }
 
 type BaseFilter struct {
@@ -144,25 +146,25 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	)
 
 	if len(o.Hash) != hashLength {
-		return false, fmt.Errorf("gateway base filter,order %s length error", o.Hash.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s length error", o.Hash.Hex())
 	}
 	if len(o.TokenB) != addrLength {
-		return false, fmt.Errorf("gateway base filter,order %s tokenB %s address length error", o.Hash.Hex(), o.TokenB.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s tokenB %s address length error", o.Hash.Hex(), o.TokenB.Hex())
 	}
 	if len(o.TokenS) != addrLength {
-		return false, fmt.Errorf("gateway base filter,order %s tokenS %s address length error", o.Hash.Hex(), o.TokenS.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s tokenS %s address length error", o.Hash.Hex(), o.TokenS.Hex())
 	}
 	if o.TokenB == o.TokenS {
-		return false, fmt.Errorf("gateway base filter,order %s tokenB == tokenS", o.Hash.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s tokenB == tokenS", o.Hash.Hex())
 	}
 	if f.MinLrcFee.Cmp(o.LrcFee) >= 0 {
-		return false, fmt.Errorf("gateway base filter,order %s lrc fee %s invalid", o.Hash.Hex(), o.LrcFee.String())
+		return false, fmt.Errorf("gateway,base filter,order %s lrc fee %s invalid", o.Hash.Hex(), o.LrcFee.String())
 	}
 	if len(o.Owner) != addrLength {
-		return false, fmt.Errorf("gateway base filter,order %s owner %s address length error", o.Hash.Hex(), o.Owner.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s owner %s address length error", o.Hash.Hex(), o.Owner.Hex())
 	}
 	if len(o.Protocol) != addrLength {
-		return false, fmt.Errorf("gateway base filter,order %s protocol %s address length error", o.Hash.Hex(), o.Owner.Hex())
+		return false, fmt.Errorf("gateway,base filter,order %s protocol %s address length error", o.Hash.Hex(), o.Owner.Hex())
 	}
 	return true, nil
 }
@@ -176,7 +178,7 @@ func (f *SignFilter) filter(o *types.Order) (bool, error) {
 	if addr, err := o.SignerAddress(); nil != err {
 		return false, err
 	} else if addr != o.Owner {
-		return false, errors.New("o.Owner and signeraddress are not match.")
+		return false, fmt.Errorf("gateway,sign filter,o.Owner %s and signeraddress %s are not match", o.Owner.Hex(), addr.Hex())
 	}
 
 	return true, nil
@@ -189,10 +191,10 @@ type TokenFilter struct {
 
 func (f *TokenFilter) filter(o *types.Order) (bool, error) {
 	if _, ok := f.AllowTokens[o.TokenS]; !ok {
-		return false, fmt.Errorf("token filter allowTokens do not contain:%s", o.TokenS.Hex())
+		return false, fmt.Errorf("gateway,token filter allowTokens do not contain:%s", o.TokenS.Hex())
 	}
 	if _, ok := f.DeniedTokens[o.TokenS]; ok {
-		return false, fmt.Errorf("token filter deniedTokens contain:%s", o.TokenS.Hex())
+		return false, fmt.Errorf("gateway,token filter deniedTokens contain:%s", o.TokenS.Hex())
 	}
 	return true, nil
 }

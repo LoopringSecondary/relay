@@ -77,7 +77,7 @@ func TestGetRing(t *testing.T) {
 	crypto.Initialize(c)
 	s := dao.NewRdsService(cfg.Mysql)
 	s.Prepare()
-	ringSubmitInfo,err := s.GetRingForSubmitByHash(common.HexToHash("0x9e75a4fea488f4b765640d1a466ded990477def59f8846e2d7ba070158c7e41b"))
+	ringSubmitInfo, err := s.GetRingForSubmitByHash(common.HexToHash("0x9e75a4fea488f4b765640d1a466ded990477def59f8846e2d7ba070158c7e41b"))
 	if nil != err {
 		t.Error(err.Error())
 	}

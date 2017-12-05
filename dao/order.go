@@ -37,12 +37,12 @@ type Order struct {
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
-	AmountS               []byte  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB               []byte  `gorm:"column:amount_b;type:varchar(30)"`
+	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
+	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
 	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
 	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
 	Salt                  int64   `gorm:"column:salt;type:bigint"`
-	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(30)"`
+	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
@@ -50,8 +50,10 @@ type Order struct {
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
-	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
-	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
+	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
+	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
+	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
@@ -62,26 +64,18 @@ type Order struct {
 func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder
 
-	var err error
 	o.Price, _ = src.Price.Float64()
 	if o.Price > 1e12 || o.Price < 0.0000000000000001 {
 		return fmt.Errorf("dao order convert down,price out of range")
 	}
-	if o.AmountB, err = src.AmountB.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order amountB error:%s", err.Error())
-	}
-	if o.AmountS, err = src.AmountS.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order amountS error:%s", err.Error())
-	}
-	if o.RemainAmountB, err = state.RemainedAmountB.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order remainAmountB error:%s", err.Error())
-	}
-	if o.RemainAmountS, err = state.RemainedAmountS.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order remainAmountS error:%s", err.Error())
-	}
-	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order lrcFee error:%s", err.Error())
-	}
+
+	o.AmountS = src.AmountS.String()
+	o.AmountB = src.AmountB.String()
+	o.DealtAmountS = state.DealtAmountS.String()
+	o.DealtAmountB = state.DealtAmountB.String()
+	o.CancelledAmountS = state.CancelledAmountS.String()
+	o.CancelledAmountB = state.CancelledAmountB.String()
+	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
 	o.Owner = src.Owner.Hex()
@@ -107,26 +101,13 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 
 // convert dao/order to types/orderState
 func (o *Order) ConvertUp(state *types.OrderState) error {
-	state.RawOrder.AmountS = new(big.Int)
-	if err := state.RawOrder.AmountS.UnmarshalText(o.AmountS); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal amountS error:%s", err.Error())
-	}
-	state.RawOrder.AmountB = new(big.Int)
-	if err := state.RawOrder.AmountB.UnmarshalText(o.AmountB); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal amountB error:%s", err.Error())
-	}
-	state.RemainedAmountS = new(big.Int)
-	if err := state.RemainedAmountS.UnmarshalText(o.RemainAmountS); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal remainAmountS error:%s", err.Error())
-	}
-	state.RemainedAmountB = new(big.Int)
-	if err := state.RemainedAmountB.UnmarshalText(o.RemainAmountB); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal remainAmountB error:%s", err.Error())
-	}
-	state.RawOrder.LrcFee = new(big.Int)
-	if err := state.RawOrder.LrcFee.UnmarshalText(o.LrcFee); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal lrcFee error:%s", err.Error())
-	}
+	state.RawOrder.AmountS, _ = new(big.Int).SetString(o.AmountS, 0)
+	state.RawOrder.AmountB, _ = new(big.Int).SetString(o.AmountB, 0)
+	state.DealtAmountS, _ = new(big.Int).SetString(o.DealtAmountS, 0)
+	state.DealtAmountB, _ = new(big.Int).SetString(o.DealtAmountB, 0)
+	state.CancelledAmountS, _ = new(big.Int).SetString(o.CancelledAmountS, 0)
+	state.CancelledAmountB, _ = new(big.Int).SetString(o.CancelledAmountB, 0)
+	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
 
 	state.RawOrder.GeneratePrice()
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
@@ -268,9 +249,10 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 
 func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		orders []Order
-		err    error
-		data   = make([]interface{}, 0)
+		orders     []Order
+		err        error
+		data       = make([]interface{}, 0)
+		pageResult PageResult
 	)
 
 	if pageIndex <= 0 {
@@ -281,18 +263,14 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
-	fmt.Println(err)
-	fmt.Println(orders)
-	if err != nil {
-		fmt.Println(err)
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error; err != nil {
+		return pageResult, err
 	}
 	for _, v := range orders {
 		data = append(data, v)
 	}
+	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	pageResult := PageResult{data, pageIndex, pageSize, 0}
-	fmt.Println(pageResult)
 	return pageResult, err
 }
 

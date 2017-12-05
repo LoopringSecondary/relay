@@ -172,8 +172,8 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			}
 
 			contract.Topics = evtLog.Topics
-			contract.BlockNumber = &evtLog.BlockNumber
-			contract.Time = &block.Timestamp
+			contract.BlockNumber = evtLog.BlockNumber.BigInt()
+			contract.Time = block.Timestamp.BigInt()
 			contract.ContractAddress = evtLog.Address
 			contract.TxHash = tx.Hash
 
@@ -214,7 +214,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ring mined event,ringhash:%s, ringIndex:%s, miner:%s, feeRecipient:%s,isRinghashReserved:%t",
 			ringmined.Ringhash.Hex(),
-			ringmined.RingIndex.BigInt().String(),
+			ringmined.RingIndex.String(),
 			ringmined.Miner.Hex(),
 			ringmined.FeeRecipient.Hex(),
 			ringmined.IsRinghashReserved)
@@ -236,14 +236,14 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		if l.commOpts.Develop {
 			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 				fill.Ringhash.Hex(),
-				fill.AmountS.BigInt().String(),
-				fill.AmountB.BigInt().String(),
+				fill.AmountS.String(),
+				fill.AmountB.String(),
 				fill.OrderHash.Hex(),
-				fill.LrcFee.BigInt().String(),
-				fill.LrcReward.BigInt().String(),
+				fill.LrcFee.String(),
+				fill.LrcReward.String(),
 				fill.NextOrderHash.Hex(),
 				fill.PreOrderHash.Hex(),
-				fill.RingIndex.BigInt().String(),
+				fill.RingIndex.String(),
 			)
 		}
 
@@ -289,7 +289,7 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,order cancelled event,orderhash:%s, cancelAmount:%s", evt.OrderHash.Hex(), evt.AmountCancelled.BigInt().String())
+		log.Debugf("extractor,order cancelled event,orderhash:%s, cancelAmount:%s", evt.OrderHash.Hex(), evt.AmountCancelled.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
@@ -314,7 +314,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.BigInt().String())
+		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
@@ -338,7 +338,7 @@ func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData)
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.BigInt().String())
+		log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 	}
 
 	eventemitter.Emit(eventemitter.AccountTransfer, evt)
@@ -362,7 +362,7 @@ func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData)
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,approval event,owner:%s, spender:%s, value:%s", evt.Owner.Hex(), evt.Spender.Hex(), evt.Value.BigInt().String())
+		log.Debugf("extractor,approval event,owner:%s, spender:%s, value:%s", evt.Owner.Hex(), evt.Spender.Hex(), evt.Value.String())
 	}
 
 	eventemitter.Emit(eventemitter.AccountApproval, evt)

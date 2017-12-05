@@ -34,9 +34,8 @@ type TokenPair struct {
 	TokenB common.Address
 }
 
-func ByteToFloat(amount []byte) float64 {
-	var rst big.Int
-	rst.UnmarshalText(amount)
+func StringToFloat(amount string) float64 {
+	rst, _ := new(big.Int).SetString(amount, 0)
 	return float64(rst.Int64()) / weiToEther
 }
 
@@ -117,10 +116,10 @@ func AddressToAlias(t string) string {
 	return ""
 }
 
-func CalculatePrice(amountS, amountB []byte, s, b string) float64 {
+func CalculatePrice(amountS, amountB string, s, b string) float64 {
 
-	as := ByteToFloat(amountS)
-	ab := ByteToFloat(amountB)
+	as := StringToFloat(amountS)
+	ab := StringToFloat(amountB)
 
 	if as == 0 || ab == 0 {
 		return 0

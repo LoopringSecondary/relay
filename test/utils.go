@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
@@ -67,7 +68,7 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 	}
 
 	rds := GenerateDaoService(cfg)
-	util.Initialize(rds)
+	InitialMarketUtil(rds)
 	for _, v := range util.SupportTokens {
 		entity.Tokens = append(entity.Tokens, v.Protocol)
 	}
@@ -105,17 +106,22 @@ func GenerateExtractor(c *config.GlobalConfig) *extractor.ExtractorServiceImpl {
 
 func GenerateOrderManager(c *config.GlobalConfig) *ordermanager.OrderManagerImpl {
 	rds := GenerateDaoService(c)
+	mc := GenerateMarketCap(c)
 	um := usermanager.NewUserManager(rds)
 	accessor, err := GenerateAccessor(c)
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor)
+	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor, mc)
 	return ob
 }
 
 func GenerateDaoService(c *config.GlobalConfig) *dao.RdsServiceImpl {
 	return dao.NewRdsService(c.Mysql)
+}
+
+func GenerateMarketCap(c *config.GlobalConfig) *marketcap.MarketCapProvider {
+	return marketcap.NewMarketCapProvider(c.Miner)
 }
 
 func LoadConfig() *config.GlobalConfig {
@@ -141,6 +147,65 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 		panic(err.Error())
 	}
 	return order
+}
+
+func InitialMarketUtil(rds dao.RdsService) {
+	util.SupportTokens = make(map[string]types.Token)
+	util.SupportMarkets = make(map[string]types.Token)
+	util.AllTokens = make(map[string]types.Token)
+
+	tokens, err := rds.FindUnDeniedTokens()
+	if err != nil {
+		log.Fatalf("market util cann't find any token!")
+	}
+	markets, err := rds.FindUnDeniedMarkets()
+	if err != nil {
+		log.Fatalf("market util cann't find any base market!")
+	}
+
+	// set support tokens
+	for _, v := range tokens {
+		var token types.Token
+		v.ConvertUp(&token)
+		util.SupportTokens[v.Symbol] = token
+		log.Infof("supported token %s->%s", token.Symbol, token.Protocol.Hex())
+	}
+
+	// set all tokens
+	for k, v := range util.SupportTokens {
+		util.AllTokens[k] = v
+	}
+	for k, v := range util.SupportMarkets {
+		util.AllTokens[k] = v
+	}
+
+	// set support markets
+	for _, v := range markets {
+		var token types.Token
+		v.ConvertUp(&token)
+		util.SupportMarkets[token.Symbol] = token
+	}
+
+	// set all markets
+	for _, k := range util.SupportTokens { // lrc,omg
+		for _, kk := range util.SupportMarkets { //eth
+			symbol := k.Symbol + "-" + kk.Symbol
+			util.AllMarkets = append(util.AllMarkets, symbol)
+			log.Infof("supported market:%s", symbol)
+		}
+	}
+
+	// set all token pairs
+	pairsMap := make(map[string]util.TokenPair, 0)
+	for _, v := range util.SupportMarkets {
+		for _, vv := range util.SupportTokens {
+			pairsMap[v.Symbol+"-"+vv.Symbol] = util.TokenPair{v.Protocol, vv.Protocol}
+			pairsMap[vv.Symbol+"-"+v.Symbol] = util.TokenPair{vv.Protocol, v.Protocol}
+		}
+	}
+	for _, v := range pairsMap {
+		util.AllTokenPairs = append(util.AllTokenPairs, v)
+	}
 }
 
 func loadConfig() *config.GlobalConfig {

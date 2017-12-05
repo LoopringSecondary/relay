@@ -42,7 +42,7 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
 	evt.From = e.From
 	evt.To = e.To
-	evt.Value = types.NewBigPtr(e.Value)
+	evt.Value = e.Value
 
 	return evt
 }
@@ -57,7 +57,7 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	evt := &types.ApprovalEvent{}
 	evt.Owner = e.Owner
 	evt.Spender = e.Spender
-	evt.Value = types.NewBigPtr(e.Value)
+	evt.Value = e.Value
 
 	return evt
 }
@@ -80,7 +80,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	}
 
 	evt := &types.RingMinedEvent{}
-	evt.RingIndex = types.NewBigPtr(e.RingIndex)
+	evt.RingIndex = e.RingIndex
 	evt.Ringhash = e.RingHash
 	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
@@ -110,33 +110,33 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.OrderHash = common.Hash(e.OrderHashList[i])
 		fill.NextOrderHash = nextOrderHash
 
-		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
-		fill.RingIndex = types.NewBigPtr(e.RingIndex)
-		fill.AmountS = types.NewBigPtr(e.AmountsList[i][0])
-		fill.AmountB = types.NewBigPtr(e.AmountsList[i][1])
-		fill.LrcReward = types.NewBigPtr(e.AmountsList[i][2])
-		fill.LrcFee = types.NewBigPtr(e.AmountsList[i][3])
-		fill.SplitS = types.NewBigPtr(e.AmountsList[i][4])
-		fill.SplitB = types.NewBigPtr(e.AmountsList[i][5])
+		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
+		fill.RingIndex = e.RingIndex
+		fill.AmountS = e.AmountsList[i][0]
+		fill.AmountB = e.AmountsList[i][1]
+		fill.LrcReward = e.AmountsList[i][2]
+		fill.LrcFee = e.AmountsList[i][3]
+		fill.SplitS = e.AmountsList[i][4]
+		fill.SplitB = e.AmountsList[i][5]
 
-		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee.BigInt())
+		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee)
 		list = append(list, &fill)
 	}
 
-	evt.TotalLrcFee = types.NewBigPtr(lrcFee)
+	evt.TotalLrcFee = lrcFee
 
 	return evt, list, nil
 }
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash `fieldName:"_orderHash"`
-	AmountCancelled *big.Int    `fieldName:"_amountCancelled"`
+	AmountCancelled *big.Int    `fieldName:"_amountCancelled"` // amountCancelled为多次取消累加总量，根据orderhash以及amountCancelled可以确定其唯一性
 }
 
 func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	evt := &types.OrderCancelledEvent{}
 	evt.OrderHash = e.OrderHash
-	evt.AmountCancelled = types.NewBigPtr(e.AmountCancelled)
+	evt.AmountCancelled = e.AmountCancelled
 
 	return evt
 }
@@ -149,7 +149,7 @@ type CutoffTimestampChangedEvent struct {
 func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
-	evt.Cutoff = types.NewBigPtr(e.Cutoff)
+	evt.Cutoff = e.Cutoff
 
 	return evt
 }

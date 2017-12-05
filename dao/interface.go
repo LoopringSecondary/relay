@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 type RdsService interface {
@@ -67,7 +68,7 @@ type RdsService interface {
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// cancel event table
-	FindCancelEventByOrderhash(orderhash common.Hash) (*CancelEvent, error)
+	FindCancelEvent(orderhash common.Hash, cancelledAmount *big.Int) (*CancelEvent, error)
 	RollBackCancel(from, to int64) error
 
 	// cutoff event table

@@ -23,9 +23,9 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
-	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"strings"
 )
 
@@ -53,8 +53,8 @@ type ContractData struct {
 	Id              string
 	Name            string
 	Key             string
-	BlockNumber     *types.Big
-	Time            *types.Big
+	BlockNumber     *big.Int
+	Time            *big.Int
 	Topics          []string
 }
 

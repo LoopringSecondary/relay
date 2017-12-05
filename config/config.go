@@ -164,6 +164,7 @@ type MysqlOptions struct {
 	DbName      string
 	Loc         string
 	TablePrefix string
+	Debug       bool
 }
 
 func Validator(cv reflect.Value) (bool, error) {

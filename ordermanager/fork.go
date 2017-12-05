@@ -77,7 +77,7 @@ func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 		}
 
 		if state.RawOrder.BuyNoMoreThanAmountB == true {
-			state.RemainedAmountB = remain // getMinAmount(remain, allowance, balance)
+			state.DealtAmountB = remain // getMinAmount(remain, allowance, balance)
 		} else {
 			batchReq := ethaccessor.BatchErc20Req{}
 			batchReq.Spender, err = p.accessor.GetSenderAddress(state.RawOrder.Protocol)
@@ -95,7 +95,7 @@ func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
 				continue
 			}
 
-			state.RemainedAmountS = getMinAmount(remain, batchReq.Allowance.BigInt(), batchReq.Balance.BigInt())
+			state.DealtAmountS = getMinAmount(remain, batchReq.Allowance.BigInt(), batchReq.Balance.BigInt())
 		}
 
 		state.CalculateRemainAmount()

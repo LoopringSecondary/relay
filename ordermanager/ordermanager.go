@@ -29,6 +29,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
+	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
@@ -122,22 +123,19 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
-	fmt.Println(".....................................")
-	fmt.Println(state)
 	state.Status = types.ORDER_NEW
-	state.RemainedAmountB = big.NewInt(0)
-	state.RemainedAmountS = state.RawOrder.AmountS
+	state.DealtAmountB = big.NewInt(0)
+	state.DealtAmountS = big.NewInt(0)
 	model := &dao.Order{}
 
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	if err := model.ConvertDown(state); err != nil {
-		fmt.Println("3.....................................")
-		log.Error(err.Error())
+		log.Debugf("order manager,handle gateway order,convert order state to order error:%s", err.Error())
 		return err
 	}
 	if err := om.rds.Add(model); err != nil {
-		fmt.Println("4.....................................")
+		log.Debugf("order manager,handle gateway order,insert order error:%s", err.Error())
 		return err
 	}
 
@@ -147,23 +145,13 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
-	model, err := om.rds.FindRingMinedByRingHash(event.Ringhash.Hex())
-	if err != nil {
-		model = &dao.RingMined{}
-		if err := model.ConvertDown(event); err != nil {
-			return err
-		}
-
-		om.rds.Add(model)
-	} else {
-		modelConvertEvent := &types.RingMinedEvent{}
-		if err := model.ConvertUp(modelConvertEvent); err != nil {
-			return err
-		}
-
-		if modelConvertEvent.RingIndex.BigInt().Cmp(event.RingIndex.BigInt()) != 0 {
-			om.rds.Add(model)
-		}
+	model := &dao.RingMined{}
+	if err := model.ConvertDown(event); err != nil {
+		return err
+	}
+	if err := om.rds.Add(model); err != nil {
+		log.Debugf("order manager,handle ringmined event,event %s has already exist", event.RingIndex.String())
+		return err
 	}
 
 	return nil
@@ -177,20 +165,23 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 	// save event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
-	if err != nil {
-		newFillModel := &dao.FillEvent{}
-		if err := newFillModel.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Add(newFillModel); err != nil {
-			return err
-		}
+	if err == nil {
+		return fmt.Errorf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:", event.RingIndex.String(), event.OrderHash.Hex())
+	}
+
+	newFillModel := &dao.FillEvent{}
+	if err := newFillModel.ConvertDown(event); err != nil {
+		log.Debugf("order manager,handle order filled event error:order %s convert down failed", event.OrderHash.Hex())
+		return err
+	}
+	if err := om.rds.Add(newFillModel); err != nil {
+		log.Debugf("order manager,handle order filled event error:order %s insert faild", event.OrderHash.Hex())
+		return err
 	}
 
 	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
-	orderhash := event.OrderHash
-	model, err := om.rds.GetOrderByHash(orderhash)
+	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
 	}
@@ -198,38 +189,18 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		return err
 	}
 
-	// judge status
-	om.orderFullFinished(state)
-
+	// judge order status
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order status is %d ", state.Status)
+		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
 	}
 
-	// validate cutoff
-	if cutoffModel, err := om.rds.FindCutoffEventByOwnerAddress(state.RawOrder.TokenS); err == nil {
-		if beenCutoff := om.rds.CheckOrderCutoff(orderhash.Hex(), cutoffModel.Cutoff); beenCutoff {
-			if err := om.rds.SettleOrdersStatus([]string{orderhash.Hex()}, types.ORDER_CUTOFF); err != nil {
-				return err
-			} else {
-				return fmt.Errorf("order manager,handle order filled event error:order %s have been cutoff", orderhash.Hex())
-			}
-		}
-	}
-
-	// calculate orderState.remainAmounts
-	state.BlockNumber = event.Blocknumber.BigInt()
-	state.RemainedAmountS = event.AmountS.BigInt()
-	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.BigInt().Cmp(state.RawOrder.AmountB) > 0 {
-		state.RemainedAmountB = state.RawOrder.AmountB
-	} else {
-		state.RemainedAmountB = event.AmountB.BigInt()
-	}
-	if event.AmountS.BigInt().Cmp(big.NewInt(0)) < 1 {
-		state.RemainedAmountS = big.NewInt(0)
-	}
+	// calculate dealt amount
+	state.BlockNumber = event.Blocknumber
+	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
+	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 
 	// update order status
-	om.orderFullFinished(state)
+	om.isOrderFullFinished(state)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -244,26 +215,26 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
-	orderhash := event.OrderHash
 
 	// set miner order provider current block number
 	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
-	_, err := om.rds.FindCancelEventByOrderhash(orderhash)
-	if err != nil {
-		newCancelEventModel := &dao.CancelEvent{}
-		if err := newCancelEventModel.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Add(newCancelEventModel); err != nil {
-			return err
-		}
+	_, err := om.rds.FindCancelEvent(event.OrderHash, event.AmountCancelled)
+	if err == nil {
+		return fmt.Errorf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
+	}
+	newCancelEventModel := &dao.CancelEvent{}
+	if err := newCancelEventModel.ConvertDown(event); err != nil {
+		return err
+	}
+	if err := om.rds.Add(newCancelEventModel); err != nil {
+		return err
 	}
 
 	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
-	model, err := om.rds.GetOrderByHash(orderhash)
+	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
 	}
@@ -272,28 +243,19 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// judge status
-	om.orderFullFinished(state)
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", orderhash.Hex(), state.Status)
+		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
 	}
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled.BigInt())
-		if state.RemainedAmountB.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order manager,handle order filled event error:order %s cancel amountB:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
-			state.RemainedAmountB = big.NewInt(0)
-		}
+		state.CancelledAmountB = event.AmountCancelled
 	} else {
-		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled.BigInt())
-		if state.RemainedAmountS.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order manager,handle order filled event error:order %s cancel amountS:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
-			state.RemainedAmountS = big.NewInt(0)
-		}
+		state.CancelledAmountS = event.AmountCancelled
 	}
 
 	// update order status
-	om.orderFullFinished(state)
+	om.isOrderFullFinished(state)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -349,23 +311,28 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) orderFullFinished(state *types.OrderState) {
-	var sum *big.Rat
+func (om *OrderManagerImpl) isOrderFullFinished(state *types.OrderState) {
+	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		ret := new(big.Int).Sub(state.RawOrder.AmountB, state.RemainedAmountB)
+		dealtAndCancelledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
+		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, dealtAndCancelledAmountB)
 		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
-		remain := new(big.Rat).SetInt(ret)
-		sum = new(big.Rat).Mul(price, remain)
+		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
+		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
 	} else {
+		dealtAndCancelledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
+		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, dealtAndCancelledAmountS)
 		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-		remain := new(big.Rat).SetInt(state.RemainedAmountS)
-		sum = new(big.Rat).Mul(price, remain)
+		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
+		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
 	}
 
 	// todo: get compare number from config
-	if sum.Cmp(big.NewRat(10, 1)) <= 0 {
+	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) <= 0 {
 		state.Status = types.ORDER_FINISHED
+	} else {
+		state.Status = types.ORDER_PARTIAL
 	}
 }
 

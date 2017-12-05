@@ -36,8 +36,8 @@ type Evaluator struct {
 
 func availableAmountS(filledOrder *types.FilledOrder) error {
 
-	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountS)
-	filledOrder.AvailableAmountB = new(big.Rat).SetInt(filledOrder.OrderState.RemainedAmountB)
+	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.DealtAmountS)
+	filledOrder.AvailableAmountB = new(big.Rat).SetInt(filledOrder.OrderState.DealtAmountB)
 	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
 
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
