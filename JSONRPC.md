@@ -181,8 +181,8 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params
         "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy"
       },
       "status" : "ORDER_CANCEL",
-      "remainedAmountB" : 30,
-      "remainedAmountS" : 29333.21,
+      "dealedAmountB" : "0x1a055690d9db80000",
+      "dealedAmountS" : "0x1a055690d9db80000",
       }
     ]
     "total" : 12,
@@ -200,15 +200,15 @@ Get depth and accuracy by token pair
 
 ##### Parameters
 
-1. `tokenS` - The token to sell
-2. `tokenB` - The token to buy
-3. `length` - The length of the depth data. defalut is 50.
+1. `market` - The market pair.
+2. `contractVersion` - The loopring protocol version.
+3. `length` - The length of the depth data. default is 50.
 
 
 ```js
 params: {
-  "tokenS" : "Eth",
-  "tokenB" : "Lrc",
+  "market" : "Lrc-Weth",
+  "contractVersion": "v1.0",
   "length" : 10 // defalut is 50
 }
 ```
@@ -216,7 +216,8 @@ params: {
 ##### Returns
 
 1. `depth` - The depth data.
-2. `accuracies` - The accuracies, it's a array of number.
+2. `market` - The market pair.
+3. `contractVersion` - The loopring protocol version.
 
 ##### Example
 ```js
@@ -236,7 +237,8 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
         [205.1, 13], [211.8, 0.5], [321.3, 33]
       ]
     },
-    "accuracies" : [0.01, 0.05, 0.1, 0.5]
+    "market" : "Lrc-Weth",
+    "contractVersion": "v1.0",
   }
 }
 ```
@@ -249,14 +251,12 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
 Get 24hr merged ticker info from loopring relay.
 
 ##### Parameters
+1. `contractVersion` - The loopring protocol version.
 
-1. `tokenS` - The token to sell
-2. `tokenB` - The token to buy
 
 ```js
 params: {
-  "from" : "Eth",
-  "to" : "Lrc"
+    "contractVersion" : "v.10"
 }
 ```
 
@@ -268,12 +268,11 @@ params: {
 4. `vol`
 5. `buy`
 6. `sell`
-7. `ts` - Timestamp.
 
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[],"id":64}'
 
 // Result
 {
@@ -295,7 +294,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":{see ab
 
 #### loopring_getFills
 
-Get order fill history. This hisotry consists of OrderFilled events.
+Get order fill history. This history consists of OrderFilled events.
 
 ##### Parameters
 
