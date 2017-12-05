@@ -54,15 +54,15 @@ type AccountManager struct {
 }
 
 type Token struct {
-	token     string
-	balance   string
-	allowance string
+	Token     string `json:"token"`
+	Balance   string `json:"balance"`
+	Allowance string `json:"allowance"`
 }
 
 type AccountJson struct {
-	contractVersion string
-	address         string
-	tokens          []Token
+	ContractVersion string `json:"contractVersion""`
+	Address         string `json:"owner"`
+	Tokens          []Token `json:"tokens"`
 }
 
 func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
@@ -85,6 +85,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 }
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
+
 
 	accountInCache, ok := a.c.Get(address)
 	if ok {
@@ -149,11 +150,11 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.StringToAddress(owner), "latest")
+	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.StringToAddress(owner), common.StringToAddress(spender), "latest")
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(spender), "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
@@ -223,12 +224,12 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 func (account *Account) ToJsonObject(contractVersion string) AccountJson {
 
 	var accountJson AccountJson
-	accountJson.address = account.address
-	accountJson.contractVersion = contractVersion
-	accountJson.tokens = make([]Token, 0)
+	accountJson.Address = account.address
+	accountJson.ContractVersion = contractVersion
+	accountJson.Tokens = make([]Token, 0)
 	for _, v := range account.balances {
 		allowance := account.allowances[buildAllowanceKey(contractVersion, v.token)]
-		accountJson.tokens = append(accountJson.tokens, Token{v.token, v.balance.String(), allowance.allowance.String()})
+		accountJson.Tokens = append(accountJson.Tokens, Token{v.token, v.balance.String(), allowance.allowance.String()})
 	}
 	return accountJson
 }

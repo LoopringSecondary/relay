@@ -38,10 +38,10 @@ type OrderManager interface {
 	Stop()
 	MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
-	GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error)
+	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
-	FillsPageQuery(query map[string]string, pageIndex, pageSize int) (dao.PageResult, error)
+	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 }
 
@@ -121,7 +121,10 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
+
 	state := input.(*types.OrderState)
+	fmt.Println(".....................................")
+	fmt.Println(state)
 	state.Status = types.ORDER_NEW
 	state.RemainedAmountB = big.NewInt(0)
 	state.RemainedAmountS = state.RawOrder.AmountS
@@ -130,10 +133,12 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	if err := model.ConvertDown(state); err != nil {
+		fmt.Println("3.....................................")
 		log.Error(err.Error())
 		return err
 	}
 	if err := om.rds.Add(model); err != nil {
+		fmt.Println("4.....................................")
 		return err
 	}
 
@@ -401,11 +406,12 @@ func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address
 	return list, nil
 }
 
-func (om *OrderManagerImpl) GetOrders(query *dao.Order, pageIndex, pageSize int) (dao.PageResult, error) {
+func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error) {
 	var (
 		pageRes dao.PageResult
 	)
 	tmp, err := om.rds.OrderPageQuery(query, pageIndex, pageSize)
+
 	if err != nil {
 		return pageRes, err
 	}
@@ -443,7 +449,7 @@ func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) 
 	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
 }
 
-func (om *OrderManagerImpl) FillsPageQuery(query map[string]string, pageIndex, pageSize int) (result dao.PageResult, err error) {
+func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {
 	return om.rds.FillsPageQuery(query, pageIndex, pageSize)
 }
 

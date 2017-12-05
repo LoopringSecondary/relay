@@ -4,6 +4,7 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/types"
 	"github.com/ipfs/go-ipfs-api"
+	"fmt"
 )
 
 type IPFSPubService interface {
@@ -25,8 +26,12 @@ func NewIPFSPubService(options *config.IpfsOptions) *IPFSPubServiceImpl {
 
 func (p *IPFSPubServiceImpl) PublishOrder(order types.Order) error {
 	orderJson, err := order.MarshalJSON()
+	fmt.Println(orderJson)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
-	return p.sh.PubSubPublish(p.options.BroadcastTopics[0], string(orderJson))
+	pubErr := p.sh.PubSubPublish(p.options.BroadcastTopics[0], string(orderJson))
+	fmt.Println(pubErr)
+	return pubErr
 }

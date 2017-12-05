@@ -21,8 +21,6 @@ package util
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -56,67 +54,9 @@ var (
 )
 
 var ContractVersionConfig = map[string]string{
-	"v1.0": "0x39kdjfskdfjsdfj",
+	"v1.0": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
 	"v1.2": "0x39kdjfskdfjsdfj",
-}
-
-func Initialize(rds dao.RdsService) {
-	SupportTokens = make(map[string]types.Token)
-	SupportMarkets = make(map[string]types.Token)
-	AllTokens = make(map[string]types.Token)
-
-	tokens, err := rds.FindUnDeniedTokens()
-	if err != nil {
-		log.Fatalf("market util cann't find any token!")
-	}
-	markets, err := rds.FindUnDeniedMarkets()
-	if err != nil {
-		log.Fatalf("market util cann't find any base market!")
-	}
-
-	// set support tokens
-	for _, v := range tokens {
-		var token types.Token
-		v.ConvertUp(&token)
-		SupportTokens[v.Symbol] = token
-		log.Infof("supported token %s->%s", token.Symbol, token.Protocol.Hex())
-	}
-
-	// set all tokens
-	for k, v := range SupportTokens {
-		AllTokens[k] = v
-	}
-	for k, v := range SupportMarkets {
-		AllTokens[k] = v
-	}
-
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		SupportMarkets[token.Symbol] = token
-	}
-
-	// set all markets
-	for _, k := range SupportTokens { // lrc,omg
-		for _, kk := range SupportMarkets { //eth
-			symbol := k.Symbol + "-" + kk.Symbol
-			AllMarkets = append(AllMarkets, symbol)
-			log.Infof("supported market:%s", symbol)
-		}
-	}
-
-	// set all token pairs
-	pairsMap := make(map[string]TokenPair, 0)
-	for _, v := range SupportMarkets {
-		for _, vv := range SupportTokens {
-			pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
-			pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
-		}
-	}
-	for _, v := range pairsMap {
-		AllTokenPairs = append(AllTokenPairs, v)
-	}
+	"v0.1": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
 }
 
 // todo: add token, delete token ...

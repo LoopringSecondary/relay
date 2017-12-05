@@ -76,16 +76,16 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	//filters = append(filters, cutoffFilter)
 }
 
-func HandleOrder(input eventemitter.EventData) error {
+func HandleOrder(input eventemitter.EventData) (err error) {
 	ord := input.(*types.Order)
 
 	orderHash := ord.GenerateHash()
 	ord.Hash = orderHash
 
-	orderState, err := gateway.om.GetOrderByHash(ord.Hash)
+	orderState, queryErr := gateway.om.GetOrderByHash(ord.Hash)
 
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
-	if err != nil {
+	if queryErr != nil {
 		ord.GeneratePrice()
 
 		for _, v := range gateway.filters {
@@ -112,7 +112,11 @@ func HandleOrder(input eventemitter.EventData) error {
 		log.Debugf("gateway accept new order hash:%s,amountS:%s,amountB:%s", orderHash.Hex(), ord.AmountS.String(), ord.AmountB.String())
 
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
-	} else if gateway.isBroadcast && orderState.BroadcastTime < gateway.maxBroadcastTime {
+	} else {
+		err = errors.New("order exist. will not insert again")
+	}
+
+	if gateway.isBroadcast && orderState.BroadcastTime < gateway.maxBroadcastTime {
 		//broadcast
 		go func() {
 			pubErr := gateway.ipfsPubService.PublishOrder(*ord)
@@ -124,7 +128,7 @@ func HandleOrder(input eventemitter.EventData) error {
 		}()
 	}
 
-	return nil
+	return err
 }
 
 type BaseFilter struct {
