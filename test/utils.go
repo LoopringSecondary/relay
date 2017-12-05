@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
@@ -65,9 +66,12 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 		panic(err)
 	}
 
-	for _, v := range data.Tokens {
-		entity.Tokens = append(entity.Tokens, common.HexToAddress(v))
+	rds := GenerateDaoService(cfg)
+	util.Initialize(rds)
+	for _, v := range util.SupportTokens {
+		entity.Tokens = append(entity.Tokens, v.Protocol)
 	}
+
 	for _, v := range data.Accounts {
 		var acc AccountEntity
 		acc.Address = common.HexToAddress(v.Address)

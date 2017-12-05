@@ -68,6 +68,8 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	if err := event.RingIndex.UnmarshalText(r.RingIndex); err != nil {
 		return err
 	}
+
+	event.TotalLrcFee = new(types.Big)
 	if err := event.TotalLrcFee.UnmarshalText(r.TotalLrcFee); err != nil {
 		return err
 	}

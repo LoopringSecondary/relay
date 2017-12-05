@@ -63,3 +63,23 @@ func TestNewRing(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestGetRing(t *testing.T) {
+	cfg := loadConfig()
+
+	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	acc1 := accounts.Account{Address: common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")}
+	acc2 := accounts.Account{Address: common.HexToAddress("0x48ff2269e58a373120ffdbbdee3fbcea854ac30a")}
+	ks.Unlock(acc1, "1")
+	ks.Unlock(acc2, "1")
+	c := crypto.NewCrypto(false, ks)
+	crypto.Initialize(c)
+	s := dao.NewRdsService(cfg.Mysql)
+	s.Prepare()
+	ringSubmitInfo,err := s.GetRingForSubmitByHash(common.HexToHash("0x9e75a4fea488f4b765640d1a466ded990477def59f8846e2d7ba070158c7e41b"))
+	if nil != err {
+		t.Error(err.Error())
+	}
+	println(ringSubmitInfo.ID)
+}

@@ -40,7 +40,7 @@ type RinghashSubmittedEvent struct {
 	RingHash        common.Hash
 	RingMiner       common.Address
 	ContractAddress common.Address
-	TxHash			common.Hash
+	TxHash          common.Hash
 	Blocknumber     *Big
 	Time            *Big
 }
@@ -121,6 +121,7 @@ type OrderFilledEvent struct {
 	IsDeleted       bool
 	SplitS          *Big
 	SplitB          *Big
+	Market          string
 }
 
 type OrderCancelledEvent struct {
@@ -157,13 +158,7 @@ type RingMinedEvent struct {
 	IsDeleted          bool
 }
 
-type SubmitRingEvent struct {
-	TxHash common.Hash
-}
-
-type RingHashRegistryEvent struct {
+type RingSubmitFailedEvent struct {
 	RingHash        common.Hash
-	TxHash          common.Hash
-	RingMiner       common.Address
-	ContractAddress common.Address
+	Err 	error
 }
