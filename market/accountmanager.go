@@ -125,7 +125,7 @@ func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 
 func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {
 	event := input.(types.TransferEvent)
-	if event.Blocknumber.BigInt().Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -138,7 +138,7 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
 	event := input.(types.ApprovalEvent)
-	if event.Blocknumber.BigInt().Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -190,9 +190,9 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 		} else {
 			oldBalance := balance.balance
 			if isAdd {
-				balance.balance = oldBalance.Sub(oldBalance, event.Value.BigInt())
+				balance.balance = oldBalance.Sub(oldBalance, event.Value)
 			} else {
-				balance.balance = oldBalance.Add(oldBalance, event.Value.BigInt())
+				balance.balance = oldBalance.Add(oldBalance, event.Value)
 			}
 			account.balances[tokenAlias] = balance
 		}
@@ -213,7 +213,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
-		allowance := Allowance{contractVersion: spender, token: tokenAlias, allowance: event.Value.BigInt()}
+		allowance := Allowance{contractVersion: spender, token: tokenAlias, allowance: event.Value}
 		account.allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}

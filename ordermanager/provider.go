@@ -34,9 +34,9 @@ type minerOrdersProvider struct {
 	rds                dao.RdsService
 	ticker             *time.Ticker
 	tick               int
-	lastBlockNumber    *types.Big
-	currentBlockNumber *types.Big
-	blockNumberPeriod  *types.Big
+	lastBlockNumber    *big.Int
+	currentBlockNumber *big.Int
+	blockNumberPeriod  *big.Int
 	mtx                sync.Mutex
 	quit               chan struct{}
 }
@@ -44,17 +44,17 @@ type minerOrdersProvider struct {
 func newMinerOrdersProvider(clearTick, blockNumberPeriod int, commonOpts *config.CommonOptions, rds dao.RdsService) *minerOrdersProvider {
 	provider := &minerOrdersProvider{}
 	provider.tick = clearTick
-	provider.blockNumberPeriod = types.NewBigWithInt(blockNumberPeriod)
+	provider.blockNumberPeriod = big.NewInt(int64(blockNumberPeriod))
 	provider.commonOpts = commonOpts
 	provider.rds = rds
-	provider.currentBlockNumber = types.NewBigPtr(provider.commonOpts.DefaultBlockNumber)
+	provider.currentBlockNumber = provider.commonOpts.DefaultBlockNumber
 
 	if entity, err := provider.rds.FindLatestBlock(); err == nil {
 		var block types.Block
 		if err := entity.ConvertUp(&block); err != nil {
 			log.Fatalf("ordermanager: orders provider,error%s", err.Error())
 		}
-		provider.currentBlockNumber = types.NewBigPtr(block.BlockNumber)
+		provider.currentBlockNumber = block.BlockNumber
 	}
 	provider.lastBlockNumber = provider.currentBlockNumber
 
@@ -82,7 +82,7 @@ func (p *minerOrdersProvider) stop() {
 	close(p.quit)
 }
 
-func (p *minerOrdersProvider) setBlockNumber(num *types.Big) {
+func (p *minerOrdersProvider) setBlockNumber(num *big.Int) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -100,13 +100,13 @@ func (p *minerOrdersProvider) markOrders(orderhashs []common.Hash) error {
 }
 
 func (p *minerOrdersProvider) unMarkOrders() error {
-	cmp := big.NewInt(0).Add(p.blockNumberPeriod.BigInt(), p.lastBlockNumber.BigInt())
-	des := new(big.Int).Sub(p.currentBlockNumber.BigInt(), cmp)
+	cmp := big.NewInt(0).Add(p.blockNumberPeriod, p.lastBlockNumber)
+	des := new(big.Int).Sub(p.currentBlockNumber, cmp)
 	if des.Cmp(big.NewInt(1)) < 0 {
 		return nil
 	}
 
-	log.Debugf("current block number:%s,last block number period:%s,period block number", p.currentBlockNumber.BigInt().String(), p.lastBlockNumber.BigInt().String(), p.blockNumberPeriod.BigInt().String())
+	log.Debugf("current block number:%s,last block number period:%s,period block number", p.currentBlockNumber.String(), p.lastBlockNumber.String(), p.blockNumberPeriod.String())
 
 	return p.rds.UnMarkMinerOrders(des.Int64())
 }

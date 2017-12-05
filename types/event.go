@@ -18,22 +18,25 @@
 
 package types
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+)
 
 type TokenRegisterEvent struct {
 	Token           common.Address
 	ContractAddress common.Address
 	Symbol          string
-	Blocknumber     *Big
-	Time            *Big
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type TokenUnRegisterEvent struct {
 	Token           common.Address
 	ContractAddress common.Address
 	Symbol          string
-	Blocknumber     *Big
-	Time            *Big
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type RinghashSubmittedEvent struct {
@@ -41,24 +44,24 @@ type RinghashSubmittedEvent struct {
 	RingMiner       common.Address
 	ContractAddress common.Address
 	TxHash          common.Hash
-	Blocknumber     *Big
-	Time            *Big
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type AddressAuthorizedEvent struct {
 	Protocol        common.Address
 	ContractAddress common.Address
 	Number          int
-	Blocknumber     *Big
-	Time            *Big
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type AddressDeAuthorizedEvent struct {
 	Protocol        common.Address
 	ContractAddress common.Address
 	Number          int
-	Blocknumber     *Big
-	Time            *Big
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 // todo: unpack transaction and create event
@@ -69,8 +72,8 @@ type EtherBalanceUpdateEvent struct {
 // todo: transfer change to
 type TokenBalanceUpdateEvent struct {
 	Owner       common.Address
-	Value       *Big
-	BlockNumber *Big
+	Value       *big.Int
+	BlockNumber *big.Int
 	BlockHash   common.Hash
 }
 
@@ -78,8 +81,8 @@ type TokenBalanceUpdateEvent struct {
 type TokenAllowanceUpdateEvent struct {
 	Owner       common.Address
 	Spender     common.Address
-	Value       *Big
-	BlockNumber *Big
+	Value       *big.Int
+	BlockNumber *big.Int
 	BlockHash   common.Hash
 }
 
@@ -87,18 +90,18 @@ type TransferEvent struct {
 	From            common.Address
 	To              common.Address
 	ContractAddress common.Address
-	Value           *Big
-	Blocknumber     *Big
-	Time            *Big
+	Value           *big.Int
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type ApprovalEvent struct {
 	Owner           common.Address
 	Spender         common.Address
 	ContractAddress common.Address
-	Value           *Big
-	Blocknumber     *Big
-	Time            *Big
+	Value           *big.Int
+	Blocknumber     *big.Int
+	Time            *big.Int
 }
 
 type OrderFilledEvent struct {
@@ -111,16 +114,16 @@ type OrderFilledEvent struct {
 	Owner           common.Address
 	TokenS          common.Address
 	TokenB          common.Address
-	RingIndex       *Big
-	Time            *Big
-	Blocknumber     *Big
-	AmountS         *Big
-	AmountB         *Big
-	LrcReward       *Big
-	LrcFee          *Big
+	RingIndex       *big.Int
+	Time            *big.Int
+	Blocknumber     *big.Int
+	AmountS         *big.Int
+	AmountB         *big.Int
+	LrcReward       *big.Int
+	LrcFee          *big.Int
 	IsDeleted       bool
-	SplitS          *Big
-	SplitB          *Big
+	SplitS          *big.Int
+	SplitB          *big.Int
 	Market          string
 }
 
@@ -128,9 +131,9 @@ type OrderCancelledEvent struct {
 	OrderHash       common.Hash
 	TxHash          common.Hash
 	ContractAddress common.Address
-	Time            *Big
-	Blocknumber     *Big
-	AmountCancelled *Big
+	Time            *big.Int
+	Blocknumber     *big.Int
+	AmountCancelled *big.Int
 	IsDeleted       bool
 }
 
@@ -138,17 +141,17 @@ type CutoffEvent struct {
 	Owner           common.Address
 	ContractAddress common.Address
 	TxHash          common.Hash
-	Time            *Big
-	Blocknumber     *Big
-	Cutoff          *Big
+	Time            *big.Int
+	Blocknumber     *big.Int
+	Cutoff          *big.Int
 	IsDeleted       bool
 }
 
 type RingMinedEvent struct {
-	RingIndex          *Big
-	Time               *Big
-	Blocknumber        *Big
-	TotalLrcFee        *Big
+	RingIndex          *big.Int
+	Time               *big.Int
+	Blocknumber        *big.Int
+	TotalLrcFee        *big.Int
 	Ringhash           common.Hash
 	TxHash             common.Hash
 	Miner              common.Address

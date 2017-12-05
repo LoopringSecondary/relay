@@ -37,12 +37,12 @@ type Order struct {
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
-	AmountS               []byte  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB               []byte  `gorm:"column:amount_b;type:varchar(30)"`
+	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
+	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
 	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
 	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
 	Salt                  int64   `gorm:"column:salt;type:bigint"`
-	LrcFee                []byte  `gorm:"column:lrc_fee;type:varchar(30)"`
+	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
@@ -50,8 +50,8 @@ type Order struct {
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
-	RemainAmountS         []byte  `gorm:"column:remain_amount_s;type:varchar(30)"`
-	RemainAmountB         []byte  `gorm:"column:remain_amount_b;type:varchar(30)"`
+	RemainAmountS         string  `gorm:"column:remain_amount_s;type:varchar(30)"`
+	RemainAmountB         string  `gorm:"column:remain_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
@@ -62,26 +62,16 @@ type Order struct {
 func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder
 
-	var err error
 	o.Price, _ = src.Price.Float64()
 	if o.Price > 1e12 || o.Price < 0.0000000000000001 {
 		return fmt.Errorf("dao order convert down,price out of range")
 	}
-	if o.AmountB, err = src.AmountB.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order amountB error:%s", err.Error())
-	}
-	if o.AmountS, err = src.AmountS.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order amountS error:%s", err.Error())
-	}
-	if o.RemainAmountB, err = state.RemainedAmountB.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order remainAmountB error:%s", err.Error())
-	}
-	if o.RemainAmountS, err = state.RemainedAmountS.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order remainAmountS error:%s", err.Error())
-	}
-	if o.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
-		return fmt.Errorf("dao order convert down, marshal order lrcFee error:%s", err.Error())
-	}
+
+	o.AmountB = src.AmountB.String()
+	o.AmountS = src.AmountS.String()
+	o.RemainAmountB = state.RemainedAmountB.String()
+	o.RemainAmountS = state.RemainedAmountS.String()
+	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
 	o.Owner = src.Owner.Hex()
@@ -107,26 +97,11 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 
 // convert dao/order to types/orderState
 func (o *Order) ConvertUp(state *types.OrderState) error {
-	state.RawOrder.AmountS = new(big.Int)
-	if err := state.RawOrder.AmountS.UnmarshalText(o.AmountS); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal amountS error:%s", err.Error())
-	}
-	state.RawOrder.AmountB = new(big.Int)
-	if err := state.RawOrder.AmountB.UnmarshalText(o.AmountB); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal amountB error:%s", err.Error())
-	}
-	state.RemainedAmountS = new(big.Int)
-	if err := state.RemainedAmountS.UnmarshalText(o.RemainAmountS); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal remainAmountS error:%s", err.Error())
-	}
-	state.RemainedAmountB = new(big.Int)
-	if err := state.RemainedAmountB.UnmarshalText(o.RemainAmountB); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal remainAmountB error:%s", err.Error())
-	}
-	state.RawOrder.LrcFee = new(big.Int)
-	if err := state.RawOrder.LrcFee.UnmarshalText(o.LrcFee); err != nil {
-		return fmt.Errorf("dao order convert up,unmarshal lrcFee error:%s", err.Error())
-	}
+	state.RawOrder.AmountS, _ = new(big.Int).SetString(o.AmountS, 0)
+	state.RawOrder.AmountB, _ = new(big.Int).SetString(o.AmountB, 0)
+	state.RemainedAmountS, _ = new(big.Int).SetString(o.RemainAmountS, 0)
+	state.RemainedAmountB, _ = new(big.Int).SetString(o.RemainAmountB, 0)
+	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
 
 	state.RawOrder.GeneratePrice()
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
