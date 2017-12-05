@@ -22,7 +22,7 @@ func (e *EthForwarder) SendRawTransaction(tx string) (result string, err error) 
 	return
 }
 
-func (e *EthForwarder) GetTransactionCount(address , blockNumber string) (result string, err error) {
+func (e *EthForwarder) GetTransactionCount(address, blockNumber string) (result string, err error) {
 	//err = e.Accessor.Call(&result, "eth_sendRawTransaction", hex)
 	return "0x1", nil
 }

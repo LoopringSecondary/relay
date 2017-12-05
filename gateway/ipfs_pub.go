@@ -1,10 +1,10 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/types"
 	"github.com/ipfs/go-ipfs-api"
-	"fmt"
 )
 
 type IPFSPubService interface {

@@ -21,11 +21,11 @@ package dao
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
-	"github.com/Loopring/relay/market/util"
 )
 
 // order amountS 上限1e30

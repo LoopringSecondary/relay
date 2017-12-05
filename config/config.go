@@ -133,7 +133,7 @@ type MinerOptions struct {
 	FeeRecepient            string //address the recepient of fee
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
-	GasLimit int64
+	GasLimit                int64
 	RateProvider            struct {
 		BaseUrl       string
 		Currency      string
@@ -164,6 +164,7 @@ type MysqlOptions struct {
 	DbName      string
 	Loc         string
 	TablePrefix string
+	Debug       bool
 }
 
 func Validator(cv reflect.Value) (bool, error) {

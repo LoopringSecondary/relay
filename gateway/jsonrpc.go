@@ -70,7 +70,7 @@ type OrderQuery struct {
 	PageSize        int
 	ContractVersion string
 	Owner           string
-	Market string
+	Market          string
 }
 
 type DepthQuery struct {
@@ -153,7 +153,7 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res str
 	return res, err
 }
 
-func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery)(res dao.PageResult, err error) {
+func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery) (res dao.PageResult, err error) {
 	orderQuery, pi, ps := convertFromQuery(query)
 	res, err = j.orderManager.GetOrders(orderQuery, pi, ps)
 	if err != nil {
@@ -396,7 +396,6 @@ func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
 
 	return rst, pi, ps
 }
-
 
 func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	rst := make(map[string]interface{})
