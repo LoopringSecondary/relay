@@ -268,9 +268,10 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 
 func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		orders []Order
-		err    error
-		data   = make([]interface{}, 0)
+		orders     []Order
+		err        error
+		data       = make([]interface{}, 0)
+		pageResult PageResult
 	)
 
 	if pageIndex <= 0 {
@@ -281,18 +282,14 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error
-	fmt.Println(err)
-	fmt.Println(orders)
-	if err != nil {
-		fmt.Println(err)
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error; err != nil {
+		return pageResult, err
 	}
 	for _, v := range orders {
 		data = append(data, v)
 	}
+	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	pageResult := PageResult{data, pageIndex, pageSize, 0}
-	fmt.Println(pageResult)
 	return pageResult, err
 }
 

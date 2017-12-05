@@ -19,7 +19,6 @@
 package crypto
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -31,7 +30,6 @@ func ValidateSignatureValues(v byte, r, s []byte) bool {
 }
 
 func GenerateHash(data ...[]byte) []byte {
-	fmt.Print(crypto)
 	return crypto.GenerateHash(data...)
 }
 
@@ -61,7 +59,5 @@ func SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types
 }
 
 func Initialize(c Crypto) {
-	fmt.Print("cccccc")
-	fmt.Print(c)
 	crypto = c
 }
