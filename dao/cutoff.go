@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"time"
 )
 
 type CutOffEvent struct {
@@ -53,11 +54,23 @@ func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner common.Address) (*C
 		err   error
 	)
 
-	err = s.db.Where("owner = ? and is_deleted = false", owner.Hex()).First(&model).Error
+	err = s.db.Where("owner = (?) and is_deleted = false", owner.Hex()).First(&model).Error
 
 	return &model, err
 }
 
 func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
 	return s.db.Model(&CutOffEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
+}
+
+func (s *RdsServiceImpl) FindValidCutoffEvents() ([]types.CutoffEvent, error) {
+	var (
+		list []types.CutoffEvent
+		err  error
+	)
+
+	nowtime := time.Now().Unix()
+	err = s.db.Where("cutoff > (?)", nowtime).Find(&list).Error
+
+	return list, err
 }

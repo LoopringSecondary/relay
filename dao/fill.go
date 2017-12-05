@@ -80,7 +80,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 		fill FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ? and order_hash = ? and is_deleted = false", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
+	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
 }

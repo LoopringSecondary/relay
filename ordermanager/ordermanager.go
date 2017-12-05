@@ -29,7 +29,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
@@ -44,6 +43,7 @@ type OrderManager interface {
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
+	FindValidCutoffEvents() ([]types.CutoffEvent, error)
 }
 
 type OrderManagerImpl struct {
@@ -421,4 +421,8 @@ func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageInd
 
 func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {
 	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
+}
+
+func (om *OrderManagerImpl) FindValidCutoffEvents() ([]types.CutoffEvent, error) {
+	return om.rds.FindValidCutoffEvents()
 }
