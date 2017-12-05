@@ -182,11 +182,11 @@ func (ord *OrderState) CalculateRemainAmount() {
 	bigRate := big.NewInt(RATE)
 
 	if ord.RawOrder.BuyNoMoreThanAmountB == true {
-		beenRateAmountB := new(big.Int).Mul(ord.RemainedAmountB, bigPrice)
-		ord.RemainedAmountS = new(big.Int).Div(beenRateAmountB, bigRate)
+		beenRateAmountB := new(big.Int).Mul(ord.DealtAmountB, bigPrice)
+		ord.DealtAmountS = new(big.Int).Div(beenRateAmountB, bigRate)
 	} else {
-		beenRateAmountS := new(big.Int).Mul(ord.RemainedAmountS, bigRate)
-		ord.RemainedAmountB = new(big.Int).Div(beenRateAmountS, bigPrice)
+		beenRateAmountS := new(big.Int).Mul(ord.DealtAmountS, bigRate)
+		ord.DealtAmountB = new(big.Int).Div(beenRateAmountS, bigPrice)
 	}
 }
 
@@ -213,12 +213,14 @@ type FilledOrder struct {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder        Order       `json:"rawOrder"`
-	BlockNumber     *big.Int    `json:"blockNumber"`
-	RemainedAmountS *big.Int    `json:"remainedAmountB"`
-	RemainedAmountB *big.Int    `json:"remainedAmountS"`
-	Status          OrderStatus `json:"status"`
-	BroadcastTime   int         `json:"broadcastTime"`
+	RawOrder         Order       `json:"rawOrder"`
+	BlockNumber      *big.Int    `json:"blockNumber"`
+	DealtAmountS     *big.Int    `json:"dealtAmountS"`
+	DealtAmountB     *big.Int    `json:"dealtAmountB"`
+	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
+	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
+	Status           OrderStatus `json:"status"`
+	BroadcastTime    int         `json:"broadcastTime"`
 }
 
 // 放到common package 根据配置决定状态

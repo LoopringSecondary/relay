@@ -50,8 +50,10 @@ type Order struct {
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
-	RemainAmountS         string  `gorm:"column:remain_amount_s;type:varchar(30)"`
-	RemainAmountB         string  `gorm:"column:remain_amount_b;type:varchar(30)"`
+	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
+	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
+	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
@@ -67,10 +69,12 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 		return fmt.Errorf("dao order convert down,price out of range")
 	}
 
-	o.AmountB = src.AmountB.String()
 	o.AmountS = src.AmountS.String()
-	o.RemainAmountB = state.RemainedAmountB.String()
-	o.RemainAmountS = state.RemainedAmountS.String()
+	o.AmountB = src.AmountB.String()
+	o.DealtAmountS = state.DealtAmountS.String()
+	o.DealtAmountB = state.DealtAmountB.String()
+	o.CancelledAmountS = state.CancelledAmountS.String()
+	o.CancelledAmountB = state.CancelledAmountB.String()
 	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
@@ -99,8 +103,10 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.AmountS, _ = new(big.Int).SetString(o.AmountS, 0)
 	state.RawOrder.AmountB, _ = new(big.Int).SetString(o.AmountB, 0)
-	state.RemainedAmountS, _ = new(big.Int).SetString(o.RemainAmountS, 0)
-	state.RemainedAmountB, _ = new(big.Int).SetString(o.RemainAmountB, 0)
+	state.DealtAmountS, _ = new(big.Int).SetString(o.DealtAmountS, 0)
+	state.DealtAmountB, _ = new(big.Int).SetString(o.DealtAmountB, 0)
+	state.CancelledAmountS, _ = new(big.Int).SetString(o.CancelledAmountS, 0)
+	state.CancelledAmountB, _ = new(big.Int).SetString(o.CancelledAmountB, 0)
 	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
 
 	state.RawOrder.GeneratePrice()
