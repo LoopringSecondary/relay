@@ -165,7 +165,7 @@ func init() {
 
 	// set supported tokens
 	rds := GenerateDaoService(cfg)
-	util.Initialize(rds)
+	InitialMarketUtil(rds)
 	for _, token := range util.SupportTokens {
 		tokens = append(tokens, token.Protocol)
 	}
