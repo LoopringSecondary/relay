@@ -21,9 +21,11 @@ package ethaccessor_test
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"testing"
 )
 
@@ -74,4 +76,42 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	}
 
 	t.Log(balance.String())
+}
+
+// todo fukun
+func TestEthNodeAccessor_CancelOrder(t *testing.T) {
+	c := test.LoadConfig()
+	accessor, err := test.GenerateAccessor(c)
+	if err != nil {
+		t.Fatalf("generate accessor error:%s", err.Error())
+	}
+
+	var (
+		result                string
+		addresses             [3]common.Address
+		values                [7]big.Int
+		buyNoMoreThanAmountB  bool
+		marginSplitPercentage uint8
+		v                     uint8
+		r, s                  common.Hash
+	)
+	token := util.SupportTokens["lrc"].Protocol
+	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, token)
+	if err := callMethod(&result, "cancelOrder", result, addresses, values, buyNoMoreThanAmountB, marginSplitPercentage, v, r, s); nil != err {
+		t.Fatalf("call method cancelOrder error:%s", err.Error())
+	}
+
+	t.Logf("cancelOrder result:%s", result)
+}
+
+func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
+
+}
+
+func TestEthNodeAccessor_Cutoff(t *testing.T) {
+
+}
+
+func TestEthNodeAccessor_GetCutoff(t *testing.T) {
+
 }

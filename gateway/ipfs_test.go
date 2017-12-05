@@ -20,6 +20,7 @@ package gateway_test
 
 import (
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -73,8 +74,11 @@ func TestRing(t *testing.T) {
 	c := test.LoadConfig()
 	entity := test.GenerateTomlEntity(c)
 
-	tokenAddressA := entity.Tokens[0]
-	tokenAddressB := entity.Tokens[1]
+	rds := test.GenerateDaoService(c)
+	test.InitialMarketUtil(rds)
+	tokenAddressA := util.SupportTokens["lrc"].Protocol
+	tokenAddressB := util.SupportMarkets["weth"].Protocol
+
 	testAcc1 := entity.Accounts[0]
 	testAcc2 := entity.Accounts[1]
 
@@ -105,7 +109,7 @@ func TestRing(t *testing.T) {
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
 		tokenAddressB,

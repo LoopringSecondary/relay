@@ -18,8 +18,6 @@
 
 package dao
 
-import "fmt"
-
 // order amountS 上限1e30
 type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
@@ -37,13 +35,9 @@ type Trend struct {
 }
 
 func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error) {
-
 	var result PageResult
 
-	fmt.Println("trend query is .......")
-	fmt.Println(query)
-
-	trends := make([]Trend,0)
+	trends := make([]Trend, 0)
 
 	if pageIndex <= 0 {
 		pageIndex = 1
@@ -60,7 +54,6 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	result.PageIndex = pageIndex
 	result.PageSize = pageSize
 
-	fmt.Println(query)
 	if err = s.db.Model(&Trend{}).Where(query).Order("start desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&trends).Error; err != nil {
 		return
 	}

@@ -94,6 +94,8 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 				m.BtoANotMatchedOrderHashes = []common.Hash{}
 				matcher.markets = append(matcher.markets, m)
 			}
+		} else {
+			log.Debugf("miner,timing matcher cann't find tokenPair tokenS:%s, tokenB:%s", pair.TokenS.Hex(), pair.TokenB.Hex())
 		}
 	}
 

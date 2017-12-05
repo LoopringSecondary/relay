@@ -60,8 +60,8 @@ type Token struct {
 }
 
 type AccountJson struct {
-	ContractVersion string `json:"contractVersion""`
-	Address         string `json:"owner"`
+	ContractVersion string  `json:"contractVersion""`
+	Address         string  `json:"owner"`
 	Tokens          []Token `json:"tokens"`
 }
 
@@ -85,7 +85,6 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 }
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
-
 
 	accountInCache, ok := a.c.Get(address)
 	if ok {
