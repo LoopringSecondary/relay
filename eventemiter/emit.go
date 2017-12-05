@@ -53,8 +53,7 @@ const (
 	Miner_NewOrderState    = "Miner_NewOrderState"
 	Miner_NewRing          = "Miner_NewRing"
 	Miner_RingMined        = "Miner_RingMined"
-	Miner_RingSubmitFailed        = "Miner_RingSubmitFailed"
-
+	Miner_RingSubmitFailed = "Miner_RingSubmitFailed"
 )
 
 var watchers map[string][]*Watcher

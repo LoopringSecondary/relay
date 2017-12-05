@@ -19,10 +19,10 @@
 package dao
 
 import (
-	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"fmt"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type FillEvent struct {
@@ -124,7 +124,6 @@ func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex,
 }
 
 func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end int64) (fills []FillEvent, err error) {
-
 
 	query := make(map[string]interface{})
 

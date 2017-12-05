@@ -115,7 +115,7 @@ func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIn
 		return res, err
 	}
 
-	for _,rm := range ringMined {
+	for _, rm := range ringMined {
 		res.Data = append(res.Data, rm)
 	}
 	return

@@ -159,6 +159,6 @@ type RingMinedEvent struct {
 }
 
 type RingSubmitFailedEvent struct {
-	RingHash        common.Hash
-	Err 	error
+	RingHash common.Hash
+	Err      error
 }

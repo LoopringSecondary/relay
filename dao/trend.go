@@ -43,7 +43,7 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	fmt.Println("trend query is .......")
 	fmt.Println(query)
 
-	trends := make([]Trend,0)
+	trends := make([]Trend, 0)
 
 	if pageIndex <= 0 {
 		pageIndex = 1

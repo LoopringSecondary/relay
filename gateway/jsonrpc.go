@@ -70,7 +70,7 @@ type OrderQuery struct {
 	PageSize        int
 	ContractVersion string
 	Owner           string
-	Market string
+	Market          string
 }
 
 type DepthQuery struct {
@@ -94,6 +94,32 @@ type RingMinedQuery struct {
 	RingHash        string
 	PageIndex       int
 	PageSize        int
+}
+
+type RawOrderJsonResult struct {
+	Protocol              string `json:"protocol"` // 智能合约地址
+	Owner                 string `json:"address"`
+	Hash                  string `json:"hash"`
+	TokenS                string `json:"tokenS"`  // 卖出erc20代币智能合约地址
+	TokenB                string `json:"tokenB"`  // 买入erc20代币智能合约地址
+	AmountS               string `json:"amountS"` // 卖出erc20代币数量上限
+	AmountB               string `json:"amountB"` // 买入erc20代币数量上限
+	Timestamp             int64  `json:"timestamp"`
+	Ttl                   string `json:"ttl"` // 订单过期时间
+	Salt                  string `json:"salt"`
+	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
+	BuyNoMoreThanAmountB  bool   `json:"buyNoMoreThanAmountB"`
+	MarginSplitPercentage string `json:"marginSplitPercentage"` // 不为0时支付给交易所的分润比例，否则视为100%
+	V                     string `json:"v"`
+	R                     string `json:"r"`
+	S                     string `json:"s"`
+}
+
+type OrderJsonResult struct {
+	RawOrder        RawOrderJsonResult `json:"originalOrder"`
+	RemainedAmountS string             `json:"remainedAmountS"`
+	RemainedAmountB string             `json:"remainedAmountB"`
+	Status          string             `json:"status"`
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -153,13 +179,13 @@ func (j *JsonrpcServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res str
 	return res, err
 }
 
-func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery)(res dao.PageResult, err error) {
+func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
 	orderQuery, pi, ps := convertFromQuery(query)
-	res, err = j.orderManager.GetOrders(orderQuery, pi, ps)
+	queryRst, err := j.orderManager.GetOrders(orderQuery, pi, ps)
 	if err != nil {
 		fmt.Println(err)
 	}
-	return res, err
+	return buildOrderResult(queryRst), err
 }
 
 func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
@@ -291,6 +317,22 @@ func convertStatus(s string) types.OrderStatus {
 	return types.ORDER_UNKNOWN
 }
 
+func getStringStatus(s types.OrderStatus) string {
+	switch s {
+	case types.ORDER_NEW:
+		return "ORDER_NEW"
+	case types.ORDER_PARTIAL:
+		return "ORDER_PARTIAL"
+	case types.ORDER_FINISHED:
+		return "ORDER_FINISHED"
+	case types.ORDER_CANCEL:
+		return "ORDER_CANCEL"
+	case types.ORDER_CUTOFF:
+		return "ORDER_CUTOFF"
+	}
+	return "ORDER_UNKNOWN"
+}
+
 func calculateDepth(states []types.OrderState, length int) [][]string {
 
 	if len(states) == 0 {
@@ -397,7 +439,6 @@ func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
 	return rst, pi, ps
 }
 
-
 func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	rst := make(map[string]interface{})
 	var pi, ps int
@@ -419,4 +460,42 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	}
 
 	return rst, pi, ps
+}
+
+func buildOrderResult(src dao.PageResult) PageResult {
+
+	rst := PageResult{Total: src.Total, PageIndex: src.PageIndex, PageSize: src.PageSize, Data: make([]interface{}, 0)}
+
+	for _, d := range src.Data {
+		o := d.(types.OrderState)
+		rst.Data = append(rst.Data, orderStateToJson(o))
+	}
+	return rst
+}
+
+func orderStateToJson(src types.OrderState) OrderJsonResult {
+
+	rst := OrderJsonResult{}
+	rst.RemainedAmountB = types.BigintToHex(src.RemainedAmountB)
+	rst.RemainedAmountS = types.BigintToHex(src.RemainedAmountS)
+	rst.Status = getStringStatus(src.Status)
+	rawOrder := RawOrderJsonResult{}
+	rawOrder.Protocol = src.RawOrder.Protocol.String()
+	rawOrder.Owner = src.RawOrder.Owner.String()
+	rawOrder.Hash = src.RawOrder.Hash.String()
+	rawOrder.TokenS = util.AddressToAlias(src.RawOrder.TokenS.String())
+	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
+	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
+	rawOrder.AmountB = types.BigintToHex(src.RawOrder.AmountB)
+	rawOrder.Timestamp = src.RawOrder.Timestamp.Int64()
+	rawOrder.Ttl = types.BigintToHex(src.RawOrder.Ttl)
+	rawOrder.Salt = types.BigintToHex(src.RawOrder.Salt)
+	rawOrder.LrcFee = types.BigintToHex(src.RawOrder.LrcFee)
+	rawOrder.BuyNoMoreThanAmountB = src.RawOrder.BuyNoMoreThanAmountB
+	rawOrder.MarginSplitPercentage = types.BigintToHex(big.NewInt(int64(src.RawOrder.MarginSplitPercentage)))
+	rawOrder.V = types.BigintToHex(big.NewInt(int64(src.RawOrder.V)))
+	rawOrder.R = src.RawOrder.R.Hex()
+	rawOrder.S = src.RawOrder.S.Hex()
+	rst.RawOrder = rawOrder
+	return rst
 }

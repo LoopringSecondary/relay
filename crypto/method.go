@@ -19,11 +19,11 @@
 package crypto
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
-	"fmt"
 )
 
 func ValidateSignatureValues(v byte, r, s []byte) bool {

@@ -79,11 +79,16 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 func HandleOrder(input eventemitter.EventData) (err error) {
 	ord := input.(*types.Order)
 
+	fmt.Println("xxxxxxxxxx")
 	orderHash := ord.GenerateHash()
 	ord.Hash = orderHash
 
+	fmt.Println("xxxxxxxxxx2")
 	orderState, queryErr := gateway.om.GetOrderByHash(ord.Hash)
 
+	var broadcastTime int
+
+	fmt.Println("xxxxxxxxxx3")
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if queryErr != nil {
 		ord.GeneratePrice()
@@ -99,24 +104,21 @@ func HandleOrder(input eventemitter.EventData) (err error) {
 		state := &types.OrderState{}
 		state.RawOrder = *ord
 
-		if gateway.isBroadcast && gateway.maxBroadcastTime > 0 {
+		broadcastTime = 0
+
+		if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 			state.BroadcastTime = 1
-			go func() {
-				pubErr := gateway.ipfsPubService.PublishOrder(*ord)
-				if pubErr != nil {
-					log.Error("publish order failed, orderHash : " + ord.Hash.Str())
-				}
-			}()
 		}
 
 		log.Debugf("gateway accept new order hash:%s,amountS:%s,amountB:%s", orderHash.Hex(), ord.AmountS.String(), ord.AmountB.String())
 
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else {
-		err = errors.New("order exist. will not insert again")
+		broadcastTime = orderState.BroadcastTime
+		err = errors.New("order was exist. please don't submit again")
 	}
 
-	if gateway.isBroadcast && orderState.BroadcastTime < gateway.maxBroadcastTime {
+	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 		//broadcast
 		go func() {
 			pubErr := gateway.ipfsPubService.PublishOrder(*ord)

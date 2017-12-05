@@ -72,10 +72,10 @@ type Trend struct {
 }
 
 type TrendManager struct {
-	c             *cache.Cache
-	cacheReady    bool
-	rds           dao.RdsService
-	cron          *cron.Cron
+	c          *cache.Cache
+	cacheReady bool
+	rds        dao.RdsService
+	cron       *cron.Cron
 }
 
 var once sync.Once
@@ -219,7 +219,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 	result.Low = low
 
 	if len(trends) == 0 {
-		lastFill := fills[len(fills) - 1]
+		lastFill := fills[len(fills)-1]
 		result.Open = util.CalculatePrice(lastFill.AmountS, lastFill.AmountB, lastFill.TokenS, lastFill.TokenB)
 		firstFill := fills[0]
 		result.Close = util.CalculatePrice(firstFill.AmountS, firstFill.AmountB, firstFill.TokenS, firstFill.TokenB)
@@ -343,8 +343,6 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 		End:        lastSecondThisHour.Unix(),
 	}
 
-
-
 	var (
 		high   float64
 		low    float64
@@ -383,7 +381,6 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 	trend.Open = util.CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
 	closeFill := fills[len(fills)-1]
 	trend.Close = util.CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
-
 
 	trend.Vol = vol
 	trend.Amount = amount

@@ -23,7 +23,6 @@ Websocket : wss://{hostname}:{port}/ws
 
 * The relay supports all Ethereum standard JSON-PRCs, please refer to [eth JSON-RPC](https://github.com/ethereum/wiki/wiki/JSON-RPC).
 * [loopring_submitOrder](#loopring_submitorder)
-* [loopring_cancelOrder](#loopring_cancelorder)
 * [loopring_getOrders](#loopring_getorders)
 * [loopring_getDepth](#loopring_getdepth)
 * [loopring_getTicker](#loopring_ticker)
@@ -48,7 +47,8 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
 ##### Parameters
 
 `JSON Object` - The order object(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
-  - `address` - Order submit address
+  - `protocol` - Loopring contract address
+  - `owner` - user's wallet address
   - `tokenS` - Token to sell.
   - `tokenB` - Token to buy.
   - `amountS` - Maximum amount of tokenS to sell.
@@ -58,14 +58,15 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `salt` - A random number to make this order's hash unique.
   - `lrcFee` - Max amount of LRC to pay for miner. The real amount to pay is proportional to fill amount.
   - `buyNoMoreThanAmountB` - If true, this order does not accept buying more than `amountB`.
-  - `savingSharePercentage` - The percentage of savings paid to miner.
+  - `marginSplitPercentage` - The percentage of savings paid to miner.
   - `v` - ECDSA signature parameter v.
   - `r` - ECDSA signature parameter r.
   - `s` - ECDSA signature parameter s.
 
 ```js
 params: {
-  "address" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "tokenS" : "Eth",
   "tokenB" : "Lrc",
   "amountS" : 100.3,
@@ -75,7 +76,7 @@ params: {
   "salt" : 3848348,
   "lrcFee" : 20,
   "buyNoMoreThanAmountB" : true,
-  "savingSharePercentage" : 50, // 0~100
+  "marginSplitPercentage" : 50, // 0~100
   "v" : 112,
   "r" : "239dskjfsn23ck34323434md93jchek3",
   "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
@@ -95,138 +96,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_submitOrder","params":{
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad"
-}
-```
-
-***
-
-#### loopring_cancelOrder
-
-Cancel an order.
-
-##### Parameters
-
-`JSON Object` - include order hash and signature params
-  - `orderHash` - The order hash.
-  - `v` - ECDSA signature parameter v.
-  - `r` - ECDSA signature parameter r.
-  - `s` - ECDSA signature parameter s.
-
-```js
-params: {
-  "orderHash" : "0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad",
-  "v" : 112,
-  "r" : "239dskjfsn23ck34323434md93jchek3",
-  "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
-}
-```
-
-##### Returns
-
-`String` - content like `SUBMIT_SUCCESS` for async request.
-
-##### Example
-```js
-// Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_cancelOrder","params":{see above},"id":64}'
-
-// Result
-{
-  "id":64,
-  "jsonrpc": "2.0",
   "result": "SUBMIT_SUCCESS"
-}
-```
-
-***
-
-#### loopring_getOrderByHash
-
-Get order details info by order hash.
-
-##### Parameters
-
-`String` - The order hash
-
-```js
-params: ["0x47173285a8d7341e5e972fc677286384f802f8ef42a5ec5f03bbfa254cb01fad"]
-```
-
-##### Returns
-
-1. `JSON Object` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
-  - `address` - Order submit address
-  - `tokenS` - Token to sell.
-  - `tokenB` - Token to buy.
-  - `amountS` - Maximum amount of tokenS to sell.
-  - `amountB` - Minimum amount of tokenB to buy if all amountS sold.
-  - `timestamp` - Indicating when this order is created.
-  - `ttl` - How long, in seconds, will this order live.
-  - `rand` - A random number to make this order's hash unique.
-  - `lrcFee` - Max amount of LRC to pay for miner. The real amount to pay is proportional to fill amount.
-  - `buyNoMoreThanAmountB` - If true, this order does not accept buying more than `amountB`.
-  - `savingSharePercentage` - The percentage of savings paid to miner.
-  - `v` - ECDSA signature parameter v.
-  - `r` - ECDSA signature parameter r.
-  - `s` - ECDSA signature parameter s.
-  - `ts` - The submit TimeStamp.
-
-2. `status` `STRING` - Order status. refer to `Order Status Set` (include Pending, PartiallyExecuted, FullyExecuted, Cancelled)
-3. `totalDealedAmountS` - The total amount of TokenS that have been selled. 
-4. `totalDealedAmountB` - The total amount of TokenB that have been buyed.
-5. `matchList` -  The match records related to this order.
-
-##### Example
-```js
-// Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params":{see above},"id":64}'
-
-// Result
-{
-  "id":64,
-  "jsonrpc": "2.0",
-  "result": {
-    "orginalOrder" : {
-      "address" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-      "tokenS" : "Eth",
-      "tokenB" : "Lrc",
-      "amountS" : 100.3,
-      "amountB" : 3838434,
-      "timestamp" : "2017-10-11 19:00:01",
-      "ttl": 1200,
-      "salt" : 3848348,
-      "lrcFee" : 20,
-      "buyNoMoreThanAmountB" : true,
-      "savingSharePercentage" : 50, // 0~100
-      "v" : 112,
-      "r" : "239dskjfsn23ck34323434md93jchek3",
-      "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
-      "ts" : 1506014710000
-    },
-    "status" : "PartiallyExecuted",
-    "totalDealedAmountS" : 30,
-    "totalDealedAmountB" : 29333.21,
-    "matchList" : {
-      "total" : 301,
-      "pageIndex" : 2,
-      "pageSize" : 20
-      "data" : [
-        {
-          "ts" : "1506014710000",
-          "amountS" : 30.31,
-          "amountB" : 3934.111,
-          "txHash" : "0x1eb8d538bb9727028912f57c54776d90c1927e3b49f34a2e53e9271949ec044c"
-        },
-        {
-          "ts" : "1506014710323",
-          "amountS" : 30.31,
-          "amountB" : 3934.111,
-          "txHash" : "0x1eb8d538bb9727028912f57c54776d90c1927e3b49f34a2e53e9271949ec044c"
-        }
-      ]
-    }
-  }
 }
 ```
 
@@ -238,15 +108,19 @@ Get loopring order list.
 
 ##### Parameters
 
-`address` - The address, if is null, will query all orders.
-`status` - selected by status.
+`owner` - The address, if is null, will query all orders.
+`status` - order status enum string.(status collection is : ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
+`contractVersion` - the loopring contract version you selected.
+`market` - which market' order.(format is lrc-weth)
 `pageIndex` - The page want to query, default is 1.
 `pageSize` - The size per page, default is 50.
 
 ```js
 params: {
-  "address" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "status" : "Canceled",
+  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "status" : "ORDER_CANCEL",
+  "contractVersion" : "v1.0",
+  "market" : "coss-weth",
   "pageIndex" : 2,
   "pageSize" : 40
 }
@@ -258,6 +132,7 @@ params: {
 
 1. `data` `LoopringOrder` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
   - `address` - Order submit address
+  - `protocol` - loopring protocol address
   - `tokenS` - Token to sell.
   - `tokenB` - Token to buy.
   - `amountS` - Maximum amount of tokenS to sell.
@@ -288,45 +163,27 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params
   "jsonrpc": "2.0",
   "result": {
     "data" : [
-      "orginalOrder" : {
-        "address" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-        "tokenS" : "Eth",
-        "tokenB" : "Lrc",
-        "amountS" : 100.3,
-        "amountB" : 3838434,
-        "timestamp" : "2017-11-11 19:00:01",
-        "ttl": 1200,
-        "salt" : 3848348,
-        "lrcFee" : 20,
+      "rawOrder" : {
+        "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+        "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+        "tokenS" : "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "tokenB" : "0xef68e7c694f40c8202821edf525de3782458639f",
+        "amountS" : "0xde0b6b3a7640000",
+        "amountB" : "0xde0b6b3a7640000",
+        "timestamp" : 1506014710,
+        "ttl": "0xd2f00",
+        "salt" : "0xb3a6cc8cc77e88",
+        "lrcFee" : "0x470de4df820000",
         "buyNoMoreThanAmountB" : true,
-        "savingSharePercentage" : 50, // 0~100
-        "v" : 112,
+        "marginSplitPercentage" : 50, // 0~100
+        "v" : "0x1c",
         "r" : "239dskjfsn23ck34323434md93jchek3",
         "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy"
       },
-      "status" : "PartiallyExecuted",
-      "totalDealedAmountS" : 30,
-      "totalDealedAmountB" : 29333.21,
-      "matchList" : {
-        "total" : 301,
-        "pageIndex" : 2,
-        "pageSize" : 20
-        "data" : [
-          {
-            "ts" : "1506014710000",
-            "amountS" : 30.31,
-            "amountB" : 3934.111,
-            "txHash" : "0x1eb8d538bb9727028912f57c54776d90c1927e3b49f34a2e53e9271949ec044c"
-          },
-          {
-            "ts" : "1506014710323",
-            "amountS" : 30.31,
-            "amountB" : 3934.111,
-            "txHash" : "0x1eb8d538bb9727028912f57c54776d90c1927e3b49f34a2e53e9271949ec044c"
-          }
-        ]
-      },
-      {}....
+      "status" : "ORDER_CANCEL",
+      "remainedAmountB" : 30,
+      "remainedAmountS" : 29333.21,
+      }
     ]
     "total" : 12,
     "pageIndex" : 1,

@@ -121,7 +121,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
-
 	state := input.(*types.OrderState)
 	fmt.Println(".....................................")
 	fmt.Println(state)
