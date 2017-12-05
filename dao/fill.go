@@ -37,41 +37,26 @@ type FillEvent struct {
 	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)"`
 	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)"`
 	OrderHash     string `gorm:"column:order_hash;type:varchar(82)"`
-	AmountS       []byte `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB       []byte `gorm:"column:amount_b;type:varchar(30)"`
+	AmountS       string `gorm:"column:amount_s;type:varchar(30)"`
+	AmountB       string `gorm:"column:amount_b;type:varchar(30)"`
 	TokenS        string `gorm:"column:token_s;type:varchar(42)"`
 	TokenB        string `gorm:"column:token_b;type:varchar(42)"`
-	LrcReward     []byte `gorm:"column:lrc_reward;type:varchar(30)"`
-	LrcFee        []byte `gorm:"column:lrc_fee;type:varchar(30)"`
-	SplitS        []byte `gorm:"column:split_s;type:varchar(30)"`
-	SplitB        []byte `gorm:"column:split_b;type:varchar(30)"`
+	LrcReward     string `gorm:"column:lrc_reward;type:varchar(30)"`
+	LrcFee        string `gorm:"column:lrc_fee;type:varchar(30)"`
+	SplitS        string `gorm:"column:split_s;type:varchar(30)"`
+	SplitB        string `gorm:"column:split_b;type:varchar(30)"`
 	Market        string `gorm:"column:market;type:varchar(42)"`
 	IsDeleted     bool   `gorm:"column:is_deleted"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
 func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
-	var err error
-
-	if f.AmountS, err = src.AmountS.MarshalText(); err != nil {
-		return err
-	}
-	if f.AmountB, err = src.AmountB.MarshalText(); err != nil {
-		return err
-	}
-	if f.LrcReward, err = src.LrcReward.MarshalText(); err != nil {
-		return err
-	}
-	if f.LrcFee, err = src.LrcFee.MarshalText(); err != nil {
-		return err
-	}
-	if f.SplitS, err = src.SplitS.MarshalText(); err != nil {
-		return err
-	}
-	if f.SplitB, err = src.SplitB.MarshalText(); err != nil {
-		return err
-	}
-
+	f.AmountS = src.AmountS.String()
+	f.AmountB = src.AmountB.String()
+	f.LrcReward = src.LrcReward.String()
+	f.LrcFee = src.LrcFee.String()
+	f.SplitS = src.SplitS.String()
+	f.SplitB = src.SplitB.String()
 	f.Protocol = src.ContractAddress.Hex()
 	f.RingIndex = src.RingIndex.Int64()
 	f.BlockNumber = src.Blocknumber.Int64()

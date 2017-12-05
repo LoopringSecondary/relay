@@ -158,7 +158,7 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 			return err
 		}
 
-		if modelConvertEvent.RingIndex.BigInt().Cmp(event.RingIndex.BigInt()) != 0 {
+		if modelConvertEvent.RingIndex.Cmp(event.RingIndex) != 0 {
 			om.rds.Add(model)
 		}
 	}
@@ -177,9 +177,11 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	if err != nil {
 		newFillModel := &dao.FillEvent{}
 		if err := newFillModel.ConvertDown(event); err != nil {
+			log.Debugf("order manager,handle order filled event error:order %s convert down failed", event.OrderHash.Hex())
 			return err
 		}
 		if err := om.rds.Add(newFillModel); err != nil {
+			log.Debugf("order manager,handle order filled event error:order %s insert faild", event.OrderHash.Hex())
 			return err
 		}
 	}
@@ -199,7 +201,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	om.orderFullFinished(state)
 
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order status is %d ", state.Status)
+		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
 	}
 
 	// validate cutoff
@@ -214,14 +216,14 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate orderState.remainAmounts
-	state.BlockNumber = event.Blocknumber.BigInt()
-	state.RemainedAmountS = event.AmountS.BigInt()
-	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.BigInt().Cmp(state.RawOrder.AmountB) > 0 {
+	state.BlockNumber = event.Blocknumber
+	state.RemainedAmountS = event.AmountS
+	if state.RawOrder.BuyNoMoreThanAmountB == true && event.AmountB.Cmp(state.RawOrder.AmountB) > 0 {
 		state.RemainedAmountB = state.RawOrder.AmountB
 	} else {
-		state.RemainedAmountB = event.AmountB.BigInt()
+		state.RemainedAmountB = event.AmountB
 	}
-	if event.AmountS.BigInt().Cmp(big.NewInt(0)) < 1 {
+	if event.AmountS.Cmp(big.NewInt(0)) < 1 {
 		state.RemainedAmountS = big.NewInt(0)
 	}
 
@@ -276,15 +278,15 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled.BigInt())
+		state.RemainedAmountB = new(big.Int).Sub(state.RemainedAmountB, event.AmountCancelled)
 		if state.RemainedAmountB.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order manager,handle order filled event error:order %s cancel amountB:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
+			log.Errorf("order manager,handle order filled event error:order %s cancel amountB:%s invalid", orderhash.Hex(), event.AmountCancelled.String())
 			state.RemainedAmountB = big.NewInt(0)
 		}
 	} else {
-		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled.BigInt())
+		state.RemainedAmountS = new(big.Int).Sub(state.RemainedAmountS, event.AmountCancelled)
 		if state.RemainedAmountS.Cmp(big.NewInt(0)) < 0 {
-			log.Errorf("order manager,handle order filled event error:order %s cancel amountS:%s invalid", orderhash.Hex(), event.AmountCancelled.BigInt().String())
+			log.Errorf("order manager,handle order filled event error:order %s cancel amountS:%s invalid", orderhash.Hex(), event.AmountCancelled.String())
 			state.RemainedAmountS = big.NewInt(0)
 		}
 	}

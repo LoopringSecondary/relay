@@ -194,11 +194,11 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 	for i, data := range fills {
 
 		if util.IsBuy(data.TokenS) {
-			vol += util.ByteToFloat(data.AmountB)
-			amount += util.ByteToFloat(data.AmountS)
+			vol += util.StringToFloat(data.AmountB)
+			amount += util.StringToFloat(data.AmountS)
 		} else {
-			vol += util.ByteToFloat(data.AmountS)
-			amount += util.ByteToFloat(data.AmountB)
+			vol += util.StringToFloat(data.AmountS)
+			amount += util.StringToFloat(data.AmountB)
 		}
 
 		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
@@ -287,11 +287,11 @@ func (t *TrendManager) insertTrend() {
 				for _, data := range fills {
 
 					if util.IsBuy(data.TokenS) {
-						vol += util.ByteToFloat(data.AmountB)
-						amount += util.ByteToFloat(data.AmountS)
+						vol += util.StringToFloat(data.AmountB)
+						amount += util.StringToFloat(data.AmountS)
 					} else {
-						vol += util.ByteToFloat(data.AmountS)
-						amount += util.ByteToFloat(data.AmountB)
+						vol += util.StringToFloat(data.AmountS)
+						amount += util.StringToFloat(data.AmountB)
 					}
 
 					price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
@@ -357,11 +357,11 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 	for _, data := range fills {
 
 		if util.IsBuy(data.TokenS) {
-			vol += util.ByteToFloat(data.AmountB)
-			amount += util.ByteToFloat(data.AmountS)
+			vol += util.StringToFloat(data.AmountB)
+			amount += util.StringToFloat(data.AmountS)
 		} else {
-			vol += util.ByteToFloat(data.AmountS)
-			amount += util.ByteToFloat(data.AmountB)
+			vol += util.StringToFloat(data.AmountS)
+			amount += util.StringToFloat(data.AmountB)
 		}
 
 		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
