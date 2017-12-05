@@ -29,7 +29,7 @@ block_period = 5
     db_name = "loopring_order_manager"
     loc = "Local"
     table_prefix = "lpr_"
-    debug = true
+    debug = false
 
 [ipfs]
     server = "localhost"
@@ -61,7 +61,7 @@ block_period = 5
     ringMaxLength = 4
     feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
     miner = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
-    ifRegistryRingHash = true
+    ifRegistryRingHash = false
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
     gas_limit = 150000000

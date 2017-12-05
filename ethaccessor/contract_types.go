@@ -110,7 +110,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.OrderHash = common.Hash(e.OrderHashList[i])
 		fill.NextOrderHash = nextOrderHash
 
-		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
+		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
 		fill.RingIndex = e.RingIndex
 		fill.AmountS = e.AmountsList[i][0]
 		fill.AmountB = e.AmountsList[i][1]
@@ -130,7 +130,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash `fieldName:"_orderHash"`
-	AmountCancelled *big.Int    `fieldName:"_amountCancelled"`
+	AmountCancelled *big.Int    `fieldName:"_amountCancelled"` // amountCancelled为多次取消累加总量，根据orderhash以及amountCancelled可以确定其唯一性
 }
 
 func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {

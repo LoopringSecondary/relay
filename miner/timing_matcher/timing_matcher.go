@@ -165,10 +165,10 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 			delete(market.AtoBOrders, orderHash)
 		} else {
 			for _, matchedRound := range matchedOrder.round {
-				orderState.RemainedAmountB.Sub(orderState.RemainedAmountB, intFromRat(matchedRound.matchedAmountB))
-				orderState.RemainedAmountS.Sub(orderState.RemainedAmountS, intFromRat(matchedRound.matchedAmountS))
+				orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(matchedRound.matchedAmountB))
+				orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(matchedRound.matchedAmountS))
 			}
-			if orderState.RemainedAmountB.Cmp(big.NewInt(int64(0))) <= 0 && orderState.RemainedAmountS.Cmp(big.NewInt(int64(0))) <= 0 {
+			if orderState.DealtAmountB.Cmp(big.NewInt(int64(0))) <= 0 && orderState.DealtAmountS.Cmp(big.NewInt(int64(0))) <= 0 {
 				//todo
 				return true
 			}
@@ -181,12 +181,12 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 	filledOrderState := filledOrder.OrderState
 	if filledOrderState.RawOrder.TokenS == market.TokenA {
 		orderState := market.AtoBOrders[filledOrderState.RawOrder.Hash]
-		orderState.RemainedAmountB.Sub(orderState.RemainedAmountB, intFromRat(filledOrder.FillAmountB))
-		orderState.RemainedAmountS.Sub(orderState.RemainedAmountS, intFromRat(filledOrder.FillAmountS))
+		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
+		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	} else {
 		orderState := market.BtoAOrders[filledOrderState.RawOrder.Hash]
-		orderState.RemainedAmountB.Sub(orderState.RemainedAmountB, intFromRat(filledOrder.FillAmountB))
-		orderState.RemainedAmountS.Sub(orderState.RemainedAmountS, intFromRat(filledOrder.FillAmountS))
+		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
+		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	}
 }
 
