@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"fmt"
+	"github.com/Loopring/relay/market/util"
 )
 
 type FillEvent struct {
@@ -83,6 +84,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenS = src.TokenS.Hex()
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
+	f.Market, _ = util.WrapMarketByAddress(f.TokenS, f.TokenB)
 	f.IsDeleted = src.IsDeleted
 
 	return nil

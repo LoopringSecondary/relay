@@ -150,11 +150,11 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance(common.HexToAddress(util.AllTokens[token]), common.HexToAddress(owner), "latest")
+	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(common.HexToAddress(util.AllTokens[token]), common.HexToAddress(owner), common.HexToAddress(spender), "latest")
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(spender), "latest")
 }
 
 func buildAllowanceKey(version, token string) string {

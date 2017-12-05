@@ -196,8 +196,8 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := j.orderManager.GetOrderBook(
 		common.HexToAddress(util.ContractVersionConfig[protocol]),
-		common.HexToAddress(util.AllTokens[a]),
-		common.HexToAddress(util.AllTokens[b]), length*2)
+		util.AllTokens[a].Protocol,
+		util.AllTokens[b].Protocol, length*2)
 
 	fmt.Println(asks)
 	fmt.Println(askErr)
@@ -211,8 +211,8 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	bids, bidErr := j.orderManager.GetOrderBook(
 		common.HexToAddress(util.ContractVersionConfig[protocol]),
-		common.HexToAddress(util.AllTokens[b]),
-		common.HexToAddress(util.AllTokens[a]), length*2)
+		util.AllTokens[b].Protocol,
+		util.AllTokens[a].Protocol, length*2)
 
 	fmt.Println(bids)
 	fmt.Println(bidErr)
