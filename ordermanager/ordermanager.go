@@ -44,6 +44,7 @@ type OrderManager interface {
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	IsOrderCutoff(owner common.Address, createTime *big.Int) bool
+	IsOrderFullFinished(state *types.OrderState) bool
 }
 
 type OrderManagerImpl struct {
@@ -202,7 +203,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 
 	// update order status
-	om.isOrderFullFinished(state)
+	finished := om.IsOrderFullFinished(state)
+	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -257,7 +259,8 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	om.isOrderFullFinished(state)
+	finished := om.IsOrderFullFinished(state)
+	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -286,7 +289,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) isOrderFullFinished(state *types.OrderState) {
+func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
@@ -304,11 +307,11 @@ func (om *OrderManagerImpl) isOrderFullFinished(state *types.OrderState) {
 	}
 
 	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) <= 0 {
-		state.Status = types.ORDER_FINISHED
-	} else {
-		state.Status = types.ORDER_PARTIAL
+	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) > 0 {
+		return false
 	}
+
+	return true
 }
 
 func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
