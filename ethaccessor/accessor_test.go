@@ -20,6 +20,7 @@ package ethaccessor_test
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
@@ -80,24 +81,46 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 
 // todo fukun
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
+	var (
+		model  *dao.Order
+		state  *types.OrderState
+		err    error
+		result string
+
+		orderhash       = common.HexToHash("")
+		cancelAmount    = big.NewInt(1)
+		contractAddress = common.HexToAddress("")
+	)
+
+	// load config
 	c := test.LoadConfig()
+
+	// get order
+	rds := test.GenerateDaoService(c)
+	if model, err = rds.GetOrderByHash(orderhash); err != nil {
+		t.Fatalf(err.Error())
+	}
+	model.ConvertUp(state)
+
+	// create cancel order contract function parameters
+	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
+	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.Timestamp, state.RawOrder.Ttl, state.RawOrder.Salt, state.RawOrder.LrcFee, cancelAmount}
+	buyNoMoreThanB := state.RawOrder.BuyNoMoreThanAmountB
+	marginSplitPercentage := state.RawOrder.MarginSplitPercentage
+	v := state.RawOrder.V
+	s := state.RawOrder.S
+	r := state.RawOrder.R
+
 	accessor, err := test.GenerateAccessor(c)
 	if err != nil {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
-
-	var (
-		result                string
-		addresses             [3]common.Address
-		values                [7]big.Int
-		buyNoMoreThanAmountB  bool
-		marginSplitPercentage uint8
-		v                     uint8
-		r, s                  common.Hash
-	)
-	token := util.SupportTokens["lrc"].Protocol
-	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, token)
-	if err := callMethod(&result, "cancelOrder", result, addresses, values, buyNoMoreThanAmountB, marginSplitPercentage, v, r, s); nil != err {
+	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
+	if !ok {
+		t.Errorf("contract address %s cann't find", contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&result, "cancelOrder", result, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	}
 
