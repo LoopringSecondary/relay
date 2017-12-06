@@ -134,6 +134,9 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state.Status = types.ORDER_NEW
 	state.DealtAmountB = big.NewInt(0)
 	state.DealtAmountS = big.NewInt(0)
+	state.CancelledAmountS = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
+
 	model := &dao.Order{}
 
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
@@ -303,7 +306,7 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	}
 
 	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) > 0 {
+	if valueOfRemainAmount.Cmp(big.NewRat(1, 1)) > 0 {
 		return false
 	}
 

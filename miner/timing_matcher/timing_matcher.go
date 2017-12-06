@@ -52,18 +52,18 @@ type OrderMatchState struct {
 }
 
 type TimingMatcher struct {
-	MatchedOrders map[common.Hash]*OrderMatchState
-	MinedRings    map[common.Hash]*minedRing
-	mtx           sync.RWMutex
-	StopChan      chan bool
-	markets       []*Market
-	submitter     *miner.RingSubmitter
-	evaluator     *miner.Evaluator
+	MatchedOrders   map[common.Hash]*OrderMatchState
+	MinedRings      map[common.Hash]*minedRing
+	mtx             sync.RWMutex
+	StopChan        chan bool
+	markets         []*Market
+	submitter       *miner.RingSubmitter
+	evaluator       *miner.Evaluator
 	lastBlockNumber *big.Int
-	duration *big.Int
+	duration        *big.Int
 
 	afterSubmitWatcher *eventemitter.Watcher
-	blockTriger *eventemitter.Watcher
+	blockTriger        *eventemitter.Watcher
 }
 
 type Market struct {
@@ -84,6 +84,7 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(1)
+	matcher.lastBlockNumber = big.NewInt(0)
 	pairs := make(map[common.Address]common.Address)
 	for _, pair := range marketLib.AllTokenPairs {
 		if addr, ok := pairs[pair.TokenS]; !ok || addr != pair.TokenB {
@@ -111,7 +112,7 @@ func (matcher *TimingMatcher) Start() {
 	//todo:the topic should contain submit success
 	eventemitter.On(eventemitter.Miner_RingMined, matcher.afterSubmitWatcher)
 	eventemitter.On(eventemitter.Miner_RingSubmitFailed, matcher.afterSubmitWatcher)
-	matcher.blockTriger = &eventemitter.Watcher{Concurrent:false, Handle: matcher.blockTrigger}
+	matcher.blockTriger = &eventemitter.Watcher{Concurrent: false, Handle: matcher.blockTrigger}
 	eventemitter.On(eventemitter.Block_New, matcher.blockTriger)
 }
 
@@ -197,7 +198,7 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 
 func (market *Market) match(protocolAddress common.Address) {
 	market.getOrdersForMatching(protocolAddress)
-	matchedOrderHashes := make(map[common.Hash]bool)  //true:fullfilled, false:partfilled
+	matchedOrderHashes := make(map[common.Hash]bool) //true:fullfilled, false:partfilled
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingSubmitInfo

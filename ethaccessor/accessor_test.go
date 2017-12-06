@@ -87,8 +87,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		err    error
 		result string
 
-		orderhash       = common.HexToHash("")
-		cancelAmount    = big.NewInt(1)
+		orderhash    = common.HexToHash("")
+		cancelAmount = big.NewInt(1)
 	)
 
 	// load config
