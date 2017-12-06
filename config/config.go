@@ -120,7 +120,8 @@ type CommonOptions struct {
 	DefaultBlockNumber *big.Int                   `required:"true"`
 	EndBlockNumber     *big.Int                   `required:"true"`
 	Develop            bool                       `required:"true"`
-	OrderMinAmounts    map[string]int64           //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
+	SaveEventLog       bool
+	OrderMinAmounts    map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
 }
 
 type LogOptions struct {

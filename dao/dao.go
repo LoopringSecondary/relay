@@ -72,6 +72,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &Token{})
+	tables = append(tables, &EventLog{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
