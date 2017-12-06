@@ -24,6 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"time"
+	"fmt"
 )
 
 type CutoffCache struct {
@@ -49,6 +51,11 @@ func NewCutoffCache(rds dao.RdsService) *CutoffCache {
 func (c *CutoffCache) Add(event *types.CutoffEvent) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+
+	nowtime := time.Now().Unix()
+	if event.Cutoff.Cmp(big.NewInt(nowtime)) < 0 {
+		return fmt.Errorf("cutoff cache,invalid cutoff time:%d", nowtime)
+	}
 
 	var (
 		model dao.CutOffEvent
