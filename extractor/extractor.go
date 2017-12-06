@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
@@ -161,6 +162,18 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			if contract, ok = l.events[key]; !ok {
 				log.Debugf("extractor,contract event id error:%s", id)
 				continue
+			}
+
+			if l.commOpts.SaveEventLog {
+				if bs, err := json.Marshal(evtLog); err != nil {
+					el := &dao.EventLog{}
+					el.Protocol = evtLog.Address
+					el.TxHash = tx.Hash
+					el.BlockNumber = evtLog.BlockNumber.Int64()
+					el.CreateTime = block.Timestamp.Int64()
+					el.Data = bs
+					l.dao.Add(el)
+				}
 			}
 
 			if nil != data && len(data) > 0 {
