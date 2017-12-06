@@ -129,7 +129,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(ringInfos []*types.RingSub
 		}
 		ringhashRegistryAbi := submitter.Accessor.RinghashRegistryAbi
 		var ringhashRegistryAddress common.Address
-		if implAddress,exists := submitter.Accessor.ProtocolAddresses[contractAddress]; !exists {
+		if implAddress, exists := submitter.Accessor.ProtocolAddresses[contractAddress]; !exists {
 			return errors.New("does't contain this version")
 		} else {
 			ringhashRegistryAddress = implAddress.RinghashRegistryAddress
@@ -157,7 +157,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(ringInfos []*types.RingSub
 func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo) error {
 	contractAddress := ringState.ProtocolAddress
 	var ringhashRegistryAddress common.Address
-	if implAddress,exists := submitter.Accessor.ProtocolAddresses[contractAddress]; !exists {
+	if implAddress, exists := submitter.Accessor.ProtocolAddresses[contractAddress]; !exists {
 		return errors.New("does't contains this version")
 	} else {
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
@@ -224,9 +224,9 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 			}
 		} else {
 			var (
-				err error
+				err         error
 				implAddress *ethaccessor.ProtocolAddress
-				exists bool
+				exists      bool
 			)
 			info := &types.RingSubmitInfo{}
 			daoInfo, _ := submitter.dbService.GetRingForSubmitByHash(event.RingHash)
@@ -234,7 +234,7 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 			if types.IsZeroHash(info.Ringhash) {
 				err = errors.New("ring hash is zero")
 			} else {
-				if implAddress,exists = submitter.Accessor.ProtocolAddresses[info.ProtocolAddress]; !exists {
+				if implAddress, exists = submitter.Accessor.ProtocolAddresses[info.ProtocolAddress]; !exists {
 					err = errors.New("doesn't contain this version of protocol:" + info.ProtocolAddress.Hex())
 				}
 				callMethod := submitter.Accessor.ContractCallMethod(submitter.Accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
@@ -264,10 +264,10 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	var (
 		implAddress *ethaccessor.ProtocolAddress
-		exists bool
-		err error
+		exists      bool
+		err         error
 	)
-	if implAddress,exists = submitter.Accessor.ProtocolAddresses[protocolAddress]; !exists {
+	if implAddress, exists = submitter.Accessor.ProtocolAddresses[protocolAddress]; !exists {
 		return nil, errors.New("doesn't contain this version of protocol:" + protocolAddress.Hex())
 	}
 	protocolAbi := submitter.Accessor.ProtocolImplAbi

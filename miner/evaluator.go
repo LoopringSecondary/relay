@@ -196,7 +196,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
-		if implAddress,exists := e.accessor.ProtocolAddresses[filledOrder.OrderState.RawOrder.Protocol]; exists {
+		if implAddress, exists := e.accessor.ProtocolAddresses[filledOrder.OrderState.RawOrder.Protocol]; exists {
 			lrcAddress = implAddress.LrcTokenAddress
 		}
 

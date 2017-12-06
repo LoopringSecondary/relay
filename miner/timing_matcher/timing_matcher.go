@@ -191,7 +191,7 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 
 func (market *Market) match() {
 	market.getOrdersForMatching()
-	matchedOrderHashes := make(map[common.Hash]bool)  //true:fullmatched, false:partmatched
+	matchedOrderHashes := make(map[common.Hash]bool) //true:fullmatched, false:partmatched
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingSubmitInfo

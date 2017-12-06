@@ -36,7 +36,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash, blockNumber *big.Int) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -48,15 +48,20 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options     config.OrderManagerOptions
-	commonOpts  *config.CommonOptions
-	rds         dao.RdsService
-	lock        sync.RWMutex
-	processor   *forkProcessor
-	provider    *minerOrdersProvider
-	um          usermanager.UserManager
-	mc          *marketcap.MarketCapProvider
-	cutoffCache *CutoffCache
+	options            config.OrderManagerOptions
+	commonOpts         *config.CommonOptions
+	rds                dao.RdsService
+	lock               sync.RWMutex
+	processor          *forkProcessor
+	um                 usermanager.UserManager
+	mc                 *marketcap.MarketCapProvider
+	cutoffCache        *CutoffCache
+	newOrderWatcher    *eventemitter.Watcher
+	ringMinedWatcher   *eventemitter.Watcher
+	fillOrderWatcher   *eventemitter.Watcher
+	cancelOrderWatcher *eventemitter.Watcher
+	cutoffOrderWatcher *eventemitter.Watcher
+	forkWatcher        *eventemitter.Watcher
 }
 
 func NewOrderManager(options config.OrderManagerOptions,
@@ -75,42 +80,42 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds)
 
-	// new miner orders provider
-	om.provider = newMinerOrdersProvider(options.TickerDuration, options.BlockPeriod, om.commonOpts, om.rds)
-
 	return om
 }
 
 // Start start orderbook as a service
 func (om *OrderManagerImpl) Start() {
-	newOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
-	ringMinedWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
-	fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
-	cancelOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
-	cutoffOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
-	forkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
+	om.newOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleGatewayOrder}
+	om.ringMinedWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
+	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
+	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
+	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
+	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
-	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, newOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, ringMinedWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCancel, cancelOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, cutoffOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerFork, forkWatcher)
-
-	om.provider.start()
+	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerFork, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
-	om.provider.stop()
+	eventemitter.Un(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
+	eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
+	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
+	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
+	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.Un(eventemitter.OrderManagerFork, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	om.Stop()
 
-	if err := om.processor.fork(input.(*ethaccessor.ForkedEvent)); err != nil {
+	if err := om.processor.fork(input.(*types.ForkedEvent)); err != nil {
 		log.Errorf("order manager,handle fork error:%s", err.Error())
 	}
 
@@ -162,9 +167,6 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
 	event := input.(*types.OrderFilledEvent)
-
-	// set miner order provider current block number
-	om.provider.setBlockNumber(event.Blocknumber)
 
 	// save event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
@@ -220,9 +222,6 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
 
-	// set miner order provider current block number
-	om.provider.setBlockNumber(event.Blocknumber)
-
 	// save event
 	_, err := om.rds.FindCancelEvent(event.OrderHash, event.AmountCancelled)
 	if err == nil {
@@ -276,9 +275,6 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
-	// set miner order provider current block number
-	om.provider.setBlockNumber(event.Blocknumber)
-
 	if err := om.cutoffCache.Add(event); err != nil {
 		return err
 	}
@@ -314,18 +310,32 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return true
 }
 
-func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
-	var list []types.OrderState
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash, blockNumber *big.Int) []types.OrderState {
+	var (
+		list          []types.OrderState
+		modelList     []*dao.Order
+		err           error
+		orderhashstrs []string
+		filterStatus  = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+	)
 
-	if err := om.provider.markOrders(filterOrderhashs); err != nil {
+	for _, v := range filterOrderhashs {
+		orderhashstrs = append(orderhashstrs, v.Hex())
+	}
+
+	if err = om.rds.MarkMinerOrders(orderhashstrs, blockNumber.Int64()); err != nil {
 		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
-	filterList := om.provider.getOrders(tokenS, tokenB, length, filterOrderhashs)
+	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, blockNumber.Int64()); err != nil {
+		return list
+	}
 
-	for _, v := range filterList {
-		if !om.um.InWhiteList(v.RawOrder.TokenS) {
-			list = append(list, v)
+	for _, v := range modelList {
+		var state types.OrderState
+		v.ConvertUp(&state)
+		if !om.um.InWhiteList(state.RawOrder.TokenS) {
+			list = append(list, state)
 		}
 	}
 

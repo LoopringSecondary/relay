@@ -48,13 +48,14 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options  config.AccessorOptions
-	commOpts config.CommonOptions
-	accessor *ethaccessor.EthNodeAccessor
-	dao      dao.RdsService
-	stop     chan struct{}
-	lock     sync.RWMutex
-	events   map[string]ContractData
+	options   config.AccessorOptions
+	commOpts  config.CommonOptions
+	accessor  *ethaccessor.EthNodeAccessor
+	dao       dao.RdsService
+	stop      chan struct{}
+	lock      sync.RWMutex
+	events    map[common.Hash]ContractData
+	protocols map[common.Address]string
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -96,7 +97,7 @@ func (l *ExtractorServiceImpl) Start() {
 			currentBlock.BlockHash = block.Hash
 			currentBlock.CreateTime = block.Timestamp.Int64()
 
-			blockEvent := &ethaccessor.BlockEvent{}
+			blockEvent := &types.BlockEvent{}
 			blockEvent.BlockNumber = block.Number.BigInt()
 			blockEvent.BlockHash = block.Hash
 			eventemitter.Emit(eventemitter.Block_New, blockEvent)
@@ -161,10 +162,17 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 				ok       bool
 			)
 
+			// 过滤合约
+			protocolAddr := common.HexToAddress(evtLog.Address)
+			if _, ok := l.protocols[protocolAddr]; !ok {
+				log.Debugf("extractor, unsupported protocol %s", protocolAddr.Hex())
+				continue
+			}
+
+			// 过滤事件
 			data := hexutil.MustDecode(evtLog.Data)
-			id := evtLog.Topics[0]
-			key := generateKey(evtLog.Address, id)
-			if contract, ok = l.events[key]; !ok {
+			id := common.HexToHash(evtLog.Topics[0])
+			if contract, ok = l.events[id]; !ok {
 				log.Debugf("extractor,contract event id error:%s", id)
 				continue
 			}
@@ -195,7 +203,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			contract.ContractAddress = evtLog.Address
 			contract.TxHash = tx.Hash
 
-			eventemitter.Emit(contract.Key, contract)
+			eventemitter.Emit(contract.Id.Hex(), contract)
 		}
 	}
 }

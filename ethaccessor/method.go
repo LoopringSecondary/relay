@@ -56,7 +56,7 @@ func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spen
 
 func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
-	if _,ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
 	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
@@ -67,7 +67,7 @@ func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
-func (accessor *EthNodeAccessor) GetCutoff(contractAddress common.Address, owner common.Address, blockNumStr string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) GetCutoff(contractAddress, owner common.Address, blockNumStr string) (*big.Int, error) {
 	var cutoff types.Big
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())

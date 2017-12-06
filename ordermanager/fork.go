@@ -38,7 +38,7 @@ func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *
 	return processor
 }
 
-func (p *forkProcessor) fork(event *ethaccessor.ForkedEvent) error {
+func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 
