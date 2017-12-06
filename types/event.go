@@ -161,3 +161,15 @@ type RingSubmitFailedEvent struct {
 	RingHash common.Hash
 	Err      error
 }
+
+type ForkedEvent struct {
+	DetectedBlock *big.Int
+	DetectedHash  common.Hash
+	ForkBlock     *big.Int
+	ForkHash      common.Hash
+}
+
+type BlockEvent struct {
+	BlockNumber *big.Int
+	BlockHash   common.Hash
+}

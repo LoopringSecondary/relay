@@ -26,11 +26,11 @@ import (
 )
 
 type EthNodeAccessor struct {
-	Erc20Abi      *abi.ABI
-	ProtocolImplAbi *abi.ABI
-	DelegateAbi     *abi.ABI
-	RinghashRegistryAbi     *abi.ABI
-	TokenRegistryAbi     *abi.ABI
+	Erc20Abi            *abi.ABI
+	ProtocolImplAbi     *abi.ABI
+	DelegateAbi         *abi.ABI
+	RinghashRegistryAbi *abi.ABI
+	TokenRegistryAbi    *abi.ABI
 
 	ProtocolAddresses map[common.Address]*ProtocolAddress
 	*rpc.Client

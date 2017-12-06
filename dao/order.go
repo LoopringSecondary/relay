@@ -149,11 +149,7 @@ func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber 
 	return err
 }
 
-func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
-	return s.db.Model(&Order{}).Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark", 0).Error
-}
-
-func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, markBlockNumber int64) ([]*Order, error) {
 	var (
 		list []*Order
 		err  error
@@ -164,10 +160,10 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, fi
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.Where("token_s = ? and token_b = ?", tokenS, tokenB).
+	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
 		Where("create_time + ttl > ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
-		Where("miner_block_mark = ?", 0).
+		Where("miner_block_mark = ? or miner_block_mark > ?", 0, markBlockNumber).
 		Order("price desc").
 		Limit(length).
 		Find(&list).

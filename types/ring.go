@@ -35,15 +35,15 @@ import (
 // 但是，根据谷歌竞拍法则(A出价10,B出价20,最终成交价为10)，撮合者最终获得的利润只能是利润最小的环路利润
 
 type Ring struct {
-	Orders      []*FilledOrder `json:"orderes"`
-	Miner       common.Address `json:"miner"`
-	V           uint8          `json:"v"`
-	R           Bytes32        `json:"r"`
-	S           Bytes32        `json:"s"`
-	Hash        common.Hash    `json:"hash"`
-	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
-	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
-	FeeMode     int            `json:"feeMode"`     //收费方式，0 lrc 1 share
+	Orders            []*FilledOrder `json:"orderes"`
+	Miner             common.Address `json:"miner"`
+	V                 uint8          `json:"v"`
+	R                 Bytes32        `json:"r"`
+	S                 Bytes32        `json:"s"`
+	Hash              common.Hash    `json:"hash"`
+	ReducedRate       *big.Rat       `json:"reducedRate"` //成环之后，折价比例
+	LegalFee          *big.Rat       `json:"legalFee"`    //法币计算的fee
+	FeeMode           int            `json:"feeMode"`     //收费方式，0 lrc 1 share
 	FullMatchedOrders []int
 }
 
