@@ -231,6 +231,7 @@ func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
 		ord.Status = ORDER_PARTIAL
 	}
 }
+
 func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {
 	remainedAmountS = new(big.Rat)
 	remainedAmountB = new(big.Rat)

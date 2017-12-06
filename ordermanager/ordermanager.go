@@ -295,14 +295,14 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	if state.RawOrder.BuyNoMoreThanAmountB {
 		dealtAndCancelledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
 		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, dealtAndCancelledAmountB)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
 		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
+		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
 	} else {
 		dealtAndCancelledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
 		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, dealtAndCancelledAmountS)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
 		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
+		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
 	}
 

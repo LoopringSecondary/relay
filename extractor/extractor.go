@@ -222,7 +222,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	ringmined.TxHash = common.HexToHash(contractData.TxHash)
 	ringmined.Time = contractData.Time
 	ringmined.Blocknumber = contractData.BlockNumber
-	ringmined.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ring mined event,ringhash:%s, ringIndex:%s, miner:%s, feeRecipient:%s,isRinghashReserved:%t",
@@ -244,7 +243,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
-		fill.IsDeleted = false
 
 		if l.commOpts.Develop {
 			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
@@ -299,8 +297,6 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
-	evt.IsDeleted = false
-
 	if l.commOpts.Develop {
 		log.Debugf("extractor,order cancelled event,orderhash:%s, cancelAmount:%s", evt.OrderHash.Hex(), evt.AmountCancelled.String())
 	}
@@ -324,7 +320,6 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
-	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())

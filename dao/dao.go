@@ -77,7 +77,7 @@ func (s *RdsServiceImpl) Prepare() {
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
 			if err := s.db.CreateTable(t).Error; err != nil {
-				log.Errorf("create mysql table error:%s", err.Error())
+				log.Fatalf("create mysql table error:%s", err.Error())
 			}
 		}
 	}
