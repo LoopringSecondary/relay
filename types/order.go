@@ -21,6 +21,7 @@ package types
 import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/ringminer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
@@ -223,9 +224,13 @@ type OrderState struct {
 	BroadcastTime    int         `json:"broadcastTime"`
 }
 
-// 放到common package 根据配置决定状态
-func (ord *OrderState) SettleStatus() {
-
+// 根据是否完全成交确定订单状态
+func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
+	if isFullFinished {
+		ord.Status = ORDER_FINISHED
+	} else {
+		ord.Status = ORDER_PARTIAL
+	}
 }
 
 func ToOrder(request *OrderJsonRequest) *Order {

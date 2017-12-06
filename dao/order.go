@@ -230,8 +230,10 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 	return true
 }
 
-func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
-	err := s.db.Model(&Order{}).Where("order_hash in (?)", orderhashs).Update("status", status).Error
+func (s *RdsServiceImpl) SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error {
+	err := s.db.Model(&Order{}).Where("create_time < (?)", cutoffTime.Int64()).
+		Where("owner = (?)", owner.Hex()).
+		Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 

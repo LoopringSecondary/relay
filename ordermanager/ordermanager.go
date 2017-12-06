@@ -29,7 +29,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
@@ -44,17 +43,20 @@ type OrderManager interface {
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
+	IsOrderCutoff(owner common.Address, createTime *big.Int) bool
+	IsOrderFullFinished(state *types.OrderState) bool
 }
 
 type OrderManagerImpl struct {
-	options    config.OrderManagerOptions
-	commonOpts *config.CommonOptions
-	rds        dao.RdsService
-	lock       sync.RWMutex
-	processor  *forkProcessor
-	provider   *minerOrdersProvider
-	um         usermanager.UserManager
-	mc         *marketcap.MarketCapProvider
+	options     config.OrderManagerOptions
+	commonOpts  *config.CommonOptions
+	rds         dao.RdsService
+	lock        sync.RWMutex
+	processor   *forkProcessor
+	provider    *minerOrdersProvider
+	um          usermanager.UserManager
+	mc          *marketcap.MarketCapProvider
+	cutoffCache *CutoffCache
 }
 
 func NewOrderManager(options config.OrderManagerOptions,
@@ -71,6 +73,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.processor = newForkProcess(om.rds, accessor)
 	om.um = userManager
 	om.mc = market
+	om.cutoffCache = NewCutoffCache(rds)
 
 	// new miner orders provider
 	om.provider = newMinerOrdersProvider(options.TickerDuration, options.BlockPeriod, om.commonOpts, om.rds)
@@ -200,7 +203,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 
 	// update order status
-	om.isOrderFullFinished(state)
+	finished := om.IsOrderFullFinished(state)
+	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -255,7 +259,8 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	om.isOrderFullFinished(state)
+	finished := om.IsOrderFullFinished(state)
+	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -274,44 +279,17 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	// set miner order provider current block number
 	om.provider.setBlockNumber(event.Blocknumber)
 
-	// save event
-	model, err := om.rds.FindCutoffEventByOwnerAddress(event.Owner)
-	if err != nil {
-		model = &dao.CutOffEvent{}
-		if err := model.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Add(model); err != nil {
-			return err
-		}
-	} else {
-		if err := model.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Update(model); err != nil {
-			return err
-		}
-	}
-
-	// get order list
-	list, err := om.rds.GetCutoffOrders(model.Cutoff)
-	if err != nil {
+	if err := om.cutoffCache.Add(event); err != nil {
 		return err
 	}
-
-	// update each order
-	var orderhashs []string
-	for _, order := range list {
-		orderhashs = append(orderhashs, order.OrderHash)
-	}
-	if err := om.rds.SettleOrdersStatus(orderhashs, types.ORDER_CUTOFF); err != nil {
+	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (om *OrderManagerImpl) isOrderFullFinished(state *types.OrderState) {
+func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
@@ -329,11 +307,11 @@ func (om *OrderManagerImpl) isOrderFullFinished(state *types.OrderState) {
 	}
 
 	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) <= 0 {
-		state.Status = types.ORDER_FINISHED
-	} else {
-		state.Status = types.ORDER_PARTIAL
+	if valueOfRemainAmount.Cmp(big.NewRat(10, 1)) > 0 {
+		return false
 	}
+
+	return true
 }
 
 func (om *OrderManagerImpl) MinerOrders(tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
@@ -421,4 +399,8 @@ func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageInd
 
 func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {
 	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
+}
+
+func (om *OrderManagerImpl) IsOrderCutoff(owner common.Address, createTime *big.Int) bool {
+	return om.cutoffCache.IsOrderCutoff(owner, createTime)
 }

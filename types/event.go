@@ -121,6 +121,7 @@ type OrderFilledEvent struct {
 	AmountB         *big.Int
 	LrcReward       *big.Int
 	LrcFee          *big.Int
+	IsDeleted       bool
 	SplitS          *big.Int
 	SplitB          *big.Int
 	Market          string
@@ -133,6 +134,7 @@ type OrderCancelledEvent struct {
 	Time            *big.Int
 	Blocknumber     *big.Int
 	AmountCancelled *big.Int
+	IsDeleted       bool
 }
 
 type CutoffEvent struct {
@@ -142,6 +144,7 @@ type CutoffEvent struct {
 	Time            *big.Int
 	Blocknumber     *big.Int
 	Cutoff          *big.Int
+	IsDeleted       bool
 }
 
 type RingMinedEvent struct {
@@ -155,6 +158,7 @@ type RingMinedEvent struct {
 	FeeRecipient       common.Address
 	ContractAddress    common.Address
 	IsRinghashReserved bool
+	IsDeleted          bool
 }
 
 type RingSubmitFailedEvent struct {
