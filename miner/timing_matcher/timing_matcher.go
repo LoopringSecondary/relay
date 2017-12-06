@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
-	"time"
 )
 
 /**
@@ -41,7 +40,7 @@ type minedRing struct {
 }
 
 type RoundState struct {
-	round          int64
+	round          *big.Int
 	ringHash       common.Hash
 	matchedAmountS *big.Rat
 	matchedAmountB *big.Rat
@@ -57,10 +56,14 @@ type TimingMatcher struct {
 	MinedRings    map[common.Hash]*minedRing
 	mtx           sync.RWMutex
 	StopChan      chan bool
-	round         int64
 	markets       []*Market
 	submitter     *miner.RingSubmitter
 	evaluator     *miner.Evaluator
+	lastBlockNumber *big.Int
+	duration *big.Int
+
+	afterSubmitWatcher *eventemitter.Watcher
+	blockTriger *eventemitter.Watcher
 }
 
 type Market struct {
@@ -80,6 +83,7 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	matcher.markets = []*Market{}
+	matcher.duration = big.NewInt(1)
 	pairs := make(map[common.Address]common.Address)
 	for _, pair := range marketLib.AllTokenPairs {
 		if addr, ok := pairs[pair.TokenS]; !ok || addr != pair.TokenB {
@@ -103,42 +107,44 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 }
 
 func (matcher *TimingMatcher) Start() {
-	watcher := &eventemitter.Watcher{Concurrent: false, Handle: matcher.afterSubmit}
+	matcher.afterSubmitWatcher = &eventemitter.Watcher{Concurrent: false, Handle: matcher.afterSubmit}
 	//todo:the topic should contain submit success
-	eventemitter.On(eventemitter.Miner_RingMined, watcher)
-	eventemitter.On(eventemitter.Miner_RingSubmitFailed, watcher)
-
-	go func() {
-		for {
-			select {
-			case <-time.After(30 * time.Second):
-				var wg sync.WaitGroup
-				matcher.round += 1
-				for _, market := range matcher.markets {
-					wg.Add(1)
-					go func(market *Market) {
-						defer func() {
-							wg.Add(-1)
-						}()
-						market.match()
-					}(market)
-				}
-				wg.Wait()
-			case <-matcher.StopChan:
-				break
-			}
-		}
-	}()
+	eventemitter.On(eventemitter.Miner_RingMined, matcher.afterSubmitWatcher)
+	eventemitter.On(eventemitter.Miner_RingSubmitFailed, matcher.afterSubmitWatcher)
+	matcher.blockTriger = &eventemitter.Watcher{Concurrent:false, Handle: matcher.blockTrigger}
+	eventemitter.On(eventemitter.Block_New, matcher.blockTriger)
 }
 
-func (market *Market) getOrdersForMatching() {
+func (matcher *TimingMatcher) blockTrigger(eventData eventemitter.EventData) error {
+	blockEvent := eventData.(*types.BlockEvent)
+	nextBlockNumber := new(big.Int).Add(matcher.duration, matcher.lastBlockNumber)
+	if nextBlockNumber.Cmp(blockEvent.BlockNumber) <= 0 {
+		matcher.lastBlockNumber = blockEvent.BlockNumber
+		var wg sync.WaitGroup
+		for _, protocolAddress := range matcher.submitter.Accessor.ProtocolAddresses {
+			for _, market := range matcher.markets {
+				wg.Add(1)
+				go func(market *Market) {
+					defer func() {
+						wg.Add(-1)
+					}()
+					market.match(protocolAddress.ContractAddress)
+				}(market)
+			}
+		}
+		wg.Wait()
+	}
+	return nil
+}
+
+func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
 	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
 
-	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
-	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
+	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
+	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
 
 	for _, order := range atoBOrders {
 		market.reduceRemainedAmountBeforeMatch(&order)
@@ -156,9 +162,9 @@ func (market *Market) getOrdersForMatching() {
 
 	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
 	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
-	//it should sub the matched amount in next round.
 }
 
+//sub the matched amount in new round.
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
@@ -189,9 +195,9 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 	return orderState
 }
 
-func (market *Market) match() {
-	market.getOrdersForMatching()
-	matchedOrderHashes := make(map[common.Hash]bool) //true:fullmatched, false:partmatched
+func (market *Market) match(protocolAddress common.Address) {
+	market.getOrdersForMatching(protocolAddress)
+	matchedOrderHashes := make(map[common.Hash]bool)  //true:fullfilled, false:partfilled
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingSubmitInfo
@@ -262,7 +268,9 @@ func (matcher *TimingMatcher) afterSubmit(eventData eventemitter.EventData) erro
 }
 
 func (matcher *TimingMatcher) Stop() {
-	matcher.StopChan <- true
+	eventemitter.Un(eventemitter.Miner_RingMined, matcher.afterSubmitWatcher)
+	eventemitter.Un(eventemitter.Miner_RingSubmitFailed, matcher.afterSubmitWatcher)
+	eventemitter.Un(eventemitter.Block_New, matcher.blockTriger)
 }
 
 func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ringiHash common.Hash) {
@@ -279,7 +287,7 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 	}
 
 	roundState := &RoundState{
-		round:          matcher.round,
+		round:          matcher.lastBlockNumber,
 		ringHash:       ringiHash,
 		matchedAmountB: filledOrder.FillAmountB,
 		matchedAmountS: filledOrder.FillAmountS,
