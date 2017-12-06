@@ -29,7 +29,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
