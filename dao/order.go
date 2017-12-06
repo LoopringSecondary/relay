@@ -53,7 +53,7 @@ type Order struct {
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
-	CancelledAmountB      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
