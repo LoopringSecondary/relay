@@ -89,7 +89,6 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 
 		orderhash       = common.HexToHash("")
 		cancelAmount    = big.NewInt(1)
-		contractAddress = common.HexToAddress("")
 	)
 
 	// load config
@@ -111,15 +110,10 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	s := state.RawOrder.S
 	r := state.RawOrder.R
 
-	accessor, err := test.GenerateAccessor(c)
-	if err != nil {
-		t.Fatalf("generate accessor error:%s", err.Error())
-	}
-	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
-	if !ok {
-		t.Errorf("contract address %s cann't find", contractAddress.Hex())
-	}
-	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	// call cancel order
+	accessor, _ := test.GenerateAccessor(c)
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
 	if err := callMethod(&result, "cancelOrder", result, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	}
