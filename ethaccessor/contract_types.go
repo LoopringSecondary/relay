@@ -227,6 +227,11 @@ type ForkedEvent struct {
 	ForkHash      common.Hash
 }
 
+type BlockEvent struct {
+	BlockNumber *big.Int
+	BlockHash   common.Hash
+}
+
 type ProtocolImpl struct {
 	Version         string
 	ContractAddress common.Address

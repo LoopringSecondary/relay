@@ -96,6 +96,11 @@ func (l *ExtractorServiceImpl) Start() {
 			currentBlock.BlockHash = block.Hash
 			currentBlock.CreateTime = block.Timestamp.Int64()
 
+			blockEvent := &ethaccessor.BlockEvent{}
+			blockEvent.BlockNumber = block.Number.BigInt()
+			blockEvent.BlockHash = block.Hash
+			eventemitter.Emit(eventemitter.Block_New, blockEvent)
+
 			var entity dao.Block
 			if err := entity.ConvertDown(currentBlock); err != nil {
 				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())

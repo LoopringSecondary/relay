@@ -21,6 +21,8 @@ package ordermanager
 import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -48,6 +50,9 @@ func newMinerOrdersProvider(clearTick, blockNumberPeriod int, commonOpts *config
 	provider.commonOpts = commonOpts
 	provider.rds = rds
 	provider.currentBlockNumber = provider.commonOpts.DefaultBlockNumber
+
+	blockEventWatcher := &eventemitter.Watcher{Concurrent: false, Handle: provider.setBlockNumber}
+	eventemitter.On(eventemitter.Block_New, blockEventWatcher)
 
 	if entity, err := provider.rds.FindLatestBlock(); err == nil {
 		var block types.Block
@@ -82,11 +87,14 @@ func (p *minerOrdersProvider) stop() {
 	close(p.quit)
 }
 
-func (p *minerOrdersProvider) setBlockNumber(num *big.Int) {
+func (p *minerOrdersProvider) setBlockNumber(input eventemitter.EventData) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	p.currentBlockNumber = num
+	event := input.(*ethaccessor.BlockEvent)
+	p.currentBlockNumber = event.BlockNumber
+
+	return nil
 }
 
 func (p *minerOrdersProvider) markOrders(orderhashs []common.Hash) error {
