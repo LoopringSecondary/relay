@@ -60,7 +60,7 @@ var accessor *ethaccessor.EthNodeAccessor
 
 func PrepareTestData() {
 
-	for protocolAddr, impl := range accessor.ProtocolImpls {
+	for protocolAddr, impl := range accessor.ProtocolAddresses {
 		//delegate registry
 		callMethod := accessor.ContractCallMethod(impl.DelegateAbi, impl.DelegateAddress)
 		var res types.Big
@@ -128,7 +128,7 @@ func AllowanceToLoopring() {
 			}
 
 			var allowance types.Big
-			for _, impl := range accessor.ProtocolImpls {
+			for _, impl := range accessor.ProtocolAddresses {
 				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
 					log.Error(err.Error())
 				} else {

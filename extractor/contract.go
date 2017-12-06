@@ -82,7 +82,7 @@ const (
 )
 
 func (l *ExtractorServiceImpl) loadProtocolContract() {
-	for _, impl := range l.accessor.ProtocolImpls {
+	for _, impl := range l.accessor.ProtocolAddresses {
 		for name, event := range impl.ProtocolImplAbi.Events {
 			if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
 				continue
@@ -148,7 +148,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract(addrs []common.Address) {
 }
 
 func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
-	for _, impl := range l.accessor.ProtocolImpls {
+	for _, impl := range l.accessor.ProtocolAddresses {
 		for name, event := range impl.TokenRegistryAbi.Events {
 			if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
 				continue
@@ -179,7 +179,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 }
 
 func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
-	for _, impl := range l.accessor.ProtocolImpls {
+	for _, impl := range l.accessor.ProtocolAddresses {
 		for name, event := range impl.RinghashRegistryAbi.Events {
 			if name != RINGHASHREGISTERED_EVT_NAME {
 				continue
@@ -204,7 +204,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 }
 
 func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
-	for _, impl := range l.accessor.ProtocolImpls {
+	for _, impl := range l.accessor.ProtocolAddresses {
 		for name, event := range impl.DelegateAbi.Events {
 			if name != ADDRESSAUTHORIZED_EVT_NAME && name != ADDRESSDEAUTHORIZED_EVT_NAME {
 				continue
