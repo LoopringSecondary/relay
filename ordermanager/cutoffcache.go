@@ -19,13 +19,13 @@
 package ordermanager
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 	"time"
-	"fmt"
 )
 
 type CutoffCache struct {
