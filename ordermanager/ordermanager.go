@@ -36,7 +36,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash, blockNumber *big.Int) []types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -310,24 +310,35 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return true
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash, blockNumber *big.Int) []types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
 	var (
-		list          []types.OrderState
-		modelList     []*dao.Order
-		err           error
-		orderhashstrs []string
-		filterStatus  = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list            []types.OrderState
+		modelList       []*dao.Order
+		currentBlock    *dao.Block
+		markBlockNumber *big.Int
+		err             error
+		orderhashstrs   []string
+		filterStatus    = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
 	for _, v := range filterOrderhashs {
 		orderhashstrs = append(orderhashstrs, v.Hex())
 	}
 
-	if err = om.rds.MarkMinerOrders(orderhashstrs, blockNumber.Int64()); err != nil {
+	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
+	if currentBlock, err = om.rds.FindLatestBlock(); err != nil {
+		var b types.Block
+		currentBlock.ConvertUp(&b)
+		markBlockNumber = b.BlockNumber
+	} else {
+		markBlockNumber = big.NewInt(0)
+	}
+
+	if err = om.rds.MarkMinerOrders(orderhashstrs, markBlockNumber.Int64()); err != nil {
 		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
-	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, blockNumber.Int64()); err != nil {
+	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
 		return list
 	}
 
