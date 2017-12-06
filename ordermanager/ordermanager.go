@@ -43,18 +43,19 @@ type OrderManager interface {
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
-	FindValidCutoffEvents() ([]types.CutoffEvent, error)
+	IsOrderCutoff(owner common.Address, createTime *big.Int) bool
 }
 
 type OrderManagerImpl struct {
-	options    config.OrderManagerOptions
-	commonOpts *config.CommonOptions
-	rds        dao.RdsService
-	lock       sync.RWMutex
-	processor  *forkProcessor
-	provider   *minerOrdersProvider
-	um         usermanager.UserManager
-	mc         *marketcap.MarketCapProvider
+	options     config.OrderManagerOptions
+	commonOpts  *config.CommonOptions
+	rds         dao.RdsService
+	lock        sync.RWMutex
+	processor   *forkProcessor
+	provider    *minerOrdersProvider
+	um          usermanager.UserManager
+	mc          *marketcap.MarketCapProvider
+	cutoffCache *CutoffCache
 }
 
 func NewOrderManager(options config.OrderManagerOptions,
@@ -71,6 +72,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.processor = newForkProcess(om.rds, accessor)
 	om.um = userManager
 	om.mc = market
+	om.cutoffCache = NewCutoffCache(rds)
 
 	// new miner orders provider
 	om.provider = newMinerOrdersProvider(options.TickerDuration, options.BlockPeriod, om.commonOpts, om.rds)
@@ -274,37 +276,10 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	// set miner order provider current block number
 	om.provider.setBlockNumber(event.Blocknumber)
 
-	// save event
-	model, err := om.rds.FindCutoffEventByOwnerAddress(event.Owner)
-	if err != nil {
-		model = &dao.CutOffEvent{}
-		if err := model.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Add(model); err != nil {
-			return err
-		}
-	} else {
-		if err := model.ConvertDown(event); err != nil {
-			return err
-		}
-		if err := om.rds.Update(model); err != nil {
-			return err
-		}
-	}
-
-	// get order list
-	list, err := om.rds.GetCutoffOrders(model.Cutoff)
-	if err != nil {
+	if err := om.cutoffCache.Add(event); err != nil {
 		return err
 	}
-
-	// update each order
-	var orderhashs []string
-	for _, order := range list {
-		orderhashs = append(orderhashs, order.OrderHash)
-	}
-	if err := om.rds.SettleOrdersStatus(orderhashs, types.ORDER_CUTOFF); err != nil {
+	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
 		return err
 	}
 
@@ -423,6 +398,6 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
 }
 
-func (om *OrderManagerImpl) FindValidCutoffEvents() ([]types.CutoffEvent, error) {
-	return om.rds.FindValidCutoffEvents()
+func (om *OrderManagerImpl) IsOrderCutoff(owner common.Address, createTime *big.Int) bool {
+	return om.cutoffCache.IsOrderCutoff(owner, createTime)
 }

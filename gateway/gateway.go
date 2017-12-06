@@ -69,12 +69,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	signFilter := &SignFilter{}
 
 	// new cutoff filter
-	cutoffFilter := &CutoffFilter{Cache: make(map[common.Address]*big.Int)}
-	if cutoffEvents, err := om.FindValidCutoffEvents(); err == nil {
-		for _, v := range cutoffEvents {
-			cutoffFilter.Cache[v.Owner] = v.Cutoff
-		}
-	}
+	cutoffFilter := &CutoffFilter{om: om}
 
 	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
@@ -197,18 +192,13 @@ func (f *TokenFilter) filter(o *types.Order) (bool, error) {
 }
 
 type CutoffFilter struct {
-	Cache map[common.Address]*big.Int
+	om ordermanager.OrderManager
 }
 
 // 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
 func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
-	cutoffTime, ok := f.Cache[o.Owner]
-	if !ok {
-		return true, nil
-	}
-
-	if o.Timestamp.Cmp(cutoffTime) < 0 {
-		return false, fmt.Errorf("gateway,cutoff filter order %s valid time %s < cutoff time %s", o.Owner.Hex(), o.Timestamp.String(), cutoffTime.String())
+	if f.om.IsOrderCutoff(o.Owner, o.Timestamp) {
+		return false, fmt.Errorf("gateway,cutoff filter order %s create time %s is out of range", o.Owner.Hex(), o.Timestamp.String())
 	}
 
 	return true, nil

@@ -48,7 +48,7 @@ type RdsService interface {
 	GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
-	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
+	SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
