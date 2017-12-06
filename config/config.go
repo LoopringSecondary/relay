@@ -106,7 +106,7 @@ type KeyStoreOptions struct {
 }
 
 type ProtocolOptions struct {
-	Address          string
+	Address          map[string]string
 	ImplAbi          string
 	RegistryAbi      string
 	DelegateAbi      string
@@ -115,7 +115,7 @@ type ProtocolOptions struct {
 
 type CommonOptions struct {
 	Erc20Abi           string
-	ProtocolImpls      map[string]ProtocolOptions `required:"true"`
+	ProtocolImpl      ProtocolOptions `required:"true"`
 	FilterTopics       []string                   `required:"true"`
 	DefaultBlockNumber *big.Int                   `required:"true"`
 	EndBlockNumber     *big.Int                   `required:"true"`

@@ -72,8 +72,8 @@ type Market struct {
 	AtoBOrders map[common.Hash]*types.OrderState
 	BtoAOrders map[common.Hash]*types.OrderState
 
-	AtoBNotMatchedOrderHashes []common.Hash
-	BtoANotMatchedOrderHashes []common.Hash
+	AtoBOrderHashesExcludeNextRound []common.Hash
+	BtoAOrderHashesExcludeNextRound []common.Hash
 }
 
 func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager) *TimingMatcher {
@@ -90,8 +90,8 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 				m.matcher = matcher
 				m.TokenA = pair.TokenS
 				m.TokenB = pair.TokenB
-				m.AtoBNotMatchedOrderHashes = []common.Hash{}
-				m.BtoANotMatchedOrderHashes = []common.Hash{}
+				m.AtoBOrderHashesExcludeNextRound = []common.Hash{}
+				m.BtoAOrderHashesExcludeNextRound = []common.Hash{}
 				matcher.markets = append(matcher.markets, m)
 			}
 		} else {
@@ -131,26 +131,14 @@ func (matcher *TimingMatcher) Start() {
 	}()
 }
 
-func (matcher *TimingMatcher) getOrCreateOrderMatchState(orderState types.OrderState) *OrderMatchState {
-	var (
-		orderMatchState *OrderMatchState
-		ok              bool
-	)
-	if orderMatchState, ok = matcher.MatchedOrders[orderState.RawOrder.Hash]; !ok {
-		orderMatchState = &OrderMatchState{}
-		orderMatchState.rounds = make([]*RoundState, 0)
-	}
-	orderMatchState.orderState = orderState
-	return orderMatchState
-}
-
 func (market *Market) getOrdersForMatching() {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
-	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBNotMatchedOrderHashes), len(market.BtoANotMatchedOrderHashes))
-	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBNotMatchedOrderHashes)
-	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoANotMatchedOrderHashes)
+	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
+
+	atoBOrders := market.om.MinerOrders(market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
+	btoAOrders := market.om.MinerOrders(market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
 
 	for _, order := range atoBOrders {
 		market.reduceRemainedAmountBeforeMatch(&order)
@@ -166,9 +154,8 @@ func (market *Market) getOrdersForMatching() {
 		}
 	}
 
-	market.AtoBNotMatchedOrderHashes = []common.Hash{}
-	market.BtoANotMatchedOrderHashes = []common.Hash{}
-
+	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
+	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
 	//it should sub the matched amount in next round.
 }
 
@@ -187,29 +174,30 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 	}
 }
 
-func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledOrder) {
+func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledOrder) *types.OrderState {
 	filledOrderState := filledOrder.OrderState
+	var orderState *types.OrderState
 	if filledOrderState.RawOrder.TokenS == market.TokenA {
-		orderState := market.AtoBOrders[filledOrderState.RawOrder.Hash]
+		orderState = market.AtoBOrders[filledOrderState.RawOrder.Hash]
 		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
 		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	} else {
-		orderState := market.BtoAOrders[filledOrderState.RawOrder.Hash]
+		orderState = market.BtoAOrders[filledOrderState.RawOrder.Hash]
 		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
 		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	}
+	return orderState
 }
 
 func (market *Market) match() {
 	market.getOrdersForMatching()
-	matchedOrderHashes := make(map[common.Hash]bool)
+	matchedOrderHashes := make(map[common.Hash]bool)  //true:fullmatched, false:partmatched
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingSubmitInfo
 		for _, b2AOrder := range market.BtoAOrders {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
-				ringTmp := &types.Ring{}
-				ringTmp.Orders = []*types.FilledOrder{convertOrderStateToFilledOrder(a2BOrder), convertOrderStateToFilledOrder(b2AOrder)}
+				ringTmp := types.NewRing([]types.OrderState{*a2BOrder, *b2AOrder})
 				market.matcher.evaluator.ComputeRing(ringTmp)
 				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
 				if nil != err {
@@ -225,8 +213,8 @@ func (market *Market) match() {
 		//对每个order标记已匹配以及减去已匹配的金额
 		if nil != ringForSubmit {
 			for _, filledOrder := range ringForSubmit.RawRing.Orders {
-				market.reduceRemainedAmountAfterFilled(filledOrder)
-				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = true
+				orderState := market.reduceRemainedAmountAfterFilled(filledOrder)
+				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = market.om.IsOrderFullFinished(orderState)
 				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
 			}
 			ringStates = append(ringStates, ringForSubmit)
@@ -234,17 +222,16 @@ func (market *Market) match() {
 	}
 
 	for orderHash, _ := range market.AtoBOrders {
-		if _, exists := matchedOrderHashes[orderHash]; !exists {
-			market.AtoBNotMatchedOrderHashes = append(market.AtoBNotMatchedOrderHashes, orderHash)
+		if fullFilled, exists := matchedOrderHashes[orderHash]; !exists || fullFilled {
+			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, orderHash)
 		}
 	}
 
 	for orderHash, _ := range market.BtoAOrders {
-		if _, exists := matchedOrderHashes[orderHash]; !exists {
-			market.BtoANotMatchedOrderHashes = append(market.BtoANotMatchedOrderHashes, orderHash)
+		if fullFilled, exists := matchedOrderHashes[orderHash]; !exists || fullFilled {
+			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, orderHash)
 		}
 	}
-
 	eventemitter.Emit(eventemitter.Miner_NewRing, ringStates)
 }
 
@@ -304,10 +291,4 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 
 func intFromRat(rat *big.Rat) *big.Int {
 	return new(big.Int).Div(rat.Num(), rat.Denom())
-}
-
-func convertOrderStateToFilledOrder(order *types.OrderState) *types.FilledOrder {
-	filledOrder := &types.FilledOrder{}
-	filledOrder.OrderState = *order
-	return filledOrder
 }

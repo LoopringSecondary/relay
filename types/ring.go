@@ -44,6 +44,25 @@ type Ring struct {
 	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
 	FeeMode     int            `json:"feeMode"`     //收费方式，0 lrc 1 share
+	FullMatchedOrders []int
+}
+
+func NewRing(orderStates []OrderState) *Ring {
+	ring := &Ring{}
+	ring.Orders = convertOrderStateToFilledOrder(orderStates)
+	ring.FullMatchedOrders = []int{}
+	ring.Hash = ring.GenerateHash()
+	return ring
+}
+
+func convertOrderStateToFilledOrder(orderStates []OrderState) []*FilledOrder {
+	filledOrders := []*FilledOrder{}
+	for _, orderState := range orderStates {
+		filledOrder := &FilledOrder{}
+		filledOrder.OrderState = orderState
+		filledOrders = append(filledOrders, filledOrder)
+	}
+	return filledOrders
 }
 
 func (ring *Ring) GenerateHash() common.Hash {
