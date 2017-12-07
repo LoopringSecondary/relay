@@ -37,8 +37,6 @@ import (
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
-	fmt.Println(val)
-	fmt.Println(val2)
 	res = "pong for first connect, meaning server is OK"
 	return
 }
@@ -198,8 +196,6 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	protocol := query.ContractVersion
 	length := query.Length
 
-	fmt.Println(query)
-
 	if mkt == "" || protocol == "" || util.ContractVersionConfig[protocol] == "" {
 		err = errors.New("market and correct contract version must be applied")
 		return
@@ -247,7 +243,6 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	depth.Depth.Buy = calculateDepth(bids, length, false)
-	fmt.Print(depth)
 
 	return depth, err
 }
