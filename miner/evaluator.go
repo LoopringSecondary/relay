@@ -36,9 +36,7 @@ type Evaluator struct {
 }
 
 func availableAmountS(filledOrder *types.FilledOrder) error {
-
-	filledOrder.AvailableAmountS = new(big.Rat).SetInt(filledOrder.OrderState.DealtAmountS)
-	filledOrder.AvailableAmountB = new(big.Rat).SetInt(filledOrder.OrderState.DealtAmountB)
+	filledOrder.AvailableAmountS,filledOrder.AvailableAmountB = filledOrder.OrderState.RemainedAmount()
 	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
 
 	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
@@ -46,7 +44,6 @@ func availableAmountS(filledOrder *types.FilledOrder) error {
 	} else {
 		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountB, new(big.Rat).Inv(sellPrice))
 	}
-	//todo:根据avalableamount，计算filledAmount时有bug
 
 	return nil
 }
