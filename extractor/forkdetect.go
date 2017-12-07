@@ -70,8 +70,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	// 更新block分叉标记
 	model := dao.Block{}
 	if err := model.ConvertDown(forkBlock); err == nil {
-		model.Fork = true
-		l.dao.Update(model)
+		l.dao.SetForkBlock(forkBlock.BlockHash)
 	}
 
 	// 发送分叉事件

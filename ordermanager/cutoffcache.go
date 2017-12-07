@@ -68,7 +68,7 @@ func (c *CutoffCache) Add(event *types.CutoffEvent) error {
 	if _, ok := c.cache[event.Owner]; !ok {
 		err = c.rds.Add(model)
 	} else {
-		err = c.rds.Update(model)
+		err = c.rds.Save(model)
 	}
 
 	if err != nil {

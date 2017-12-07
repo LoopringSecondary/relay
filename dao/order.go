@@ -49,7 +49,7 @@ type Order struct {
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
-	BlockNumber           int64   `gorm:"column:block_num;type:bigint"`
+	BlockNumber           int64   `gorm:"column:block_number;type:bigint"`
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
@@ -200,7 +200,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
-	err = s.db.Where("block_num between ? and ?", from, to).Find(&list).Error
+	err = s.db.Where("block_number between ? and ?", from, to).Find(&list).Error
 
 	return list, err
 }
@@ -274,4 +274,26 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 
 func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
+}
+
+// update order status,dealtAmountS,dealtAmountB,blockNumber
+func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, blockNumber *big.Int) error {
+	items := map[string]interface{}{
+		"status":         uint8(status),
+		"dealt_amount_s": dealtAmountS.String(),
+		"dealt_amount_b": dealtAmountB.String(),
+		"block_number":   blockNumber.String(),
+	}
+	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
+}
+
+// update order status,dealtAmountS,dealtAmountB,blockNumber
+func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error {
+	items := map[string]interface{}{
+		"status":             uint8(status),
+		"cancelled_amount_s": cancelledAmountS.String(),
+		"cancelled_amount_b": cancelledAmountB.String(),
+		"block_number":       blockNumber.String(),
+	}
+	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }

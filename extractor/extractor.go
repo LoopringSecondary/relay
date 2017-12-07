@@ -508,9 +508,8 @@ func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()
 	if err == nil {
-		forkBlock.ConvertUp(&ret)
-		forkBlock.Fork = false
-		l.dao.Update(forkBlock)
+		blockHash := common.HexToHash(forkBlock.BlockHash)
+		l.dao.SetForkBlock(blockHash)
 		return ret.BlockNumber, end
 	}
 
