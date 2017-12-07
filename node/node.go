@@ -75,7 +75,7 @@ type MineNode struct {
 }
 
 func (n *MineNode) Start() {
-	//n.miner.Start()
+	n.miner.Start()
 }
 
 func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {

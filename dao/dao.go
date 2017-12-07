@@ -72,11 +72,12 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &Token{})
+	tables = append(tables, &EventLog{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {
 			if err := s.db.CreateTable(t).Error; err != nil {
-				log.Errorf("create mysql table error:%s", err.Error())
+				log.Fatalf("create mysql table error:%s", err.Error())
 			}
 		}
 	}

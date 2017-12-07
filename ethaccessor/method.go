@@ -56,11 +56,10 @@ func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spen
 
 func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
-	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
-	if !ok {
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
 	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
 		return nil, err
 	}
@@ -68,18 +67,16 @@ func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
-func (accessor *EthNodeAccessor) GetCutoff(contractAddress common.Address, owner common.Address, blockNumStr string) (int, error) {
-	var cutoff int
-	contractAbi, ok := accessor.ProtocolImpls[contractAddress]
-	if !ok {
-		return cutoff, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+func (accessor *EthNodeAccessor) GetCutoff(contractAddress, owner common.Address, blockNumStr string) (*big.Int, error) {
+	var cutoff types.Big
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(contractAbi.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
 	if err := callMethod(&cutoff, "cutoffs", blockNumStr, owner); err != nil {
-		return cutoff, err
+		return nil, err
 	}
-
-	return cutoff, nil
+	return cutoff.BigInt(), nil
 }
 
 func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc20Req) error {
@@ -284,7 +281,7 @@ func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.In
 }
 
 func (ethAccessor *EthNodeAccessor) GetSenderAddress(protocol common.Address) (common.Address, error) {
-	impl, ok := ethAccessor.ProtocolImpls[protocol]
+	impl, ok := ethAccessor.ProtocolAddresses[protocol]
 	if !ok {
 		return common.Address{}, errors.New("accessor method:invalid protocol address")
 	}

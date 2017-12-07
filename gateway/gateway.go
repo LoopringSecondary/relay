@@ -52,9 +52,10 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
-	// add filters
+	// new base filter
 	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee)}
 
+	// new token filter
 	tokenFilter := &TokenFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
 	for _, v := range util.AllTokens {
 		if v.Deny {
@@ -64,14 +65,16 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 		}
 	}
 
+	// new sign filter
 	signFilter := &SignFilter{}
 
-	//cutoffFilter := &CutoffFilter{Cache: ob.cutoffcache}
+	// new cutoff filter
+	cutoffFilter := &CutoffFilter{om: om}
 
 	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
-	//filters = append(filters, cutoffFilter)
+	gateway.filters = append(gateway.filters, cutoffFilter)
 }
 
 func HandleOrder(input eventemitter.EventData) error {
@@ -199,22 +202,15 @@ func (f *TokenFilter) filter(o *types.Order) (bool, error) {
 	return true, nil
 }
 
-// todo: cutoff filter
+type CutoffFilter struct {
+	om ordermanager.OrderManager
+}
 
-//type CutoffFilter struct {
-//	Cache *CutoffIndexCache
-//}
-//
-//// 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
-//func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
-//	idx, ok := f.Cache.indexMap[o.Owner]
-//	if !ok {
-//		return true, nil
-//	}
-//
-//	if o.Timestamp.Cmp(idx.Cutoff) < 0 {
-//		return false, errors.New("")
-//	}
-//
-//	return true, nil
-//}
+// 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
+func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
+	if f.om.IsOrderCutoff(o.Owner, o.Timestamp) {
+		return false, fmt.Errorf("gateway,cutoff filter order %s create time %s is out of range", o.Owner.Hex(), o.Timestamp.String())
+	}
+
+	return true, nil
+}

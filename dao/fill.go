@@ -46,7 +46,6 @@ type FillEvent struct {
 	SplitS        string `gorm:"column:split_s;type:varchar(30)"`
 	SplitB        string `gorm:"column:split_b;type:varchar(30)"`
 	Market        string `gorm:"column:market;type:varchar(42)"`
-	IsDeleted     bool   `gorm:"column:is_deleted"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -70,7 +69,6 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.Market, _ = util.WrapMarketByAddress(f.TokenS, f.TokenB)
-	f.IsDeleted = src.IsDeleted
 
 	return nil
 }
@@ -80,7 +78,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 		fill FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ? and order_hash = ? and is_deleted = false", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
+	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
 }
@@ -125,7 +123,7 @@ func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end
 	if timeQuery != "" {
 		err = s.db.Where(query).Where(timeQuery).Order("create_time desc").Limit(100).Find(&fills).Error
 	} else {
-		err = s.db.Where(query).Where("is_delete = false").Order("create_time desc").Limit(100).Find(&fills).Error
+		err = s.db.Where(query).Order("create_time desc").Limit(100).Find(&fills).Error
 	}
 	return
 }
@@ -143,5 +141,5 @@ func buildTimeQueryString(start, end int64) string {
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&FillEvent{}).Error
 }

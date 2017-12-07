@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
 )
@@ -194,7 +195,10 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 	}
 
 	for _, filledOrder := range ringState.Orders {
-		lrcAddress := e.accessor.ProtocolImpls[filledOrder.OrderState.RawOrder.Protocol].LrcTokenAddress
+		var lrcAddress common.Address
+		if implAddress, exists := e.accessor.ProtocolAddresses[filledOrder.OrderState.RawOrder.Protocol]; exists {
+			lrcAddress = implAddress.LrcTokenAddress
+		}
 
 		//todo:成本节约
 		legalAmountOfSaving := new(big.Rat)

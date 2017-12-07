@@ -220,27 +220,15 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
-type ForkedEvent struct {
-	DetectedBlock *big.Int
-	DetectedHash  common.Hash
-	ForkBlock     *big.Int
-	ForkHash      common.Hash
-}
-
-type ProtocolImpl struct {
+type ProtocolAddress struct {
 	Version         string
 	ContractAddress common.Address
-	ProtocolImplAbi *abi.ABI
 
 	LrcTokenAddress common.Address
-	LrcTokenAbi     *abi.ABI
 
 	TokenRegistryAddress common.Address
-	TokenRegistryAbi     *abi.ABI
 
 	RinghashRegistryAddress common.Address
-	RinghashRegistryAbi     *abi.ABI
 
 	DelegateAddress common.Address
-	DelegateAbi     *abi.ABI
 }

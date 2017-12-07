@@ -50,7 +50,7 @@ func TestSingleOrder(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
-	impl, _ := c.Common.ProtocolImpls["v_0_1"]
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
@@ -58,7 +58,7 @@ func TestSingleOrder(t *testing.T) {
 	order := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
-		common.HexToAddress(impl.Address),
+		protocol,
 		account.Address,
 		amountS1,
 		amountB1,
@@ -95,26 +95,26 @@ func TestRing(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
-	impl, _ := c.Common.ProtocolImpls["v_0_1"]
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	order1 := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
-		common.HexToAddress(impl.Address),
+		protocol,
 		acc1.Address,
 		amountS1,
 		amountB1,
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
 		tokenAddressB,
 		tokenAddressA,
-		common.HexToAddress(impl.Address),
+		protocol,
 		acc2.Address,
 		amountS2,
 		amountB2,

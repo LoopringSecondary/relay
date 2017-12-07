@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
@@ -47,13 +48,14 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options  config.AccessorOptions
-	commOpts config.CommonOptions
-	accessor *ethaccessor.EthNodeAccessor
-	dao      dao.RdsService
-	stop     chan struct{}
-	lock     sync.RWMutex
-	events   map[string]ContractData
+	options   config.AccessorOptions
+	commOpts  config.CommonOptions
+	accessor  *ethaccessor.EthNodeAccessor
+	dao       dao.RdsService
+	stop      chan struct{}
+	lock      sync.RWMutex
+	events    map[common.Hash]ContractData
+	protocols map[common.Address]string
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -94,6 +96,11 @@ func (l *ExtractorServiceImpl) Start() {
 			currentBlock.ParentHash = block.ParentHash
 			currentBlock.BlockHash = block.Hash
 			currentBlock.CreateTime = block.Timestamp.Int64()
+
+			blockEvent := &types.BlockEvent{}
+			blockEvent.BlockNumber = block.Number.BigInt()
+			blockEvent.BlockHash = block.Hash
+			eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 			var entity dao.Block
 			if err := entity.ConvertDown(currentBlock); err != nil {
@@ -155,12 +162,31 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 				ok       bool
 			)
 
+			// 过滤合约
+			protocolAddr := common.HexToAddress(evtLog.Address)
+			if _, ok := l.protocols[protocolAddr]; !ok {
+				log.Debugf("extractor, unsupported protocol %s", protocolAddr.Hex())
+				continue
+			}
+
+			// 过滤事件
 			data := hexutil.MustDecode(evtLog.Data)
-			id := evtLog.Topics[0]
-			key := generateKey(evtLog.Address, id)
-			if contract, ok = l.events[key]; !ok {
+			id := common.HexToHash(evtLog.Topics[0])
+			if contract, ok = l.events[id]; !ok {
 				log.Debugf("extractor,contract event id error:%s", id)
 				continue
+			}
+
+			if l.commOpts.SaveEventLog {
+				if bs, err := json.Marshal(evtLog); err != nil {
+					el := &dao.EventLog{}
+					el.Protocol = evtLog.Address
+					el.TxHash = tx.Hash
+					el.BlockNumber = evtLog.BlockNumber.Int64()
+					el.CreateTime = block.Timestamp.Int64()
+					el.Data = bs
+					l.dao.Add(el)
+				}
 			}
 
 			if nil != data && len(data) > 0 {
@@ -177,7 +203,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			contract.ContractAddress = evtLog.Address
 			contract.TxHash = tx.Hash
 
-			eventemitter.Emit(contract.Key, contract)
+			eventemitter.Emit(contract.Id.Hex(), contract)
 		}
 	}
 }
@@ -209,7 +235,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 	ringmined.TxHash = common.HexToHash(contractData.TxHash)
 	ringmined.Time = contractData.Time
 	ringmined.Blocknumber = contractData.BlockNumber
-	ringmined.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ring mined event,ringhash:%s, ringIndex:%s, miner:%s, feeRecipient:%s,isRinghashReserved:%t",
@@ -231,7 +256,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
-		fill.IsDeleted = false
 
 		if l.commOpts.Develop {
 			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
@@ -286,8 +310,6 @@ func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.Even
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
-	evt.IsDeleted = false
-
 	if l.commOpts.Develop {
 		log.Debugf("extractor,order cancelled event,orderhash:%s, cancelAmount:%s", evt.OrderHash.Hex(), evt.AmountCancelled.String())
 	}
@@ -311,7 +333,6 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
-	evt.IsDeleted = false
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())

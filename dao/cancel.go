@@ -52,11 +52,11 @@ func (s *RdsServiceImpl) FindCancelEvent(orderhash common.Hash, cancelledAmount 
 		err   error
 	)
 
-	err = s.db.Where("order_hash = (?)", orderhash.Hex()).Where("amount_cancelled = (?)", cancelledAmount.String()).First(&model).Error
+	err = s.db.Where("order_hash = ? and amount_cancelled = ?", orderhash.Hex(), cancelledAmount.String()).First(&model).Error
 
 	return &model, err
 }
 
 func (s *RdsServiceImpl) RollBackCancel(from, to int64) error {
-	return s.db.Model(&CancelEvent{}).Where("block_number > ? and block_number <= ?", from, to).UpdateColumn("is_deleted", true).Error
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CancelEvent{}).Error
 }

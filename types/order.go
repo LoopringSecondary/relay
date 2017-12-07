@@ -223,9 +223,35 @@ type OrderState struct {
 	BroadcastTime    int         `json:"broadcastTime"`
 }
 
-// 放到common package 根据配置决定状态
-func (ord *OrderState) SettleStatus() {
+// 根据是否完全成交确定订单状态
+func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
+	if isFullFinished {
+		ord.Status = ORDER_FINISHED
+	} else {
+		ord.Status = ORDER_PARTIAL
+	}
+}
 
+func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {
+	remainedAmountS = new(big.Rat)
+	remainedAmountB = new(big.Rat)
+	if orderState.RawOrder.BuyNoMoreThanAmountB {
+		reducedAmountB := new(big.Rat)
+		reducedAmountB.Add(reducedAmountB, new(big.Rat).SetInt(orderState.DealtAmountB)).
+			Add(reducedAmountB, new(big.Rat).SetInt(orderState.CancelledAmountB))
+		sellPrice := new(big.Rat).SetFrac(orderState.RawOrder.AmountS, orderState.RawOrder.AmountB)
+		remainedAmountB.Sub(new(big.Rat).SetInt(orderState.RawOrder.AmountB), reducedAmountB)
+		remainedAmountS.Mul(remainedAmountB, sellPrice)
+	} else {
+		reducedAmountS := new(big.Rat)
+		reducedAmountS.Add(reducedAmountS, new(big.Rat).SetInt(orderState.DealtAmountS)).
+			Add(reducedAmountS, new(big.Rat).SetInt(orderState.CancelledAmountS))
+		buyPrice := new(big.Rat).SetFrac(orderState.RawOrder.AmountB, orderState.RawOrder.AmountS)
+		remainedAmountS.Sub(new(big.Rat).SetInt(orderState.RawOrder.AmountS), reducedAmountS)
+		remainedAmountB.Mul(remainedAmountS, buyPrice)
+	}
+
+	return remainedAmountS, remainedAmountB
 }
 
 func ToOrder(request *OrderJsonRequest) *Order {

@@ -35,7 +35,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	var (
 		latestBlock   types.Block
 		newBlockModel dao.Block
-		forkEvent     ethaccessor.ForkedEvent
+		forkEvent     types.ForkedEvent
 	)
 
 	latestBlockModel, err := l.dao.FindLatestBlock()

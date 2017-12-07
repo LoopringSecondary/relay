@@ -53,7 +53,7 @@ type Order struct {
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
-	CancelledAmountB      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
@@ -149,11 +149,7 @@ func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber 
 	return err
 }
 
-func (s *RdsServiceImpl) UnMarkMinerOrders(blockNumber int64) error {
-	return s.db.Model(&Order{}).Where("miner_block_mark < ?", blockNumber).Update("miner_block_mark", 0).Error
-}
-
-func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, markBlockNumber int64) ([]*Order, error) {
 	var (
 		list []*Order
 		err  error
@@ -164,10 +160,10 @@ func (s *RdsServiceImpl) GetOrdersForMiner(tokenS, tokenB string, length int, fi
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.Where("token_s = ? and token_b = ?", tokenS, tokenB).
+	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
 		Where("create_time + ttl > ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
-		Where("miner_block_mark = ?", 0).
+		Where("miner_block_mark = ? or miner_block_mark > ?", 0, markBlockNumber).
 		Order("price desc").
 		Limit(length).
 		Find(&list).
@@ -230,8 +226,10 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 	return true
 }
 
-func (s *RdsServiceImpl) SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error {
-	err := s.db.Model(&Order{}).Where("order_hash in (?)", orderhashs).Update("status", status).Error
+func (s *RdsServiceImpl) SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error {
+	err := s.db.Model(&Order{}).Where("create_time < (?)", cutoffTime.Int64()).
+		Where("owner = (?)", owner.Hex()).
+		Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 

@@ -120,7 +120,8 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 }
 
 func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
-	return a.accessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
+	cutoffTime, err := a.accessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
+	return int(cutoffTime.Int64()), err
 }
 
 func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {

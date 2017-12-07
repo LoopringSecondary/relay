@@ -59,55 +59,59 @@ var creator accounts.Account
 var accessor *ethaccessor.EthNodeAccessor
 
 func PrepareTestData() {
+	c := loadConfig()
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 
-	for protocolAddr, impl := range accessor.ProtocolImpls {
-		//delegate registry
-		callMethod := accessor.ContractCallMethod(impl.DelegateAbi, impl.DelegateAddress)
+	//delegate registry
+	delegateAbi := accessor.DelegateAbi
+	delegateAddress := accessor.ProtocolAddresses[protocol].DelegateAddress
+	callMethod := accessor.ContractCallMethod(delegateAbi, delegateAddress)
+	var res types.Big
+	if err := callMethod(&res, "isAddressAuthorized", "latest", protocol); nil != err {
+		log.Errorf("err:%s", err.Error())
+	} else {
+		if res.Int() <= 0 {
+			delegateCallMethod := accessor.ContractSendTransactionMethod(delegateAbi, delegateAddress)
+			if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, protocol); nil != err {
+				log.Errorf("delegate add version error:%s", err.Error())
+			} else {
+				log.Infof("delegate add version hash:%s", hash)
+			}
+		} else {
+			log.Infof("delegate had added this version")
+		}
+	}
+
+	//tokenregistry
+	tokenRegisterAbi := accessor.TokenRegistryAbi
+	tokenRegisterAddress := accessor.ProtocolAddresses[protocol].TokenRegistryAddress
+	for _, tokenAddr := range tokens {
+		callMethod := accessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
-		if err := callMethod(&res, "isAddressAuthorized", "latest", protocolAddr); nil != err {
+		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
 			log.Errorf("err:%s", err.Error())
 		} else {
 			if res.Int() <= 0 {
-				delegateCallMethod := accessor.ContractSendTransactionMethod(impl.DelegateAbi, impl.DelegateAddress)
-				if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, protocolAddr); nil != err {
-					log.Errorf("delegate add version error:%s", err.Error())
+				registryMethod := accessor.ContractSendTransactionMethod(tokenRegisterAbi, tokenRegisterAddress)
+				if hash, err := registryMethod(creator, "registerToken", nil, nil, tokenAddr, strconv.Itoa(rand.Intn(100000))); nil != err {
+					log.Errorf("token registry error:%s", err.Error())
 				} else {
-					log.Infof("delegate add version hash:%s", hash)
+					log.Infof("token registry hash:%s", hash)
 				}
 			} else {
-				log.Infof("delegate had added this version")
+				log.Infof("token had registered")
 			}
 		}
+	}
 
-		//tokenregistry
-		for _, tokenAddr := range tokens {
-			callMethod := accessor.ContractCallMethod(impl.TokenRegistryAbi, impl.TokenRegistryAddress)
-			var res types.Big
-			if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
-				log.Errorf("err:%s", err.Error())
+	//approve
+	for _, tokenAddr := range tokens {
+		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
+		for _, acc := range orderAccounts {
+			if hash, err := erc20SendMethod(acc, "approve", nil, nil, delegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
+				log.Errorf("token approve error:%s", err.Error())
 			} else {
-				if res.Int() <= 0 {
-					registryMethod := accessor.ContractSendTransactionMethod(impl.TokenRegistryAbi, impl.TokenRegistryAddress)
-					if hash, err := registryMethod(creator, "registerToken", nil, nil, tokenAddr, strconv.Itoa(rand.Intn(100000))); nil != err {
-						log.Errorf("token registry error:%s", err.Error())
-					} else {
-						log.Infof("token registry hash:%s", hash)
-					}
-				} else {
-					log.Infof("token had registered")
-				}
-			}
-		}
-
-		//approve
-		for _, tokenAddr := range tokens {
-			erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
-			for _, acc := range orderAccounts {
-				if hash, err := erc20SendMethod(acc, "approve", nil, nil, impl.DelegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
-					log.Errorf("token approve error:%s", err.Error())
-				} else {
-					log.Infof("token approve hash:%s", hash)
-				}
+				log.Infof("token approve hash:%s", hash)
 			}
 		}
 	}
@@ -128,7 +132,7 @@ func AllowanceToLoopring() {
 			}
 
 			var allowance types.Big
-			for _, impl := range accessor.ProtocolImpls {
+			for _, impl := range accessor.ProtocolAddresses {
 				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
 					log.Error(err.Error())
 				} else {

@@ -44,11 +44,10 @@ type RdsService interface {
 	GetOrderByHash(orderhash common.Hash) (*Order, error)
 	GetOrdersByHash(orderhashs []string) (map[string]Order, error)
 	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
-	UnMarkMinerOrders(blockNumber int64) error
-	GetOrdersForMiner(tokenS, tokenB string, length int, filterStatus []types.OrderStatus) ([]*Order, error)
+	GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, markBlockNumber int64) ([]*Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
-	SettleOrdersStatus(orderhashs []string, status types.OrderStatus) error
+	SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
@@ -73,6 +72,7 @@ type RdsService interface {
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error)
+	FindValidCutoffEvents() ([]types.CutoffEvent, error)
 	RollBackCutoff(from, to int64) error
 
 	// trend table

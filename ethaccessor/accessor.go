@@ -26,8 +26,13 @@ import (
 )
 
 type EthNodeAccessor struct {
-	Erc20Abi      *abi.ABI
-	ProtocolImpls map[common.Address]*ProtocolImpl
+	Erc20Abi            *abi.ABI
+	ProtocolImplAbi     *abi.ABI
+	DelegateAbi         *abi.ABI
+	RinghashRegistryAbi *abi.ABI
+	TokenRegistryAbi    *abi.ABI
+
+	ProtocolAddresses map[common.Address]*ProtocolAddress
 	*rpc.Client
 }
 
@@ -42,32 +47,32 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 	if accessor.Erc20Abi, err = NewAbi(commonOptions.Erc20Abi); nil != err {
 		return nil, err
 	}
-	accessor.ProtocolImpls = make(map[common.Address]*ProtocolImpl)
+	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
 
-	for version, opts := range commonOptions.ProtocolImpls {
-		impl := &ProtocolImpl{Version: version, ContractAddress: common.HexToAddress(opts.Address)}
-		if protocolImplAbi, err := NewAbi(opts.ImplAbi); nil != err {
-			return nil, err
-		} else {
-			impl.ProtocolImplAbi = protocolImplAbi
-		}
-		if registryAbi, err := NewAbi(opts.RegistryAbi); nil != err {
-			return nil, err
-		} else {
-			impl.RinghashRegistryAbi = registryAbi
-		}
-		if transferDelegateAbi, err := NewAbi(opts.DelegateAbi); nil != err {
-			return nil, err
-		} else {
-			impl.DelegateAbi = transferDelegateAbi
-		}
-		if tokenRegistryAbi, err := NewAbi(opts.TokenRegistryAbi); nil != err {
-			return nil, err
-		} else {
-			impl.TokenRegistryAbi = tokenRegistryAbi
-		}
+	if protocolImplAbi, err := NewAbi(commonOptions.ProtocolImpl.ImplAbi); nil != err {
+		return nil, err
+	} else {
+		accessor.ProtocolImplAbi = protocolImplAbi
+	}
+	if registryAbi, err := NewAbi(commonOptions.ProtocolImpl.RegistryAbi); nil != err {
+		return nil, err
+	} else {
+		accessor.RinghashRegistryAbi = registryAbi
+	}
+	if transferDelegateAbi, err := NewAbi(commonOptions.ProtocolImpl.DelegateAbi); nil != err {
+		return nil, err
+	} else {
+		accessor.DelegateAbi = transferDelegateAbi
+	}
+	if tokenRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.TokenRegistryAbi); nil != err {
+		return nil, err
+	} else {
+		accessor.TokenRegistryAbi = tokenRegistryAbi
+	}
 
-		callMethod := accessor.ContractCallMethod(impl.ProtocolImplAbi, impl.ContractAddress)
+	for version, address := range commonOptions.ProtocolImpl.Address {
+		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
+		callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, impl.ContractAddress)
 		var addr string
 		if err := callMethod(&addr, "lrcTokenAddress", "latest"); nil != err {
 			return nil, err
@@ -89,7 +94,7 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 		} else {
 			impl.DelegateAddress = common.HexToAddress(addr)
 		}
-		accessor.ProtocolImpls[impl.ContractAddress] = impl
+		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 	}
 
 	return accessor, nil

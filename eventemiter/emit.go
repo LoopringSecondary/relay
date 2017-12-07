@@ -54,6 +54,9 @@ const (
 	Miner_NewRing          = "Miner_NewRing"
 	Miner_RingMined        = "Miner_RingMined"
 	Miner_RingSubmitFailed = "Miner_RingSubmitFailed"
+
+	// Block
+	Block_New = "Block_New"
 )
 
 var watchers map[string][]*Watcher
