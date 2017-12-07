@@ -71,7 +71,7 @@ func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner common.Address) (*C
 }
 
 func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete("is_deleted", true).Error
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
 }
 
 func (s *RdsServiceImpl) FindValidCutoffEvents() ([]CutOffEvent, error) {
