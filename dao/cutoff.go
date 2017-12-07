@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"time"
 )
 
@@ -34,7 +35,7 @@ type CutOffEvent struct {
 	CreateTime  int64  `gorm:"column:create_time"`
 }
 
-// convert chainClient/orderCancelledEvent to dao/CancelEvent
+// convert types/cutoffEvent to dao/CancelEvent
 func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.ContractAddress.Hex()
@@ -42,6 +43,18 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Cutoff = src.Cutoff.Int64()
 	e.BlockNumber = src.Blocknumber.Int64()
 	e.CreateTime = src.Time.Int64()
+
+	return nil
+}
+
+// convert dao/cutoffEvent to types/cutoffEvent
+func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
+	dst.Owner = common.HexToAddress(e.Owner)
+	dst.ContractAddress = common.HexToAddress(e.Protocol)
+	dst.TxHash = common.HexToHash(e.TxHash)
+	dst.Blocknumber = big.NewInt(e.BlockNumber)
+	dst.Cutoff = big.NewInt(e.Cutoff)
+	dst.Time = big.NewInt(e.CreateTime)
 
 	return nil
 }
@@ -61,9 +74,9 @@ func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
 	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
 }
 
-func (s *RdsServiceImpl) FindValidCutoffEvents() ([]types.CutoffEvent, error) {
+func (s *RdsServiceImpl) FindValidCutoffEvents() ([]CutOffEvent, error) {
 	var (
-		list []types.CutoffEvent
+		list []CutOffEvent
 		err  error
 	)
 

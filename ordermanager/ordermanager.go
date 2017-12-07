@@ -329,7 +329,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	}
 
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err = om.rds.FindLatestBlock(); err != nil {
+	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
 		var b types.Block
 		currentBlock.ConvertUp(&b)
 		markBlockNumber = b.BlockNumber

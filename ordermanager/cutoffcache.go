@@ -41,7 +41,9 @@ func NewCutoffCache(rds dao.RdsService) *CutoffCache {
 
 	if cutoffEvents, err := rds.FindValidCutoffEvents(); err == nil {
 		for _, v := range cutoffEvents {
-			cache.cache[v.Owner] = v.Cutoff
+			var event types.CutoffEvent
+			v.ConvertUp(&event)
+			cache.cache[event.Owner] = event.Cutoff
 		}
 	}
 
