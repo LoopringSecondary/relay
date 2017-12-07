@@ -27,7 +27,7 @@ import (
 
 type Block struct {
 	ID          int    `gorm:"column:id;primary_key"`
-	BlockNumber []byte `gorm:"column:block_number;type:varchar(30)"`
+	BlockNumber int64  `gorm:"column:block_number;type:bigint"`
 	BlockHash   string `gorm:"column:block_hash;type:varchar(82);unique_index"`
 	ParentHash  string `gorm:"column:parent_hash;type:varchar(82);unique_index"`
 	CreateTime  int64  `gorm:"column:create_time"`
@@ -36,12 +36,7 @@ type Block struct {
 
 // convert types/block to dao/block
 func (b *Block) ConvertDown(src *types.Block) error {
-	var err error
-	b.BlockNumber, err = src.BlockNumber.MarshalText()
-	if err != nil {
-		return err
-	}
-
+	b.BlockNumber = src.BlockNumber.Int64()
 	b.BlockHash = src.BlockHash.Hex()
 	b.ParentHash = src.ParentHash.Hex()
 	b.CreateTime = src.CreateTime
@@ -52,11 +47,7 @@ func (b *Block) ConvertDown(src *types.Block) error {
 
 // convert dao/block to types/block
 func (b *Block) ConvertUp(dst *types.Block) error {
-	dst.BlockNumber = new(big.Int)
-	if err := dst.BlockNumber.UnmarshalText(b.BlockNumber); err != nil {
-		return err
-	}
-
+	dst.BlockNumber = big.NewInt(b.BlockNumber)
 	dst.BlockHash = common.HexToHash(b.BlockHash)
 	dst.ParentHash = common.HexToHash(b.ParentHash)
 	dst.CreateTime = b.CreateTime
@@ -65,53 +56,40 @@ func (b *Block) ConvertUp(dst *types.Block) error {
 }
 
 func (s *RdsServiceImpl) FindBlockByHash(blockhash common.Hash) (*Block, error) {
-	var (
-		block Block
-		err   error
-	)
-
+	var block Block
 	if types.IsZeroHash(blockhash) {
 		return nil, errors.New("block table findBlockByHash get an illegal hash")
 	}
 
-	err = s.db.Where("block_hash = ?", blockhash.Hex()).First(&block).Error
+	err := s.db.Where("block_hash = ?", blockhash.Hex()).First(&block).Error
 
 	return &block, err
 }
 
 func (s *RdsServiceImpl) FindBlockByParentHash(parenthash common.Hash) (*Block, error) {
-	var (
-		block Block
-		err   error
-	)
+	var block Block
 
 	if types.IsZeroHash(parenthash) {
 		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
 	}
 
-	err = s.db.Where("parent_hash = ?", parenthash.Hex()).First(&block).Error
+	err := s.db.Where("parent_hash = ?", parenthash.Hex()).First(&block).Error
 
 	return &block, err
 }
 
 func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
-	var (
-		block Block
-		err   error
-	)
-
-	err = s.db.Order("create_time desc").First(&block).Error
-
+	var block Block
+	err := s.db.Order("create_time desc").First(&block).Error
 	return &block, err
 }
 
 func (s *RdsServiceImpl) FindForkBlock() (*Block, error) {
-	var (
-		block Block
-		err   error
-	)
-
-	err = s.db.Where("fork = ?", true).First(&block).Error
-
+	var block Block
+	err := s.db.Where("fork = ?", true).First(&block).Error
 	return &block, err
+}
+
+func (s *RdsServiceImpl) SetForkBlock(blockhash common.Hash) error {
+	return s.db.Model(&Block{}).Where("block_hash", blockhash.String()).Update("fork = ?", true).Error
 }

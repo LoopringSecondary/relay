@@ -33,11 +33,11 @@ type RdsService interface {
 	Del(item interface{}) error
 	First(item interface{}) error
 	Last(item interface{}) error
-	Update(item interface{}) error
+	Save(item interface{}) error
 	FindAll(item interface{}) error
 
 	// ring mined table
-	FindRingMinedByRingHash(ringhash string) (*RingMined, error)
+	FindRingMinedByRingHash(ringhash string) (*RingMinedEvent, error)
 	RollBackRingMined(from, to int64) error
 
 	// order table
@@ -52,12 +52,15 @@ type RdsService interface {
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
+	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, blockNumber *big.Int) error
+	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)
 	FindBlockByParentHash(parenthash common.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
 	FindForkBlock() (*Block, error)
+	SetForkBlock(blockhash common.Hash) error
 
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
@@ -71,7 +74,7 @@ type RdsService interface {
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error)
-	FindValidCutoffEvents() ([]types.CutoffEvent, error)
+	FindValidCutoffEvents() ([]CutOffEvent, error)
 	RollBackCutoff(from, to int64) error
 
 	// trend table

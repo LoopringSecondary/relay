@@ -169,15 +169,15 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
-		if len(matchedOrder.rounds) <= 0 {
-			delete(market.AtoBOrders, orderHash)
-			delete(market.BtoAOrders, orderHash)
-		} else {
-			for _, matchedRound := range matchedOrder.rounds {
-				orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(matchedRound.matchedAmountB))
-				orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(matchedRound.matchedAmountS))
-			}
+		//if len(matchedOrder.rounds) <= 0 {
+		//	delete(market.AtoBOrders, orderHash)
+		//	delete(market.BtoAOrders, orderHash)
+		//} else {
+		for _, matchedRound := range matchedOrder.rounds {
+			orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(matchedRound.matchedAmountB))
+			orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(matchedRound.matchedAmountS))
 		}
+		//}
 	}
 }
 
@@ -186,12 +186,12 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 	var orderState *types.OrderState
 	if filledOrderState.RawOrder.TokenS == market.TokenA {
 		orderState = market.AtoBOrders[filledOrderState.RawOrder.Hash]
-		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
-		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
+		orderState.DealtAmountB.Add(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
+		orderState.DealtAmountS.Add(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	} else {
 		orderState = market.BtoAOrders[filledOrderState.RawOrder.Hash]
-		orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
-		orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
+		orderState.DealtAmountB.Add(orderState.DealtAmountB, intFromRat(filledOrder.FillAmountB))
+		orderState.DealtAmountS.Add(orderState.DealtAmountS, intFromRat(filledOrder.FillAmountS))
 	}
 	return orderState
 }

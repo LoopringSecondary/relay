@@ -156,7 +156,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
-	model := &dao.RingMined{}
+	model := &dao.RingMinedEvent{}
 	if err := model.ConvertDown(event); err != nil {
 		return err
 	}
@@ -213,9 +213,12 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
+		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.Update(state); err != nil {
+	// status,dealtAmountS,dealtAmountB,blockNumber,
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.BlockNumber); err != nil {
+		log.Errorf(err.Error())
 		return err
 	}
 
@@ -268,7 +271,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.rds.Update(state); err != nil {
+	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.BlockNumber); err != nil {
 		return err
 	}
 
@@ -329,7 +332,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	}
 
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err = om.rds.FindLatestBlock(); err != nil {
+	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
 		var b types.Block
 		currentBlock.ConvertUp(&b)
 		markBlockNumber = b.BlockNumber
@@ -341,6 +344,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
+	markBlockNumber = new(big.Int).Sub(markBlockNumber, big.NewInt(int64(om.options.BlockPeriod)))
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
 		return list
 	}

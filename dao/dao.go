@@ -64,7 +64,7 @@ func (s *RdsServiceImpl) Prepare() {
 
 	tables = append(tables, &Order{})
 	tables = append(tables, &Block{})
-	tables = append(tables, &RingMined{})
+	tables = append(tables, &RingMinedEvent{})
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})

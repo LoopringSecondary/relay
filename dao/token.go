@@ -58,45 +58,25 @@ func (t *Token) ConvertUp(dst *types.Token) error {
 }
 
 func (s *RdsServiceImpl) FindUnDeniedTokens() ([]Token, error) {
-	var (
-		list []Token
-		err  error
-	)
-
-	err = s.db.Where("deny = (?)", false).Where("is_market = (?)", false).Find(&list).Error
-
+	var list []Token
+	err := s.db.Where("deny = ? and is_market = ?", false, false).Find(&list).Error
 	return list, err
 }
 
 func (s *RdsServiceImpl) FindDeniedTokens() ([]Token, error) {
-	var (
-		list []Token
-		err  error
-	)
-
-	err = s.db.Where("deny = (?)", true).Where("is_market = (?)", false).Find(&list).Error
-
+	var list []Token
+	err := s.db.Where("deny = ? and is_market = ?", true, false).Find(&list).Error
 	return list, err
 }
 
 func (s *RdsServiceImpl) FindUnDeniedMarkets() ([]Token, error) {
-	var (
-		list []Token
-		err  error
-	)
-
-	err = s.db.Where("deny = (?)", false).Where("is_market = (?)", true).Find(&list).Error
-
+	var list []Token
+	err := s.db.Where("deny = ? and is_market = ?", false, true).Find(&list).Error
 	return list, err
 }
 
 func (s *RdsServiceImpl) FindDeniedMarkets() ([]Token, error) {
-	var (
-		list []Token
-		err  error
-	)
-
-	err = s.db.Where("deny = (?)", true).Where("is_market = (?)", true).Find(&list).Error
-
+	var list []Token
+	err := s.db.Where("deny = ? and is_market = ?", true, true).Find(&list).Error
 	return list, err
 }
