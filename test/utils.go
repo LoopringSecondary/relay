@@ -186,7 +186,6 @@ func InitialMarketUtil(rds dao.RdsService) {
 		util.AllTokens[k] = v
 	}
 
-
 	// set all markets
 	for _, k := range util.SupportTokens { // lrc,omg
 		for _, kk := range util.SupportMarkets { //eth

@@ -33,6 +33,7 @@ func (l *ExtractorServiceImpl) loadContract() {
 	l.events = make(map[common.Hash]ContractData)
 	l.protocols = make(map[common.Address]string)
 
+	l.loadProtocolAddress()
 	l.loadErc20Contract()
 	l.loadProtocolContract()
 	l.loadTokenRegisterContract()
@@ -43,6 +44,24 @@ func (l *ExtractorServiceImpl) loadContract() {
 func (l *ExtractorServiceImpl) loadProtocolAddress() {
 	for _, v := range util.AllTokens {
 		l.protocols[v.Protocol] = v.Symbol
+		log.Debugf("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
+	}
+
+	for _, v := range l.accessor.ProtocolAddresses {
+		protocolSymbol := "loopring"
+		delegateSymbol := "transfer_delegate"
+		ringhashRegisterSymbol := "ringhash_register"
+		tokenRegisterSymbol := "token_register"
+
+		l.protocols[v.ContractAddress] = protocolSymbol
+		l.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
+		l.protocols[v.RinghashRegistryAddress] = ringhashRegisterSymbol
+		l.protocols[v.DelegateAddress] = delegateSymbol
+
+		log.Debugf("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
+		log.Debugf("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
+		log.Debugf("extractor,contract protocol %s->%s", ringhashRegisterSymbol, v.RinghashRegistryAddress.Hex())
+		log.Debugf("extractor,contract protocol %s->%s", delegateSymbol, v.DelegateAddress.Hex())
 	}
 }
 

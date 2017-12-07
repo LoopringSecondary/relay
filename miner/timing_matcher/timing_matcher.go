@@ -173,10 +173,10 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 		//	delete(market.AtoBOrders, orderHash)
 		//	delete(market.BtoAOrders, orderHash)
 		//} else {
-			for _, matchedRound := range matchedOrder.rounds {
-				orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(matchedRound.matchedAmountB))
-				orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(matchedRound.matchedAmountS))
-			}
+		for _, matchedRound := range matchedOrder.rounds {
+			orderState.DealtAmountB.Sub(orderState.DealtAmountB, intFromRat(matchedRound.matchedAmountB))
+			orderState.DealtAmountS.Sub(orderState.DealtAmountS, intFromRat(matchedRound.matchedAmountS))
+		}
 		//}
 	}
 }
