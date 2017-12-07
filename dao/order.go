@@ -163,7 +163,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
 		Where("create_time + ttl > ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
-		Where("miner_block_mark = ? or miner_block_mark > ?", 0, markBlockNumber).
+		Where("miner_block_mark = ? or miner_block_mark <= ?", 0, markBlockNumber).
 		Order("price desc").
 		Limit(length).
 		Find(&list).
