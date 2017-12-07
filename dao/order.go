@@ -31,33 +31,31 @@ import (
 // order amountS 上限1e30
 
 type Order struct {
-	ID                    int     `gorm:"column:id;primary_key;"`
-	Protocol              string  `gorm:"column:protocol;type:varchar(42)"`
-	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
-	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
-	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
-	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
-	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
-	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
-	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
-	Salt                  int64   `gorm:"column:salt;type:bigint"`
-	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
-	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
-	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
-	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
-	R                     string  `gorm:"column:r;type:varchar(66)"`
-	S                     string  `gorm:"column:s;type:varchar(66)"`
-	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
-	BlockNumber           int64   `gorm:"column:block_number;type:bigint"`
-	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
-	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
-	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
-	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
-	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
-	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
-	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
-	Market                string  `gorm:"column:market;type:varchar(40)"`
+	ID                       int     `gorm:"column:id;primary_key;"`
+	Protocol                 string  `gorm:"column:protocol;type:varchar(42)"`
+	Owner                    string  `gorm:"column:owner;type:varchar(42)"`
+	OrderHash                string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
+	TokenS                   string  `gorm:"column:token_s;type:varchar(42)"`
+	TokenB                   string  `gorm:"column:token_b;type:varchar(42)"`
+	AmountS                  string  `gorm:"column:amount_s;type:varchar(30)"`
+	AmountB                  string  `gorm:"column:amount_b;type:varchar(30)"`
+	CreateTime               int64   `gorm:"column:create_time;type:bigint"`
+	Ttl                      int64   `gorm:"column:ttl;type:bigint"`
+	Salt                     int64   `gorm:"column:salt;type:bigint"`
+	LrcFee                   string  `gorm:"column:lrc_fee;type:varchar(30)"`
+	BuyNoMoreThanAmountB     bool    `gorm:"column:buy_nomore_than_amountb"`
+	MarginSplitPercentage    uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
+	V                        uint8   `gorm:"column:v;type:tinyint(4)"`
+	R                        string  `gorm:"column:r;type:varchar(66)"`
+	S                        string  `gorm:"column:s;type:varchar(66)"`
+	Price                    float64 `gorm:"column:price;type:decimal(28,16);"`
+	BlockNumber              int64   `gorm:"column:block_number;type:bigint"`
+	CancelledOrFilledAmountS string  `gorm:"column:cancelled_or_filled_amount_s;type:varchar(30)"`
+	CancelledOrFilledAmountB string  `gorm:"column:cancelled_or_filled_amount_b;type:varchar(30)"`
+	Status                   uint8   `gorm:"column:status;type:tinyint(4)"`
+	MinerBlockMark           int64   `gorm:"column:miner_block_mark;type:bigint"`
+	BroadcastTime            int     `gorm:"column:broadcast_time;type:bigint"`
+	Market                   string  `gorm:"column:market;type:varchar(40)"`
 }
 
 // convert types/orderState to dao/order
@@ -71,10 +69,8 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 
 	o.AmountS = src.AmountS.String()
 	o.AmountB = src.AmountB.String()
-	o.DealtAmountS = state.DealtAmountS.String()
-	o.DealtAmountB = state.DealtAmountB.String()
-	o.CancelledAmountS = state.CancelledAmountS.String()
-	o.CancelledAmountB = state.CancelledAmountB.String()
+	o.CancelledOrFilledAmountS = state.CancelledOrFilledS.String()
+	o.CancelledOrFilledAmountB = state.CancelledOrFilledB.String()
 	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
@@ -103,10 +99,8 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.AmountS, _ = new(big.Int).SetString(o.AmountS, 0)
 	state.RawOrder.AmountB, _ = new(big.Int).SetString(o.AmountB, 0)
-	state.DealtAmountS, _ = new(big.Int).SetString(o.DealtAmountS, 0)
-	state.DealtAmountB, _ = new(big.Int).SetString(o.DealtAmountB, 0)
-	state.CancelledAmountS, _ = new(big.Int).SetString(o.CancelledAmountS, 0)
-	state.CancelledAmountB, _ = new(big.Int).SetString(o.CancelledAmountB, 0)
+	state.CancelledOrFilledS, _ = new(big.Int).SetString(o.CancelledOrFilledAmountS, 0)
+	state.CancelledOrFilledB, _ = new(big.Int).SetString(o.CancelledOrFilledAmountB, 0)
 	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
 
 	state.RawOrder.GeneratePrice()
@@ -282,24 +276,12 @@ func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }
 
-// update order status,dealtAmountS,dealtAmountB,blockNumber
-func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, blockNumber *big.Int) error {
+func (s *RdsServiceImpl) UpdateOrderCancelOrFilledAmount(hash common.Hash, status types.OrderStatus, cancelledOrFilledAmountS, cancelledOrFilledAmountB, blockNumber *big.Int) error {
 	items := map[string]interface{}{
-		"status":         uint8(status),
-		"dealt_amount_s": dealtAmountS.String(),
-		"dealt_amount_b": dealtAmountB.String(),
-		"block_number":   blockNumber.String(),
-	}
-	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
-}
-
-// update order status,dealtAmountS,dealtAmountB,blockNumber
-func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error {
-	items := map[string]interface{}{
-		"status":             uint8(status),
-		"cancelled_amount_s": cancelledAmountS.String(),
-		"cancelled_amount_b": cancelledAmountB.String(),
-		"block_number":       blockNumber.String(),
+		"status":                       uint8(status),
+		"cancelled_or_filled_amount_s": cancelledOrFilledAmountS.String(),
+		"cancelled_or_filled_amount_b": cancelledOrFilledAmountB.String(),
+		"block_number":                 blockNumber.String(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }
