@@ -79,7 +79,7 @@ params: {
 
 ##### Returns
 
-`String` - The order hash.
+`String` - The submit success info.
 
 ##### Example
 ```js
@@ -106,13 +106,14 @@ Get loopring order list.
 - `orderHash` - The order hash.
 - `status` - order status enum string.(status collection is : ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
 - `contractVersion` - the loopring contract version you selected.
-- `market` - which market' order.(format is lrc-weth)
+- `market` - The market of the order.(format is LRC-WETH)
 - `pageIndex` - The page want to query, default is 1.
 - `pageSize` - The size per page, default is 50.
 
 ```js
 params: {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
   "status" : "ORDER_CANCEL",
   "contractVersion" : "v1.0",
   "market" : "coss-weth",
@@ -125,23 +126,12 @@ params: {
 
 `PageResult of Order` - Order list with page info
 
-1. `data` `LoopringOrder` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
-  - `address` - Order submit address
-  - `protocol` - loopring protocol address
-  - `tokenS` - Token to sell.
-  - `tokenB` - Token to buy.
-  - `amountS` - Maximum amount of tokenS to sell.
-  - `amountB` - Minimum amount of tokenB to buy if all amountS sold.
-  - `timestamp` - Indicating when this order is created.
-  - `ttl` - How long, in seconds, will this order live.
-  - `rand` - A random number to make this order's hash unique.
-  - `lrcFee` - Max amount of LRC to pay for miner. The real amount to pay is proportional to fill amount.
-  - `buyNoMoreThanAmountB` - If true, this order does not accept buying more than `amountB`.
-  - `savingSharePercentage` - The percentage of savings paid to miner.
-  - `v` - ECDSA signature parameter v.
-  - `r` - ECDSA signature parameter r.
-  - `s` - ECDSA signature parameter s.
-  - `ts` - The submit TimeStamp.
+1. `data` 
+  - `orginalOrder` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
+  - `status` - The current order status.
+  - `protocol` - loopring protocol address.
+  - `dealtAmountS` - Dealt amount of token S.
+  - `dealtAmountB` - Dealt amount of token B.
 
 2. `total` - Total amount of orders.
 3. `pageIndex` - Index of page.
@@ -158,26 +148,27 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params
   "jsonrpc": "2.0",
   "result": {
     "data" : [
-      "rawOrder" : {
-        "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-        "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-        "tokenS" : "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
-        "tokenB" : "0xef68e7c694f40c8202821edf525de3782458639f",
-        "amountS" : "0xde0b6b3a7640000",
-        "amountB" : "0xde0b6b3a7640000",
-        "timestamp" : 1506014710,
-        "ttl": "0xd2f00",
-        "salt" : "0xb3a6cc8cc77e88",
-        "lrcFee" : "0x470de4df820000",
-        "buyNoMoreThanAmountB" : true,
-        "marginSplitPercentage" : 50, // 0~100
-        "v" : "0x1c",
-        "r" : "239dskjfsn23ck34323434md93jchek3",
-        "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy"
-      },
-      "status" : "ORDER_CANCEL",
-      "dealedAmountB" : "0x1a055690d9db80000",
-      "dealedAmountS" : "0x1a055690d9db80000",
+      {
+          "orginalOrder" : {
+              "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+              "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+              "tokenS" : "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+              "tokenB" : "0xef68e7c694f40c8202821edf525de3782458639f",
+              "amountS" : "0xde0b6b3a7640000",
+              "amountB" : "0xde0b6b3a7640000",
+              "timestamp" : 1506014710,
+              "ttl": "0xd2f00",
+              "salt" : "0xb3a6cc8cc77e88",
+              "lrcFee" : "0x470de4df820000",
+              "buyNoMoreThanAmountB" : true,
+              "marginSplitPercentage" : 50, // 0~100
+              "v" : "0x1c",
+              "r" : "239dskjfsn23ck34323434md93jchek3",
+              "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy"
+          },
+          "status" : "ORDER_CANCEL",
+          "dealtAmountB" : "0x1a055690d9db80000",
+          "dealtAmountS" : "0x1a055690d9db80000",
       }
     ]
     "total" : 12,

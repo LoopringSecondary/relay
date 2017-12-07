@@ -133,7 +133,7 @@ type PriceQuote struct {
 
 type TokenPrice struct {
 	Token string  `json:"token"`
-	Price float64 `json:price`
+	Price float64 `json:"price"`
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -261,9 +261,23 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	return depth, err
 }
 
-func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err error) {
-	fmt.Println(query)
-	return j.orderManager.FillsPageQuery(fillQueryToMap(query))
+func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
+	res, err := j.orderManager.FillsPageQuery(fillQueryToMap(query))
+
+	if err != nil {
+		return dao.PageResult{}, nil
+	}
+
+	result := dao.PageResult{PageIndex:res.PageIndex, PageSize:res.PageSize, Total:res.Total, Data:make([]interface{}, 0)}
+
+	for _, f := range res.Data {
+		fill := f.(dao.FillEvent)
+		fill.TokenS = util.AddressToAlias(fill.TokenS)
+		fill.TokenB = util.AddressToAlias(fill.TokenB)
+		result.Data = append(result.Data, fill)
+	}
+	fmt.Println(result)
+	return result, nil
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Ticker, err error) {
