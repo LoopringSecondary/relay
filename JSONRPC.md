@@ -471,3 +471,82 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params"
   }
 }
 ```
+***
+
+#### loopring_getCutoff
+
+Get cut off time of the address.
+
+##### Parameters
+
+1. `address` - The ring hash, if is null, will query all rings.
+2. `contractVersion` - contract version of loopring protocol.
+3. `blockNumber` - "earliest", "latest" or "pending", default is "latest".
+
+```js
+params: [
+  "0x8888f1f195afa192cfee860698584c030f4c9db1",
+  "v1.0",
+  "latest"
+]
+```
+
+##### Returns
+- `string` - the cutoff timestamp string.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCutoff","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": "1501232222"
+```
+***
+
+#### loopring_getPriceQuote
+
+Get the USD/CNY/BTC quoted price of tokens
+
+##### Parameters
+
+1. `curreny` - The base currency want to query, supported types is `CNY`, `USD`.
+
+```js
+params: ["CNY"]
+```
+
+##### Returns
+- `currency` - The base currency, CNY or USD.
+- `tokens` - Every token price int the currency.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCutoff","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": {
+    "currency" : "CNY",
+    "tokens" : [
+        {
+          "token": "ETH",
+          "price": 31022.12 // hopeful price :)
+        },
+        {
+          "token": "LRC",
+          "price": 100.86
+        }
+     ]
+  }
+```
+***
+
+
+
