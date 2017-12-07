@@ -22,7 +22,6 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -114,7 +113,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	accessor, _ := test.GenerateAccessor(c)
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
-	if err := callMethod(&result, "cancelOrder", result, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
+	if err := callMethod(&result, "cancelOrder", "latest", addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	}
 
@@ -122,13 +121,43 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
+	c := test.LoadConfig()
+	accessor, _ := test.GenerateAccessor(c)
 
+	orderhash := common.HexToHash("")
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("fill or cancel amount:%s", amount.String())
+	}
 }
 
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
+	var result string
 
+	c := test.LoadConfig()
+	accessor, _ := test.GenerateAccessor(c)
+
+	cutoffTimestamp := big.NewInt(1)
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
+	if err := callMethod(&result, "setCutoff", "latest", cutoffTimestamp); nil != err {
+		t.Fatalf("call method setCutoff error:%s", err.Error())
+	}
+
+	t.Logf("setCutoff result:%s", result)
 }
 
 func TestEthNodeAccessor_GetCutoff(t *testing.T) {
+	c := test.LoadConfig()
+	accessor, _ := test.GenerateAccessor(c)
 
+	owner := common.HexToAddress("")
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	if timestamp, err := accessor.GetCutoff(protocol, owner, "latest"); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("cutoff timestamp:%s", timestamp.String())
+	}
 }
