@@ -40,8 +40,8 @@ const (
 )
 
 type Ticker struct {
-	Market   string `json:"market"`
-	Interval string `json:"interval"`
+	Market   string  `json:"market"`
+	Interval string  `json:"interval"`
 	Amount   float64 `json:"amount"`
 	Vol      float64 `json:"vol"`
 	Open     float64 `json:"open"`
@@ -49,9 +49,9 @@ type Ticker struct {
 	High     float64 `json:"high"`
 	Low      float64 `json:"low"`
 	Last     float64 `json:"last"`
-	Buy		 string `json:"buy"`
-	Sell     string `json:"sell"`
-	Change   string `json:"change"`
+	Buy      string  `json:"buy"`
+	Sell     string  `json:"sell"`
+	Change   string  `json:"change"`
 }
 
 type Cache struct {
