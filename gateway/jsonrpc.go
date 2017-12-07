@@ -34,6 +34,7 @@ import (
 	"strings"
 	"sort"
 	"strconv"
+	"github.com/Loopring/relay/marketcap"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -148,15 +149,17 @@ type JsonrpcServiceImpl struct {
 	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
 	ethForwarder   *EthForwarder
+	marketCap      *marketcap.MarketCapProvider
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder, capProvider *marketcap.MarketCapProvider) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
 	l.orderManager = orderManager
 	l.accountManager = accountManager
 	l.ethForwarder = ethForwarder
+	l.marketCap = capProvider
 	return l
 }
 
@@ -295,11 +298,16 @@ func (j *JsonrpcServiceImpl) GetCutoff(address, contractVersion, blockNumber str
 	return cutoff.String(), nil
 }
 
-func (j *JsonrpcServiceImpl) GetPriceQuote() (result PriceQuote, err error) {
+func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, err error) {
 
+	rst := PriceQuote{currency, make([]TokenPrice, 0)}
+	for k, v := range util.AllTokens {
+		price := j.marketCap.GetMarketCapByCurrency(v.Protocol, marketcap.StringToLegalCurrency(currency))
+		floatPrice, _ := price.Float64()
+		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
+	}
 
-
-	return PriceQuote{}, nil
+	return rst, nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {

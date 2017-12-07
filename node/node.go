@@ -263,7 +263,7 @@ func (n *Node) registerAccountManager() {
 
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {

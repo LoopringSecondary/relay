@@ -30,6 +30,7 @@ Websocket : wss://{hostname}:{port}/ws
 * [loopring_getTrend](#loopring_getTrend)
 * [loopring_getRingsMined](#loopring_getringsmined)
 * [loopring_getCutoff](#loopring_getCutoff)
+* [loopring_getCutoff](#loopring_getCutoff)
 
 ## Websocket APIs
 TBD
