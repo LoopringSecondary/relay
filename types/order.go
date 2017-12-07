@@ -213,12 +213,14 @@ type FilledOrder struct {
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
-	RawOrder           Order       `json:"rawOrder"`
-	BlockNumber        *big.Int    `json:"blockNumber"`
-	CancelledOrFilledS *big.Int    `json:"cancelledOrFilledAmountS"`
-	CancelledOrFilledB *big.Int    `json:"cancelledOrFilledAmountB"`
-	Status             OrderStatus `json:"status"`
-	BroadcastTime      int         `json:"broadcastTime"`
+	RawOrder         Order       `json:"rawOrder"`
+	BlockNumber      *big.Int    `json:"blockNumber"`
+	DealtAmountS     *big.Int    `json:"dealtAmountS"`
+	DealtAmountB     *big.Int    `json:"dealtAmountB"`
+	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
+	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
+	Status           OrderStatus `json:"status"`
+	BroadcastTime    int         `json:"broadcastTime"`
 }
 
 // 根据是否完全成交确定订单状态

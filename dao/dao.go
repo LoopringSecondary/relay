@@ -27,9 +27,9 @@ import (
 
 type PageResult struct {
 	Data      []interface{} `json:"data"`
-	PageIndex int `json:"pageIndex"`
-	PageSize  int `json:"pageSize"`
-	Total     int `json:"total"`
+	PageIndex int           `json:"pageIndex"`
+	PageSize  int           `json:"pageSize"`
+	Total     int           `json:"total"`
 }
 
 type RdsServiceImpl struct {

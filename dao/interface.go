@@ -52,7 +52,8 @@ type RdsService interface {
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
-	UpdateOrderCancelOrFilledAmount(hash common.Hash, status types.OrderStatus, cancelledOrFilledAmountS, cancelledOrFilledAmountB, blockNumber *big.Int) error
+	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, blockNumber *big.Int) error
+	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)

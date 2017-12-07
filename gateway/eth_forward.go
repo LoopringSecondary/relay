@@ -44,4 +44,3 @@ func (e *EthForwarder) Call(ethCall ethaccessor.CallArg, blockNumber string) (re
 	fmt.Println(result)
 	return result, nil
 }
-
