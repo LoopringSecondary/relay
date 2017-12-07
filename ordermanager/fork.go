@@ -101,13 +101,13 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 		state.CalculateRemainAmount()
 		state.BlockNumber = forkBlockNumber
 
-		newOrderModel := dao.Order{}
+		newOrderModel := dao.Order{ID: v.ID}
 		if err := newOrderModel.ConvertDown(state); err != nil {
 			log.Debugf("order manager fork error:%s", err.Error())
 			continue
 		}
 
-		if err := p.dao.Update(newOrderModel); err != nil {
+		if err := p.dao.Save(newOrderModel); err != nil {
 			log.Debugf("order manager fork erorr:%s", err.Error())
 			continue
 		}

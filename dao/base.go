@@ -45,7 +45,7 @@ func (s *RdsServiceImpl) Last(item interface{}) error {
 }
 
 // update single item
-func (s *RdsServiceImpl) Update(item interface{}) error {
+func (s *RdsServiceImpl) Save(item interface{}) error {
 	return s.db.Save(item).Error
 }
 
