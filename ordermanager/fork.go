@@ -38,6 +38,7 @@ func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *
 	return processor
 }
 
+// todo: 回滚时需要将所有涉及到的event对应的order amount修改一遍
 func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
