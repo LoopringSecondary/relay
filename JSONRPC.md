@@ -545,6 +545,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCutoff","params":{see
         }
      ]
   }
+}
 ```
 ***
 

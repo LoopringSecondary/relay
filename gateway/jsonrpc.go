@@ -127,8 +127,8 @@ type OrderJsonResult struct {
 }
 
 type PriceQuote struct {
-	Fiat   string       `json:"fiat"`
-	Tokens []TokenPrice `json:"tokens"`
+	Currency string `json:"currency"`
+	Tokens [] TokenPrice `json:"tokens"`
 }
 
 type TokenPrice struct {
