@@ -27,12 +27,12 @@ Websocket : wss://{hostname}:{port}/ws
 * [loopring_getDepth](#loopring_getdepth)
 * [loopring_getTicker](#loopring_ticker)
 * [loopring_getFills](#loopring_getfills)
-* [loopring_getCandleTicks](#loopring_getcandleticks)
+* [loopring_getTrend](#loopring_getTrend)
 * [loopring_getRingsMined](#loopring_getringsmined)
+* [loopring_getCutoff](#loopring_getCutoff)
 
 ## Websocket APIs
-* [loopring_subscribeDepth](#loopring_subdepth)
-* [loopring_subscribeCandleTick](#loopring_subscribecandletick)
+TBD
 
 
 ## JSON RPC API Reference
@@ -354,16 +354,13 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getFills","params":{see 
 
 ***
 
-#### loopring_getCandleTicks
+#### loopring_getTrend
 
 Get tick infos for kline.
 
 ##### Parameters
 
-1. `tokenS` - The token to sell
-2. `tokenB` - The token to buy
-3. `interval` - The interval of kline. enum like: 1m, 5m, 6h, 1d....
-4. `size` - The data size.
+1. `market` - The token to sell
 
 ```js
 params: {
@@ -372,7 +369,6 @@ params: {
   "address" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
-}
 ```
 
 ##### Returns
@@ -480,93 +476,3 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params"
   }
 }
 ```
-
-***
-
-## Websocket API Reference
-
-***
-
-#### loopring_subscribeDepth
-
-subscribe depth data with websocket. after connected, client sends this message to server side.
-
-##### Parameters
-
-`JSON Object`
-- `sub` - subscribe key. `market.depth.$tokenS.$tokenB`, tokenS and tokenB must be filled in lowercase.
-- `id` - An identifier established by the client that MUST contain a number(same to json-rpc).
-
-```js
-{
-  "sub": "market.depth.eth.lrc",
-  "id": 64
-}
-```
-
-##### Returns
-
-`JSON Object`
-- `sub` - subscribe key. `market.depth.$tokenS.$tokenB`, tokenS and tokenB must be filled in lowercase.
-- `id` - An identifier established by the client that MUST contain a number(same to json-rpc).
-
-##### Example
-```js
-// Send message
-{
-  "sub": "market.depth.eth.lrc",
-  "id": 64
-}
-
-// Result
-{
-  "id": "64",
-  "result": "SUB_SUCCESS",
-  "message" : "" // if sub failed, this param contain error message.
-}
-```
-
-***
-
-***
-
-#### loopring_subscribeCandleTick
-
-subscribe candle tick data with websocket. after connected, client sends this message to server side. 
-
-##### Parameters
-
-`JSON Object`
-- `sub` - subscribe key. `market.candle.$tokenS.$tokenB`, tokenS and tokenB must be filled in lowercase.
-- `id` - An identifier established by the client that MUST contain a number(same to json-rpc).
-
-```js
-{
-  "sub": "market.candle.eth.lrc",
-  "id": 64
-}
-```
-
-##### Returns
-
-`JSON Object`
-- `sub` - subscribe key. `market.candle.$tokenS.$tokenB`, tokenS and tokenB must be filled in lowercase.
-- `id` - An identifier established by the client that MUST contain a number(same to json-rpc).
-
-##### Example
-```js
-// Send message
-{
-  "sub": "market.candle.eth.lrc",
-  "id": 64
-}
-
-// Result
-{
-  "id": "64",
-  "result": "SUB_SUCCESS",
-  "message" : "" // if sub failed, this param contain error message.
-}
-```
-
-***

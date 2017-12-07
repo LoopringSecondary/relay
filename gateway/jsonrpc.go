@@ -71,6 +71,7 @@ type OrderQuery struct {
 	ContractVersion string `json:"contractVersion"`
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
+	OrderHash		string `json:"orderHash"`
 }
 
 type DepthQuery struct {
@@ -122,6 +123,16 @@ type OrderJsonResult struct {
 	CancelledAmountS string             `json:"cancelledAmountS"`
 	CancelledAmountB string             `json:"cancelledAmountB"`
 	Status           string             `json:"status"`
+}
+
+type PriceQuote struct {
+	Fiat string `json:"fiat"`
+	Tokens [] TokenPrice `json:"tokens"`
+}
+
+type TokenPrice struct {
+	Token string `json:"token"`
+	Price float64 `json:price`
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -252,7 +263,7 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err 
 	return j.orderManager.FillsPageQuery(fillQueryToMap(query))
 }
 
-func (j *JsonrpcServiceImpl) GetTicker(market string, contractVersion string) (res []market.Ticker, err error) {
+func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 
 	for _, t := range res {
@@ -276,6 +287,21 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	return
 }
 
+func (j *JsonrpcServiceImpl) GetCutoff(address, contractVersion, blockNumber string) (result string, err error) {
+	cutoff, err := j.ethForwarder.Accessor.GetCutoff(common.HexToAddress(address), common.HexToAddress(util.ContractVersionConfig[contractVersion]), blockNumber)
+	if err != nil {
+		return "", err
+	}
+	return cutoff.String(), nil
+}
+
+func (j *JsonrpcServiceImpl) GetPriceQuote() (result PriceQuote, err error) {
+
+
+
+	return PriceQuote{}, nil
+}
+
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
@@ -291,6 +317,9 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pag
 	}
 	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
+	}
+	if orderQuery.OrderHash != "" {
+		query["order_hash"] = orderQuery.OrderHash
 	}
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
