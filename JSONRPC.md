@@ -193,7 +193,7 @@ Get depth and accuracy by token pair
 
 ```js
 params: {
-  "market" : "Lrc-Weth",
+  "market" : "LRC-WETH",
   "contractVersion": "v1.0",
   "length" : 10 // defalut is 50
 }
@@ -223,7 +223,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
         [205.1, 13], [211.8, 0.5], [321.3, 33]
       ]
     },
-    "market" : "Lrc-Weth",
+    "market" : "LRC-WETH",
     "contractVersion": "v1.0",
   }
 }
@@ -242,18 +242,20 @@ Get 24hr merged ticker info from loopring relay.
 
 ```js
 params: {
-    "contractVersion" : "v.10"
+    "contractVersion" : "v1.0"
 }
 ```
 
 ##### Returns
 
-1. `high`
-2. `low`
-3. `last`
-4. `vol`
-5. `buy`
-6. `sell`
+1. `high` - The 24hr highest price.
+2. `low`  - The 24hr lowest price.
+3. `last` - The newest dealt price.
+4. `vol` - The 24hr exchange volume.
+5. `amount` - The 24hr exchange amount.
+5. `buy` - The highest buy price in the depth.
+6. `sell` - The lowest sell price in the depth.
+7. `change` - The 24hr change percent of price.
 
 ##### Example
 ```js
@@ -269,9 +271,10 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[],"id"
     "low" : 19283.2,
     "last" : 28002.2,
     "vol" : 1038,
+    "amount" : 1003839.32,
     "buy" : 122321,
     "sell" : 12388,
-    "ts" : 1506014710000
+    "change" : "-50.12%"
   }
 }
 ```
@@ -284,17 +287,21 @@ Get order fill history. This history consists of OrderFilled events.
 
 ##### Parameters
 
-1. `tokenS` - The token to sell
-2. `tokenB` - The token to buy
-3. `address`
-4. `pageIndex`
-5. `pageSize`
+1. `market` - The market of the order.(format is LRC-WETH)
+2. `owner` - The address, if is null, will query all orders.
+3. `contractVersion` - the loopring contract version you selected.
+4. `orderHash` - The order hash.
+5. `ringHash` - The order fill related ring's hash.
+6. `pageIndex` - The page want to query, default is 1.
+7. `pageSize` - The size per page, default is 50.
 
 ```js
 params: {
-  "tokenS" : "Eth",
-  "tokenB" : "Lrc"
-  "address" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+  "market" : "LRC-WETH",
+  "contractVersion" : "v1.0",
+  "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+  "orderHash" : "0xee0b482d9b704070c970df1e69297392a8bb73f4ed91213ae5c1725d4d1923fd",
+  "ringHash" : "0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
 }
@@ -303,12 +310,23 @@ params: {
 ##### Returns
 
 `PAGE RESULT of OBJECT`
-1. `ARRAY OF DATA` - The match histories.
-  - `txHash` - The transaction hash of the match.
-  - `fillAmountS` - Amount of sell.
-  - `fillAmountB` - Amount of buy.
-  - `ts` - The timestamp of matching time.
-  - `relatedOrderHash` - The order hash.
+1. `ARRAY OF DATA` - The fills list.
+  - `protocol` - The loopring contract address.
+  - `owner` - The order owner address.
+  - `ringIndex` - The index of the ring.
+  - `createTime` - The timestamp of matching time.
+  - `ringHash` - The hash of the matching ring.
+  - `txHash` - The transaction hash.
+  - `orderHash` - The order hash.
+  - `orderHash` - The order hash.
+  - `amountS` - The matched sell amount.
+  - `amountB` - The matched buy amount.
+  - `tokenS` - The matched sell token.
+  - `tokenB` - The matched buy token.
+  - `lrcFee` - The real amount of LRC to pay for miner.
+  - `lrcReward` - The amount of LRC paid by miner to order owner in exchange for margin split.
+  - `splitS` - The tokenS paid to miner.
+  - `splitB` - The tokenB paid to miner.
 2. `pageIndex`
 3. `pageSize`
 4. `total`
@@ -325,10 +343,22 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getFills","params":{see 
   "result": {
     "data" : [
       {
-        "txHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-        "fillAmountS" : 20,
-        "fillAmountB" : 30.21,
-        "ts" : 1506014710000
+          "protocol":"0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
+          "owner":"0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC9",
+          "ringIndex":100,
+          "createTime":1512631182,
+          "ringHash":"0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
+          "txHash":"0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
+          "orderHash":"0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
+          "amountS":"0xde0b6b3a7640000",
+          "amountB":"0xde0b6b3a7640001",
+          "tokenS":"WETH",
+          "tokenB":"COSS",
+          "lrcReward":"0xde0b6b3a7640000",
+          "lrcFee":"0xde0b6b3a7640000",
+          "splitS":"0xde0b6b3a7640000",
+          "splitB":"0x0",
+          "market":"LRC-WETH"
       }
     ],
     "pageIndex" : 1,
@@ -342,37 +372,35 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getFills","params":{see 
 
 #### loopring_getTrend
 
-Get tick infos for kline.
+Get trend info per market.
 
 ##### Parameters
 
-1. `market` - The token to sell
+1. `market` - The market type.
 
 ```js
-params: {
-  "from" : "Eth",
-  "to" : "Lrc"
-  "address" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "pageIndex" : 1,
-  "pageSize" : 20 // max size is 50.
+params: [
+  "market" : "LRC-WETH"
+]
 ```
 
 ##### Returns
 
 `ARRAY of JSON OBJECT`
-  - `fillAmountS` - Total amount of sell.
-  - `fillAmountB` - Total amount of buy.
-  - `ts` - The timestamp of matching time.
+  - `market` - The market type.
+  - `high` - The 24hr highest price.
+  - `low`  - The 24hr lowest price.
+  - `vol` - The 24hr exchange volume.
+  - `amount` - The 24hr exchange amount.
   - `open` - The opening price.
   - `close` - The closing price.
-  - `high` - The highest price in interval.
-  - `low` - The lowest price in interval.
-
+  - `start` - The statistical cycle start time.
+  - `end` - The statistical cycle end time.
 
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getTrend","params":{see above},"id":64}'
 
 // Result
 {
@@ -381,13 +409,15 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params"
   "result": {
     "data" : [
       {
-        "fillAmountS" : 20,
-        "fillAmountB" : 30.21,
-        "ts" : 1506014710000
-        "open" : 3232.1,
-        "close" : 2321,
-        "high" : 1231.2,
-        "low" : 1234.2
+        "market" : "LRC-WETH",
+        "high" : 30384.2,
+        "low" : 19283.2,
+        "vol" : 1038,
+        "amount" : 1003839.32,
+        "open" : 122321.01,
+        "close" : 12388.3,
+        "start" : 1512646617,
+        "end" : 1512726001
       }
     ]
   }
@@ -403,14 +433,14 @@ Get all mined rings.
 ##### Parameters
 
 1. `ringHash` - The ring hash, if is null, will query all rings.
-2. `miner` - The miner that submit the ring.
+2. `contractVersion` - The loopring contract version.
 3. `pageIndex` - The page want to query, default is 1.
 4. `pageSize` - The size per page, default is 50.
 
 ```js
 params: {
   "ringHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-  "miner" : "0x8888f1f195afa192cfee860698584c030f4c9db1"
+  "contractVersion" : "v1.0"
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
 }
@@ -420,9 +450,13 @@ params: {
 
 1. `data` - The ring info.(refer to [Ring&RingMined](https://github.com/Loopring/protocol/blob/3bdc40c4f319e8fe70f58f82563db49579094b5c/contracts/LoopringProtocolImpl.sol#L109)
   - `ringHash` - The ring hash.
+  - `tradeAmount` - The fills number int the ring.
   - `miner` - The miner that submit match orders.
   - `feeRecepient` - The fee recepient address.
-  - `orders` - The filled order list, the order struct refer to [OrderFilled](https://github.com/Loopring/protocol/blob/3bdc40c4f319e8fe70f58f82563db49579094b5c/contracts/LoopringProtocolImpl.sol#L117)
+  - `txHash` - The ring match transaction hash.
+  - `blockNumber` - The number of the block which contains the transaction.
+  - `totalLrcFee` - The total lrc fee.
+  - `time` - The ring matched time.
 2. `total` - Total amount of orders.
 3. `pageIndex` - Index of page.
 4. `pageSize` - Amount per page.
@@ -440,20 +474,13 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params"
      "data" : [
        {
         "ringhash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
+        "tradeAmount" : 3,
         "miner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
-        "feeRecepient" : "0x8888f1f195afa192cfee860698584c030f4c9db1"
-        "orders" : [
-          {
-            "orderHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-            "blockNumber" : 2345223,
-            "prevOrderHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-            "nextOrderHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-            "amountS" : 34.2,
-            "amountB" : 38.1,
-            "lrcReward" : 0.2,
-            "lrcFee" : 0.31
-          }
-        ]
+        "feeRecepient" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+        "txHash" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+        "blockNumber" : 10001,
+        "totalLrcFee" : 101,
+        "timestamp" : 1506114710,
        }
      ]
      "total" : 12,
