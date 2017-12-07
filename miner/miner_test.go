@@ -63,7 +63,7 @@ func TestMatch(t *testing.T) {
 	rdsService := dao.NewRdsService(cfg.Mysql)
 	userManager := usermanager.NewUserManager(rdsService)
 	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
-	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor)
+	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor, nil)
 
 	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
 	submitter := miner.NewSubmitter(cfg.Miner, accessor, rdsService, marketCapProvider)
