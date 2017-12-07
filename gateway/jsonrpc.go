@@ -32,6 +32,7 @@ import (
 	"math/big"
 	"net"
 	"strings"
+	"sort"
 	"strconv"
 )
 
@@ -44,9 +45,9 @@ func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
 
 type PageResult struct {
 	Data      []interface{} `json:"data"`
-	PageIndex int `json:"pageIndex"`
-	PageSize  int `json:"pageSize"`
-	Total     int `json:"total"`
+	PageIndex int           `json:"pageIndex"`
+	PageSize  int           `json:"pageSize"`
+	Total     int           `json:"total"`
 }
 
 type Depth struct {
@@ -67,15 +68,15 @@ type CommonTokenRequest struct {
 
 type OrderQuery struct {
 	Status          string `json:"status"`
-	PageIndex       int `json:"pageIndex"`
-	PageSize        int `json:"pageSize"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
 	ContractVersion string `json:"contractVersion"`
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 }
 
 type DepthQuery struct {
-	Length          int `json:"length"`
+	Length          int    `json:"length"`
 	ContractVersion string `json:"contractVersion"`
 	Market          string `json:"market"`
 }
@@ -117,10 +118,12 @@ type RawOrderJsonResult struct {
 }
 
 type OrderJsonResult struct {
-	RawOrder        RawOrderJsonResult `json:"originalOrder"`
-	RemainedAmountS string             `json:"remainedAmountS"`
-	RemainedAmountB string             `json:"remainedAmountB"`
-	Status          string             `json:"status"`
+	RawOrder         RawOrderJsonResult `json:"originalOrder"`
+	DealtAmountS     string             `json:"dealtAmountS"`
+	DealtAmountB     string             `json:"dealtAmountB"`
+	CancelledAmountS string             `json:"cancelledAmountS"`
+	CancelledAmountB string             `json:"cancelledAmountB"`
+	Status           string             `json:"status"`
 }
 
 var RemoteAddrContextKey = "RemoteAddr"
@@ -238,9 +241,6 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		util.AllTokens[b].Protocol,
 		util.AllTokens[a].Protocol, length*2)
 
-	fmt.Println(bids)
-	fmt.Println(bidErr)
-
 	if bidErr != nil {
 		err = errors.New("get depth error , please refresh again")
 		return
@@ -260,7 +260,7 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (res dao.PageResult, err 
 func (j *JsonrpcServiceImpl) GetTicker(market string, contractVersion string) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 
-	for _,t := range res {
+	for _, t := range res {
 		j.fillBuyAndSell(&t, contractVersion)
 	}
 	return
@@ -311,7 +311,7 @@ func convertStatus(s string) types.OrderStatus {
 		return types.ORDER_PARTIAL
 	case "ORDER_FINISHED":
 		return types.ORDER_FINISHED
-	case "ORDER_CANCEL":
+	case "ORDER_CANCELED":
 		return types.ORDER_CANCEL
 	case "ORDER_CUTOFF":
 		return types.ORDER_CUTOFF
@@ -328,7 +328,7 @@ func getStringStatus(s types.OrderStatus) string {
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
-		return "ORDER_CANCEL"
+		return "ORDER_CANCELED"
 	case types.ORDER_CUTOFF:
 		return "ORDER_CUTOFF"
 	}
@@ -346,40 +346,46 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool) [][]strin
 		depth[i] = make([]string, 0)
 	}
 
-	var tempSumAmountS, tempSumAmountB big.Int
-	var lastPrice big.Rat
+	depthMap := make(map[string]big.Rat)
 
-	for i, s := range states {
+	for _, s := range states {
 
-		if i == 0 {
-			lastPrice = *s.RawOrder.Price
-			tempSumAmountS = *s.RawOrder.AmountS
-			tempSumAmountB = *s.RawOrder.AmountB
-			if len(states) == 1 {
-				if isAsk {
-					f, _ := lastPrice.Float64()
-					depth = append(depth, []string{strconv.FormatFloat(1/f, 'f', 10, 64), tempSumAmountB.String()})
-				} else {
-					depth = append(depth, []string{lastPrice.FloatString(10), tempSumAmountB.String()})
-				}
+		price := *s.RawOrder.Price
+		amountS, amountB := s.RemainedAmount()
+
+		if isAsk {
+			price = *price.Inv(&price)
+			priceFloatStr := price.FloatString(10)
+			if v, ok := depthMap[priceFloatStr]; ok {
+				depthMap[priceFloatStr] = *v.Add(&v, amountS)
+			} else {
+				depthMap[priceFloatStr] = *amountS
 			}
 		} else {
-			if lastPrice.Cmp(s.RawOrder.Price) != 0 {
-				if isAsk {
-					f, _ := lastPrice.Float64()
-					depth = append(depth, []string{strconv.FormatFloat(1/f, 'f', 10, 64), tempSumAmountB.String()})
-				} else {
-					depth = append(depth, []string{lastPrice.FloatString(10), tempSumAmountB.String()})
-				}
-				tempSumAmountS.Set(big.NewInt(0))
-				tempSumAmountB.Set(big.NewInt(0))
-				lastPrice = *s.RawOrder.Price
+			priceFloatStr := price.FloatString(10)
+			if v, ok := depthMap[priceFloatStr]; ok {
+				depthMap[priceFloatStr] = *v.Add(&v, amountB)
 			} else {
-				tempSumAmountS.Add(&tempSumAmountS, s.RawOrder.AmountS)
-				tempSumAmountB.Add(&tempSumAmountB, s.RawOrder.AmountB)
+				depthMap[priceFloatStr] = *amountB
 			}
 		}
 	}
+
+	for k, v := range depthMap {
+		amount, _ := v.Float64()
+		depth = append(depth, []string{k, strconv.FormatFloat(amount / util.WeiToEther, 'f', 10, 64)})
+	}
+
+	sort.Slice(depth, func(i, j int) bool {
+		cmpA, _ := strconv.ParseFloat(depth[i][0], 64)
+		cmpB, _ := strconv.ParseFloat(depth[j][0], 64)
+		if isAsk {
+			return cmpA < cmpB
+		} else {
+			return cmpA > cmpB
+		}
+
+	})
 
 	if length < len(depth) {
 		return depth[:length]
@@ -488,8 +494,10 @@ func buildOrderResult(src dao.PageResult) PageResult {
 func orderStateToJson(src types.OrderState) OrderJsonResult {
 
 	rst := OrderJsonResult{}
-	rst.RemainedAmountB = types.BigintToHex(src.RemainedAmountB)
-	rst.RemainedAmountS = types.BigintToHex(src.RemainedAmountS)
+	rst.DealtAmountB = types.BigintToHex(src.DealtAmountB)
+	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)
+	rst.CancelledAmountB = types.BigintToHex(src.CancelledAmountB)
+	rst.CancelledAmountS = types.BigintToHex(src.CancelledAmountS)
 	rst.Status = getStringStatus(src.Status)
 	rawOrder := RawOrderJsonResult{}
 	rawOrder.Protocol = src.RawOrder.Protocol.String()
@@ -512,8 +520,8 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	return rst
 }
 
-func(j *JsonrpcServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersion string) {
-	queryDepth := DepthQuery{ 1, contractVersion, ticker.Market}
+func (j *JsonrpcServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersion string) {
+	queryDepth := DepthQuery{1, contractVersion, ticker.Market}
 
 	depth, err := j.GetDepth(queryDepth)
 	if err != nil {

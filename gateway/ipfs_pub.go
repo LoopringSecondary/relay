@@ -19,7 +19,6 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"

@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-const weiToEther = 1e18
+const WeiToEther = 1e18
 
 type TokenPair struct {
 	TokenS common.Address
@@ -36,11 +36,11 @@ type TokenPair struct {
 
 func StringToFloat(amount string) float64 {
 	rst, _ := new(big.Int).SetString(amount, 0)
-	return float64(rst.Int64()) / weiToEther
+	return float64(rst.Int64()) / WeiToEther
 }
 
 func FloatToByte(amount float64) []byte {
-	rst, _ := big.NewInt(int64(amount * weiToEther)).MarshalText()
+	rst, _ := big.NewInt(int64(amount * WeiToEther)).MarshalText()
 	return rst
 }
 
