@@ -171,6 +171,13 @@ func InitialMarketUtil(rds dao.RdsService) {
 		log.Infof("supported token %s->%s", token.Symbol, token.Protocol.Hex())
 	}
 
+	// set support markets
+	for _, v := range markets {
+		var token types.Token
+		v.ConvertUp(&token)
+		util.SupportMarkets[token.Symbol] = token
+	}
+
 	// set all tokens
 	for k, v := range util.SupportTokens {
 		util.AllTokens[k] = v
@@ -179,12 +186,6 @@ func InitialMarketUtil(rds dao.RdsService) {
 		util.AllTokens[k] = v
 	}
 
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportMarkets[token.Symbol] = token
-	}
 
 	// set all markets
 	for _, k := range util.SupportTokens { // lrc,omg
