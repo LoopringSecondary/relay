@@ -104,7 +104,7 @@ func (l *ExtractorServiceImpl) Start() {
 
 			var entity dao.Block
 			if err := entity.ConvertDown(currentBlock); err != nil {
-				log.Debugf("extractor, convert block to dao/entity error:%s", err.Error())
+				log.Debugf("extractor,convert block to dao/entity error:%s", err.Error())
 			} else {
 				l.dao.Add(&entity)
 			}
