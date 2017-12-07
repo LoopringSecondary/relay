@@ -1,9 +1,9 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type EthForwarder struct {
@@ -11,18 +11,37 @@ type EthForwarder struct {
 }
 
 func (e *EthForwarder) GetBalance(address, blockNumber string) (result string, err error) {
-	err = e.Accessor.Call(&result, "eth_getBalance", common.StringToAddress(address), blockNumber)
+	fmt.Println("get balance log")
+	fmt.Println("intput is " + address + " " + blockNumber)
+	err = e.Accessor.Call(&result, "eth_getBalance", common.HexToAddress(address), blockNumber)
+	fmt.Println(result)
 	return
 }
 
 func (e *EthForwarder) SendRawTransaction(tx string) (result string, err error) {
-	hex := hexutil.Bytes{}
-	hex.UnmarshalText([]byte(tx))
-	//err = e.Accessor.Call(&result, "eth_sendRawTransaction", hex)
+	fmt.Println("get balance log")
+	fmt.Println("intput is " + tx)
+	err = e.Accessor.Call(&result, "eth_sendRawTransaction", tx)
+	fmt.Println(result)
+	err = nil
+	result = "SEND_SUCCESS"
 	return
 }
 
 func (e *EthForwarder) GetTransactionCount(address, blockNumber string) (result string, err error) {
-	//err = e.Accessor.Call(&result, "eth_sendRawTransaction", hex)
-	return "0x1", nil
+	fmt.Println("get balance log")
+	fmt.Println("intput is " + address + " " + blockNumber)
+	err = e.Accessor.Call(&result, "eth_getTransactionCount", common.HexToAddress(address), blockNumber)
+	fmt.Println(result)
+	return result, nil
 }
+
+func (e *EthForwarder) Call(ethCall ethaccessor.CallArg, blockNumber string) (result string, err error) {
+	fmt.Println("get balance log")
+	fmt.Println("intput is " + blockNumber)
+	fmt.Println(ethCall)
+	err = e.Accessor.Call(&result, "eth_call", ethCall, blockNumber)
+	fmt.Println(result)
+	return result, nil
+}
+

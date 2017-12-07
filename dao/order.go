@@ -267,7 +267,13 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 	for _, v := range orders {
 		data = append(data, v)
 	}
+
 	pageResult = PageResult{data, pageIndex, pageSize, 0}
+
+	err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+	if err != nil {
+		return pageResult, err
+	}
 
 	return pageResult, err
 }

@@ -127,9 +127,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
-
-	// todo: 正式启用公有链测试后放开
-	// n.marketCapProvider.Start()
+	//n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {
 		n.relayNode.Start()
@@ -265,7 +263,7 @@ func (n *Node) registerAccountManager() {
 
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {

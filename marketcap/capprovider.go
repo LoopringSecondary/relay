@@ -112,12 +112,13 @@ func (p *MarketCapProvider) GetEthCap() *big.Rat {
 }
 
 func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
-	// todo:
-	return new(big.Rat).SetInt64(int64(1))
+	return p.GetMarketCapByCurrency(tokenAddress, p.currency)
+}
 
+func (p *MarketCapProvider) GetMarketCapByCurrency(tokenAddress common.Address, currency LegalCurrency) *big.Rat {
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)
-		switch p.currency {
+		switch currency {
 		case CNY:
 			v = v.SetFloat64(c.PriceCny)
 		case USD:

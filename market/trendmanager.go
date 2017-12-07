@@ -40,16 +40,18 @@ const (
 )
 
 type Ticker struct {
-	Market   string
-	Interval string
-	Amount   float64
-	Vol      float64
-	Open     float64
-	Close    float64
-	High     float64
-	Low      float64
-	Last     float64
-	Change   string
+	Market   string `json:"market"`
+	Interval string `json:"interval"`
+	Amount   float64 `json:"amount"`
+	Vol      float64 `json:"vol"`
+	Open     float64 `json:"open"`
+	Close    float64 `json:"close"`
+	High     float64 `json:"high"`
+	Low      float64 `json:"low"`
+	Last     float64 `json:"last"`
+	Buy		 string `json:"buy"`
+	Sell     string `json:"sell"`
+	Change   string `json:"change"`
 }
 
 type Cache struct {
@@ -235,7 +237,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 1 * * * *", t.insertTrend)
+	t.cron.AddFunc("10 * * * * *", t.insertTrend)
 	t.cron.Start()
 }
 
