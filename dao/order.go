@@ -142,6 +142,10 @@ func (s *RdsServiceImpl) GetOrderByHash(orderhash common.Hash) (*Order, error) {
 }
 
 func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error {
+	if len(filterOrderhashs) == 0 {
+		return nil
+	}
+
 	err := s.db.Model(&Order{}).
 		Where("order_hash in (?)", filterOrderhashs).
 		Update("miner_block_mark", blockNumber).Error
@@ -227,9 +231,8 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 }
 
 func (s *RdsServiceImpl) SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error {
-	err := s.db.Model(&Order{}).Where("create_time < (?)", cutoffTime.Int64()).
-		Where("owner = (?)", owner.Hex()).
-		Update("status", types.ORDER_CUTOFF).Error
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	err := s.db.Model(&Order{}).Where("create_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 

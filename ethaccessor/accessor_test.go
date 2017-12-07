@@ -131,39 +131,52 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
+	orderhash := common.HexToHash("0xdf07a078dd8e94b5e6e50a2fd71ea8d3ce82e151e8bdedf89a7f93e23ab299cb")
+
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
-	orderhash := common.HexToHash("0x0a1889ded67b7e6375416e27045670857278d641d8fa2a0520cbf78216ba3c30")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
-	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
+	if timestamp, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
-		t.Logf("fill or cancel amount:%s", amount.String())
+		t.Logf("cutoff timestamp:%s", timestamp.String())
 	}
 }
 
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
-	var result string
+	var (
+		owner  = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+		cutoff = big.NewInt(1522651087)
+	)
 
+	// load config
 	c := test.LoadConfig()
+
+	// unlock account
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	account := accounts.Account{Address: common.HexToAddress(owner)}
+	ks.Unlock(account, "202")
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	// call cancel order
 	accessor, _ := test.GenerateAccessor(c)
-
-	cutoffTimestamp := big.NewInt(1)
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
-	if err := callMethod(&result, "setCutoff", "latest", cutoffTimestamp); nil != err {
+	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
+	if result, err := callMethod(account, "setCutoff", nil, nil, cutoff); nil != err {
 		t.Fatalf("call method setCutoff error:%s", err.Error())
+	} else {
+		t.Logf("cutoff result:%s", result)
 	}
-
-	t.Logf("setCutoff result:%s", result)
 }
 
 func TestEthNodeAccessor_GetCutoff(t *testing.T) {
+	owner := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
-	owner := common.HexToAddress("")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if timestamp, err := accessor.GetCutoff(protocol, owner, "latest"); err != nil {
 		t.Fatal(err)

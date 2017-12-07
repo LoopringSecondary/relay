@@ -335,7 +335,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())
+		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)

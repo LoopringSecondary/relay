@@ -282,13 +282,14 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
+	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
+		log.Debugf("order manager,handle cutoff event,%s", err.Error())
+	}
 	if err := om.cutoffCache.Add(event); err != nil {
 		return err
 	}
-	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
-		return err
-	}
 
+	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
 	return nil
 }
 
