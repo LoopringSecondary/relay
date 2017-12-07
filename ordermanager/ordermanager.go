@@ -156,7 +156,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
-	model := &dao.RingMined{}
+	model := &dao.RingMinedEvent{}
 	if err := model.ConvertDown(event); err != nil {
 		return err
 	}

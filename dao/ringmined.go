@@ -24,7 +24,7 @@ import (
 	"math/big"
 )
 
-type RingMined struct {
+type RingMinedEvent struct {
 	ID                 int    `gorm:"column:id;primary_key"`
 	Protocol           string `gorm:"column:contract_address;type:varchar(42)"`
 	RingIndex          string `gorm:"column:ring_index;type:varchar(30)"`
@@ -38,7 +38,7 @@ type RingMined struct {
 	Time               int64  `gorm:"column:time;type:bigint"`
 }
 
-func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
+func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.RingIndex = event.RingIndex.String()
 	r.TotalLrcFee = event.TotalLrcFee.String()
 	r.Protocol = event.ContractAddress.Hex()
@@ -53,7 +53,7 @@ func (r *RingMined) ConvertDown(event *types.RingMinedEvent) error {
 	return nil
 }
 
-func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
+func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.RingIndex, _ = new(big.Int).SetString(r.RingIndex, 0)
 	event.TotalLrcFee, _ = new(big.Int).SetString(r.TotalLrcFee, 0)
 	event.Ringhash = common.HexToHash(r.RingHash)
@@ -67,9 +67,9 @@ func (r *RingMined) ConvertUp(event *types.RingMinedEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindRingMinedByRingHash(ringHash string) (*RingMined, error) {
+func (s *RdsServiceImpl) FindRingMinedByRingHash(ringHash string) (*RingMinedEvent, error) {
 	var (
-		model RingMined
+		model RingMinedEvent
 		err   error
 	)
 
@@ -79,12 +79,12 @@ func (s *RdsServiceImpl) FindRingMinedByRingHash(ringHash string) (*RingMined, e
 }
 
 func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
-	err := s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&RingMined{}).Error
+	err := s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&RingMinedEvent{}).Error
 	return err
 }
 
 func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
-	ringMined := make([]RingMined, 0)
+	ringMined := make([]RingMinedEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 
 	err = s.db.Where(query).Order("time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&ringMined).Error
@@ -92,7 +92,7 @@ func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIn
 	if err != nil {
 		return res, err
 	}
-	err = s.db.Model(&RingMined{}).Where(query).Count(&res.Total).Error
+	err = s.db.Model(&RingMinedEvent{}).Where(query).Count(&res.Total).Error
 	if err != nil {
 		return res, err
 	}
