@@ -26,10 +26,10 @@ import (
 )
 
 type PageResult struct {
-	Data      []interface{}
-	PageIndex int
-	PageSize  int
-	Total     int
+	Data      []interface{} `json:"data"`
+	PageIndex int `json:"pageIndex"`
+	PageSize  int `json:"pageSize"`
+	Total     int `json:"total"`
 }
 
 type RdsServiceImpl struct {
