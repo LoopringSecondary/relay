@@ -215,10 +215,8 @@ type FilledOrder struct {
 type OrderState struct {
 	RawOrder         Order       `json:"rawOrder"`
 	BlockNumber      *big.Int    `json:"blockNumber"`
-	DealtAmountS     *big.Int    `json:"dealtAmountS"`
-	DealtAmountB     *big.Int    `json:"dealtAmountB"`
-	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
-	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
+	CancelledOrFilledS *big.Int  `json:"cancelledOrFilledAmountS"`
+	CancelledOrFilledB *big.Int  `json:"cancelledOrFilledAmountB"`
 	Status           OrderStatus `json:"status"`
 	BroadcastTime    int         `json:"broadcastTime"`
 }

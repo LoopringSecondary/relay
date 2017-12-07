@@ -78,7 +78,6 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	t.Log(balance.String())
 }
 
-// todo fukun
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
 		model  *dao.Order
@@ -124,7 +123,7 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
-	orderhash := common.HexToHash("")
+	orderhash := common.HexToHash("0xde52fa205497f74882b2ccab01d1dbaf17605aad39b2cc56e9c054cd27828069")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
