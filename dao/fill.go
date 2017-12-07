@@ -26,26 +26,26 @@ import (
 )
 
 type FillEvent struct {
-	ID            int    `gorm:"column:id;primary_key;"`
-	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner         string `gorm:"column:owner;type:varchar(42)"`
-	RingIndex     int64  `gorm:"column:ring_index;"`
-	BlockNumber   int64  `gorm:"column:block_number"`
-	CreateTime    int64  `gorm:"column:create_time"`
-	RingHash      string `gorm:"column:ring_hash;varchar(82)"`
-	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
-	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)"`
-	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)"`
-	OrderHash     string `gorm:"column:order_hash;type:varchar(82)"`
-	AmountS       string `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB       string `gorm:"column:amount_b;type:varchar(30)"`
-	TokenS        string `gorm:"column:token_s;type:varchar(42)"`
-	TokenB        string `gorm:"column:token_b;type:varchar(42)"`
-	LrcReward     string `gorm:"column:lrc_reward;type:varchar(30)"`
-	LrcFee        string `gorm:"column:lrc_fee;type:varchar(30)"`
-	SplitS        string `gorm:"column:split_s;type:varchar(30)"`
-	SplitB        string `gorm:"column:split_b;type:varchar(30)"`
-	Market        string `gorm:"column:market;type:varchar(42)"`
+	ID            int    `gorm:"column:id;primary_key;" json:"id"`
+	Protocol      string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
+	Owner         string `gorm:"column:owner;type:varchar(42)" json:"owner"`
+	RingIndex     int64  `gorm:"column:ring_index;" json:"ringIndex"`
+	BlockNumber   int64  `gorm:"column:block_number" json:"blockNumber"`
+	CreateTime    int64  `gorm:"column:create_time" json:"createTime"`
+	RingHash      string `gorm:"column:ring_hash;varchar(82)" json:"ringHash"`
+	TxHash        string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
+	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)" json:"preOrderHash"`
+	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)" json:"nextOrderHash"`
+	OrderHash     string `gorm:"column:order_hash;type:varchar(82)" json:"orderHash"`
+	AmountS       string `gorm:"column:amount_s;type:varchar(30)" json:"amountS"`
+	AmountB       string `gorm:"column:amount_b;type:varchar(30)" json:"amountB"`
+	TokenS        string `gorm:"column:token_s;type:varchar(42)" json:"tokenS"`
+	TokenB        string `gorm:"column:token_b;type:varchar(42)" json:"tokenB"`
+	LrcReward     string `gorm:"column:lrc_reward;type:varchar(30)" json:"lrcReward"`
+	LrcFee        string `gorm:"column:lrc_fee;type:varchar(30)" json:"lrcFee"`
+	SplitS        string `gorm:"column:split_s;type:varchar(30)" json:"splitS"`
+	SplitB        string `gorm:"column:split_b;type:varchar(30)" json:"splitB"`
+	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -81,11 +81,6 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
 
 	return &fill, err
-}
-
-func (s *RdsServiceImpl) FirstPreMarket(tokenS string, tokenB string) (fill FillEvent, err error) {
-	err = s.db.First(&fill).Error
-	return
 }
 
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {

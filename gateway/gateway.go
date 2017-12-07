@@ -86,6 +86,9 @@ func HandleOrder(input eventemitter.EventData) error {
 	order := input.(*types.Order)
 	order.Hash = order.GenerateHash()
 
+	var broadcastTime int
+
+	fmt.Println("xxxxxxxxxx3")
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil {
 		order.GeneratePrice()
@@ -99,22 +102,30 @@ func HandleOrder(input eventemitter.EventData) error {
 			}
 		}
 
-		log.Debugf("gateway,accept new order hash:%s,amountS:%s,amountB:%s", order.Hash.Hex(), order.AmountS.String(), order.AmountB.String())
+		state := &types.OrderState{}
+		state.RawOrder = *order
+
+		broadcastTime = 0
+
+		if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
+			state.BroadcastTime = 1
+		}
 
 		state = &types.OrderState{}
 		state.RawOrder = *order
 
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else {
+		broadcastTime = state.BroadcastTime
 		return fmt.Errorf("gateway,order %s exist,will not insert again", order.Hash.Hex())
 	}
 
-	gateway.broadcast(state)
+	gateway.broadcast(state, broadcastTime)
 	return nil
 }
 
-func (g *Gateway) broadcast(state *types.OrderState) {
-	if gateway.isBroadcast && state.BroadcastTime < gateway.maxBroadcastTime {
+func (g *Gateway) broadcast(state *types.OrderState, bt int) {
+	if gateway.isBroadcast && bt < gateway.maxBroadcastTime {
 		//broadcast
 		go func() {
 			pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
