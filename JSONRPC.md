@@ -10,13 +10,11 @@ This document describes relay's public APIs (JSON_RPC and WebSocket), but doesn'
 This document contains the following sections:
 - Endport
 - JSON-RPC Methods
-- Websocket API
 
 
 ## Endport
 ```
 JSON-RPC  : http://{hostname}:{port}/rpc
-Websocket : wss://{hostname}:{port}/ws
 ```
 
 ## JSON-RPC Methods 
@@ -28,16 +26,11 @@ Websocket : wss://{hostname}:{port}/ws
 * [loopring_getTicker](#loopring_ticker)
 * [loopring_getFills](#loopring_getfills)
 * [loopring_getTrend](#loopring_getTrend)
-* [loopring_getRingsMined](#loopring_getringsmined)
+* [loopring_getRingMined](#loopring_getRingMined)
 * [loopring_getCutoff](#loopring_getCutoff)
-* [loopring_getCutoff](#loopring_getCutoff)
-
-## Websocket APIs
-TBD
-
+* [loopring_getPriceQuote](#loopring_getPriceQuote)
 
 ## JSON RPC API Reference
-
 
 ***
 
@@ -109,12 +102,13 @@ Get loopring order list.
 
 ##### Parameters
 
-`owner` - The address, if is null, will query all orders.
-`status` - order status enum string.(status collection is : ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
-`contractVersion` - the loopring contract version you selected.
-`market` - which market' order.(format is lrc-weth)
-`pageIndex` - The page want to query, default is 1.
-`pageSize` - The size per page, default is 50.
+- `owner` - The address, if is null, will query all orders.
+- `orderHash` - The order hash.
+- `status` - order status enum string.(status collection is : ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
+- `contractVersion` - the loopring contract version you selected.
+- `market` - which market' order.(format is lrc-weth)
+- `pageIndex` - The page want to query, default is 1.
+- `pageSize` - The size per page, default is 50.
 
 ```js
 params: {
