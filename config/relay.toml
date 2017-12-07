@@ -29,7 +29,7 @@ block_period = 5
     db_name = "loopring_order_manager"
     loc = "Local"
     table_prefix = "lpr_"
-    debug = true
+    debug = false
 
 [ipfs]
     server = "localhost"
