@@ -72,7 +72,7 @@ type RdsService interface {
 
 	// cutoff event table
 	FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error)
-	FindValidCutoffEvents() ([]types.CutoffEvent, error)
+	FindValidCutoffEvents() ([]CutOffEvent, error)
 	RollBackCutoff(from, to int64) error
 
 	// trend table
