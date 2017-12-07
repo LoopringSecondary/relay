@@ -25,16 +25,16 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"net"
-	"strings"
 	"sort"
 	"strconv"
-	"github.com/Loopring/relay/marketcap"
+	"strings"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -72,7 +72,7 @@ type OrderQuery struct {
 	ContractVersion string `json:"contractVersion"`
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
-	OrderHash		string `json:"orderHash"`
+	OrderHash       string `json:"orderHash"`
 }
 
 type DepthQuery struct {
@@ -127,12 +127,12 @@ type OrderJsonResult struct {
 }
 
 type PriceQuote struct {
-	Fiat string `json:"fiat"`
-	Tokens [] TokenPrice `json:"tokens"`
+	Fiat   string       `json:"fiat"`
+	Tokens []TokenPrice `json:"tokens"`
 }
 
 type TokenPrice struct {
-	Token string `json:"token"`
+	Token string  `json:"token"`
 	Price float64 `json:price`
 }
 
@@ -405,7 +405,7 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool) [][]strin
 
 	for k, v := range depthMap {
 		amount, _ := v.Float64()
-		depth = append(depth, []string{k, strconv.FormatFloat(amount / util.WeiToEther, 'f', 10, 64)})
+		depth = append(depth, []string{k, strconv.FormatFloat(amount/util.WeiToEther, 'f', 10, 64)})
 	}
 
 	sort.Slice(depth, func(i, j int) bool {

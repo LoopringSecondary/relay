@@ -132,8 +132,10 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 	state := input.(*types.OrderState)
 	state.Status = types.ORDER_NEW
-	state.CancelledOrFilledS = big.NewInt(0)
-	state.CancelledOrFilledB = big.NewInt(0)
+	state.DealtAmountS = big.NewInt(0)
+	state.DealtAmountB = big.NewInt(0)
+	state.CancelledAmountS = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
 
 	model := &dao.Order{}
 
@@ -202,8 +204,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 	// calculate dealt amount
 	state.BlockNumber = event.Blocknumber
-	state.CancelledOrFilledS = new(big.Int).Add(state.CancelledOrFilledS, event.AmountS)
-	state.CancelledOrFilledB = new(big.Int).Add(state.CancelledOrFilledB, event.AmountB)
+	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
+	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 
 	// update order status
 	finished := om.IsOrderFullFinished(state)
@@ -214,7 +216,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderCancelOrFilledAmount(state.RawOrder.Hash, state.Status, state.CancelledOrFilledS, state.CancelledOrFilledB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.BlockNumber); err != nil {
 		return err
 	}
 
@@ -254,9 +256,9 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.CancelledOrFilledB = event.AmountCancelled
+		state.CancelledAmountS = event.AmountCancelled
 	} else {
-		state.CancelledOrFilledS = event.AmountCancelled
+		state.CancelledAmountB = event.AmountCancelled
 	}
 
 	// update order status
@@ -267,7 +269,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.rds.UpdateOrderCancelOrFilledAmount(state.RawOrder.Hash, state.Status, state.CancelledOrFilledS, state.CancelledOrFilledB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.BlockNumber); err != nil {
 		return err
 	}
 
@@ -291,12 +293,14 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, state.CancelledOrFilledB)
+		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
+		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
 		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
 		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
 	} else {
-		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, state.CancelledOrFilledS)
+		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
+		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
 		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
 		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
