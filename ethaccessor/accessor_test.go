@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"log"
 	"math/big"
 	"testing"
 )
@@ -128,7 +127,7 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	orderhash := common.HexToHash("")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	} else {
 		t.Logf("fill or cancel amount:%s", amount.String())
 	}
@@ -157,7 +156,7 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 	owner := common.HexToAddress("")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if timestamp, err := accessor.GetCutoff(protocol, owner, "latest"); err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	} else {
 		t.Logf("cutoff timestamp:%s", timestamp.String())
 	}
