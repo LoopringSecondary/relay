@@ -21,13 +21,12 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 )
 
 type CancelEvent struct {
 	ID              int    `gorm:"column:id;primary_key;"`
 	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
-	OrderHash       string `gorm:"column:order_hash;varchar(82);unique_index"`
+	OrderHash       string `gorm:"column:order_hash;type:varchar(82)"`
 	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber     int64  `gorm:"column:block_number"`
 	CreateTime      int64  `gorm:"column:create_time"`
@@ -46,13 +45,13 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCancelEvent(orderhash common.Hash, cancelledAmount *big.Int) (*CancelEvent, error) {
+func (s *RdsServiceImpl) FindCancelEvent(orderhash, txhash common.Hash) (*CancelEvent, error) {
 	var (
 		model CancelEvent
 		err   error
 	)
 
-	err = s.db.Where("order_hash = ? and amount_cancelled = ?", orderhash.Hex(), cancelledAmount.String()).First(&model).Error
+	err = s.db.Where("order_hash = ? and tx_hash = ?", orderhash.Hex(), txhash.String()).First(&model).Error
 
 	return &model, err
 }

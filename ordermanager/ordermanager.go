@@ -188,7 +188,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// get rds.Order and types.OrderState
-	state := &types.OrderState{}
+	state := &types.OrderState{BlockNumber: event.Blocknumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
@@ -206,6 +206,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	state.BlockNumber = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
+	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
 	finished := om.IsOrderFullFinished(state)
@@ -227,7 +228,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	event := input.(*types.OrderCancelledEvent)
 
 	// save event
-	_, err := om.rds.FindCancelEvent(event.OrderHash, event.AmountCancelled)
+	_, err := om.rds.FindCancelEvent(event.OrderHash, event.TxHash)
 	if err == nil {
 		return fmt.Errorf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
 	}
@@ -251,14 +252,16 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// judge status
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
+		return fmt.Errorf("order manager,handle order cancelled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
 	}
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.CancelledAmountS = event.AmountCancelled
+		state.CancelledAmountB = new(big.Int).Add(state.CancelledAmountB, event.AmountCancelled)
+		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amountb:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountB.String())
 	} else {
-		state.CancelledAmountB = event.AmountCancelled
+		state.CancelledAmountS = new(big.Int).Add(state.CancelledAmountS, event.AmountCancelled)
+		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amounts:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountS.String())
 	}
 
 	// update order status

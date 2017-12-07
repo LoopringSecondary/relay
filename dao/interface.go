@@ -69,7 +69,7 @@ type RdsService interface {
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// cancel event table
-	FindCancelEvent(orderhash common.Hash, cancelledAmount *big.Int) (*CancelEvent, error)
+	FindCancelEvent(orderhash, txhash common.Hash) (*CancelEvent, error)
 	RollBackCancel(from, to int64) error
 
 	// cutoff event table
