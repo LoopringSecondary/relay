@@ -49,7 +49,7 @@ type Order struct {
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
-	BlockNumber           int64   `gorm:"column:block_number;type:bigint"`
+	UpdatedBlock          int64   `gorm:"column:updated_block;type:bigint"`
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
@@ -87,8 +87,8 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
-	if state.BlockNumber != nil {
-		o.BlockNumber = state.BlockNumber.Int64()
+	if state.UpdatedBlock != nil {
+		o.UpdatedBlock = state.UpdatedBlock.Int64()
 	}
 	o.Status = uint8(state.Status)
 	o.V = src.V
@@ -128,7 +128,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
 
-	state.BlockNumber = big.NewInt(o.BlockNumber)
+	state.UpdatedBlock = big.NewInt(o.UpdatedBlock)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
 
@@ -204,7 +204,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
-	err = s.db.Where("block_number between ? and ?", from, to).Find(&list).Error
+	err = s.db.Where("updated_block between ? and ?", from, to).Find(&list).Error
 
 	return list, err
 }
@@ -290,7 +290,7 @@ func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.Ord
 		"status":         uint8(status),
 		"dealt_amount_s": dealtAmountS.String(),
 		"dealt_amount_b": dealtAmountB.String(),
-		"block_number":   blockNumber.String(),
+		"updated_block":   blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }
@@ -300,7 +300,7 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"status":             uint8(status),
 		"cancelled_amount_s": cancelledAmountS.String(),
 		"cancelled_amount_b": cancelledAmountB.String(),
-		"block_number":       blockNumber.String(),
+		"updated_block":       blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }

@@ -56,6 +56,7 @@ type ExtractorServiceImpl struct {
 	lock      sync.RWMutex
 	events    map[common.Hash]ContractData
 	protocols map[common.Address]string
+	ringmineds map[common.Hash]bool
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -155,7 +156,13 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			continue
 		}
 
-		// todo:判断transactionRecipient.to地址是否是合约地址
+		type transaction struct {
+			others []ContractData
+			ring ContractData
+			hasRing bool
+		}
+		innerTx  := new(transaction)
+
 		for _, evtLog := range receipt.Logs {
 			var (
 				contract ContractData
@@ -203,7 +210,35 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			contract.ContractAddress = evtLog.Address
 			contract.TxHash = tx.Hash
 
-			eventemitter.Emit(contract.Id.Hex(), contract)
+			if contract.Name == RINGMINED_EVT_NAME {
+				innerTx.hasRing = true
+				innerTx.ring = contract
+			} else {
+				innerTx.others = append(innerTx.others, contract)
+			}
+		}
+
+		// emit contract data,if inner transaction has ring,combine it
+		if innerTx.hasRing {
+			ringminedEvt, err := l.convertRingMined(innerTx.ring)
+			if err != nil {
+				log.Debugf(err.Error())
+				continue
+			}
+			for _, v := range innerTx.others {
+				evt, err := l.convertTransfer(v)
+				if err != nil {
+					log.Errorf(err.Error())
+					continue
+				} else {
+					ringminedEvt.TransferEvents = append(ringminedEvt.TransferEvents, evt)
+				}
+			}
+			eventemitter.Emit(innerTx.ring.Id.Hex(), ringminedEvt)
+		} else {
+			for _, v := range innerTx.others {
+				eventemitter.Emit(v.Id.Hex(),  v)
+			}
 		}
 	}
 }
@@ -218,23 +253,50 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	return nil
 }
 
-func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
-	contractData := input.(ContractData)
+func (l *ExtractorServiceImpl) convertTransfer(contractData ContractData) (*types.TransferEvent, error) {
+	if len(contractData.Topics) < 3 {
+		return nil, fmt.Errorf("extractor,token transfer event indexed fields number error")
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
+	contractEvent.From = common.HexToAddress(contractData.Topics[1])
+	contractEvent.To = common.HexToAddress(contractData.Topics[2])
+
+	evt := contractEvent.ConvertDown()
+	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
+	evt.Time = contractData.Time
+	evt.Blocknumber = contractData.BlockNumber
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.String())
+	}
+
+	return evt, nil
+}
+
+func (l *ExtractorServiceImpl) convertRingMined(contractData ContractData) (*types.RingMinedEvent, error) {
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,ring mined event indexed fields number error")
+		return nil, fmt.Errorf("extractor,ring mined event indexed fields number error")
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
 	contractEvent.RingHash = common.HexToHash(contractData.Topics[1])
 
-	ringmined, fills, err := contractEvent.ConvertDown()
+	// get types.ringmined event and judge length
+	ringmined, err := contractEvent.ConvertDown()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	length := len(ringmined.OrderHashList)
+	if length != len(ringmined.AmountsList) {
+		return nil, fmt.Errorf("extractor,ring mined event orderhash list length != amountsList length")
+	}
+
 	ringmined.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	ringmined.TxHash = common.HexToHash(contractData.TxHash)
 	ringmined.Time = contractData.Time
 	ringmined.Blocknumber = contractData.BlockNumber
+	ringmined.TotalLrcFee = big.NewInt(0)
 
 	if l.commOpts.Develop {
 		log.Debugf("extractor,ring mined event,ringhash:%s, ringIndex:%s, miner:%s, feeRecipient:%s,isRinghashReserved:%t",
@@ -245,13 +307,38 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			ringmined.IsRinghashReserved)
 	}
 
-	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
+	var orderhashList []string
+	for i := 0; i < len(ringmined.OrderHashList); i++ {
+		var (
+			fill                        types.OrderFilledEvent
+			preOrderHash, nextOrderHash common.Hash
+		)
 
-	var (
-		fillList      []*types.OrderFilledEvent
-		orderhashList []string
-	)
-	for _, fill := range fills {
+		if i == 0 {
+			preOrderHash = common.Hash(ringmined.OrderHashList[length-1])
+			nextOrderHash = common.Hash(ringmined.OrderHashList[1])
+		} else if i == length-1 {
+			preOrderHash = common.Hash(ringmined.OrderHashList[length-2])
+			nextOrderHash = common.Hash(ringmined.OrderHashList[0])
+		} else {
+			preOrderHash = common.Hash(ringmined.OrderHashList[i-1])
+			nextOrderHash = common.Hash(ringmined.OrderHashList[i+1])
+		}
+
+		fill.Ringhash = ringmined.Ringhash
+		fill.PreOrderHash = preOrderHash
+		fill.OrderHash = common.Hash(ringmined.OrderHashList[i])
+		fill.NextOrderHash = nextOrderHash
+
+		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
+		fill.RingIndex = ringmined.RingIndex
+		fill.AmountS = ringmined.AmountsList[i][0]
+		fill.AmountB = ringmined.AmountsList[i][1]
+		fill.LrcReward = ringmined.AmountsList[i][2]
+		fill.LrcFee = ringmined.AmountsList[i][3]
+		fill.SplitS = ringmined.AmountsList[i][4]
+		fill.SplitB = ringmined.AmountsList[i][5]
+
 		fill.TxHash = common.HexToHash(contractData.TxHash)
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
@@ -271,15 +358,17 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			)
 		}
 
-		fillList = append(fillList, fill)
 		orderhashList = append(orderhashList, fill.OrderHash.Hex())
+		ringmined.TotalLrcFee = new(big.Int).Add(ringmined.TotalLrcFee, fill.LrcFee)
+		ringmined.OrderFillEvents = append(ringmined.OrderFillEvents, &fill)
 	}
+
 
 	ordermap, err := l.dao.GetOrdersByHash(orderhashList)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, v := range fillList {
+	for _, v := range ringmined.OrderFillEvents {
 		if ord, ok := ordermap[v.OrderHash.Hex()]; ok {
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
@@ -291,6 +380,17 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			log.Debugf("extractor,order filled event cann't match order %s", ord.OrderHash)
 		}
 	}
+
+	return ringmined, nil
+}
+
+func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
+	contractData := input.(ContractData)
+	ringmined, err := l.convertRingMined(contractData)
+	if err != nil {
+		return err
+	}
+	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
 	return nil
 }
@@ -345,23 +445,11 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 
 func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
 	contractData := input.(ContractData)
-	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,token transfer event indexed fields number error")
+
+	evt, err := l.convertTransfer(contractData)
+	if err != nil {
+		return err
 	}
-
-	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
-	contractEvent.From = common.HexToAddress(contractData.Topics[1])
-	contractEvent.To = common.HexToAddress(contractData.Topics[2])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-	}
-
 	eventemitter.Emit(eventemitter.AccountTransfer, evt)
 
 	return nil

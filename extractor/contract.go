@@ -32,6 +32,7 @@ import (
 func (l *ExtractorServiceImpl) loadContract() {
 	l.events = make(map[common.Hash]ContractData)
 	l.protocols = make(map[common.Address]string)
+	l.ringmineds = make(map[common.Hash]bool)
 
 	l.loadProtocolAddress()
 	l.loadErc20Contract()
@@ -111,6 +112,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 		switch contract.Name {
 		case RINGMINED_EVT_NAME:
+			l.ringmineds[contract.Id] = true
 			contract.Event = &ethaccessor.RingMinedEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRingMinedEvent}
 		case CANCEL_EVT_NAME:

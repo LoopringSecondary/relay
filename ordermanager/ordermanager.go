@@ -53,6 +53,7 @@ type OrderManagerImpl struct {
 	rds                dao.RdsService
 	lock               sync.RWMutex
 	processor          *forkProcessor
+	accessor 		   *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
 	mc                 *marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
@@ -61,6 +62,8 @@ type OrderManagerImpl struct {
 	fillOrderWatcher   *eventemitter.Watcher
 	cancelOrderWatcher *eventemitter.Watcher
 	cutoffOrderWatcher *eventemitter.Watcher
+	transferWatcher    *eventemitter.Watcher
+	approvalWatcher    *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
 }
 
@@ -76,6 +79,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.commonOpts = commonOpts
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor)
+	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds)
@@ -90,6 +94,8 @@ func (om *OrderManagerImpl) Start() {
 	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
 	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
+	om.transferWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleTransfer}
+	om.transferWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleApproval}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
 	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
@@ -155,7 +161,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
-
+	
 	model := &dao.RingMinedEvent{}
 	if err := model.ConvertDown(event); err != nil {
 		return err
@@ -188,7 +194,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// get rds.Order and types.OrderState
-	state := &types.OrderState{BlockNumber: event.Blocknumber}
+	state := &types.OrderState{UpdatedBlock: event.Blocknumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
@@ -203,7 +209,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate dealt amount
-	state.BlockNumber = event.Blocknumber
+	state.UpdatedBlock = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
@@ -217,7 +223,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -272,7 +278,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -291,6 +297,33 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 
 	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
 	return nil
+}
+
+func (om *OrderManagerImpl) handleTransfer(input eventemitter.EventData) error {
+
+	return nil
+}
+
+func (om *OrderManagerImpl) handleApproval(input eventemitter.EventData) error {
+
+}
+
+func (om *OrderManagerImpl) CalculateAvailableAmount(state *types.OrderState) error {
+	var err error
+	batchReq := ethaccessor.BatchErc20Req{}
+
+	if batchReq.Spender, err = om.accessor.GetSenderAddress(state.RawOrder.Protocol); err != nil {
+		return fmt.Errorf("order manager, calculate available amount error:%s", err.Error())
+	}
+	batchReq.Owner = state.RawOrder.Owner
+	batchReq.Token = state.RawOrder.TokenS
+	batchReq.BlockParameter = types.BigintToHex(state.UpdatedBlock)
+
+	if err = om.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{&batchReq}); err != nil {
+		return fmt.Errorf("order manager, calculate available amount get balance and allowance error:%s", err.Error())
+	}
+
+	state.DealtAmountS = getMinAmount(remain, batchReq.Allowance.BigInt(), batchReq.Balance.BigInt())
 }
 
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {

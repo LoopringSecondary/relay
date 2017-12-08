@@ -72,11 +72,11 @@ type RingMinedEvent struct {
 	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
 }
 
-func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
+func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, error) {
 	length := len(e.OrderHashList)
 
 	if length != len(e.AmountsList) || length < 2 {
-		return nil, nil, errors.New("ringMined event unpack error:orderHashList length invalid")
+		return nil, errors.New("ringMined event unpack error:orderHashList length invalid")
 	}
 
 	evt := &types.RingMinedEvent{}
@@ -85,47 +85,14 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
 	evt.IsRinghashReserved = e.IsRingHashReserved
+	evt.AmountsList = e.AmountsList
 
-	var list []*types.OrderFilledEvent
-	lrcFee := big.NewInt(0)
-	for i := 0; i < length; i++ {
-		var (
-			fill                        types.OrderFilledEvent
-			preOrderHash, nextOrderHash common.Hash
-		)
-
-		if i == 0 {
-			preOrderHash = common.Hash(e.OrderHashList[length-1])
-			nextOrderHash = common.Hash(e.OrderHashList[1])
-		} else if i == length-1 {
-			preOrderHash = common.Hash(e.OrderHashList[length-2])
-			nextOrderHash = common.Hash(e.OrderHashList[0])
-		} else {
-			preOrderHash = common.Hash(e.OrderHashList[i-1])
-			nextOrderHash = common.Hash(e.OrderHashList[i+1])
-		}
-
-		fill.Ringhash = e.RingHash
-		fill.PreOrderHash = preOrderHash
-		fill.OrderHash = common.Hash(e.OrderHashList[i])
-		fill.NextOrderHash = nextOrderHash
-
-		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
-		fill.RingIndex = e.RingIndex
-		fill.AmountS = e.AmountsList[i][0]
-		fill.AmountB = e.AmountsList[i][1]
-		fill.LrcReward = e.AmountsList[i][2]
-		fill.LrcFee = e.AmountsList[i][3]
-		fill.SplitS = e.AmountsList[i][4]
-		fill.SplitB = e.AmountsList[i][5]
-
-		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee)
-		list = append(list, &fill)
+	var orderHashList []common.Hash
+	for _, v := range e.OrderHashList {
+		orderHashList = append(orderHashList, common.Hash(v))
 	}
 
-	evt.TotalLrcFee = lrcFee
-
-	return evt, list, nil
+	return evt, nil
 }
 
 type OrderCancelledEvent struct {

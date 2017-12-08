@@ -144,6 +144,15 @@ type CutoffEvent struct {
 	Cutoff          *big.Int
 }
 
+/*
+RingIndex          *big.Int       `fieldName:"_ringIndex"`
+	RingHash           common.Hash    `fieldName:"_ringhash"`
+	Miner              common.Address `fieldName:"_miner"`
+	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
+	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
+	OrderHashList      [][32]uint8    `fieldName:"_orderHashList"`
+	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
+*/
 type RingMinedEvent struct {
 	RingIndex          *big.Int
 	Time               *big.Int
@@ -151,10 +160,14 @@ type RingMinedEvent struct {
 	TotalLrcFee        *big.Int
 	Ringhash           common.Hash
 	TxHash             common.Hash
+	OrderHashList      []common.Hash
+	AmountsList 	   [][6]*big.Int
 	Miner              common.Address
 	FeeRecipient       common.Address
 	ContractAddress    common.Address
 	IsRinghashReserved bool
+	TransferEvents     []*TransferEvent
+	OrderFillEvents    []*OrderFilledEvent
 }
 
 type RingSubmitFailedEvent struct {
@@ -172,4 +185,11 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
+}
+
+type RingEvent struct {
+	RingHash 	common.Hash
+	IsFull		bool
+	Fills 		[]*OrderFilledEvent
+	TransferEvent []*TransferEvent
 }
