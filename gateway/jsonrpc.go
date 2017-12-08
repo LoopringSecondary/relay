@@ -300,6 +300,12 @@ func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageRes
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
 	account := j.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	ethBalance := market.Balance{Token:"ETH", Balance:big.NewInt(0)}
+	b, bErr := j.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
+	if bErr == nil {
+		ethBalance.Balance = types.HexToBigint(b)
+		account.Balances["ETH"] = ethBalance
+	}
 	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
 }

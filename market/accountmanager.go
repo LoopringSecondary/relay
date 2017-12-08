@@ -31,14 +31,14 @@ import (
 )
 
 type Account struct {
-	address    string
-	balances   map[string]Balance
-	allowances map[string]Allowance
+	Address    string
+	Balances   map[string]Balance
+	Allowances map[string]Allowance
 }
 
 type Balance struct {
-	token   string
-	balance *big.Int
+	Token   string
+	Balance *big.Int
 }
 
 type Allowance struct {
@@ -91,16 +91,16 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 		account := accountInCache.(Account)
 		return account
 	} else {
-		account := Account{address: address, balances: make(map[string]Balance), allowances: make(map[string]Allowance)}
+		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance)}
 		for k, v := range util.AllTokens {
-			balance := Balance{token: k}
+			balance := Balance{Token: k}
 
 			amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
 			if err != nil {
 				log.Infof("get balance failed, token:%s", v.Symbol)
 			} else {
-				balance.balance = amount
-				account.balances[k] = balance
+				balance.Balance = amount
+				account.Balances[k] = balance
 			}
 
 			allowance := Allowance{contractVersion: contractVersion, token: k}
@@ -110,7 +110,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 				log.Infof("get allowance failed, token:%s", v.Symbol)
 			} else {
 				allowance.allowance = allowanceAmount
-				account.allowances[buildAllowanceKey(contractVersion, k)] = allowance
+				account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
 			}
 
 		}
@@ -178,24 +178,24 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
-		balance, ok := account.balances[tokenAlias]
+		balance, ok := account.Balances[tokenAlias]
 		if !ok {
-			balance = Balance{token: tokenAlias}
+			balance = Balance{Token: tokenAlias}
 			amount, err := a.GetBalanceFromAccessor(event.ContractAddress.String(), tokenAlias)
 			if err != nil {
 				log.Error("get balance failed from accessor")
 			} else {
-				balance.balance = amount
+				balance.Balance = amount
 			}
-			account.balances[tokenAlias] = balance
+			account.Balances[tokenAlias] = balance
 		} else {
-			oldBalance := balance.balance
+			oldBalance := balance.Balance
 			if isAdd {
-				balance.balance = oldBalance.Sub(oldBalance, event.Value)
+				balance.Balance = oldBalance.Sub(oldBalance, event.Value)
 			} else {
-				balance.balance = oldBalance.Add(oldBalance, event.Value)
+				balance.Balance = oldBalance.Add(oldBalance, event.Value)
 			}
-			account.balances[tokenAlias] = balance
+			account.Balances[tokenAlias] = balance
 		}
 		a.c.Set(address, account, cache.NoExpiration)
 	}
@@ -215,7 +215,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	if ok {
 		account := v.(Account)
 		allowance := Allowance{contractVersion: spender, token: tokenAlias, allowance: event.Value}
-		account.allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
+		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}
 	return nil
@@ -224,12 +224,12 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 func (account *Account) ToJsonObject(contractVersion string) AccountJson {
 
 	var accountJson AccountJson
-	accountJson.Address = account.address
+	accountJson.Address = account.Address
 	accountJson.ContractVersion = contractVersion
 	accountJson.Tokens = make([]Token, 0)
-	for _, v := range account.balances {
-		allowance := account.allowances[buildAllowanceKey(contractVersion, v.token)]
-		accountJson.Tokens = append(accountJson.Tokens, Token{v.token, v.balance.String(), allowance.allowance.String()})
+	for _, v := range account.Balances {
+		allowance := account.Allowances[buildAllowanceKey(contractVersion, v.Token)]
+		accountJson.Tokens = append(accountJson.Tokens, Token{v.Token, v.Balance.String(), allowance.allowance.String()})
 	}
 	return accountJson
 }

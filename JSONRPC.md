@@ -433,7 +433,7 @@ Get trend info per market.
 
 ```js
 params: [
-  "market" : "LRC-WETH"
+  "LRC-WETH"
 ]
 ```
 

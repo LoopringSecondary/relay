@@ -58,7 +58,7 @@ var ContractVersionConfig = map[string]string{}
 
 func WrapMarket(s, b string) (market string, err error) {
 
-	s, b = strings.ToLower(s), strings.ToLower(b)
+	s, b = strings.ToUpper(s), strings.ToUpper(b)
 
 	if IsSupportedMarket(s) && IsSupportedToken(b) {
 		market = fmt.Sprintf("%s-%s", b, s)
@@ -80,7 +80,7 @@ func UnWrap(market string) (s, b string) {
 		return "", ""
 	}
 
-	s, b = strings.ToLower(mkt[0]), strings.ToLower(mkt[1])
+	s, b = strings.ToUpper(mkt[0]), strings.ToUpper(mkt[1])
 	return
 }
 
