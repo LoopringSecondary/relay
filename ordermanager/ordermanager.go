@@ -53,6 +53,7 @@ type OrderManagerImpl struct {
 	rds                dao.RdsService
 	lock               sync.RWMutex
 	processor          *forkProcessor
+	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
 	mc                 *marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
@@ -79,6 +80,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds)
+	om.accessor = accessor
 
 	return om
 }
@@ -293,6 +295,18 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
+func (om *OrderManagerImpl) IsFundInsufficient(state *types.OrderState) bool {
+	price := om.mc.GetMarketCap(state.RawOrder.TokenS)
+	amount := new(big.Rat).SetInt(state.AvailableAmountS)
+	value := new(big.Rat).Mul(price, amount)
+
+	if value.Cmp(big.NewRat(1, 1)) > 0 {
+		return false
+	}
+
+	return true
+}
+
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	var valueOfRemainAmount *big.Rat
 
@@ -342,21 +356,70 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		markBlockNumber = big.NewInt(0)
 	}
 
+	// 标记miner提供的劣质订单
 	if err = om.rds.MarkMinerOrders(orderhashstrs, markBlockNumber.Int64()); err != nil {
 		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
+	// 从数据库获取订单
 	markBlockNumber = new(big.Int).Sub(markBlockNumber, big.NewInt(int64(om.options.BlockPeriod)))
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
 		return list
 	}
-
+	var listBeforeCheckAccount []types.OrderState
 	for _, v := range modelList {
 		var state types.OrderState
 		v.ConvertUp(&state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
-			list = append(list, state)
+			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
+	}
+
+	// 批量查询订单账户的余额及授权
+	var erc20ReqList []*ethaccessor.BatchErc20Req
+	for _, v := range listBeforeCheckAccount {
+		batchReq := ethaccessor.BatchErc20Req{}
+		spender, err := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
+		if err != nil {
+			continue
+		}
+		batchReq.Spender = spender
+		batchReq.Owner = v.RawOrder.Owner
+		batchReq.Token = v.RawOrder.TokenS
+		batchReq.BlockParameter = types.BigintToHex(big.NewInt(currentBlock.BlockNumber))
+		erc20ReqList = append(erc20ReqList, &batchReq)
+	}
+	if len(erc20ReqList) == 0 {
+		return list
+	}
+	if err := om.accessor.BatchErc20BalanceAndAllowance(erc20ReqList); err != nil {
+		log.Debugf("order manager,miner orders,batchErc20BalanceAndAllowance error:%s", err.Error())
+		return list
+	}
+
+	// 根据余额及授权过滤订单
+	var accountMarkList []string
+	for _, req := range erc20ReqList {
+		for _, v := range listBeforeCheckAccount {
+			if v.RawOrder.Owner != req.Owner || req.BalanceErr != nil || req.AllowanceErr != nil {
+				continue
+			}
+			cancelOrFilled := new(big.Int).Add(v.DealtAmountS, v.CancelledAmountS)
+			available := new(big.Int).Sub(v.RawOrder.AmountS, cancelOrFilled)
+			v.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
+
+			if om.IsFundInsufficient(&v) {
+				accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
+			} else {
+				list = append(list, v)
+			}
+		}
+	}
+
+	// 标记余额/授权不足订单
+	accountForbiddenBlockMark := currentBlock.BlockNumber + int64(om.options.AccountPeriod)
+	if err = om.rds.MarkMinerOrders(accountMarkList, accountForbiddenBlockMark); err != nil {
+		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
 	return list

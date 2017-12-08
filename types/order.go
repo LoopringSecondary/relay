@@ -219,6 +219,7 @@ type OrderState struct {
 	DealtAmountB     *big.Int    `json:"dealtAmountB"`
 	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
 	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
+	AvailableAmountS *big.Int    `json:"availableAmountS"`
 	Status           OrderStatus `json:"status"`
 	BroadcastTime    int         `json:"broadcastTime"`
 }

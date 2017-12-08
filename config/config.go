@@ -146,6 +146,7 @@ type MinerOptions struct {
 type OrderManagerOptions struct {
 	TickerDuration int
 	BlockPeriod    int
+	AccountPeriod  int
 }
 
 type GatewayFiltersOptions struct {
