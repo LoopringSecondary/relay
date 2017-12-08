@@ -264,7 +264,7 @@ func (t *TrendManager) insertTrend() {
 			if trends == nil || len(trends) == 0 {
 				fills, fillsErr := t.rds.QueryRecentFills(mkt, "", start, end)
 
-				if fillsErr != nil || len(fills) == 0 {
+				if fillsErr != nil {
 					continue
 				}
 
@@ -309,10 +309,15 @@ func (t *TrendManager) insertTrend() {
 				toInsert.High = high
 				toInsert.Low = low
 
-				openFill := fills[0]
-				toInsert.Open = util.CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
-				closeFill := fills[len(fills)-1]
-				toInsert.Close = util.CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
+				if len(fills) == 0 {
+					toInsert.Open = 0
+					toInsert.Close = 0
+				} else {
+					openFill := fills[0]
+					toInsert.Open = util.CalculatePrice(openFill.AmountS, openFill.AmountB, openFill.TokenS, openFill.TokenB)
+					closeFill := fills[len(fills)-1]
+					toInsert.Close = util.CalculatePrice(closeFill.AmountS, closeFill.AmountB, closeFill.TokenS, closeFill.TokenB)
+				}
 
 				toInsert.Vol = vol
 				toInsert.Amount = amount

@@ -29,7 +29,7 @@ block_period = 10
     db_name = "loopring_order_manager"
     loc = "Local"
     table_prefix = "lpr_"
-    debug = false
+    debug = true
 
 [contract]
     versions = ["v1.0", "v1.0-test"]
