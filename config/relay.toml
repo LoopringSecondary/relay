@@ -31,6 +31,10 @@ block_period = 10
     table_prefix = "lpr_"
     debug = false
 
+[contract]
+    versions = ["v1.0", "v1.0-test"]
+    addresses = ["0xc01172a87f6cc20e1e3b9ad13a9e715fbc2d5aa9", "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D"]
+
 [ipfs]
     server = "localhost"
     port = 8080

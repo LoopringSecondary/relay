@@ -20,17 +20,70 @@ JSON-RPC  : http://{hostname}:{port}/rpc
 ## JSON-RPC Methods 
 
 * The relay supports all Ethereum standard JSON-PRCs, please refer to [eth JSON-RPC](https://github.com/ethereum/wiki/wiki/JSON-RPC).
+* [loopring_getBalance](#loopring_getbalance)
 * [loopring_submitOrder](#loopring_submitorder)
 * [loopring_getOrders](#loopring_getorders)
 * [loopring_getDepth](#loopring_getdepth)
-* [loopring_getTicker](#loopring_ticker)
+* [loopring_getTicker](#loopring_getticker)
 * [loopring_getFills](#loopring_getfills)
-* [loopring_getTrend](#loopring_getTrend)
-* [loopring_getRingMined](#loopring_getRingMined)
-* [loopring_getCutoff](#loopring_getCutoff)
-* [loopring_getPriceQuote](#loopring_getPriceQuote)
+* [loopring_getTrend](#loopring_gettrend)
+* [loopring_getRingMined](#loopring_getringmined)
+* [loopring_getCutoff](#loopring_getcutoff)
+* [loopring_getPriceQuote](#loopring_getpricequote)
 
 ## JSON RPC API Reference
+
+***
+
+#### loopring_getBalance
+
+Get user's balance and token allowance info.
+
+##### Parameters
+
+- `owner` - The address, if is null, will query all orders.
+- `contractVersion` - The loopring contract version you selected.
+
+```js
+params: {
+  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "contractVersion" : "v1.0"
+}
+```
+
+##### Returns
+
+`Account` - Account balance info object.
+
+1. `contractVersion` - The loopring contract version you selected.
+2. `tokens` - All token balance and allowance info array.
+
+##### Example
+```js
+// Request
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": {
+    "contractVersion":"v1.0",
+    "tokens": [
+      {
+          "token": "LRC",
+          "balance": "510000000000000000000",
+          "allowance": "21210000000000000000000"
+      },
+      {
+          "token": "WETH",
+          "balance": "12300000000000000000000",
+          "allowance": "2121200000000000000000"
+      }
+    ]
+  }
+}
+```
 
 ***
 
@@ -188,7 +241,7 @@ Get depth and accuracy by token pair
 
 1. `market` - The market pair.
 2. `contractVersion` - The loopring protocol version.
-3. `length` - The length of the depth data. default is 50.
+3. `length` - The length of the depth data. default is 20.
 
 
 ```js
@@ -241,9 +294,9 @@ Get 24hr merged ticker info from loopring relay.
 
 
 ```js
-params: {
-    "contractVersion" : "v1.0"
-}
+params: [
+    "v1.0"
+]
 ```
 
 ##### Returns
@@ -260,13 +313,13 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[],"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":["v1.0"],"id":64}'
 
 // Result
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": {
+  "result": [{
     "high" : 30384.2,
     "low" : 19283.2,
     "last" : 28002.2,
@@ -275,7 +328,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[],"id"
     "buy" : 122321,
     "sell" : 12388,
     "change" : "-50.12%"
-  }
+  }]
 }
 ```
 

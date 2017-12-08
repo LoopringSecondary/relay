@@ -52,11 +52,7 @@ var (
 	AllTokenPairs  []TokenPair
 )
 
-var ContractVersionConfig = map[string]string{
-	"v1.0": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
-	"v1.2": "0x39kdjfskdfjsdfj",
-	"v0.1": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
-}
+var ContractVersionConfig = map[string]string{}
 
 // todo: add token, delete token ...
 
