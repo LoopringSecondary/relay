@@ -155,3 +155,7 @@ func getContractVersion(address string) string {
 func IsSupportedContract(address string) bool {
 	return getContractVersion(address) != ""
 }
+
+func GetWethAddress() common.Address {
+	return AllTokens["WETH"].Protocol
+}
