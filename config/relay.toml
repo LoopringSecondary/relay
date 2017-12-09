@@ -25,6 +25,8 @@ account_period = 100
 	    encode_time = "iso8601"
 
 [mysql]
+    hostname = "127.0.0.1"
+    port = "3306"
     user = "root"
     password = "111111"
     db_name = "loopring_order_manager"

@@ -52,6 +52,9 @@ type RingSubmitter struct {
 
 	dbService         dao.RdsService
 	marketCapProvider *marketcap.MarketCapProvider
+
+	newRingWatcher *eventemitter.Watcher
+	ringhashSubmitWatcher *eventemitter.Watcher
 }
 
 type RingSubmitFailed struct {
@@ -186,7 +189,7 @@ func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) 
 	if nil != e {
 		event := e.(*types.RingMinedEvent)
 		//excute ring failed
-		if nil == event {
+		if types.IsZeroHash(event.Ringhash) {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
@@ -215,8 +218,7 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 	if nil != e {
 		event := e.(*types.RinghashSubmittedEvent)
 		//registry failed
-		if nil == event {
-
+		if types.IsZeroHash(event.RingHash) {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
@@ -330,6 +332,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	cost = cost.Mul(cost, submitter.marketCapProvider.GetEthCap())
 	received := new(big.Rat).Sub(ringState.LegalFee, cost)
 	ringForSubmit.Received = received
+
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
 		// todo: warning
 		//return nil, errors.New("received can't be less than 0")
@@ -338,14 +341,17 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 }
 
 func (submitter *RingSubmitter) stop() {
-	//todo
+	eventemitter.Un(eventemitter.Miner_NewRing, submitter.newRingWatcher)
+	eventemitter.Un(eventemitter.RingHashSubmitted, submitter.ringhashSubmitWatcher)
 }
 
 func (submitter *RingSubmitter) start() {
 	newRingWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.newRings}
-	eventemitter.On(eventemitter.Miner_NewRing, newRingWatcher)
+	submitter.newRingWatcher = newRingWatcher
+	eventemitter.On(eventemitter.Miner_NewRing, submitter.newRingWatcher)
 
 	watcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleRegistryEvent}
-	eventemitter.On(eventemitter.RingHashSubmitted, watcher)
+	submitter.ringhashSubmitWatcher = watcher
+	eventemitter.On(eventemitter.RingHashSubmitted, submitter.ringhashSubmitWatcher)
 
 }

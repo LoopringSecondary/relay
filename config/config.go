@@ -168,6 +168,8 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
+	Hostname string
+	Port string
 	User        string
 	Password    string
 	DbName      string
