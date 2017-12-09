@@ -155,6 +155,7 @@ func (l *ExtractorServiceImpl) Stop() {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
+	l.syncComplete = false
 	close(l.stop)
 }
 
