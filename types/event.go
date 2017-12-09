@@ -149,6 +149,7 @@ type RingMinedEvent struct {
 	Time               *big.Int
 	Blocknumber        *big.Int
 	TotalLrcFee        *big.Int
+	TradeAmount        int
 	Ringhash           common.Hash
 	TxHash             common.Hash
 	Miner              common.Address

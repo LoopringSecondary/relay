@@ -124,6 +124,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	}
 
 	evt.TotalLrcFee = lrcFee
+	evt.TradeAmount = length
 
 	return evt, list, nil
 }
