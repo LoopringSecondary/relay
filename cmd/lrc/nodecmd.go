@@ -79,12 +79,13 @@ func startNode(ctx *cli.Context) error {
 func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 	if "full" == globalConfig.Mode || "miner" == globalConfig.Mode {
 		minerUnlocked := false
+		println(globalConfig.Miner.Miner)
 		unlockAccs := []accounts.Account{}
 		if ctx.IsSet(utils.UnlockFlag.Name) {
 			unlocks := strings.Split(ctx.String(utils.UnlockFlag.Name), ",")
 			for _, acc := range unlocks {
 				if common.IsHexAddress(acc) {
-					if globalConfig.Miner.Miner == acc {
+					if strings.ToLower(globalConfig.Miner.Miner) == strings.ToLower(acc) {
 						minerUnlocked = true
 					}
 					unlockAccs = append(unlockAccs, accounts.Account{Address: common.HexToAddress(acc)})
@@ -98,7 +99,7 @@ func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 		}
 		var passwords []string
 		if ctx.IsSet(utils.PasswordsFlag.Name) {
-			passwords = strings.Split(ctx.String(utils.UnlockFlag.Name), ",")
+			passwords = strings.Split(ctx.String(utils.PasswordsFlag.Name), ",")
 			if len(passwords) != len(unlockAccs) {
 				utils.ExitWithErr(ctx.App.Writer, errors.New("the count of passwords and unlocks not match "))
 			}
