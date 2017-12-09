@@ -96,25 +96,44 @@ func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 		if !minerUnlocked {
 			utils.ExitWithErr(ctx.App.Writer, errors.New("the address used to mine ring must be unlocked "))
 		}
-		for _, acc := range unlockAccs {
-			unlocked := false
-			for trials := 1; trials < 4; trials++ {
-				fmt.Fprintf(ctx.App.Writer, "Unlocking account %s | Attempt %d/%d \n", acc.Address.Hex(), trials, 3)
-				passphrase, _ := getPassphraseFromTeminal(false, ctx.App.Writer)
+		var passwords []string
+		if ctx.IsSet(utils.PasswordsFlag.Name) {
+			passwords = strings.Split(ctx.String(utils.UnlockFlag.Name), ",")
+			if len(passwords) != len(unlockAccs) {
+				utils.ExitWithErr(ctx.App.Writer, errors.New("the count of passwords and unlocks not match "))
+			}
+		}
+		for idx, acc := range unlockAccs {
+			var passphrase string
+			if ctx.IsSet(utils.PasswordsFlag.Name) {
+				passphrase = passwords[idx]
 				if err := crypto.UnlockAccount(acc, passphrase); nil != err {
 					if keystore.ErrNoMatch == err {
 						log.Fatalf("err:", err.Error())
 					} else {
-						log.Infof("failed to unlock, try again")
+						utils.ExitWithErr(ctx.App.Writer, errors.New("failed to unlock address:"+acc.Address.Hex()))
 					}
-				} else {
-					unlocked = true
-					log.Infof("Unlocked address:%s", acc.Address.Hex())
-					break
 				}
-			}
-			if !unlocked {
-				utils.ExitWithErr(ctx.App.Writer, errors.New("3 incorrect passphrase attempts when unlocking address:"+acc.Address.Hex()))
+			} else {
+				unlocked := false
+				for trials := 1; trials < 4; trials++ {
+					fmt.Fprintf(ctx.App.Writer, "Unlocking account %s | Attempt %d/%d \n", acc.Address.Hex(), trials, 3)
+					passphrase, _ = getPassphraseFromTeminal(false, ctx.App.Writer)
+					if err := crypto.UnlockAccount(acc, passphrase); nil != err {
+						if keystore.ErrNoMatch == err {
+							log.Fatalf("err:", err.Error())
+						} else {
+							log.Infof("failed to unlock, try again")
+						}
+					} else {
+						unlocked = true
+						log.Infof("Unlocked address:%s", acc.Address.Hex())
+						break
+					}
+				}
+				if !unlocked {
+					utils.ExitWithErr(ctx.App.Writer, errors.New("3 incorrect passphrase attempts when unlocking address:"+acc.Address.Hex()))
+				}
 			}
 		}
 	}
