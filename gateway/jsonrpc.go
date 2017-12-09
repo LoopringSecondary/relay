@@ -206,7 +206,7 @@ func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err e
 
 func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
-	mkt := strings.ToLower(query.Market)
+	mkt := strings.ToUpper(query.Market)
 	protocol := query.ContractVersion
 	length := query.Length
 
@@ -220,7 +220,9 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	a, b := util.UnWrap(mkt)
-	if !util.IsSupportedMarket(mkt) {
+
+	_, err = util.WrapMarket(a, b)
+	if err != nil {
 		err = errors.New("unsupported market type")
 		return
 	}
