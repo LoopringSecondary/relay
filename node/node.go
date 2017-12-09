@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/log"
@@ -126,6 +127,12 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
+
+	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterSyncExtractor}
+	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
+}
+
+func (n *Node) startAfterSyncExtractor(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
 	//n.marketCapProvider.Start()
 
@@ -137,6 +144,8 @@ func (n *Node) Start() {
 		n.relayNode.Start()
 		n.mineNode.Start()
 	}
+
+	return nil
 }
 
 func (n *Node) Wait() {
