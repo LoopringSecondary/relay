@@ -138,13 +138,13 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 }
 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
-	event := input.(types.ApprovalEvent)
+	event := input.(*types.ApprovalEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		err = a.updateAllowance(event)
+		err = a.updateAllowance(*event)
 	}
 	return
 }
