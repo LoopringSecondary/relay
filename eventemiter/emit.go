@@ -57,6 +57,9 @@ const (
 
 	// Block
 	Block_New = "Block_New"
+
+	// Extractor
+	SyncChainComplete = "SyncChainComplete"
 )
 
 var watchers map[string][]*Watcher

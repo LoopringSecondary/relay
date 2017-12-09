@@ -21,7 +21,6 @@ package dao
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -95,7 +94,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
 	o.BroadcastTime = state.BroadcastTime
-	o.Market, _ = util.WrapMarketByAddress(o.TokenB, o.TokenS)
+
 	return nil
 }
 

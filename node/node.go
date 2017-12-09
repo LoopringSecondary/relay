@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/log"
@@ -35,7 +36,6 @@ import (
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
-	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
@@ -85,8 +85,8 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	// register
 	n.registerMysql()
-	n.initMarkets()
 
+	util.Initialize(n.rdsService, n.globalConfig)
 	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
 	n.registerAccessor()
 	n.registerUserManager()
@@ -126,6 +126,12 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
+
+	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterSyncExtractor}
+	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
+}
+
+func (n *Node) startAfterSyncExtractor(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
 	//n.marketCapProvider.Start()
 
@@ -137,6 +143,8 @@ func (n *Node) Start() {
 		n.relayNode.Start()
 		n.mineNode.Start()
 	}
+
+	return nil
 }
 
 func (n *Node) Wait() {
@@ -180,71 +188,6 @@ func (n *Node) registerAccessor() {
 		log.Fatalf("err:%s", err.Error())
 	}
 	n.accessor = accessor
-}
-
-func (n *Node) initMarkets() {
-
-	util.SupportTokens = make(map[string]types.Token)
-	util.SupportMarkets = make(map[string]types.Token)
-	util.AllTokens = make(map[string]types.Token)
-
-	tokens, err := n.rdsService.FindUnDeniedTokens()
-	if err != nil {
-		log.Fatalf("market util cann't find any token!")
-	}
-	markets, err := n.rdsService.FindUnDeniedMarkets()
-	if err != nil {
-		log.Fatalf("market util cann't find any base market!")
-	}
-
-	// set support tokens
-	for _, v := range tokens {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportTokens[v.Symbol] = token
-		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
-	}
-
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportMarkets[token.Symbol] = token
-	}
-
-	// set all tokens
-	for k, v := range util.SupportTokens {
-		util.AllTokens[k] = v
-	}
-	for k, v := range util.SupportMarkets {
-		util.AllTokens[k] = v
-	}
-
-	// set all markets
-	for _, k := range util.SupportTokens { // lrc,omg
-		for _, kk := range util.SupportMarkets { //eth
-			symbol := k.Symbol + "-" + kk.Symbol
-			util.AllMarkets = append(util.AllMarkets, symbol)
-			log.Infof("market util,supported market:%s", symbol)
-		}
-	}
-
-	// set all token pairs
-	pairsMap := make(map[string]util.TokenPair, 0)
-	for _, v := range util.SupportMarkets {
-		for _, vv := range util.SupportTokens {
-			pairsMap[v.Symbol+"-"+vv.Symbol] = util.TokenPair{v.Protocol, vv.Protocol}
-			pairsMap[vv.Symbol+"-"+v.Symbol] = util.TokenPair{vv.Protocol, v.Protocol}
-		}
-	}
-	for _, v := range pairsMap {
-		util.AllTokenPairs = append(util.AllTokenPairs, v)
-	}
-
-	for i := 0; i < len(n.globalConfig.Contract.Versions); i++ {
-		util.ContractVersionConfig[n.globalConfig.Contract.Versions[i]] = n.globalConfig.Contract.Addresses[i]
-	}
-
 }
 
 func (n *Node) registerExtractor() {

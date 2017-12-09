@@ -149,6 +149,7 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	}
 }
 
+// cutoff的值必须在两个块的timestamp之间
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	var (
 		owner  = cutOffOwner
