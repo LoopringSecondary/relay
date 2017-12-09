@@ -78,11 +78,18 @@ type GlobalConfig struct {
 	OrderManager   OrderManagerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
+	Contract	   ContractOptions
 }
 
 type JsonrpcOptions struct {
 	Port int
 }
+
+type ContractOptions struct {
+	Versions []string
+	Addresses []string
+}
+
 
 func (c *GlobalConfig) defaultConfig() {
 
