@@ -77,6 +77,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.commonOpts = commonOpts
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor)
+	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds)
@@ -190,7 +191,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// get rds.Order and types.OrderState
-	state := &types.OrderState{BlockNumber: event.Blocknumber}
+	state := &types.OrderState{UpdatedBlock: event.Blocknumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
@@ -205,7 +206,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate dealt amount
-	state.BlockNumber = event.Blocknumber
+	state.UpdatedBlock = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
@@ -219,7 +220,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -274,7 +275,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 

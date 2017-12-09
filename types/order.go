@@ -214,7 +214,7 @@ type FilledOrder struct {
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
 	RawOrder         Order       `json:"rawOrder"`
-	BlockNumber      *big.Int    `json:"blockNumber"`
+	UpdatedBlock     *big.Int    `json:"updatedBlock"`
 	DealtAmountS     *big.Int    `json:"dealtAmountS"`
 	DealtAmountB     *big.Int    `json:"dealtAmountB"`
 	CancelledAmountS *big.Int    `json:"cancelledAmountS"`

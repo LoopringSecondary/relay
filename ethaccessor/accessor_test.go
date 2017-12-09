@@ -81,13 +81,18 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	t.Log(balance.String())
 }
 
+const (
+	cancelOrderHash = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
+	cutOffOwner     = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+)
+
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
 		model        *dao.Order
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0x466209ffba54cb6eeace9aebdb1f9a9ea4fe399d10cdbe0a4168df8d16ff45f0")
+		orderhash    = common.HexToHash(cancelOrderHash)
 		cancelAmount = big.NewInt(1980)
 	)
 
@@ -131,22 +136,22 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
-	orderhash := common.HexToHash("0xdf07a078dd8e94b5e6e50a2fd71ea8d3ce82e151e8bdedf89a7f93e23ab299cb")
+	orderhash := common.HexToHash(cancelOrderHash)
 
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
-	if timestamp, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
+	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
-		t.Logf("cutoff timestamp:%s", timestamp.String())
+		t.Logf("cancelOrFilled amount:%s", amount.String())
 	}
 }
 
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	var (
-		owner  = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+		owner  = cutOffOwner
 		cutoff = big.NewInt(1522651087)
 	)
 
@@ -172,7 +177,7 @@ func TestEthNodeAccessor_Cutoff(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCutoff(t *testing.T) {
-	owner := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+	owner := common.HexToAddress(cutOffOwner)
 
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)

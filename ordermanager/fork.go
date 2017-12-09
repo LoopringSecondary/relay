@@ -100,7 +100,7 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 		}
 
 		state.CalculateRemainAmount()
-		state.BlockNumber = forkBlockNumber
+		state.UpdatedBlock = forkBlockNumber
 
 		newOrderModel := dao.Order{ID: v.ID}
 		if err := newOrderModel.ConvertDown(state); err != nil {
