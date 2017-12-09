@@ -158,7 +158,11 @@ func (p *MarketCapProvider) Start() {
 						if nil != err {
 							log.Errorf("err:%s", err.Error())
 						} else {
-							c = caps[0]
+							c.PriceCny = caps[0].PriceCny
+							c.PriceUsd = caps[0].PriceUsd
+							c.PriceBtc = caps[0].PriceBtc
+							c.Volume24HCNY = caps[0].Volume24HCNY
+							c.Volume24HUSD = caps[0].Volume24HUSD
 						}
 					}
 				}
