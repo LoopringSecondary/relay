@@ -177,7 +177,7 @@ func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
 		c := &CurrencyMarketCap{}
 		c.Address = v.Protocol
 		c.Id = v.Symbol
-		c.Name = v.Symbol
+		c.Name = v.Source
 		provider.currenciesMap[c.Address] = c
 	}
 	return provider
