@@ -30,7 +30,7 @@ account_period = 100
     db_name = "loopring_order_manager"
     loc = "Local"
     table_prefix = "lpr_"
-    debug = true
+    debug = false
 
 [contract]
     versions = ["v1.0", "v1.0-test"]
@@ -80,6 +80,7 @@ account_period = 100
 [gateway_filters]
     [gateway_filters.base_filter]
         min_lrc_fee = 10
+        max_price = 1000000000000
 
 [keystore]
     keydir = "ks_dir"

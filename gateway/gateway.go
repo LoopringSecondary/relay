@@ -53,17 +53,10 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	// new base filter
-	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee)}
+	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee), MaxPrice: big.NewInt(filterOptions.BaseFilter.MaxPrice)}
 
 	// new token filter
-	tokenFilter := &TokenFilter{AllowTokens: make(map[common.Address]bool), DeniedTokens: make(map[common.Address]bool)}
-	for _, v := range util.AllTokens {
-		if v.Deny {
-			tokenFilter.DeniedTokens[v.Protocol] = true
-		} else {
-			tokenFilter.AllowTokens[v.Protocol] = true
-		}
-	}
+	tokenFilter := &TokenFilter{}
 
 	// new sign filter
 	signFilter := &SignFilter{}
@@ -139,6 +132,7 @@ func (g *Gateway) broadcast(state *types.OrderState, bt int) {
 
 type BaseFilter struct {
 	MinLrcFee *big.Int
+	MaxPrice  *big.Int
 }
 
 func (f *BaseFilter) filter(o *types.Order) (bool, error) {
@@ -168,6 +162,9 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if len(o.Protocol) != addrLength {
 		return false, fmt.Errorf("gateway,base filter,order %s protocol %s address length error", o.Hash.Hex(), o.Owner.Hex())
 	}
+	if o.Price.Cmp(new(big.Rat).SetFrac(f.MaxPrice, big.NewInt(1))) > 0 || o.Price.Cmp(new(big.Rat).SetFrac(big.NewInt(1), f.MaxPrice)) < 0 {
+		return false, fmt.Errorf("dao order convert down,price out of range")
+	}
 	return true, nil
 }
 
@@ -192,12 +189,24 @@ type TokenFilter struct {
 }
 
 func (f *TokenFilter) filter(o *types.Order) (bool, error) {
-	if _, ok := f.AllowTokens[o.TokenS]; !ok {
-		return false, fmt.Errorf("gateway,token filter allowTokens do not contain:%s", o.TokenS.Hex())
+	supportTokenS := false
+	supportTokenB := false
+	for _, v := range util.AllTokens {
+		if v.Protocol == o.TokenS && !v.Deny {
+			supportTokenS = true
+		}
+		if v.Protocol == o.TokenB && !v.Deny {
+			supportTokenB = true
+		}
 	}
-	if _, ok := f.DeniedTokens[o.TokenS]; ok {
-		return false, fmt.Errorf("gateway,token filter deniedTokens contain:%s", o.TokenS.Hex())
+
+	if !supportTokenS {
+		return false, fmt.Errorf("gateway,token filter,tokenS:%s do not supported", o.TokenS.Hex())
 	}
+	if !supportTokenB {
+		return false, fmt.Errorf("gateway,token filter,tokenB:%s do not supported", o.TokenB.Hex())
+	}
+
 	return true, nil
 }
 
