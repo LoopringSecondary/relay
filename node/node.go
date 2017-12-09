@@ -127,7 +127,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.ipfsSubService.Start()
-	//n.marketCapProvider.Start()
+	n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {
 		n.relayNode.Start()

@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/patrickmn/go-cache"
 	"math/big"
+	"strings"
 )
 
 type Account struct {
@@ -86,6 +87,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
+	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
 		account := accountInCache.(Account)
@@ -154,7 +156,7 @@ func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*bi
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(spender), "latest")
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(util.ContractVersionConfig[spender]), "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
