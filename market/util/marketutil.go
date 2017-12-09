@@ -21,6 +21,10 @@ package util
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -33,6 +37,13 @@ type TokenPair struct {
 	TokenS common.Address
 	TokenB common.Address
 }
+
+type TokenStandard uint8
+
+const (
+	TOKEN_STANDARD_ERC20 TokenStandard = iota
+	TOKEN_STANDARD_ERC223
+)
 
 func StringToFloat(amount string) float64 {
 	rst, _ := new(big.Int).SetString(amount, 0)
@@ -53,6 +64,119 @@ var (
 )
 
 var ContractVersionConfig = map[string]string{}
+
+func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
+
+	SupportTokens = make(map[string]types.Token)
+	SupportMarkets = make(map[string]types.Token)
+	AllTokens = make(map[string]types.Token)
+
+	tokens, err := rds.FindUnDeniedTokens()
+	if err != nil {
+		log.Fatalf("market util cann't find any token!")
+	}
+	markets, err := rds.FindUnDeniedMarkets()
+	if err != nil {
+		log.Fatalf("market util cann't find any base market!")
+	}
+
+	// set support tokens
+	for _, v := range tokens {
+		var token types.Token
+		v.ConvertUp(&token)
+		SupportTokens[v.Symbol] = token
+		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
+	}
+
+	// set support markets
+	for _, v := range markets {
+		var token types.Token
+		v.ConvertUp(&token)
+		SupportMarkets[token.Symbol] = token
+	}
+
+	// set all tokens
+	for k, v := range SupportTokens {
+		AllTokens[k] = v
+	}
+	for k, v := range SupportMarkets {
+		AllTokens[k] = v
+	}
+
+	// set all markets
+	for _, k := range SupportTokens { // lrc,omg
+		for _, kk := range SupportMarkets { //eth
+			symbol := k.Symbol + "-" + kk.Symbol
+			AllMarkets = append(AllMarkets, symbol)
+			log.Infof("market util,supported market:%s", symbol)
+		}
+	}
+
+	// set all token pairs
+	pairsMap := make(map[string]TokenPair, 0)
+	for _, v := range SupportMarkets {
+		for _, vv := range SupportTokens {
+			pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
+			pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
+		}
+	}
+	for _, v := range pairsMap {
+		AllTokenPairs = append(AllTokenPairs, v)
+	}
+
+	for i := 0; i < len(conf.Contract.Versions); i++ {
+		ContractVersionConfig[conf.Contract.Versions[i]] = conf.Contract.Addresses[i]
+	}
+
+	tokenRegisterWatcher := &eventemitter.Watcher{false, TokenRegister}
+	tokenUnRegisterWatcher := &eventemitter.Watcher{false, TokenUnRegister}
+	eventemitter.On(eventemitter.TokenRegistered, tokenRegisterWatcher)
+	eventemitter.On(eventemitter.TokenUnRegistered, tokenUnRegisterWatcher)
+}
+
+func TokenRegister(input eventemitter.EventData) error {
+	evt := input.(*types.TokenRegisterEvent)
+
+	var token types.Token
+	token.Protocol = evt.Token
+	token.Symbol = evt.Symbol
+	token.Deny = false
+	token.IsMarket = false
+	token.Time = evt.Time.Int64()
+
+	// todo: how to get source
+	token.Source = ""
+	SupportTokens[evt.Symbol] = token
+	AllTokens[evt.Symbol] = token
+
+	pairsMap := make(map[string]TokenPair, 0)
+	for _, v := range SupportMarkets {
+		pairsMap[v.Symbol+"-"+evt.Symbol] = TokenPair{v.Protocol, evt.Token}
+		pairsMap[evt.Symbol+"-"+v.Symbol] = TokenPair{evt.Token, v.Protocol}
+	}
+	for _, v := range pairsMap {
+		AllTokenPairs = append(AllTokenPairs, v)
+	}
+	return nil
+}
+
+func TokenUnRegister(input eventemitter.EventData) error {
+	evt := input.(*types.TokenUnRegisterEvent)
+
+	delete(SupportTokens, evt.Symbol)
+	delete(AllTokens, evt.Symbol)
+
+	var list []TokenPair
+	for _, v := range AllTokenPairs {
+		if v.TokenS == evt.Token || v.TokenB == evt.Token {
+			continue
+		}
+		list = append(list, v)
+	}
+	AllTokenPairs = list
+
+	return nil
+}
 
 // todo: add token, delete token ...
 

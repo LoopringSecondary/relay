@@ -280,6 +280,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
+		fill.Market, _ = util.WrapMarketByAddress(fill.TokenS.Hex(), fill.TokenB.Hex())
 
 		if l.commOpts.Develop {
 			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
