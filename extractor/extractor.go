@@ -197,7 +197,7 @@ func (l *ExtractorServiceImpl) processBlock(block ethaccessor.BlockWithTxObject)
 			data := hexutil.MustDecode(evtLog.Data)
 			id := common.HexToHash(evtLog.Topics[0])
 			if contract, ok = l.events[id]; !ok {
-				log.Debugf("extractor,contract event id error:%s", id)
+				log.Debugf("extractor,contract event id error:%s", id.Hex())
 				continue
 			}
 
