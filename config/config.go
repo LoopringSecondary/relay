@@ -78,7 +78,7 @@ type GlobalConfig struct {
 	OrderManager   OrderManagerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
-	Contract	   ContractOptions
+	Contract       ContractOptions
 }
 
 type JsonrpcOptions struct {
@@ -86,10 +86,9 @@ type JsonrpcOptions struct {
 }
 
 type ContractOptions struct {
-	Versions []string
+	Versions  []string
 	Addresses []string
 }
-
 
 func (c *GlobalConfig) defaultConfig() {
 
@@ -159,6 +158,7 @@ type OrderManagerOptions struct {
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee int64
+		MaxPrice  int64
 	}
 }
 
