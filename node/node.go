@@ -183,6 +183,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) initMarkets() {
+
 	util.SupportTokens = make(map[string]types.Token)
 	util.SupportMarkets = make(map[string]types.Token)
 	util.AllTokens = make(map[string]types.Token)
@@ -239,6 +240,11 @@ func (n *Node) initMarkets() {
 	for _, v := range pairsMap {
 		util.AllTokenPairs = append(util.AllTokenPairs, v)
 	}
+
+	for i := 0; i < len(n.globalConfig.Contract.Versions); i++ {
+		util.ContractVersionConfig[n.globalConfig.Contract.Versions[i]] = n.globalConfig.Contract.Addresses[i]
+	}
+
 }
 
 func (n *Node) registerExtractor() {

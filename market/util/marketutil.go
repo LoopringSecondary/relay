@@ -52,17 +52,13 @@ var (
 	AllTokenPairs  []TokenPair
 )
 
-var ContractVersionConfig = map[string]string{
-	"v1.0": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
-	"v1.2": "0x39kdjfskdfjsdfj",
-	"v0.1": "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D",
-}
+var ContractVersionConfig = map[string]string{}
 
 // todo: add token, delete token ...
 
 func WrapMarket(s, b string) (market string, err error) {
 
-	s, b = strings.ToLower(s), strings.ToLower(b)
+	s, b = strings.ToUpper(s), strings.ToUpper(b)
 
 	if IsSupportedMarket(s) && IsSupportedToken(b) {
 		market = fmt.Sprintf("%s-%s", b, s)
@@ -84,7 +80,7 @@ func UnWrap(market string) (s, b string) {
 		return "", ""
 	}
 
-	s, b = strings.ToLower(mkt[0]), strings.ToLower(mkt[1])
+	s, b = strings.ToUpper(mkt[0]), strings.ToUpper(mkt[1])
 	return
 }
 

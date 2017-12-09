@@ -19,12 +19,7 @@ func (e *EthForwarder) GetBalance(address, blockNumber string) (result string, e
 }
 
 func (e *EthForwarder) SendRawTransaction(tx string) (result string, err error) {
-	fmt.Println("get balance log")
-	fmt.Println("intput is " + tx)
 	err = e.Accessor.Call(&result, "eth_sendRawTransaction", tx)
-	fmt.Println(result)
-	err = nil
-	result = "SEND_SUCCESS"
 	return
 }
 
