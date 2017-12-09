@@ -20,10 +20,13 @@ package ethaccessor_test
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
@@ -78,15 +81,19 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	t.Log(balance.String())
 }
 
+const (
+	cancelOrderHash = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
+	cutOffOwner     = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+)
+
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
-		model  *dao.Order
-		state  *types.OrderState
-		err    error
-		result string
-
-		orderhash    = common.HexToHash("")
-		cancelAmount = big.NewInt(1)
+		model        *dao.Order
+		state        types.OrderState
+		err          error
+		result       string
+		orderhash    = common.HexToHash(cancelOrderHash)
+		cancelAmount = big.NewInt(1980)
 	)
 
 	// load config
@@ -97,7 +104,16 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	if model, err = rds.GetOrderByHash(orderhash); err != nil {
 		t.Fatalf(err.Error())
 	}
-	model.ConvertUp(state)
+	if err := model.ConvertUp(&state); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	// unlock account
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	account := accounts.Account{Address: state.RawOrder.Owner}
+	ks.Unlock(account, "202")
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
 
 	// create cancel order contract function parameters
 	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
@@ -111,48 +127,61 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	// call cancel order
 	accessor, _ := test.GenerateAccessor(c)
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
-	if err := callMethod(&result, "cancelOrder", "latest", addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
+	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
+	if result, err = callMethod(account, "cancelOrder", nil, nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
+	} else {
+		t.Logf("cancelOrder result:%s", result)
 	}
-
-	t.Logf("cancelOrder result:%s", result)
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
+	orderhash := common.HexToHash(cancelOrderHash)
+
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
-	orderhash := common.HexToHash("0xde52fa205497f74882b2ccab01d1dbaf17605aad39b2cc56e9c054cd27828069")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
-		t.Logf("fill or cancel amount:%s", amount.String())
+		t.Logf("cancelOrFilled amount:%s", amount.String())
 	}
 }
 
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
-	var result string
+	var (
+		owner  = cutOffOwner
+		cutoff = big.NewInt(1522651087)
+	)
 
+	// load config
 	c := test.LoadConfig()
+
+	// unlock account
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	account := accounts.Account{Address: common.HexToAddress(owner)}
+	ks.Unlock(account, "202")
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	// call cancel order
 	accessor, _ := test.GenerateAccessor(c)
-
-	cutoffTimestamp := big.NewInt(1)
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
-	if err := callMethod(&result, "setCutoff", "latest", cutoffTimestamp); nil != err {
+	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
+	if result, err := callMethod(account, "setCutoff", nil, nil, cutoff); nil != err {
 		t.Fatalf("call method setCutoff error:%s", err.Error())
+	} else {
+		t.Logf("cutoff result:%s", result)
 	}
-
-	t.Logf("setCutoff result:%s", result)
 }
 
 func TestEthNodeAccessor_GetCutoff(t *testing.T) {
+	owner := common.HexToAddress(cutOffOwner)
+
 	c := test.LoadConfig()
 	accessor, _ := test.GenerateAccessor(c)
 
-	owner := common.HexToAddress("")
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
 	if timestamp, err := accessor.GetCutoff(protocol, owner, "latest"); err != nil {
 		t.Fatal(err)

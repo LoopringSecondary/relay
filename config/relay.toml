@@ -6,6 +6,7 @@ name = "Loopring corporation"
 [order_manager]
 ticker_duration = 10
 block_period = 10
+account_period = 100
 
 [log]
     [log.zap_opts]

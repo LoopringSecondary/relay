@@ -48,14 +48,15 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options   config.AccessorOptions
-	commOpts  config.CommonOptions
-	accessor  *ethaccessor.EthNodeAccessor
-	dao       dao.RdsService
-	stop      chan struct{}
-	lock      sync.RWMutex
-	events    map[common.Hash]ContractData
-	protocols map[common.Address]string
+	options    config.AccessorOptions
+	commOpts   config.CommonOptions
+	accessor   *ethaccessor.EthNodeAccessor
+	dao        dao.RdsService
+	stop       chan struct{}
+	lock       sync.RWMutex
+	events     map[common.Hash]ContractData
+	protocols  map[common.Address]string
+	ringmineds map[common.Hash]bool
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -155,7 +156,6 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			continue
 		}
 
-		// todo:判断transactionRecipient.to地址是否是合约地址
 		for _, evtLog := range receipt.Logs {
 			var (
 				contract ContractData
@@ -335,7 +335,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())
+		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
@@ -345,6 +345,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 
 func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
 	contractData := input.(ContractData)
+
 	if len(contractData.Topics) < 3 {
 		return fmt.Errorf("extractor,token transfer event indexed fields number error")
 	}

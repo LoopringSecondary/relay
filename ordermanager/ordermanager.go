@@ -53,6 +53,7 @@ type OrderManagerImpl struct {
 	rds                dao.RdsService
 	lock               sync.RWMutex
 	processor          *forkProcessor
+	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
 	mc                 *marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
@@ -76,9 +77,11 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.commonOpts = commonOpts
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor)
+	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds)
+	om.accessor = accessor
 
 	return om
 }
@@ -188,7 +191,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// get rds.Order and types.OrderState
-	state := &types.OrderState{}
+	state := &types.OrderState{UpdatedBlock: event.Blocknumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
@@ -203,9 +206,10 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate dealt amount
-	state.BlockNumber = event.Blocknumber
+	state.UpdatedBlock = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
+	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
 	finished := om.IsOrderFullFinished(state)
@@ -216,7 +220,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -227,7 +231,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	event := input.(*types.OrderCancelledEvent)
 
 	// save event
-	_, err := om.rds.FindCancelEvent(event.OrderHash, event.AmountCancelled)
+	_, err := om.rds.FindCancelEvent(event.OrderHash, event.TxHash)
 	if err == nil {
 		return fmt.Errorf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
 	}
@@ -251,14 +255,16 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// judge status
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
+		return fmt.Errorf("order manager,handle order cancelled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
 	}
 
 	// calculate remainAmount
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		state.CancelledAmountS = event.AmountCancelled
+		state.CancelledAmountB = new(big.Int).Add(state.CancelledAmountB, event.AmountCancelled)
+		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amountb:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountB.String())
 	} else {
-		state.CancelledAmountB = event.AmountCancelled
+		state.CancelledAmountS = new(big.Int).Add(state.CancelledAmountS, event.AmountCancelled)
+		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amounts:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountS.String())
 	}
 
 	// update order status
@@ -269,7 +275,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	if err := model.ConvertDown(state); err != nil {
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.BlockNumber); err != nil {
+	if err := om.rds.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -279,14 +285,27 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
+	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
+		log.Debugf("order manager,handle cutoff event,%s", err.Error())
+	}
 	if err := om.cutoffCache.Add(event); err != nil {
 		return err
 	}
-	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
-		return err
+
+	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
+	return nil
+}
+
+func (om *OrderManagerImpl) IsFundInsufficient(state *types.OrderState) bool {
+	price := om.mc.GetMarketCap(state.RawOrder.TokenS)
+	amount := new(big.Rat).SetInt(state.AvailableAmountS)
+	value := new(big.Rat).Mul(price, amount)
+
+	if value.Cmp(big.NewRat(1, 1)) > 0 {
+		return false
 	}
 
-	return nil
+	return true
 }
 
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
@@ -338,21 +357,70 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		markBlockNumber = big.NewInt(0)
 	}
 
+	// 标记miner提供的劣质订单
 	if err = om.rds.MarkMinerOrders(orderhashstrs, markBlockNumber.Int64()); err != nil {
 		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
+	// 从数据库获取订单
 	markBlockNumber = new(big.Int).Sub(markBlockNumber, big.NewInt(int64(om.options.BlockPeriod)))
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
 		return list
 	}
-
+	var listBeforeCheckAccount []types.OrderState
 	for _, v := range modelList {
 		var state types.OrderState
 		v.ConvertUp(&state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
-			list = append(list, state)
+			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
+	}
+
+	// 批量查询订单账户的余额及授权
+	var erc20ReqList []*ethaccessor.BatchErc20Req
+	for _, v := range listBeforeCheckAccount {
+		batchReq := ethaccessor.BatchErc20Req{}
+		spender, err := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
+		if err != nil {
+			continue
+		}
+		batchReq.Spender = spender
+		batchReq.Owner = v.RawOrder.Owner
+		batchReq.Token = v.RawOrder.TokenS
+		batchReq.BlockParameter = types.BigintToHex(big.NewInt(currentBlock.BlockNumber))
+		erc20ReqList = append(erc20ReqList, &batchReq)
+	}
+	if len(erc20ReqList) == 0 {
+		return list
+	}
+	if err := om.accessor.BatchErc20BalanceAndAllowance(erc20ReqList); err != nil {
+		log.Debugf("order manager,miner orders,batchErc20BalanceAndAllowance error:%s", err.Error())
+		return list
+	}
+
+	// 根据余额及授权过滤订单
+	var accountMarkList []string
+	for _, req := range erc20ReqList {
+		for _, v := range listBeforeCheckAccount {
+			if v.RawOrder.Owner != req.Owner || req.BalanceErr != nil || req.AllowanceErr != nil {
+				continue
+			}
+			cancelOrFilled := new(big.Int).Add(v.DealtAmountS, v.CancelledAmountS)
+			available := new(big.Int).Sub(v.RawOrder.AmountS, cancelOrFilled)
+			v.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
+
+			if om.IsFundInsufficient(&v) {
+				accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
+			} else {
+				list = append(list, v)
+			}
+		}
+	}
+
+	// 标记余额/授权不足订单
+	accountForbiddenBlockMark := currentBlock.BlockNumber + int64(om.options.AccountPeriod)
+	if err = om.rds.MarkMinerOrders(accountMarkList, accountForbiddenBlockMark); err != nil {
+		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
 	return list

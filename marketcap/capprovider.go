@@ -116,6 +116,9 @@ func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
 }
 
 func (p *MarketCapProvider) GetMarketCapByCurrency(tokenAddress common.Address, currency LegalCurrency) *big.Rat {
+	// todo:
+	return new(big.Rat).SetInt64(int64(1))
+
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)
 		switch currency {
