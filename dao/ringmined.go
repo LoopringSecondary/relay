@@ -35,6 +35,7 @@ type RingMinedEvent struct {
 	IsRinghashReserved bool   `gorm:"column:is_ring_hash_reserved;" json:"isRinghashReserved"`
 	BlockNumber        int64  `gorm:"column:block_number;type:bigint" json:"blockNumber"`
 	TotalLrcFee        string `gorm:"column:total_lrc_fee;type:varchar(30)" json:"totalLrcFee"`
+	TradeAmount        int    `gorm:"column:trade_amount"`
 	Time               int64  `gorm:"column:time;type:bigint" json:"timestamp"`
 }
 
@@ -49,6 +50,7 @@ func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.IsRinghashReserved = event.IsRinghashReserved
 	r.BlockNumber = event.Blocknumber.Int64()
 	r.Time = event.Time.Int64()
+	r.TradeAmount = event.TradeAmount
 
 	return nil
 }
@@ -63,6 +65,7 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.IsRinghashReserved = r.IsRinghashReserved
 	event.Blocknumber = big.NewInt(r.BlockNumber)
 	event.Time = big.NewInt(r.Time)
+	event.TradeAmount = r.TradeAmount
 
 	return nil
 }

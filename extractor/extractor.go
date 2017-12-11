@@ -48,14 +48,15 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options   config.AccessorOptions
-	commOpts  config.CommonOptions
-	accessor  *ethaccessor.EthNodeAccessor
-	dao       dao.RdsService
-	stop      chan struct{}
-	lock      sync.RWMutex
-	events    map[common.Hash]ContractData
-	protocols map[common.Address]string
+	options      config.AccessorOptions
+	commOpts     config.CommonOptions
+	accessor     *ethaccessor.EthNodeAccessor
+	dao          dao.RdsService
+	stop         chan struct{}
+	lock         sync.RWMutex
+	events       map[common.Hash]ContractData
+	protocols    map[common.Address]string
+	syncComplete bool
 }
 
 func NewExtractorService(options config.AccessorOptions,
@@ -67,6 +68,7 @@ func NewExtractorService(options config.AccessorOptions,
 	l.commOpts = commonOpts
 	l.accessor = accessor
 	l.dao = rds
+	l.syncComplete = false
 
 	l.loadContract()
 	l.startDetectFork()
@@ -88,6 +90,7 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Fatalf("extractor,iterator next error:%s", err.Error())
 			}
 
+			// get current block
 			block := inter.(*ethaccessor.BlockWithTxObject)
 			log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
 
@@ -97,11 +100,28 @@ func (l *ExtractorServiceImpl) Start() {
 			currentBlock.BlockHash = block.Hash
 			currentBlock.CreateTime = block.Timestamp.Int64()
 
+			// sync chain block number
+			if l.syncComplete == false {
+				var syncBlock types.Big
+				if err := l.accessor.Call(&syncBlock, "eth_blockNumber"); err != nil {
+					log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
+				}
+				if syncBlock.BigInt().Cmp(currentBlock.BlockNumber) <= 0 && l.syncComplete == false {
+					eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
+					l.syncComplete = true
+					log.Debugf("extractor,sync chain block complete!")
+				} else {
+					log.Debugf("extractor,chain block syncing... ")
+				}
+			}
+
+			// emit new block
 			blockEvent := &types.BlockEvent{}
 			blockEvent.BlockNumber = block.Number.BigInt()
 			blockEvent.BlockHash = block.Hash
 			eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
+			// convert block to dao entity
 			var entity dao.Block
 			if err := entity.ConvertDown(currentBlock); err != nil {
 				log.Debugf("extractor,convert block to dao/entity error:%s", err.Error())
@@ -109,6 +129,7 @@ func (l *ExtractorServiceImpl) Start() {
 				l.dao.Add(&entity)
 			}
 
+			// base filter
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {
 				log.Infof("extractor,get none block transaction")
@@ -117,12 +138,14 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Infof("extractor,get block transaction list length %d", txcnt)
 			}
 
+			// detect chain fork
 			if err := l.detectFork(currentBlock); err != nil {
 				log.Debugf("extractor,detect fork error:%s", err.Error())
 				continue
 			}
 
-			l.doBlock(*block)
+			// core process
+			l.processBlock(*block)
 		}
 	}()
 }
@@ -131,6 +154,7 @@ func (l *ExtractorServiceImpl) Stop() {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
+	l.syncComplete = false
 	close(l.stop)
 }
 
@@ -141,12 +165,12 @@ func (l *ExtractorServiceImpl) Restart() {
 	l.Start()
 }
 
-func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
+func (l *ExtractorServiceImpl) processBlock(block ethaccessor.BlockWithTxObject) {
 	for _, tx := range block.Transactions {
 		log.Debugf("extractor,get transaction hash:%s", tx.Hash)
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
-		l.doMethod(tx.Input)
+		l.processMethod(tx.Input)
 
 		// 获取transaction内所有event logs
 		var receipt ethaccessor.TransactionReceipt
@@ -155,7 +179,6 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			continue
 		}
 
-		// todo:判断transactionRecipient.to地址是否是合约地址
 		for _, evtLog := range receipt.Logs {
 			var (
 				contract ContractData
@@ -173,7 +196,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 			data := hexutil.MustDecode(evtLog.Data)
 			id := common.HexToHash(evtLog.Topics[0])
 			if contract, ok = l.events[id]; !ok {
-				log.Debugf("extractor,contract event id error:%s", id)
+				log.Debugf("extractor,contract event id error:%s", id.Hex())
 				continue
 			}
 
@@ -208,7 +231,7 @@ func (l *ExtractorServiceImpl) doBlock(block ethaccessor.BlockWithTxObject) {
 	}
 }
 
-func (l *ExtractorServiceImpl) doMethod(input string) error {
+func (l *ExtractorServiceImpl) processMethod(input string) error {
 	return nil
 }
 
@@ -256,6 +279,7 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
+		fill.Market, _ = util.WrapMarketByAddress(fill.TokenS.Hex(), fill.TokenB.Hex())
 
 		if l.commOpts.Develop {
 			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
@@ -335,7 +359,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 	evt.Blocknumber = contractData.BlockNumber
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s -> %s", evt.Owner.Hex(), evt.Cutoff.String())
+		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
@@ -345,6 +369,7 @@ func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.Eve
 
 func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
 	contractData := input.(ContractData)
+
 	if len(contractData.Topics) < 3 {
 		return fmt.Errorf("extractor,token transfer event indexed fields number error")
 	}

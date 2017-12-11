@@ -20,7 +20,6 @@ package dao
 
 import (
 	"fmt"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -68,7 +67,6 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenS = src.TokenS.Hex()
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
-	f.Market, _ = util.WrapMarketByAddress(f.TokenS, f.TokenB)
 
 	return nil
 }

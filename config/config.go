@@ -78,7 +78,7 @@ type GlobalConfig struct {
 	OrderManager   OrderManagerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
-	Contract	   ContractOptions
+	Contract       ContractOptions
 }
 
 type JsonrpcOptions struct {
@@ -86,10 +86,9 @@ type JsonrpcOptions struct {
 }
 
 type ContractOptions struct {
-	Versions []string
+	Versions  []string
 	Addresses []string
 }
-
 
 func (c *GlobalConfig) defaultConfig() {
 
@@ -153,11 +152,13 @@ type MinerOptions struct {
 type OrderManagerOptions struct {
 	TickerDuration int
 	BlockPeriod    int
+	AccountPeriod  int
 }
 
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee int64
+		MaxPrice  int64
 	}
 }
 
@@ -167,6 +168,8 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
+	Hostname string
+	Port string
 	User        string
 	Password    string
 	DbName      string

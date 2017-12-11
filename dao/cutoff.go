@@ -85,3 +85,8 @@ func (s *RdsServiceImpl) FindValidCutoffEvents() ([]CutOffEvent, error) {
 
 	return list, err
 }
+
+func (s *RdsServiceImpl) UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {
+	item := map[string]interface{}{"tx_hash": txhash.Hex(), "block_number": blockNumber.Int64(), "cutoff": cutoff.Int64(), "create_time": createTime}
+	return s.db.Model(&CutOffEvent{}).Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Update(item).Error
+}

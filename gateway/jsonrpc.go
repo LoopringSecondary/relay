@@ -127,8 +127,8 @@ type OrderJsonResult struct {
 }
 
 type PriceQuote struct {
-	Currency string `json:"currency"`
-	Tokens [] TokenPrice `json:"tokens"`
+	Currency string       `json:"currency"`
+	Tokens   []TokenPrice `json:"tokens"`
 }
 
 type TokenPrice struct {
@@ -270,7 +270,7 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 		return dao.PageResult{}, nil
 	}
 
-	result := dao.PageResult{PageIndex:res.PageIndex, PageSize:res.PageSize, Total:res.Total, Data:make([]interface{}, 0)}
+	result := dao.PageResult{PageIndex: res.PageIndex, PageSize: res.PageSize, Total: res.Total, Data: make([]interface{}, 0)}
 
 	for _, f := range res.Data {
 		fill := f.(dao.FillEvent)
@@ -302,7 +302,7 @@ func (j *JsonrpcServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageRes
 
 func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
 	account := j.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
-	ethBalance := market.Balance{Token:"ETH", Balance:big.NewInt(0)}
+	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := j.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)

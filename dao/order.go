@@ -21,7 +21,6 @@ package dao
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -49,7 +48,7 @@ type Order struct {
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
-	BlockNumber           int64   `gorm:"column:block_number;type:bigint"`
+	UpdatedBlock          int64   `gorm:"column:updated_block;type:bigint"`
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
@@ -87,15 +86,15 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
-	if state.BlockNumber != nil {
-		o.BlockNumber = state.BlockNumber.Int64()
+	if state.UpdatedBlock != nil {
+		o.UpdatedBlock = state.UpdatedBlock.Int64()
 	}
 	o.Status = uint8(state.Status)
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
 	o.BroadcastTime = state.BroadcastTime
-	o.Market, _ = util.WrapMarketByAddress(o.TokenB, o.TokenS)
+
 	return nil
 }
 
@@ -128,7 +127,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
 
-	state.BlockNumber = big.NewInt(o.BlockNumber)
+	state.UpdatedBlock = big.NewInt(o.UpdatedBlock)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
 
@@ -142,6 +141,10 @@ func (s *RdsServiceImpl) GetOrderByHash(orderhash common.Hash) (*Order, error) {
 }
 
 func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error {
+	if len(filterOrderhashs) == 0 {
+		return nil
+	}
+
 	err := s.db.Model(&Order{}).
 		Where("order_hash in (?)", filterOrderhashs).
 		Update("miner_block_mark", blockNumber).Error
@@ -200,7 +203,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
-	err = s.db.Where("block_number between ? and ?", from, to).Find(&list).Error
+	err = s.db.Where("updated_block between ? and ?", from, to).Find(&list).Error
 
 	return list, err
 }
@@ -227,9 +230,8 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 }
 
 func (s *RdsServiceImpl) SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error {
-	err := s.db.Model(&Order{}).Where("create_time < (?)", cutoffTime.Int64()).
-		Where("owner = (?)", owner.Hex()).
-		Update("status", types.ORDER_CUTOFF).Error
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	err := s.db.Model(&Order{}).Where("create_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 
@@ -287,7 +289,7 @@ func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.Ord
 		"status":         uint8(status),
 		"dealt_amount_s": dealtAmountS.String(),
 		"dealt_amount_b": dealtAmountB.String(),
-		"block_number":   blockNumber.String(),
+		"updated_block":  blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }
@@ -297,7 +299,7 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"status":             uint8(status),
 		"cancelled_amount_s": cancelledAmountS.String(),
 		"cancelled_amount_b": cancelledAmountB.String(),
-		"block_number":       blockNumber.String(),
+		"updated_block":      blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }

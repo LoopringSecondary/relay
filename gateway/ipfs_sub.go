@@ -163,8 +163,12 @@ func (p *subProxy) listen() {
 		for {
 			record, err := p.iterator.Next()
 			if err != nil {
-				log.Errorf("ipfs sub,iterator next err:%s", err.Error())
-				continue
+				if err.Error() == "EOF" {
+					log.Fatalf("ipfs sub,ipfs client shut down!")
+				} else {
+					log.Errorf("ipfs sub,iterator next err:%s", err.Error())
+					continue
+				}
 			}
 
 			data := record.Data()

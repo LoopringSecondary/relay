@@ -56,19 +56,17 @@ func (c *CutoffCache) Add(event *types.CutoffEvent) error {
 
 	nowtime := time.Now().Unix()
 	if event.Cutoff.Cmp(big.NewInt(nowtime)) < 0 {
-		return fmt.Errorf("cutoff cache,invalid cutoff time:%d", nowtime)
+		return fmt.Errorf("cutoff cache,cutoff time:%s < nowtime:%d", event.Cutoff.String(), nowtime)
 	}
 
-	var (
-		model dao.CutOffEvent
-		err   error
-	)
+	var err error
 
+	model := &dao.CutOffEvent{}
 	model.ConvertDown(event)
 	if _, ok := c.cache[event.Owner]; !ok {
 		err = c.rds.Add(model)
 	} else {
-		err = c.rds.Save(model)
+		err = c.rds.UpdateCutoffByProtocolAndOwner(event.ContractAddress, event.Owner, event.TxHash, event.Blocknumber, event.Cutoff, event.Time)
 	}
 
 	if err != nil {
