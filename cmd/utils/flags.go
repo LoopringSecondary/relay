@@ -34,7 +34,7 @@ var (
 		Name:  "unlocks",
 		Usage: "the list of accounts to unlock",
 	}
-	passwordsFlag = cli.StringFlag{
+	PasswordsFlag = cli.StringFlag{
 		Name:  "passwords",
 		Usage: "the file contains passwords used to unlock accounts ",
 	}
@@ -48,7 +48,7 @@ func GlobalFlags() []cli.Flag {
 		},
 		ModeFlag,
 		UnlockFlag,
-		//passwordsFlag,
+		PasswordsFlag,
 	}
 }
 

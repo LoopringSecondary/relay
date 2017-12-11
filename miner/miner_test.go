@@ -97,25 +97,14 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 
 func TestPrepareTestData(t *testing.T) {
 	test.PrepareTestData()
-	//ks := keystore.NewKeyStore("/Users/yuhongyu/myeth/data/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
-	////todo:
-	//owner := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
-	//ks.Unlock(owner, "1")
-	//if bs,err := ks.SignHash(owner, common.FromHex("0x585c8da34ce874803ecbede5baf6b5d97d3f9cbd2ab94de042bae3eaf63e73c9")); nil != err {
-	//	t.Error(err)
-	//} else {
-	//	t.Log(common.ToHex(bs))
-	//}
 }
 
 func TestAllowance(t *testing.T) {
 	test.AllowanceToLoopring()
+	//b := new(big.Int)
+	//b.SetString("18428729675200069633", 0)
+	//println(common.Bytes2Hex(b.Bytes()))
+	//test.Tokens()
 }
-
-func TestB(t *testing.T) {
-	suffix := "000000000000000000"
-	bi := new(big.Int)
-	bi.SetString("88000"+suffix, 0)
-	println(common.ToHex(bi.Bytes()))
-
-}
+//18428729675200069633
+//9223372036854775807

@@ -181,7 +181,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		big.NewInt(0),
-		big.NewInt(1000000), //gas,
+			gas,
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
@@ -202,7 +202,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contr
 					return "", err
 				}
 			}
-			gas.Add(gas, big.NewInt(int64(10000)))
+			gas.Add(gas, big.NewInt(int64(1000)))
 			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
 		}
 	}
