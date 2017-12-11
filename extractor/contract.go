@@ -32,7 +32,6 @@ import (
 func (l *ExtractorServiceImpl) loadContract() {
 	l.events = make(map[common.Hash]ContractData)
 	l.protocols = make(map[common.Address]string)
-	l.ringmineds = make(map[common.Hash]bool)
 
 	l.loadProtocolAddress()
 	l.loadErc20Contract()
@@ -112,7 +111,6 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 		switch contract.Name {
 		case RINGMINED_EVT_NAME:
-			l.ringmineds[contract.Id] = true
 			contract.Event = &ethaccessor.RingMinedEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleRingMinedEvent}
 		case CANCEL_EVT_NAME:
@@ -125,7 +123,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		l.events[contract.Id] = contract
-		log.Debugf("extracotr,contract event name %s, key %s", contract.Name, contract.Id.Hex())
+		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }
 
@@ -149,7 +147,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		l.events[contract.Id] = contract
-		log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Id.Hex())
+		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }
 
@@ -173,7 +171,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		l.events[contract.Id] = contract
-		log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Id.Hex())
+		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }
 
@@ -190,7 +188,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 		eventemitter.On(contract.Id.Hex(), watcher)
 
 		l.events[contract.Id] = contract
-		log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Id.Hex())
+		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }
 
@@ -214,6 +212,6 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		l.events[contract.Id] = contract
-		log.Debugf("extracotr,contract event name %s -> key:%s", contract.Name, contract.Id.Hex())
+		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }

@@ -56,7 +56,6 @@ type ExtractorServiceImpl struct {
 	lock         sync.RWMutex
 	events       map[common.Hash]ContractData
 	protocols    map[common.Address]string
-	ringmineds   map[common.Hash]bool
 	syncComplete bool
 }
 
