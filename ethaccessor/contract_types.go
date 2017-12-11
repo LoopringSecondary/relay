@@ -221,6 +221,36 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
+type WethDepositMethod struct {
+	From  common.Address
+	To    common.Address
+	Value *big.Int
+}
+
+func (e *WethDepositMethod) ConvertDown() *types.WethDepositMethod {
+	evt := &types.WethDepositMethod{}
+	evt.From = e.From
+	evt.To = e.To
+	evt.Value = e.Value
+
+	return evt
+}
+
+type WethWithdrawalMethod struct {
+	From  common.Address
+	To    common.Address
+	Value *big.Int `fieldName:"amount"`
+}
+
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethod {
+	evt := &types.WethWithdrawalMethod{}
+	evt.From = e.From
+	evt.To = e.To
+	evt.Value = e.Value
+
+	return evt
+}
+
 type ProtocolAddress struct {
 	Version         string
 	ContractAddress common.Address

@@ -158,6 +158,26 @@ type RingMinedEvent struct {
 	IsRinghashReserved bool
 }
 
+type WethDepositMethod struct {
+	From            common.Address
+	To              common.Address
+	ContractAddress common.Address
+	TxHash          common.Hash
+	Value           *big.Int
+	Time            *big.Int
+	Blocknumber     *big.Int
+}
+
+type WethWithdrawalMethod struct {
+	From            common.Address
+	To              common.Address
+	ContractAddress common.Address
+	TxHash          common.Hash
+	Value           *big.Int
+	Time            *big.Int
+	Blocknumber     *big.Int
+}
+
 type RingSubmitFailedEvent struct {
 	RingHash common.Hash
 	Err      error
