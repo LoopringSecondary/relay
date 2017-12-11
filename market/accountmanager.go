@@ -156,7 +156,11 @@ func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*bi
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(util.ContractVersionConfig[spender]), "latest")
+	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig[spender]))
+	if err != nil {
+		return big.NewInt(0), errors.New("invalid spender address")
+	}
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
