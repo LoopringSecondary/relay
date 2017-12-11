@@ -19,13 +19,10 @@
 package ethaccessor_test
 
 import (
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/bak/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,37 +30,15 @@ import (
 	"testing"
 )
 
-func TestNewAccessor(t *testing.T) {
-	cfg := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/relay.toml")
-	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
-	if nil != err {
-		t.Log(err.Error())
-	}
-	var b types.Big
-	if err := accessor.Call(&b, "eth_getBalance", common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259"), "pending"); nil != err {
-		t.Error(err.Error())
-	}
-
-	t.Log(b.BigInt().String())
-
-	balance, _ := accessor.Erc20Balance(common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"), common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"), "pending")
-	t.Log(balance.String())
-
-	reqs := []*ethaccessor.BatchErc20Req{&ethaccessor.BatchErc20Req{
-		Owner:          common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2"),
-		Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-		BlockParameter: "pending",
-	},
-		&ethaccessor.BatchErc20Req{
-			Owner:          common.HexToAddress("0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"),
-			Token:          common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e"),
-			BlockParameter: "pending",
-		}}
-	accessor.BatchErc20BalanceAndAllowance(reqs)
-
-	t.Log("balance", reqs[0].Balance.BigInt().String())
-	t.Log("balance", reqs[1].Balance.BigInt().String())
-}
+const (
+	version              = "v_0_1"
+	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
+	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
+	registerTokenSymbol  = "wrdn"
+	balanceTokenAddress  = ""
+	balanceOwner		 = ""
+)
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	c := test.LoadConfig()
@@ -82,13 +57,31 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	t.Log(balance.String())
 }
 
-const (
-	version              = "v_0_1"
-	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
-	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
-	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
-	registerTokenSymbol  = "wrdn"
-)
+func TestEthNodeAccessor_Approval(t *testing.T) {
+	// load config
+	c := test.LoadConfig()
+
+	// unlock account
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	ks.Unlock(account, "1")
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	// call register token
+	//accessor, _ := test.GenerateAccessor(c)
+	//protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
+	//callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, accessor.ProtocolAddresses[protocol].)
+	//if result, err := callMethod(account, "registerToken", nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
+	//	t.Fatalf("call method registerToken error:%s", err.Error())
+	//} else {
+	//	t.Logf("registerToken result:%s", result)
+	//}
+}
+
+func TestEthNodeAccessor_CheckApproval(t *testing.T) {
+
+}
 
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (

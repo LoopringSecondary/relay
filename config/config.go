@@ -171,7 +171,7 @@ type MysqlOptions struct {
 	User        string
 	Password    string
 	DbName      string
-	Loc         string
+	Url 		string
 	TablePrefix string
 	Debug       bool
 }
