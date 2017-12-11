@@ -213,7 +213,12 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	spender := event.Spender.String()
 	address := event.Owner.String()
 
-	if !util.IsSupportedContract(spender) {
+	spenderAddress, err := a.accessor.GetSenderAddress(event.Spender)
+	if err != nil {
+		return errors.New("invalid spender address")
+	}
+
+	if strings.ToLower(spenderAddress.Hex()) != strings.ToLower(event.Spender.Hex()) {
 		return errors.New("unsupported contract address : " + spender)
 	}
 
