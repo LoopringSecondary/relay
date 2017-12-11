@@ -43,7 +43,7 @@ type Balance struct {
 }
 
 type Allowance struct {
-	contractVersion string
+	//contractVersion string
 	token           string
 	allowance       *big.Int
 }
@@ -105,7 +105,9 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 				account.Balances[k] = balance
 			}
 
-			allowance := Allowance{contractVersion: contractVersion, token: k}
+			allowance := Allowance{
+				//contractVersion: contractVersion,
+				token: k }
 
 			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
@@ -164,7 +166,8 @@ func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) 
 }
 
 func buildAllowanceKey(version, token string) string {
-	return version + "_" + token
+	//return version + "_" + token
+	return token
 }
 
 func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) error {
@@ -193,8 +196,7 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 			} else {
 				balance.Balance = amount
 			}
-			account.Balances[tokenAlias] = balance
-		} else {
+			account.Balances[tokenAlias] = balance } else {
 			oldBalance := balance.Balance
 			if isAdd {
 				balance.Balance = oldBalance.Sub(oldBalance, event.Value)
@@ -213,7 +215,8 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	spender := event.Spender.String()
 	address := event.Owner.String()
 
-	spenderAddress, err := a.accessor.GetSenderAddress(event.Spender)
+	// 这里只能根据loopring的合约获取了
+	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
 	if err != nil {
 		return errors.New("invalid spender address")
 	}
@@ -225,7 +228,10 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
-		allowance := Allowance{contractVersion: spender, token: tokenAlias, allowance: event.Value}
+		allowance := Allowance{
+			//contractVersion: spender,
+			token: tokenAlias,
+			allowance: event.Value}
 		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}
