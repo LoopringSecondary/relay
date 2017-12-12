@@ -133,9 +133,9 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(h[:])), nil
 }
 
-/////////// Owner
+/////////// Address
 
-// Owner represents the 20 byte address of an Ethereum account.
+// Address represents the 20 byte address of an Ethereum account.
 type Address [AddressLength]byte
 
 func BytesToAddress(b []byte) Address {
@@ -223,7 +223,7 @@ func (a Address) MarshalText() ([]byte, error) {
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedText("Owner", input, a[:])
+	return hexutil.UnmarshalFixedText("Address", input, a[:])
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
@@ -231,7 +231,7 @@ func (a *Address) UnmarshalJSON(input []byte) error {
 	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
 }
 
-// UnprefixedHash allows marshaling an Owner without 0x prefix.
+// UnprefixedHash allows marshaling an Address without 0x prefix.
 type UnprefixedAddress Address
 
 // UnmarshalText decodes the address from hex. The 0x prefix is optional.

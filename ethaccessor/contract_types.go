@@ -20,6 +20,7 @@ package ethaccessor
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -219,6 +220,85 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	evt.Number = e.Number
 
 	return evt
+}
+
+/*
+type Order struct {
+	Protocol              common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
+	TokenS                common.Address `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
+	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
+	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
+	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
+	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"`
+	Ttl                   *big.Int       `json:"ttl" gencodec:"required"` // 订单过期时间
+	Salt                  *big.Int       `json:"salt" gencodec:"required"`
+	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
+	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
+	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
+	V                     uint8          `json:"v" gencodec:"required"`
+	R                     Bytes32        `json:"r" gencodec:"required"`
+	S                     Bytes32        `json:"s" gencodec:"required"`
+	Price                 *big.Rat       `json:"price"`
+	Owner                 common.Address `json:"owner"`
+	Hash                  common.Hash    `json:"hash"`
+}
+}
+*/
+
+type SubmitRingMethod struct {
+	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
+	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
+	Uint8ArgsList      [][2]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList,feeSelectionList
+	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList"`
+	VList              []uint8             `fieldName:"vList"`
+	RList              [][32]uint8         `fieldName:"rList"`
+	SList              [][32]uint8         `fieldName:"sList"`
+	RingMiner          common.Address      `fieldName:"ringminer"`
+	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
+}
+
+// should add protocol, miner, feeRecipient
+func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
+	var list []*types.Order
+	length := len(m.AddressList)
+
+	// length of v.s.r list = length  +  1, they contained ring'vsr
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || length != len(m.VList)-1 || length != len(m.SList)-1 || length != len(m.RList)-1 || length < 2 {
+		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
+	}
+
+	for i := 0; i < length; i++ {
+		var order types.Order
+
+		order.Owner = m.AddressList[i][0]
+		order.TokenS = m.AddressList[i][1]
+		if i == length-1 {
+			order.TokenB = m.AddressList[0][1]
+		} else {
+			order.TokenB = m.AddressList[i+1][1]
+		}
+
+		order.AmountS = m.UintArgsList[i][0]
+		order.AmountB = m.UintArgsList[i][1]
+		order.Timestamp = m.UintArgsList[i][2]
+		order.Ttl = m.UintArgsList[i][3]
+		order.Salt = m.UintArgsList[i][4]
+		order.LrcFee = m.UintArgsList[i][5]
+
+		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
+		// todo ???
+		order.LrcFee = big.NewInt(int64(m.Uint8ArgsList[i][1]))
+
+		order.BuyNoMoreThanAmountB = m.BuyNoMoreThanBList[i]
+
+		order.V = m.VList[i]
+		order.R = m.RList[i]
+		order.S = m.SList[i]
+
+		list = append(list, &order)
+	}
+
+	return list, nil
 }
 
 type WethDepositMethod struct {
