@@ -170,13 +170,17 @@ type RingSubmitInfo struct {
 	OrdersCount      *big.Int
 	ProtocolData     []byte
 	ProtocolGas      *big.Int
+	ProtocolUsedGas  *big.Int
 	ProtocolGasPrice *big.Int
+
 	RegistryData     []byte
 	RegistryGas      *big.Int
+	RegistryUsedGas  *big.Int
 	RegistryGasPrice *big.Int
-	SubmitTxHash     common.Hash
-	RegistryTxHash   common.Hash
-	Received         *big.Rat
+
+	SubmitTxHash   common.Hash
+	RegistryTxHash common.Hash
+	Received       *big.Rat
 }
 
 type RingSubmitInputs struct {
