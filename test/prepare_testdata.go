@@ -107,7 +107,8 @@ func PrepareTestData() {
 	for _, tokenAddr := range tokens {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
-			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
+			println("###", acc.Address.Hex())
+			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(int64(0))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -121,7 +122,7 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 		tokens1 = tokens
 	}
 	if nil == orderAccounts1 {
-		orderAccounts = orderAccounts1
+		orderAccounts1 = orderAccounts
 	}
 	for _, tokenAddr := range tokens1 {
 		callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddr)
@@ -170,7 +171,11 @@ func init() {
 	for _, accTmp := range testData.Accounts {
 		account := accounts.Account{Address: common.HexToAddress(accTmp.Address)}
 		orderAccounts = append(orderAccounts, account)
-		ks.Unlock(account, accTmp.Passphrase)
+		if err := ks.Unlock(account, accTmp.Passphrase); nil != err {
+			println("===", accTmp.Address, err.Error())
+		} else {
+			println("(((((", accTmp.Address)
+		}
 	}
 
 	// set supported tokens
@@ -182,15 +187,7 @@ func init() {
 	crypto.Initialize(c)
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
-	tokens = append(tokens, common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51"),
-		common.HexToAddress("0xaA85Ef3E19b3502C72CE1e04FD00fcAa2b9daF85"),
-		common.HexToAddress("0xDa54CD1F5c842246887306A83a7Db837214aaD58"),
-		common.HexToAddress("0xe043E725058e10986d77C0e27d50462A3C6b1A90"),
-		common.HexToAddress("0xe98040Ac31274Ac045EC7b592eb8DcB3c0Bc359C"),
-		common.HexToAddress("0x7599aa3D5B9019cFae7c934f5d42d18891cb3CAf"),
-		common.HexToAddress("0x58Ab00E351097883632b2CA0bEc8FCa2f3be7C16"),
-		common.HexToAddress("0xc9565B2951114e374999eefe80d4E25F4B2eD39C"),
-	)
+	tokens = []common.Address{common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")}
 }
 
 //setbalance after deploy token by protocol

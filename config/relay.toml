@@ -25,11 +25,11 @@ account_period = 100
 	    encode_time = "iso8601"
 
 [mysql]
-    hostname = "ec2-52-199-80-249.ap-northeast-1.compute.amazonaws.com"
+    hostname = "127.0.0.1"
     port = "3306"
     user = "root"
     password = "111111"
-    db_name = "loopring_miner"
+    db_name = "loopring_order_manager"
     table_prefix = "lpr_"
     debug = false
 
@@ -38,9 +38,9 @@ account_period = 100
     addresses = ["0xc01172a87f6cc20e1e3b9ad13a9e715fbc2d5aa9", "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D"]
 
 [ipfs]
-    server = "ec2-52-199-80-249.ap-northeast-1.compute.amazonaws.com"
+    server = "127.0.0.1"
     port = 8080
-    listen_topics = ["test_topic_listen_fk"]
+    listen_topics = ["test_topic_broad_fk"]
     broadcast_topics = ["test_topic_broad_fk"]
 
 [gateway]
@@ -52,7 +52,7 @@ account_period = 100
 
 [common]
     filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
-    default_block_number = 2211
+    default_block_number = 17719
     develop = true
     save_event_log = true
     erc20Abi = "[{\"constant\":false,\"inputs\":[{\"name\":\"spender\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"approve\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalSupply\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"from\",\"type\":\"address\"},{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transferFrom\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"who\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"to\",\"type\":\"address\"},{\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"transfer\",\"outputs\":[{\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"spender\",\"type\":\"address\"}],\"name\":\"allowance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"spender\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Approval\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"Transfer\",\"type\":\"event\"}]"
@@ -67,9 +67,9 @@ account_period = 100
 
 [miner]
     ringMaxLength = 4
-    feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
-    miner = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
-    ifRegistryRingHash = true
+    feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
+    miner = "0x750aD4351bB728ceC7d639A9511F9D6488f1E259"
+    ifRegistryRingHash = false
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
     gas_limit = 150000000
