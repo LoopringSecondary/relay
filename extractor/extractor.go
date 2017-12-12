@@ -293,6 +293,30 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	return nil
 }
 
+func (l *ExtractorServiceImpl) handleCancelOrderMethod(input eventemitter.EventData) error {
+	contract := input.(MethodData)
+	cancel := contract.Method.(*ethaccessor.CancelOrderMethod)
+
+	data := hexutil.MustDecode("0x" + contract.Input[10:])
+	if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
+		return fmt.Errorf("extractor,unpack submitRing method error:%s", err.Error())
+	}
+
+	order, err := cancel.ConvertDown()
+	if err != nil {
+		return fmt.Errorf("extractor,handle submitRing convert order data error:%s", err.Error())
+	}
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor,external order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
+	}
+
+	order.Protocol = common.HexToAddress(contract.ContractAddress)
+	eventemitter.Emit(eventemitter.Gateway, order)
+
+	return nil
+}
+
 func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 

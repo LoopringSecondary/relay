@@ -106,6 +106,7 @@ const (
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
 	SUBMITRING_METHOD_NAME       = "submitRing"
+	CANCELORDER_METHOD_NAME      = "cancelOrder"
 	WETH_DEPOSIT_METHOD_NAME     = "deposit"
 	WETH_WITHDRAWAL_METHOD_NAME  = "withdraw"
 )
@@ -157,17 +158,23 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 	}
 
 	for name, method := range l.accessor.ProtocolImplAbi.Methods {
-		if name != SUBMITRING_METHOD_NAME {
+		if name != SUBMITRING_METHOD_NAME && name != CANCELORDER_METHOD_NAME {
 			continue
 		}
 
 		contract := newMethodData(&method, l.accessor.ProtocolImplAbi)
-		contract.Method = &ethaccessor.SubmitRingMethod{}
-
 		watcher := &eventemitter.Watcher{}
-		watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
-		eventemitter.On(contract.Id, watcher)
 
+		switch contract.Name {
+		case SUBMITRING_METHOD_NAME:
+			contract.Method = &ethaccessor.SubmitRingMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
+		case CANCELORDER_METHOD_NAME:
+			contract.Method = &ethaccessor.CancelOrderMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleCancelOrderMethod}
+		}
+
+		eventemitter.On(contract.Id, watcher)
 		l.methods[contract.Id] = contract
 		log.Debugf("extracotr,contract method name:%s -> key:%s", contract.Name, contract.Id)
 	}
