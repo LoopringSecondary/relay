@@ -150,6 +150,8 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 }
 
 func init() {
+	Initialize()
+
 	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/" + "/test/testdata.toml"
 
 	io, err := os.Open(file)
@@ -162,7 +164,6 @@ func init() {
 		panic(err)
 	}
 
-	cfg := loadConfig()
 	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	creator = accounts.Account{Address: common.HexToAddress(testData.Creator.Address)}
@@ -178,15 +179,13 @@ func init() {
 	}
 
 	// set supported tokens
-	rds := GenerateDaoService(cfg)
-	InitialMarketUtil(rds)
 	for _, token := range util.AllTokens {
 		tokens = append(tokens, token.Protocol)
 	}
 
 	c := crypto.NewCrypto(false, ks)
 	crypto.Initialize(c)
-	accessor, err = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
+	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
 	tokens = []common.Address{common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")}
 }

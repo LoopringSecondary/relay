@@ -91,6 +91,7 @@ type MethodData struct {
 	BlockNumber     *big.Int
 	Time            *big.Int
 	Value           *big.Int
+	Input           string
 }
 
 const (
@@ -104,6 +105,7 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
+	SUBMITRING_METHOD_NAME       = "submitRing"
 	WETH_DEPOSIT_METHOD_NAME     = "deposit"
 	WETH_WITHDRAWAL_METHOD_NAME  = "withdraw"
 )
@@ -153,6 +155,22 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 		l.events[contract.Id] = contract
 		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
+
+	for name, method := range l.accessor.ProtocolImplAbi.Methods {
+		if name != SUBMITRING_METHOD_NAME {
+			continue
+		}
+
+		contract := newMethodData(&method, l.accessor.ProtocolImplAbi)
+		contract.Method = &ethaccessor.SubmitRingMethod{}
+
+		watcher := &eventemitter.Watcher{}
+		watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingMethod}
+		eventemitter.On(contract.Id, watcher)
+
+		l.methods[contract.Id] = contract
+		log.Debugf("extracotr,contract method name:%s -> key:%s", contract.Name, contract.Id)
+	}
 }
 
 func (l *ExtractorServiceImpl) loadErc20Contract() {
@@ -190,7 +208,7 @@ func (l *ExtractorServiceImpl) loadWethContract() {
 
 		switch contract.Name {
 		case WETH_DEPOSIT_METHOD_NAME:
-			contract.Method = &ethaccessor.WethDepositMethod{}
+			// weth deposit without any inputs,use transaction.value as input
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleWethDepositMethod}
 		case WETH_WITHDRAWAL_METHOD_NAME:
 			contract.Method = &ethaccessor.WethWithdrawalMethod{}
