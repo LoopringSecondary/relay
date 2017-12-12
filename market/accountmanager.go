@@ -148,8 +148,9 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		err = a.updateAllowance(*event)
-		log.Error(err.Error())
+		if err = a.updateAllowance(*event); nil != err {
+			log.Error(err.Error())
+		}
 	}
 	return
 }
