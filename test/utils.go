@@ -209,7 +209,7 @@ func InitialMarketUtil(rds dao.RdsService) {
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + config.ConfigFile
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 
