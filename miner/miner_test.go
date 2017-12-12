@@ -100,11 +100,11 @@ func TestPrepareTestData(t *testing.T) {
 }
 
 func TestAllowance(t *testing.T) {
-	test.AllowanceToLoopring()
+	test.AllowanceToLoopring(nil, nil)
 	//b := new(big.Int)
 	//b.SetString("18428729675200069633", 0)
 	//println(common.Bytes2Hex(b.Bytes()))
-	//test.Tokens()
+
 }
 //18428729675200069633
 //9223372036854775807

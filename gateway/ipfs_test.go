@@ -132,7 +132,7 @@ func TestPrepareProtocol(t *testing.T) {
 }
 
 func TestAllowance(t *testing.T) {
-	test.AllowanceToLoopring()
+	test.AllowanceToLoopring(nil, nil)
 }
 
 func pubMessage(sh *shell.Shell, data string) {
