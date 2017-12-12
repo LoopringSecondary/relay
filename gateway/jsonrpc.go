@@ -206,7 +206,7 @@ func (j *JsonrpcServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err e
 
 func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
-	mkt := strings.ToLower(query.Market)
+	mkt := strings.ToUpper(query.Market)
 	protocol := query.ContractVersion
 	length := query.Length
 
@@ -220,7 +220,9 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	}
 
 	a, b := util.UnWrap(mkt)
-	if !util.IsSupportedToken(a) || !util.IsSupportedToken(b) {
+
+	_, err = util.WrapMarket(a, b)
+	if err != nil {
 		err = errors.New("unsupported market type")
 		return
 	}
@@ -311,7 +313,7 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 }
 
 func (j *JsonrpcServiceImpl) GetCutoff(address, contractVersion, blockNumber string) (result string, err error) {
-	cutoff, err := j.ethForwarder.Accessor.GetCutoff(common.HexToAddress(address), common.HexToAddress(util.ContractVersionConfig[contractVersion]), blockNumber)
+	cutoff, err := j.ethForwarder.Accessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[contractVersion]), common.HexToAddress(address), blockNumber)
 	if err != nil {
 		return "", err
 	}
