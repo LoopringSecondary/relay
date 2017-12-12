@@ -80,17 +80,18 @@ func TestRing(t *testing.T) {
 	tokenAddressA := common.HexToAddress("0x88699e7fee2da0462981a08a15a3b940304cc516")
 	tokenAddressB := common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")
 
-	testAcc1 := entity.Accounts[0]
-	testAcc2 := entity.Accounts[1]
-
+	//testAcc1 := entity.Accounts[0]
+	//testAcc2 := entity.Accounts[1]
+	testAcc1 := accounts.Account{Address:common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	testAcc2 := accounts.Account{Address:common.HexToAddress("0x251f3bd45b06a8b29cb6d171131e192c1254fec1")}
 	// get keystore and unlock account
 	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	acc1 := accounts.Account{Address: testAcc1.Address}
 	acc2 := accounts.Account{Address: testAcc2.Address}
 
-	ks.Unlock(acc1, testAcc1.Passphrase)
-	ks.Unlock(acc2, testAcc2.Passphrase)
+	ks.Unlock(acc1, "1")
+	ks.Unlock(acc2, "1")
 
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
