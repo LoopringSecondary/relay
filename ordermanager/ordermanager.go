@@ -141,21 +141,46 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state.CancelledAmountS = big.NewInt(0)
 	state.CancelledAmountB = big.NewInt(0)
 
-	model := &dao.Order{}
-	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
-
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
-	if err := model.ConvertDown(state); err != nil {
-		log.Debugf("order manager,handle gateway order,convert order state to order error:%s", err.Error())
-		return err
-	}
-	if err := om.rds.Add(model); err != nil {
-		log.Debugf("order manager,handle gateway order,insert order error:%s", err.Error())
-		return err
+	// order already exist in dao/order
+	if _, err := om.rds.GetOrderByHash(state.RawOrder.Hash); err == nil {
+		return nil
 	}
 
-	return nil
+	// get order cancelled or filled amount from chain
+	if cancelOrFilledAmount, err := om.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, "latest"); err != nil {
+		return fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
+	} else {
+		state.CancelledAmountS = cancelOrFilledAmount
+	}
+
+	// check order finished status
+	finished := om.IsOrderFullFinished(state)
+	state.SettleFinishedStatus(finished)
+
+	// check allowance and balance
+	var markBlockNumber int64 = 0
+	if state.Status != types.ORDER_FINISHED {
+		spender, _ := om.accessor.GetSenderAddress(state.RawOrder.Protocol)
+		req := generateErc20Req(state, spender)
+		if err := om.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{req}); err != nil {
+			return fmt.Errorf("order manager,geteway new order,batchErc20BalanceAndAllowance error:%s", err.Error())
+		}
+		if req.AllowanceErr != nil || req.BalanceErr != nil {
+			return fmt.Errorf("order manager,gateway new order,order %s ab ")
+		}
+		if ok := om.IsFundInsufficient(state); ok {
+			markBlockNumber = state.UpdatedBlock.Int64() + int64(om.options.AccountPeriod)
+		}
+	}
+
+	model := &dao.Order{}
+	model.MinerBlockMark = markBlockNumber
+	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	model.ConvertDown(state)
+
+	return om.rds.Add(model)
 }
 
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
@@ -371,28 +396,19 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	}
 	var listBeforeCheckAccount []*types.OrderState
 	for _, v := range modelList {
-		//println("==========modelList",v.OrderHash, v.TokenS, v.TokenB, v.AmountS, v.AmountB)
 		state := &types.OrderState{}
 		v.ConvertUp(state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
 			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
-
 	}
 
 	// 批量查询订单账户的余额及授权
 	var erc20ReqList []*ethaccessor.BatchErc20Req
 	for _, v := range listBeforeCheckAccount {
-		batchReq := ethaccessor.BatchErc20Req{}
 		spender, _ := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
-		//if err != nil {
-		//	continue
-		//}
-		batchReq.Spender = spender
-		batchReq.Owner = v.RawOrder.Owner
-		batchReq.Token = v.RawOrder.TokenS
-		batchReq.BlockParameter = "latest"
-		erc20ReqList = append(erc20ReqList, &batchReq)
+		batchReq := generateErc20Req(v, spender)
+		erc20ReqList = append(erc20ReqList, batchReq)
 	}
 	if len(erc20ReqList) == 0 {
 		return list
@@ -409,10 +425,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		if req.BalanceErr != nil || req.AllowanceErr != nil {
 			continue
 		}
-		cancelOrFilled := new(big.Int).Add(v.DealtAmountS, v.CancelledAmountS)
-		available := new(big.Int).Sub(v.RawOrder.AmountS, cancelOrFilled)
-		v.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
-
+		calculateAmountS(v, req)
 		if om.IsFundInsufficient(v) {
 			accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
 		} else {

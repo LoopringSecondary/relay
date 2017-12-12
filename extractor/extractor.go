@@ -287,6 +287,7 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 			log.Debugf("extractor,external order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
 		}
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
+		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
 	return nil
