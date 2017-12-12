@@ -30,11 +30,13 @@ import (
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
 func (l *ExtractorServiceImpl) loadContract() {
-	l.events = make(map[common.Hash]ContractData)
+	l.events = make(map[common.Hash]EventData)
+	l.methods = make(map[string]MethodData)
 	l.protocols = make(map[common.Address]string)
 
 	l.loadProtocolAddress()
 	l.loadErc20Contract()
+	l.loadWethContract()
 	l.loadProtocolContract()
 	l.loadTokenRegisterContract()
 	l.loadRingHashRegisteredContract()
@@ -65,7 +67,7 @@ func (l *ExtractorServiceImpl) loadProtocolAddress() {
 	}
 }
 
-type ContractData struct {
+type EventData struct {
 	Event           interface{}
 	ContractAddress string // 某个合约具体地址
 	TxHash          string // transaction hash
@@ -75,6 +77,20 @@ type ContractData struct {
 	BlockNumber     *big.Int
 	Time            *big.Int
 	Topics          []string
+}
+
+type MethodData struct {
+	Method          interface{}
+	ContractAddress string // 某个合约具体地址
+	From            string
+	To              string
+	TxHash          string // transaction hash
+	CAbi            *abi.ABI
+	Id              string
+	Name            string
+	BlockNumber     *big.Int
+	Time            *big.Int
+	Value           *big.Int
 }
 
 const (
@@ -88,13 +104,25 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
+	WETH_DEPOSIT_METHOD_NAME     = "deposit"
+	WETH_WITHDRAWAL_METHOD_NAME  = "withdraw"
 )
 
-func newContractData(event *abi.Event, cabi *abi.ABI) ContractData {
-	var c ContractData
+func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
+	var c EventData
 
 	c.Id = event.Id()
 	c.Name = event.Name
+	c.CAbi = cabi
+
+	return c
+}
+
+func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
+	var c MethodData
+
+	c.Id = common.ToHex(method.Id())
+	c.Name = method.Name
 	c.CAbi = cabi
 
 	return c
@@ -107,7 +135,7 @@ func (l *ExtractorServiceImpl) loadProtocolContract() {
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newContractData(&event, l.accessor.ProtocolImplAbi)
+		contract := newEventData(&event, l.accessor.ProtocolImplAbi)
 
 		switch contract.Name {
 		case RINGMINED_EVT_NAME:
@@ -134,7 +162,7 @@ func (l *ExtractorServiceImpl) loadErc20Contract() {
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newContractData(&event, l.accessor.Erc20Abi)
+		contract := newEventData(&event, l.accessor.Erc20Abi)
 
 		switch contract.Name {
 		case TRANSFER_EVT_NAME:
@@ -151,6 +179,30 @@ func (l *ExtractorServiceImpl) loadErc20Contract() {
 	}
 }
 
+func (l *ExtractorServiceImpl) loadWethContract() {
+	for name, method := range l.accessor.WethAbi.Methods {
+		if name != WETH_DEPOSIT_METHOD_NAME && name != WETH_WITHDRAWAL_METHOD_NAME {
+			continue
+		}
+
+		watcher := &eventemitter.Watcher{}
+		contract := newMethodData(&method, l.accessor.WethAbi)
+
+		switch contract.Name {
+		case WETH_DEPOSIT_METHOD_NAME:
+			contract.Method = &ethaccessor.WethDepositMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleWethDepositMethod}
+		case WETH_WITHDRAWAL_METHOD_NAME:
+			contract.Method = &ethaccessor.WethWithdrawalMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleWethWithdrawalMethod}
+		}
+
+		eventemitter.On(contract.Id, watcher)
+		l.methods[contract.Id] = contract
+		log.Debugf("extracotr,contract method name:%s -> key:%s", contract.Name, contract.Id)
+	}
+}
+
 func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 	for name, event := range l.accessor.TokenRegistryAbi.Events {
 		if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
@@ -158,7 +210,7 @@ func (l *ExtractorServiceImpl) loadTokenRegisterContract() {
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newContractData(&event, l.accessor.TokenRegistryAbi)
+		contract := newEventData(&event, l.accessor.TokenRegistryAbi)
 
 		switch contract.Name {
 		case TOKENREGISTERED_EVT_NAME:
@@ -181,7 +233,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 			continue
 		}
 
-		contract := newContractData(&event, l.accessor.RinghashRegistryAbi)
+		contract := newEventData(&event, l.accessor.RinghashRegistryAbi)
 		contract.Event = &ethaccessor.RingHashSubmittedEvent{}
 
 		watcher := &eventemitter.Watcher{Concurrent: false, Handle: l.handleRinghashSubmitEvent}
@@ -199,7 +251,7 @@ func (l *ExtractorServiceImpl) loadTokenTransferDelegateProtocol() {
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newContractData(&event, l.accessor.DelegateAbi)
+		contract := newEventData(&event, l.accessor.DelegateAbi)
 
 		switch contract.Name {
 		case ADDRESSAUTHORIZED_EVT_NAME:

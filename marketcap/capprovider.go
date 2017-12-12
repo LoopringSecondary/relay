@@ -116,9 +116,6 @@ func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
 }
 
 func (p *MarketCapProvider) GetMarketCapByCurrency(tokenAddress common.Address, currency LegalCurrency) *big.Rat {
-	// todo:
-	return new(big.Rat).SetInt64(int64(1))
-
 	if c, ok := p.currenciesMap[tokenAddress]; ok {
 		v := new(big.Rat)
 		switch currency {
@@ -161,7 +158,11 @@ func (p *MarketCapProvider) Start() {
 						if nil != err {
 							log.Errorf("err:%s", err.Error())
 						} else {
-							c = caps[0]
+							c.PriceCny = caps[0].PriceCny
+							c.PriceUsd = caps[0].PriceUsd
+							c.PriceBtc = caps[0].PriceBtc
+							c.Volume24HCNY = caps[0].Volume24HCNY
+							c.Volume24HUSD = caps[0].Volume24HUSD
 						}
 					}
 				}
@@ -180,7 +181,7 @@ func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
 		c := &CurrencyMarketCap{}
 		c.Address = v.Protocol
 		c.Id = v.Symbol
-		c.Name = v.Symbol
+		c.Name = v.Source
 		provider.currenciesMap[c.Address] = c
 	}
 	return provider

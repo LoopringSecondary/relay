@@ -121,6 +121,8 @@ type ProtocolOptions struct {
 
 type CommonOptions struct {
 	Erc20Abi           string
+	WethAbi            string
+	WethAddress        string
 	ProtocolImpl       ProtocolOptions `required:"true"`
 	FilterTopics       []string        `required:"true"`
 	DefaultBlockNumber *big.Int        `required:"true"`
@@ -168,12 +170,11 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
-	Hostname string
-	Port string
+	Hostname    string
+	Port        string
 	User        string
 	Password    string
 	DbName      string
-	Loc         string
 	TablePrefix string
 	Debug       bool
 }

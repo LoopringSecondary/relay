@@ -70,7 +70,7 @@ func PrepareTestData() {
 	} else {
 		if res.Int() <= 0 {
 			delegateCallMethod := accessor.ContractSendTransactionMethod(delegateAbi, delegateAddress)
-			if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, protocol); nil != err {
+			if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, nil, protocol); nil != err {
 				log.Errorf("delegate add version error:%s", err.Error())
 			} else {
 				log.Infof("delegate add version hash:%s", hash)
@@ -84,7 +84,6 @@ func PrepareTestData() {
 	tokenRegisterAbi := accessor.TokenRegistryAbi
 	tokenRegisterAddress := accessor.ProtocolAddresses[protocol].TokenRegistryAddress
 	for _, tokenAddr := range tokens {
-		println("token:", tokenAddr.Hex())
 		callMethod := accessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
 		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
@@ -92,7 +91,7 @@ func PrepareTestData() {
 		} else {
 			if res.Int() <= 0 {
 				registryMethod := accessor.ContractSendTransactionMethod(tokenRegisterAbi, tokenRegisterAddress)
-				if hash, err := registryMethod(creator, "registerToken", nil, nil, tokenAddr, "WETH"); nil != err {
+				if hash, err := registryMethod(creator, "registerToken", nil, nil, nil, tokenAddr, "WETH"); nil != err {
 					log.Errorf("token registry error:%s", err.Error())
 				} else {
 					log.Infof("token registry hash:%s", hash)
@@ -107,7 +106,7 @@ func PrepareTestData() {
 	for _, tokenAddr := range tokens {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
-			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(1000000), nil, delegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
+			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -121,9 +120,8 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 		tokens1 = tokens
 	}
 	if nil == orderAccounts1 {
-		orderAccounts1 = orderAccounts
+		orderAccounts = orderAccounts1
 	}
-
 	for _, tokenAddr := range tokens1 {
 		callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddr)
 

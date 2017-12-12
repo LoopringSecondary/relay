@@ -164,7 +164,7 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to common.Address, gas, gasPrice *big.Int, callData []byte) (string, error) {
+func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -177,11 +177,14 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if err := accessor.Call(&nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
 		return "", err
 	}
+	if value == nil {
+		value = big.NewInt(0)
+	}
 	// todo: modify gas
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
-		big.NewInt(0),
-			gas,
+		value,
+		gas,
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
@@ -192,8 +195,8 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 }
 
 //gas, gasPrice can be set to nil
-func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
-	return func(sender accounts.Account, methodName string, gas, gasPrice *big.Int, args ...interface{}) (string, error) {
+func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
@@ -203,7 +206,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contr
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
-			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, callData)
+			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, value, callData)
 		}
 	}
 }

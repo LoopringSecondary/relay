@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/patrickmn/go-cache"
 	"math/big"
+	"strings"
 )
 
 type Account struct {
@@ -42,7 +43,7 @@ type Balance struct {
 }
 
 type Allowance struct {
-	contractVersion string
+	//contractVersion string
 	token           string
 	allowance       *big.Int
 }
@@ -86,6 +87,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
+	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
 		account := accountInCache.(Account)
@@ -103,7 +105,9 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 				account.Balances[k] = balance
 			}
 
-			allowance := Allowance{contractVersion: contractVersion, token: k}
+			allowance := Allowance{
+				//contractVersion: contractVersion,
+				token: k }
 
 			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
@@ -125,26 +129,27 @@ func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 }
 
 func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {
-	event := input.(types.TransferEvent)
+	event := input.(*types.TransferEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		a.updateBalance(event, true)
-		a.updateBalance(event, false)
+		a.updateBalance(*event, true)
+		a.updateBalance(*event, false)
 	}
 	return nil
 }
 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
-	event := input.(types.ApprovalEvent)
+	event := input.(*types.ApprovalEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		err = a.updateAllowance(event)
+		err = a.updateAllowance(*event)
+		log.Error(err.Error())
 	}
 	return
 }
@@ -154,11 +159,16 @@ func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*bi
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), common.HexToAddress(spender), "latest")
+	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig[spender]))
+	if err != nil {
+		return big.NewInt(0), errors.New("invalid spender address")
+	}
+	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
-	return version + "_" + token
+	//return version + "_" + token
+	return token
 }
 
 func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) error {
@@ -187,8 +197,7 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 			} else {
 				balance.Balance = amount
 			}
-			account.Balances[tokenAlias] = balance
-		} else {
+			account.Balances[tokenAlias] = balance } else {
 			oldBalance := balance.Balance
 			if isAdd {
 				balance.Balance = oldBalance.Sub(oldBalance, event.Value)
@@ -207,14 +216,23 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	spender := event.Spender.String()
 	address := event.Owner.String()
 
-	if !util.IsSupportedContract(spender) {
+	// 这里只能根据loopring的合约获取了
+	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
+	if err != nil {
+		return errors.New("invalid spender address")
+	}
+
+	if strings.ToLower(spenderAddress.Hex()) != strings.ToLower(event.Spender.Hex()) {
 		return errors.New("unsupported contract address : " + spender)
 	}
 
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
-		allowance := Allowance{contractVersion: spender, token: tokenAlias, allowance: event.Value}
+		allowance := Allowance{
+			//contractVersion: spender,
+			token: tokenAlias,
+			allowance: event.Value}
 		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}
