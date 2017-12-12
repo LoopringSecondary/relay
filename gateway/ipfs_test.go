@@ -139,7 +139,6 @@ func TestAllowance(t *testing.T) {
 func pubMessage(sh *shell.Shell, data string) {
 	c := test.LoadConfig()
 	topic := c.Ipfs.BroadcastTopics[0]
-	println("adsfds",topic)
 	err := sh.PubSubPublish(topic, data)
 	if err != nil {
 		panic(err.Error())

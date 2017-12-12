@@ -147,7 +147,6 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
 	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
 
-
 	for _, order := range atoBOrders {
 		market.reduceRemainedAmountBeforeMatch(order)
 		if !market.om.IsOrderFullFinished(order) {
