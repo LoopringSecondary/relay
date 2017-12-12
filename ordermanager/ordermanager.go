@@ -170,6 +170,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		if req.AllowanceErr != nil || req.BalanceErr != nil {
 			return fmt.Errorf("order manager,gateway new order,order %s ab ")
 		}
+		calculateAmountS(state, req)
 		if ok := om.IsFundInsufficient(state); ok {
 			markBlockNumber = state.UpdatedBlock.Int64() + int64(om.options.AccountPeriod)
 		}
