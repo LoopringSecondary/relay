@@ -140,11 +140,10 @@ func (l *ExtractorServiceImpl) Start() {
 			}
 
 			// detect chain fork
-			// todo test
-			//if err := l.detectFork(currentBlock); err != nil {
-			//	log.Debugf("extractor,detect fork error:%s", err.Error())
-			//	continue
-			//}
+			if err := l.detectFork(currentBlock); err != nil {
+				log.Debugf("extractor,detect fork error:%s", err.Error())
+				continue
+			}
 
 			// process block
 			for _, tx := range block.Transactions {

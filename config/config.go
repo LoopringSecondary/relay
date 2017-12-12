@@ -29,13 +29,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// todo modify to relay.toml
-const ConfigFile = "debug.toml"
-
 func LoadConfig(file string) *GlobalConfig {
 	if "" == file {
 		dir, _ := os.Getwd()
-		file = dir + "/config/" + ConfigFile
+		file = dir + "/config/relay.toml"
 	}
 
 	io, err := os.Open(file)
