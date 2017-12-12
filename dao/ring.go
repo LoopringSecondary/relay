@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/tealeg/xlsx"
 	"math/big"
 )
 
@@ -45,6 +46,24 @@ type FilledOrder struct {
 	LegalFee string `json:"legalFee"` //法币计算的fee
 	SPrice string `json:"SPrice"`
 	BPrice string `json:"BPrice"`
+}
+
+func (daoFilledOrder *FilledOrder) ConvertDown(filledOrder *types.FilledOrder, ringhash common.Hash) error {
+	daoFilledOrder.RingHash = ringhash.Hex()
+	daoFilledOrder.OrderHash = filledOrder.OrderState.RawOrder.Hash.Hex()
+	daoFilledOrder.FeeSelection = filledOrder.FeeSelection
+	daoFilledOrder.RateAmountS = filledOrder.RateAmountS.String()
+	daoFilledOrder.AvailableAmountS = filledOrder.AvailableAmountS.String()
+	daoFilledOrder.AvailableAmountB = filledOrder.AvailableAmountB.String()
+	daoFilledOrder.FillAmountS = filledOrder.FillAmountS.String()
+	daoFilledOrder.FillAmountB = filledOrder.FillAmountB.String()
+	daoFilledOrder.LrcReward = filledOrder.LrcReward.String()
+	daoFilledOrder.LrcFee = filledOrder.LrcFee.String()
+	daoFilledOrder.FeeS = filledOrder.FeeS.String()
+	daoFilledOrder.LegalFee = filledOrder.LegalFee.String()
+	daoFilledOrder.SPrice = filledOrder.SPrice.String()
+	daoFilledOrder.BPrice = filledOrder.BPrice.String()
+	return nil
 }
 
 type RingSubmitInfo struct {
