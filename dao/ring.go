@@ -29,9 +29,27 @@ type Ring struct {
 	Hash string `gorm:"column:hash;type:varchar(82)"`
 }
 
+type FilledOrder struct {
+	ID   int    `gorm:"column:id;primary_key;"`
+	RingHash string `gorm:"column:ringhash;type:varchar(82)"`
+	OrderHash string  `gorm:"column:ringhash;type:varchar(82)"`
+	FeeSelection     uint8      `json:"feeSelection"`     //0 -> lrc
+	RateAmountS      string   `json:"rateAmountS"`      //提交需要
+	AvailableAmountS string   `json:"availableAmountS"` //需要，也是用于计算fee
+	AvailableAmountB string   //需要，也是用于计算fee
+	FillAmountS      string   `json:"fillAmountS"`
+	FillAmountB      string   `json:"fillAmountB"` //计算需要
+	LrcReward        string   `json:"lrcReward"`
+	LrcFee           string   `json:"lrcFee"`
+	FeeS             string   `json:"feeS"`
+	LegalFee string `json:"legalFee"` //法币计算的fee
+	SPrice string `json:"SPrice"`
+	BPrice string `json:"BPrice"`
+}
+
 type RingSubmitInfo struct {
 	ID               int    `gorm:"column:id;primary_key;"`
-	Hash             string `gorm:"column:ringhash;type:varchar(82)"`
+	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
 	ProtocolAddress  string `gorm:"column:protocol_address;type:varchar(42)"`
 	OrdersCount      int64  `gorm:"column:order_count;type:bigint"`
 	ProtocolData     string `gorm:"column:protocol_data;type:text"`
@@ -47,7 +65,7 @@ type RingSubmitInfo struct {
 }
 
 func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
-	info.Hash = typesInfo.Ringhash.Hex()
+	info.RingHash = typesInfo.Ringhash.Hex()
 	info.ProtocolAddress = typesInfo.ProtocolAddress.Hex()
 	info.OrdersCount = typesInfo.OrdersCount.Int64()
 	info.ProtocolData = common.ToHex(typesInfo.ProtocolData)
@@ -61,7 +79,7 @@ func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
 }
 
 func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
-	typesInfo.Ringhash = common.HexToHash(info.Hash)
+	typesInfo.Ringhash = common.HexToHash(info.RingHash)
 	typesInfo.ProtocolAddress = common.HexToAddress(info.ProtocolAddress)
 	typesInfo.OrdersCount = big.NewInt(info.OrdersCount)
 	typesInfo.ProtocolData = common.FromHex(info.ProtocolData)

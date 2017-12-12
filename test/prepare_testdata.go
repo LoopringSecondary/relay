@@ -108,7 +108,7 @@ func PrepareTestData() {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
 			println("###", acc.Address.Hex())
-			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(testData.AllowanceAmount)); nil != err {
+			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(int64(0))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
