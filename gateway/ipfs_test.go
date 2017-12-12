@@ -35,8 +35,8 @@ const (
 )
 
 func TestSingleOrder(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
 	// get keystore and unlock account
 	tokenAddressA := entity.Tokens[0]
@@ -71,11 +71,9 @@ func TestSingleOrder(t *testing.T) {
 }
 
 func TestRing(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
-	rds := test.GenerateDaoService(c)
-	test.InitialMarketUtil(rds)
 	tokenAddressA := util.SupportTokens["lrc"].Protocol
 	tokenAddressB := util.SupportMarkets["weth"].Protocol
 

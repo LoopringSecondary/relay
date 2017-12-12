@@ -50,7 +50,21 @@ type TestEntity struct {
 	AllowanceAmount int64
 }
 
-func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
+var (
+	cfg *config.GlobalConfig
+	rds dao.RdsService
+)
+
+func Initialize() {
+	cfg = loadConfig()
+	rds = GenerateDaoService()
+	util.Initialize(rds, cfg)
+}
+
+func Rds() dao.RdsService       { return rds }
+func Cfg() *config.GlobalConfig { return cfg }
+
+func GenerateTomlEntity() *TestEntity {
 	var (
 		data   TestData
 		entity TestEntity
@@ -67,8 +81,6 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 		panic(err)
 	}
 
-	rds := GenerateDaoService(cfg)
-	InitialMarketUtil(rds)
 	for _, v := range util.SupportTokens {
 		entity.Tokens = append(entity.Tokens, v.Protocol)
 	}
@@ -86,42 +98,40 @@ func GenerateTomlEntity(cfg *config.GlobalConfig) *TestEntity {
 	return &entity
 }
 
-func GenerateAccessor(c *config.GlobalConfig) (*ethaccessor.EthNodeAccessor, error) {
-	accessor, err := ethaccessor.NewAccessor(c.Accessor, c.Common)
+func GenerateAccessor() (*ethaccessor.EthNodeAccessor, error) {
+	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	if nil != err {
 		return nil, err
 	}
 	return accessor, nil
 }
 
-func GenerateExtractor(c *config.GlobalConfig) *extractor.ExtractorServiceImpl {
-	rds := GenerateDaoService(c)
-	accessor, err := GenerateAccessor(c)
+func GenerateExtractor() *extractor.ExtractorServiceImpl {
+	accessor, err := GenerateAccessor()
 	if err != nil {
 		panic(err)
 	}
-	l := extractor.NewExtractorService(c.Accessor, c.Common, accessor, rds)
+	l := extractor.NewExtractorService(cfg.Accessor, cfg.Common, accessor, rds)
 	return l
 }
 
-func GenerateOrderManager(c *config.GlobalConfig) *ordermanager.OrderManagerImpl {
-	rds := GenerateDaoService(c)
-	mc := GenerateMarketCap(c)
+func GenerateOrderManager() *ordermanager.OrderManagerImpl {
+	mc := GenerateMarketCap()
 	um := usermanager.NewUserManager(rds)
-	accessor, err := GenerateAccessor(c)
+	accessor, err := GenerateAccessor()
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(c.OrderManager, &c.Common, rds, um, accessor, mc)
+	ob := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rds, um, accessor, mc)
 	return ob
 }
 
-func GenerateDaoService(c *config.GlobalConfig) *dao.RdsServiceImpl {
-	return dao.NewRdsService(c.Mysql)
+func GenerateDaoService() *dao.RdsServiceImpl {
+	return dao.NewRdsService(cfg.Mysql)
 }
 
-func GenerateMarketCap(c *config.GlobalConfig) *marketcap.MarketCapProvider {
-	return marketcap.NewMarketCapProvider(c.Miner)
+func GenerateMarketCap() *marketcap.MarketCapProvider {
+	return marketcap.NewMarketCapProvider(cfg.Miner)
 }
 
 func LoadConfig() *config.GlobalConfig {
@@ -147,65 +157,6 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 		panic(err.Error())
 	}
 	return order
-}
-
-func InitialMarketUtil(rds dao.RdsService) {
-	util.SupportTokens = make(map[string]types.Token)
-	util.SupportMarkets = make(map[string]types.Token)
-	util.AllTokens = make(map[string]types.Token)
-
-	tokens, err := rds.FindUnDeniedTokens()
-	if err != nil {
-		log.Fatalf("market util cann't find any token!")
-	}
-	markets, err := rds.FindUnDeniedMarkets()
-	if err != nil {
-		log.Fatalf("market util cann't find any base market!")
-	}
-
-	// set support tokens
-	for _, v := range tokens {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportTokens[v.Symbol] = token
-		log.Infof("supported token %s->%s", token.Symbol, token.Protocol.Hex())
-	}
-
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		util.SupportMarkets[token.Symbol] = token
-	}
-
-	// set all tokens
-	for k, v := range util.SupportTokens {
-		util.AllTokens[k] = v
-	}
-	for k, v := range util.SupportMarkets {
-		util.AllTokens[k] = v
-	}
-
-	// set all markets
-	for _, k := range util.SupportTokens { // lrc,omg
-		for _, kk := range util.SupportMarkets { //eth
-			symbol := k.Symbol + "-" + kk.Symbol
-			util.AllMarkets = append(util.AllMarkets, symbol)
-			log.Infof("supported market:%s", symbol)
-		}
-	}
-
-	// set all token pairs
-	pairsMap := make(map[string]util.TokenPair, 0)
-	for _, v := range util.SupportMarkets {
-		for _, vv := range util.SupportTokens {
-			pairsMap[v.Symbol+"-"+vv.Symbol] = util.TokenPair{v.Protocol, vv.Protocol}
-			pairsMap[vv.Symbol+"-"+v.Symbol] = util.TokenPair{vv.Protocol, v.Protocol}
-		}
-	}
-	for _, v := range pairsMap {
-		util.AllTokenPairs = append(util.AllTokenPairs, v)
-	}
 }
 
 func loadConfig() *config.GlobalConfig {

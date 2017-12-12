@@ -125,7 +125,6 @@ type ProtocolOptions struct {
 type CommonOptions struct {
 	Erc20Abi           string
 	WethAbi            string
-	WethAddress        string
 	ProtocolImpl       ProtocolOptions `required:"true"`
 	FilterTopics       []string        `required:"true"`
 	DefaultBlockNumber *big.Int        `required:"true"`

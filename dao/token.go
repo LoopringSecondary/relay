@@ -40,7 +40,6 @@ func (t *Token) ConvertDown(src *types.Token) error {
 	t.Source = src.Source
 	t.CreateTime = src.Time
 	t.Deny = src.Deny
-	t.IsMarket = src.IsMarket
 
 	return nil
 }

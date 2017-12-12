@@ -178,7 +178,9 @@ func TokenUnRegister(input eventemitter.EventData) error {
 	return nil
 }
 
-// todo: add token, delete token ...
+func WethTokenAddress() common.Address {
+	return SupportMarkets["weth"].Protocol
+}
 
 func WrapMarket(s, b string) (market string, err error) {
 

@@ -179,7 +179,7 @@ func (l *ExtractorServiceImpl) Restart() {
 
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int) error {
 	var tx ethaccessor.Transaction
-	if err := l.accessor.Call(&tx, "eth_getTransaction", txhash); err != nil {
+	if err := l.accessor.Call(&tx, "eth_getTransactionByHash", txhash); err != nil {
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
