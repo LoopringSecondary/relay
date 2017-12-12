@@ -295,9 +295,11 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 
 func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
-	contractMethod := contractData.Method.(*ethaccessor.WethDepositMethod)
 
-	deposit := contractMethod.ConvertDown()
+	var deposit types.WethDepositMethod
+	deposit.From = common.HexToAddress(contractData.From)
+	deposit.To = common.HexToAddress(contractData.To)
+	deposit.Value = contractData.Value
 	deposit.Time = contractData.Time
 	deposit.Blocknumber = contractData.BlockNumber
 	deposit.TxHash = common.HexToHash(contractData.TxHash)
@@ -314,6 +316,11 @@ func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventD
 func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 	contractMethod := contractData.Method.(*ethaccessor.WethWithdrawalMethod)
+
+	data := hexutil.MustDecode("0x" + contractData.Input[10:])
+	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+		return fmt.Errorf("extractor,unpack weth withdrawal method error:%s", err.Error())
+	}
 
 	withdrawal := contractMethod.ConvertDown()
 	withdrawal.Time = contractData.Time

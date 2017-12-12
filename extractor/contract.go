@@ -208,7 +208,7 @@ func (l *ExtractorServiceImpl) loadWethContract() {
 
 		switch contract.Name {
 		case WETH_DEPOSIT_METHOD_NAME:
-			contract.Method = &ethaccessor.WethDepositMethod{}
+			// weth deposit without any inputs,use transaction.value as input
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleWethDepositMethod}
 		case WETH_WITHDRAWAL_METHOD_NAME:
 			contract.Method = &ethaccessor.WethWithdrawalMethod{}

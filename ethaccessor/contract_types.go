@@ -222,29 +222,6 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
-/*
-type Order struct {
-	Protocol              common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
-	TokenS                common.Address `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
-	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
-	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
-	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
-	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"`
-	Ttl                   *big.Int       `json:"ttl" gencodec:"required"` // 订单过期时间
-	Salt                  *big.Int       `json:"salt" gencodec:"required"`
-	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
-	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
-	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
-	V                     uint8          `json:"v" gencodec:"required"`
-	R                     Bytes32        `json:"r" gencodec:"required"`
-	S                     Bytes32        `json:"s" gencodec:"required"`
-	Price                 *big.Rat       `json:"price"`
-	Owner                 common.Address `json:"owner"`
-	Hash                  common.Hash    `json:"hash"`
-}
-}
-*/
-
 type SubmitRingMethod struct {
 	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
 	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
@@ -301,31 +278,12 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	return list, nil
 }
 
-type WethDepositMethod struct {
-	From  common.Address
-	To    common.Address
-	Value *big.Int
-}
-
-func (e *WethDepositMethod) ConvertDown() *types.WethDepositMethod {
-	evt := &types.WethDepositMethod{}
-	evt.From = e.From
-	evt.To = e.To
-	evt.Value = e.Value
-
-	return evt
-}
-
 type WethWithdrawalMethod struct {
-	From  common.Address
-	To    common.Address
 	Value *big.Int `fieldName:"amount"`
 }
 
 func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethod {
 	evt := &types.WethWithdrawalMethod{}
-	evt.From = e.From
-	evt.To = e.To
 	evt.Value = e.Value
 
 	return evt
