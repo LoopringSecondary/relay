@@ -132,7 +132,7 @@ func (n *Node) Start() {
 
 func (n *Node) startAfterSyncExtractor(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
-	//n.marketCapProvider.Start()
+	n.marketCapProvider.Start()
 
 	if "relay" == n.globalConfig.Mode {
 		n.relayNode.Start()

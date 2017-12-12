@@ -271,7 +271,7 @@ func IsAddress(token string) bool {
 
 func getContractVersion(address string) string {
 	for k, v := range ContractVersionConfig {
-		if v == address {
+		if strings.ToLower(v) == strings.ToLower(address) {
 			return k
 		}
 	}
@@ -280,4 +280,8 @@ func getContractVersion(address string) string {
 
 func IsSupportedContract(address string) bool {
 	return getContractVersion(address) != ""
+}
+
+func GetWethAddress() common.Address {
+	return AllTokens["WETH"].Protocol
 }

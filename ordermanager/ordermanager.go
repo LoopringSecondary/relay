@@ -37,7 +37,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -335,9 +335,9 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return true
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState {
 	var (
-		list            []types.OrderState
+		list            []*types.OrderState
 		modelList       []*dao.Order
 		currentBlock    *dao.Block
 		markBlockNumber *big.Int
@@ -369,27 +369,29 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
 		return list
 	}
-	var listBeforeCheckAccount []types.OrderState
+	var listBeforeCheckAccount []*types.OrderState
 	for _, v := range modelList {
-		var state types.OrderState
-		v.ConvertUp(&state)
+		//println("==========modelList",v.OrderHash, v.TokenS, v.TokenB, v.AmountS, v.AmountB)
+		state := &types.OrderState{}
+		v.ConvertUp(state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
 			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
+
 	}
 
 	// 批量查询订单账户的余额及授权
 	var erc20ReqList []*ethaccessor.BatchErc20Req
 	for _, v := range listBeforeCheckAccount {
 		batchReq := ethaccessor.BatchErc20Req{}
-		spender, err := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
-		if err != nil {
-			continue
-		}
+		spender, _ := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
+		//if err != nil {
+		//	continue
+		//}
 		batchReq.Spender = spender
 		batchReq.Owner = v.RawOrder.Owner
 		batchReq.Token = v.RawOrder.TokenS
-		batchReq.BlockParameter = types.BigintToHex(big.NewInt(currentBlock.BlockNumber))
+		batchReq.BlockParameter = "latest"
 		erc20ReqList = append(erc20ReqList, &batchReq)
 	}
 	if len(erc20ReqList) == 0 {
@@ -402,20 +404,19 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 
 	// 根据余额及授权过滤订单
 	var accountMarkList []string
-	for _, req := range erc20ReqList {
-		for _, v := range listBeforeCheckAccount {
-			if v.RawOrder.Owner != req.Owner || req.BalanceErr != nil || req.AllowanceErr != nil {
-				continue
-			}
-			cancelOrFilled := new(big.Int).Add(v.DealtAmountS, v.CancelledAmountS)
-			available := new(big.Int).Sub(v.RawOrder.AmountS, cancelOrFilled)
-			v.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
+	for idx, req := range erc20ReqList {
+		v := listBeforeCheckAccount[idx]
+		if req.BalanceErr != nil || req.AllowanceErr != nil {
+			continue
+		}
+		cancelOrFilled := new(big.Int).Add(v.DealtAmountS, v.CancelledAmountS)
+		available := new(big.Int).Sub(v.RawOrder.AmountS, cancelOrFilled)
+		v.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
 
-			if om.IsFundInsufficient(&v) {
-				accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
-			} else {
-				list = append(list, v)
-			}
+		if om.IsFundInsufficient(v) {
+			accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
+		} else {
+			list = append(list, v)
 		}
 	}
 
