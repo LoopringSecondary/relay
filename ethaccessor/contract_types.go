@@ -20,6 +20,7 @@ package ethaccessor
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -221,31 +222,68 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
-type WethDepositMethod struct {
-	From  common.Address
-	To    common.Address
-	Value *big.Int
+type SubmitRingMethod struct {
+	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
+	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
+	Uint8ArgsList      [][2]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList,feeSelectionList
+	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList"`
+	VList              []uint8             `fieldName:"vList"`
+	RList              [][32]uint8         `fieldName:"rList"`
+	SList              [][32]uint8         `fieldName:"sList"`
+	RingMiner          common.Address      `fieldName:"ringminer"`
+	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
 }
 
-func (e *WethDepositMethod) ConvertDown() *types.WethDepositMethod {
-	evt := &types.WethDepositMethod{}
-	evt.From = e.From
-	evt.To = e.To
-	evt.Value = e.Value
+// should add protocol, miner, feeRecipient
+func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
+	var list []*types.Order
+	length := len(m.AddressList)
 
-	return evt
+	// length of v.s.r list = length  +  1, they contained ring'vsr
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || length != len(m.VList)-1 || length != len(m.SList)-1 || length != len(m.RList)-1 || length < 2 {
+		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
+	}
+
+	for i := 0; i < length; i++ {
+		var order types.Order
+
+		order.Owner = m.AddressList[i][0]
+		order.TokenS = m.AddressList[i][1]
+		if i == length-1 {
+			order.TokenB = m.AddressList[0][1]
+		} else {
+			order.TokenB = m.AddressList[i+1][1]
+		}
+
+		order.AmountS = m.UintArgsList[i][0]
+		order.AmountB = m.UintArgsList[i][1]
+		order.Timestamp = m.UintArgsList[i][2]
+		order.Ttl = m.UintArgsList[i][3]
+		order.Salt = m.UintArgsList[i][4]
+		order.LrcFee = m.UintArgsList[i][5]
+
+		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
+		// todo ???
+		order.LrcFee = big.NewInt(int64(m.Uint8ArgsList[i][1]))
+
+		order.BuyNoMoreThanAmountB = m.BuyNoMoreThanBList[i]
+
+		order.V = m.VList[i]
+		order.R = m.RList[i]
+		order.S = m.SList[i]
+
+		list = append(list, &order)
+	}
+
+	return list, nil
 }
 
 type WethWithdrawalMethod struct {
-	From  common.Address
-	To    common.Address
 	Value *big.Int `fieldName:"amount"`
 }
 
 func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethod {
 	evt := &types.WethWithdrawalMethod{}
-	evt.From = e.From
-	evt.To = e.To
 	evt.Value = e.Value
 
 	return evt

@@ -151,11 +151,11 @@ func (l *ExtractorServiceImpl) Start() {
 
 				// 解析method，获得ring内等orders并发送到orderbook保存
 				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), tx.BlockNumber.BigInt()); err != nil {
-					log.Debugf(err.Error())
+					log.Errorf(err.Error())
 				}
 
 				if err := l.processEvent(&tx, block.Timestamp.BigInt()); err != nil {
-					log.Debugf(err.Error())
+					log.Errorf(err.Error())
 				}
 			}
 		}
@@ -179,7 +179,7 @@ func (l *ExtractorServiceImpl) Restart() {
 
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int) error {
 	var tx ethaccessor.Transaction
-	if err := l.accessor.Call(&tx, "eth_getTransaction", txhash); err != nil {
+	if err := l.accessor.Call(&tx, "eth_getTransactionByHash", txhash); err != nil {
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
@@ -195,10 +195,6 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 		return fmt.Errorf("extractor,contract method id error:%s", id)
 	}
 
-	if err := contract.CAbi.Unpack(contract.Method, contract.Name, input, abi.SEL_UNPACK_METHOD); err != nil {
-		return fmt.Errorf("extractor,process method error:%s", err.Error())
-	}
-
 	contract.BlockNumber = tx.BlockNumber.BigInt()
 	contract.Time = time
 	contract.ContractAddress = tx.To
@@ -207,6 +203,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	contract.TxHash = tx.Hash
 	contract.Value = tx.Value.BigInt()
 	contract.BlockNumber = blockNumber
+	contract.Input = tx.Input
 
 	eventemitter.Emit(contract.Id, contract)
 	return nil
@@ -273,15 +270,35 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
 func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
-	// todo: unpack method
+	contract := input.(MethodData)
+	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+
+	data := hexutil.MustDecode("0x" + contract.Input[10:])
+	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
+		return fmt.Errorf("extractor,unpack submitRing method error:%s", err.Error())
+	}
+	orderList, err := ring.ConvertDown()
+	if err != nil {
+		return fmt.Errorf("extractor,handle submitRing convert order data error:%s", err.Error())
+	}
+
+	for _, v := range orderList {
+		if l.commOpts.Develop {
+			log.Debugf("extractor,external order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+		}
+		v.Protocol = common.HexToAddress(contract.ContractAddress)
+	}
+
 	return nil
 }
 
 func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
-	contractMethod := contractData.Method.(*ethaccessor.WethDepositMethod)
 
-	deposit := contractMethod.ConvertDown()
+	var deposit types.WethDepositMethod
+	deposit.From = common.HexToAddress(contractData.From)
+	deposit.To = common.HexToAddress(contractData.To)
+	deposit.Value = contractData.Value
 	deposit.Time = contractData.Time
 	deposit.Blocknumber = contractData.BlockNumber
 	deposit.TxHash = common.HexToHash(contractData.TxHash)
@@ -298,6 +315,11 @@ func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventD
 func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 	contractMethod := contractData.Method.(*ethaccessor.WethWithdrawalMethod)
+
+	data := hexutil.MustDecode("0x" + contractData.Input[10:])
+	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+		return fmt.Errorf("extractor,unpack weth withdrawal method error:%s", err.Error())
+	}
 
 	withdrawal := contractMethod.ConvertDown()
 	withdrawal.Time = contractData.Time

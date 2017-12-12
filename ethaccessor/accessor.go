@@ -37,7 +37,7 @@ type EthNodeAccessor struct {
 	*rpc.Client
 }
 
-func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions) (*EthNodeAccessor, error) {
+func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) (*EthNodeAccessor, error) {
 	var err error
 	accessor := &EthNodeAccessor{}
 	accessor.Client, err = rpc.Dial(accessorOptions.RawUrl)
@@ -52,7 +52,7 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 	if accessor.WethAbi, err = NewAbi(commonOptions.WethAbi); nil != err {
 		return nil, err
 	}
-	accessor.WethAddress = common.HexToAddress(commonOptions.WethAddress)
+	accessor.WethAddress = wethAddress
 
 	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
 

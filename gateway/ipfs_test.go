@@ -20,6 +20,7 @@ package gateway_test
 
 import (
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -34,8 +35,8 @@ const (
 )
 
 func TestSingleOrder(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
 	// get keystore and unlock account
 	tokenAddressA := entity.Tokens[0]
@@ -70,15 +71,11 @@ func TestSingleOrder(t *testing.T) {
 }
 
 func TestRing(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
-	rds := test.GenerateDaoService(c)
-	test.InitialMarketUtil(rds)
-	//tokenAddressA := util.SupportTokens["lrc"].Protocol
-	//tokenAddressB := util.SupportMarkets["weth"].Protocol
-	tokenAddressA := common.HexToAddress("0x88699e7fee2da0462981a08a15a3b940304cc516")
-	tokenAddressB := common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")
+	tokenAddressA := util.SupportTokens["lrc"].Protocol
+	tokenAddressB := util.SupportMarkets["weth"].Protocol
 
 	testAcc1 := entity.Accounts[0]
 	testAcc2 := entity.Accounts[1]
@@ -110,7 +107,7 @@ func TestRing(t *testing.T) {
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	order2 := test.CreateOrder(
 		tokenAddressB,
