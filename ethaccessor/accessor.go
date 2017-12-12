@@ -31,8 +31,9 @@ type EthNodeAccessor struct {
 	DelegateAbi         *abi.ABI
 	RinghashRegistryAbi *abi.ABI
 	TokenRegistryAbi    *abi.ABI
-
-	ProtocolAddresses map[common.Address]*ProtocolAddress
+	WethAbi             *abi.ABI
+	WethAddress         common.Address
+	ProtocolAddresses   map[common.Address]*ProtocolAddress
 	*rpc.Client
 }
 
@@ -47,6 +48,12 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 	if accessor.Erc20Abi, err = NewAbi(commonOptions.Erc20Abi); nil != err {
 		return nil, err
 	}
+
+	if accessor.WethAbi, err = NewAbi(commonOptions.WethAbi); nil != err {
+		return nil, err
+	}
+	accessor.WethAddress = common.HexToAddress(commonOptions.WethAddress)
+
 	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
 
 	if protocolImplAbi, err := NewAbi(commonOptions.ProtocolImpl.ImplAbi); nil != err {

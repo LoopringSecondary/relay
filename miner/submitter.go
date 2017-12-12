@@ -53,7 +53,7 @@ type RingSubmitter struct {
 	dbService         dao.RdsService
 	marketCapProvider *marketcap.MarketCapProvider
 
-	newRingWatcher *eventemitter.Watcher
+	newRingWatcher        *eventemitter.Watcher
 	ringhashSubmitWatcher *eventemitter.Watcher
 }
 
@@ -146,7 +146,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(ringInfos []*types.RingSub
 			if gas, gasPrice, err1 := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
 				return err1
 			} else {
-				if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, gas, gasPrice, registryData); nil != err {
+				if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
 					return err
 				} else {
 					submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash, "")
@@ -166,7 +166,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
 
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, ringState.RegistryData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, nil, ringState.RegistryData); nil != err {
 		return err
 	} else {
 		ringState.RegistryTxHash = common.HexToHash(txHash)
@@ -176,7 +176,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 }
 
 func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, ringSate.ProtocolData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
 		return err
 	} else {
 		ringSate.SubmitTxHash = common.HexToHash(txHash)
