@@ -19,11 +19,84 @@
 package ordermanager
 
 import (
+	"fmt"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
+
+func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
+	blockNumberStr := blockNumberToString(blockNumber)
+
+	state.Status = types.ORDER_NEW
+	state.DealtAmountS = big.NewInt(0)
+	state.DealtAmountB = big.NewInt(0)
+	state.CancelledAmountS = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
+
+	// get order cancelled or filled amount from chain
+	if cancelOrFilledAmount, err := accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {
+		return nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
+	} else {
+		state.CancelledAmountS = cancelOrFilledAmount
+	}
+
+	// check order finished status
+	finished := isOrderFullFinished(state, mc)
+	state.SettleFinishedStatus(finished)
+	if blockNumber == nil {
+		state.UpdatedBlock = big.NewInt(0)
+	} else {
+		state.UpdatedBlock = blockNumber
+	}
+
+	model := &dao.Order{}
+	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	model.ConvertDown(state)
+
+	return model, nil
+}
+
+func isOrderFullFinished(state *types.OrderState, mc *marketcap.MarketCapProvider) bool {
+	var valueOfRemainAmount *big.Rat
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
+		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
+		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
+		price := mc.GetMarketCap(state.RawOrder.TokenB)
+		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
+	} else {
+		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
+		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
+		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
+		price := mc.GetMarketCap(state.RawOrder.TokenS)
+		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
+	}
+
+	// todo: get compare number from config
+	if valueOfRemainAmount.Cmp(big.NewRat(1, 1)) > 0 {
+		return false
+	}
+
+	return true
+}
+
+func isFundInsufficient(state *types.OrderState, mc *marketcap.MarketCapProvider) bool {
+	price := mc.GetMarketCap(state.RawOrder.TokenS)
+	value := new(big.Rat).Mul(price, state.AvailableAmountS)
+
+	// todo: get from config
+	if value.Cmp(new(big.Rat).SetInt64(1)) > 0 {
+		return false
+	}
+
+	return true
+}
 
 func calculateAmountS(state *types.OrderState, req *ethaccessor.BatchErc20Req) {
 	var available, cancelOrFilledRatS *big.Rat
@@ -63,12 +136,27 @@ func getMinAmount(a1, a2, a3 *big.Rat) *big.Rat {
 	return min
 }
 
-func generateErc20Req(state *types.OrderState, spender common.Address) *ethaccessor.BatchErc20Req {
+func generateErc20Req(state *types.OrderState, spender common.Address, blockNumber *big.Int) *ethaccessor.BatchErc20Req {
 	var batchReq ethaccessor.BatchErc20Req
 	batchReq.Spender = spender
 	batchReq.Owner = state.RawOrder.Owner
 	batchReq.Token = state.RawOrder.TokenS
-	batchReq.BlockParameter = "latest"
+	if blockNumber == nil {
+		batchReq.BlockParameter = "latest"
+	} else {
+		batchReq.BlockParameter = types.BigintToHex(blockNumber)
+	}
 
 	return &batchReq
+}
+
+func blockNumberToString(blockNumber *big.Int) string {
+	var blockNumberStr string
+	if blockNumber == nil {
+		blockNumberStr = "latest"
+	} else {
+		blockNumberStr = types.BigintToHex(blockNumber)
+	}
+
+	return blockNumberStr
 }

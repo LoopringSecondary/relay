@@ -203,7 +203,8 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
-	err = s.db.Where("updated_block between ? and ?", from, to).Find(&list).Error
+	nowtime := time.Now().Unix()
+	err = s.db.Where("updated_block between ? and ? and create_time + ttl > ?", from, to, nowtime).Find(&list).Error
 
 	return list, err
 }

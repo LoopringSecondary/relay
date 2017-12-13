@@ -22,23 +22,28 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"math/big"
 )
 
 type forkProcessor struct {
-	dao      dao.RdsService
-	accessor *ethaccessor.EthNodeAccessor
+	dao           dao.RdsService
+	accessor      *ethaccessor.EthNodeAccessor
+	mc            *marketcap.MarketCapProvider
+	accountPeriod int64
 }
 
-func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *forkProcessor {
+func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, period int64) *forkProcessor {
 	processor := &forkProcessor{}
 	processor.dao = rds
+	processor.mc = mc
+	processor.accessor = accessor
+	processor.accountPeriod = period
 
 	return processor
 }
 
-// todo: 回滚时需要将所有涉及到的event对应的order amount修改一遍
 func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
@@ -62,7 +67,6 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	}
 
 	forkBlockNumber := big.NewInt(from)
-	forkBlockNumHex := types.BigintToHex(forkBlockNumber)
 	for _, v := range orderList {
 		state := &types.OrderState{}
 		if err := v.ConvertUp(state); err != nil {
@@ -70,49 +74,18 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 			continue
 		}
 
-		// todo(fuk):get contract cancelOrFilledMap remainAmount and approval token amount,compare and get min
-		remain, err := p.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, forkBlockNumHex)
+		model, err := newOrderEntity(state, p.accessor, p.mc, forkBlockNumber)
 		if err != nil {
-			log.Debugf("order manager fork error:%s", err.Error())
+			log.Errorf("order manager fork error:%s", err.Error())
 			continue
 		}
 
-		if state.RawOrder.BuyNoMoreThanAmountB == true {
-			state.DealtAmountB = remain // getMinAmount(remain, allowance, balance)
-		} else {
-			batchReq := ethaccessor.BatchErc20Req{}
-			batchReq.Spender, err = p.accessor.GetSenderAddress(state.RawOrder.Protocol)
-			if err != nil {
-				log.Debugf("order manager fork error:%s", err.Error())
-				continue
-			}
-			batchReq.Owner = state.RawOrder.Owner
-			batchReq.Token = state.RawOrder.TokenS
-			batchReq.BlockParameter = forkBlockNumHex
-
-			p.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{&batchReq})
-			if err != nil || batchReq.AllowanceErr != nil || batchReq.BalanceErr != nil {
-				log.Debugf("order manager fork error:%s", err.Error())
-				continue
-			}
-
-			state.DealtAmountS = getMinAmount(remain, batchReq.Allowance.BigInt(), batchReq.Balance.BigInt())
-		}
-
-		state.CalculateRemainAmount()
-		state.UpdatedBlock = forkBlockNumber
-
-		newOrderModel := dao.Order{ID: v.ID}
-		if err := newOrderModel.ConvertDown(state); err != nil {
+		model.ID = v.ID
+		if err := p.dao.Save(model); err != nil {
 			log.Debugf("order manager fork error:%s", err.Error())
-			continue
-		}
-
-		if err := p.dao.Save(newOrderModel); err != nil {
-			log.Debugf("order manager fork erorr:%s", err.Error())
 			continue
 		}
 	}
-	// todo find order in contract
+
 	return nil
 }

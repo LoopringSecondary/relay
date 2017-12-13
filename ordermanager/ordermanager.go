@@ -30,6 +30,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
+	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
@@ -135,12 +136,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
-	state.Status = types.ORDER_NEW
-	state.DealtAmountS = big.NewInt(0)
-	state.DealtAmountB = big.NewInt(0)
-	state.CancelledAmountS = big.NewInt(0)
-	state.CancelledAmountB = big.NewInt(0)
-
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	// order already exist in dao/order
@@ -148,38 +143,11 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		return nil
 	}
 
-	// get order cancelled or filled amount from chain
-	if cancelOrFilledAmount, err := om.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, "latest"); err != nil {
-		return fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
-	} else {
-		state.CancelledAmountS = cancelOrFilledAmount
+	model, err := newOrderEntity(state, om.accessor, om.mc, nil)
+	if err != nil {
+		return err
 	}
-
-	// check order finished status
-	finished := om.IsOrderFullFinished(state)
-	state.SettleFinishedStatus(finished)
-
-	// check allowance and balance
-	var markBlockNumber int64 = 0
-	if state.Status != types.ORDER_FINISHED {
-		spender, _ := om.accessor.GetSenderAddress(state.RawOrder.Protocol)
-		req := generateErc20Req(state, spender)
-		if err := om.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{req}); err != nil {
-			return fmt.Errorf("order manager,geteway new order,batchErc20BalanceAndAllowance error:%s", err.Error())
-		}
-		if req.AllowanceErr != nil || req.BalanceErr != nil {
-			return fmt.Errorf("order manager,gateway new order,order %s ab ")
-		}
-		calculateAmountS(state, req)
-		if ok := om.IsFundInsufficient(state); ok {
-			markBlockNumber = state.UpdatedBlock.Int64() + int64(om.options.AccountPeriod)
-		}
-	}
-
-	model := &dao.Order{}
-	model.MinerBlockMark = markBlockNumber
 	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
-	model.ConvertDown(state)
 
 	return om.rds.Add(model)
 }
@@ -240,7 +208,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	finished := om.IsOrderFullFinished(state)
+	finished := isOrderFullFinished(state, om.mc)
 	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
@@ -296,7 +264,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	finished := om.IsOrderFullFinished(state)
+	finished := isOrderFullFinished(state, om.mc)
 	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
@@ -324,41 +292,8 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) IsFundInsufficient(state *types.OrderState) bool {
-	price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-	value := new(big.Rat).Mul(price, state.AvailableAmountS)
-
-	// todo: get from config
-	if value.Cmp(new(big.Rat).SetInt64(1)) > 0 {
-		return false
-	}
-
-	return true
-}
-
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
-	var valueOfRemainAmount *big.Rat
-
-	if state.RawOrder.BuyNoMoreThanAmountB {
-		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
-		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
-		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
-	} else {
-		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
-		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
-		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
-	}
-
-	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(1, 1)) > 0 {
-		return false
-	}
-
-	return true
+	return isOrderFullFinished(state, om.mc)
 }
 
 func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState {
@@ -408,7 +343,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	var erc20ReqList []*ethaccessor.BatchErc20Req
 	for _, v := range listBeforeCheckAccount {
 		spender, _ := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
-		batchReq := generateErc20Req(v, spender)
+		batchReq := generateErc20Req(v, spender, nil)
 		erc20ReqList = append(erc20ReqList, batchReq)
 	}
 	if len(erc20ReqList) == 0 {
@@ -427,7 +362,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 			continue
 		}
 		calculateAmountS(v, req)
-		if om.IsFundInsufficient(v) {
+		if isFundInsufficient(v, om.mc) {
 			accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
 		} else {
 			list = append(list, v)
