@@ -92,36 +92,26 @@ func HandleOrder(input eventemitter.EventData) error {
 				return err
 			}
 		}
-
-		state := &types.OrderState{}
 		state.RawOrder = *order
-
 		broadcastTime = 0
-
 		if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 			state.BroadcastTime = 1
 		}
-
-		state = &types.OrderState{}
-		state.RawOrder = *order
-
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else {
 		broadcastTime = state.BroadcastTime
-		return fmt.Errorf("gateway,order %s exist,will not insert again", order.Hash.Hex())
+		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
 	}
 
 	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 		//broadcast
-		fmt.Println("++++++++++1")
 		pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
-		fmt.Println("++++++++++2")
-		fmt.Println(pubErr)
 		if pubErr != nil {
 			log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.Hex())
 		} else {
-			fmt.Println("++++++++++3")
-			gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1)
+			if err = gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1); nil != err {
+				return err
+			}
 		}
 	}
 	return nil
