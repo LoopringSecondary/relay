@@ -160,7 +160,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
-	event := input.(types.WethDepositMethod)
+	event := input.(types.WethDepositMethodEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
@@ -174,7 +174,7 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 }
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
-	event := input.(types.WethWithdrawalMethod)
+	event := input.(types.WethWithdrawalMethodEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
@@ -263,11 +263,11 @@ func (a *AccountManager) updateWethBalance(address string) error {
 	return nil
 }
 
-func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositMethod) error {
+func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositMethodEvent) error {
 	return a.updateWethBalance(event.From.Hex())
 }
 
-func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalMethod) error {
+func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalMethodEvent) error {
 	return a.updateWethBalance(event.From.Hex())
 }
 
