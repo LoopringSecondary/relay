@@ -79,8 +79,12 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleTokenTransfer}
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
+	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
+	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
 	eventemitter.On(eventemitter.AccountTransfer, transferWatcher)
 	eventemitter.On(eventemitter.AccountApproval, approveWatcher)
+	eventemitter.On(eventemitter.WethDepositMethod, wethDepositWatcher)
+	eventemitter.On(eventemitter.WethWithdrawalMethod, wethWithdrawalWatcher)
 
 	return accountManager
 }
@@ -154,6 +158,34 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 	return
 }
 
+func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
+	event := input.(types.WethDepositMethod)
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+		log.Info("the eth network may be forked. flush all cache")
+		a.c.Flush()
+		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
+	} else {
+		if err = a.updateWethBalanceByDeposit(event); nil != err {
+			log.Error(err.Error())
+		}
+	}
+	return
+}
+
+func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
+	event := input.(types.WethWithdrawalMethod)
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+		log.Info("the eth network may be forked. flush all cache")
+		a.c.Flush()
+		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
+	} else {
+		if err = a.updateWethBalanceByWithdrawal(event); nil != err {
+			log.Error(err.Error())
+		}
+	}
+	return
+}
+
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
 	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
@@ -191,7 +223,7 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 		balance, ok := account.Balances[tokenAlias]
 		if !ok {
 			balance = Balance{Token: tokenAlias}
-			amount, err := a.GetBalanceFromAccessor(event.ContractAddress.String(), tokenAlias)
+			amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
 			if err != nil {
 				log.Error("get balance failed from accessor")
 			} else {
@@ -210,6 +242,32 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 		a.c.Set(address, account, cache.NoExpiration)
 	}
 	return nil
+}
+
+func (a *AccountManager) updateWethBalance(address string) error {
+	tokenAlias := "WETH"
+	v, ok := a.c.Get(address)
+	if ok {
+		account := v.(Account)
+		balance := Balance{Token: tokenAlias}
+		amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
+		if err != nil {
+			log.Error("get balance failed from accessor")
+		} else {
+			balance.Balance = amount
+		}
+		account.Balances[tokenAlias] = balance
+		a.c.Set(address, account, cache.NoExpiration)
+	}
+	return nil
+}
+
+func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositMethod) error {
+	return a.updateWethBalance(event.From.Hex())
+}
+
+func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalMethod) error {
+	return a.updateWethBalance(event.From.Hex())
 }
 
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
