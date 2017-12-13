@@ -306,15 +306,13 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		filterStatus                                       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
-	for _, v := range filterOrderHashLists[0].OrderHash {
-		orderhashstrs1 = append(orderhashstrs1, v.Hex())
-	}
-	for _, v := range filterOrderHashLists[1].OrderHash {
-		orderhashstrs2 = append(orderhashstrs2, v.Hex())
+	if filterOrderHashLists[0] == nil || filterOrderHashLists[1] == nil {
+		return list
 	}
 
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
+	currentBlock, err = om.rds.FindLatestBlock()
+	if err == nil {
 		var b types.Block
 		currentBlock.ConvertUp(&b)
 		delayBlockCnt1 = b.BlockNumber.Int64() + int64(filterOrderHashLists[0].DelayedCount)
@@ -326,13 +324,20 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		currentBlockNumber = 0
 	}
 
-	// 标记miner提供的劣质订单
-	if len(orderhashstrs1) > 0 && delayBlockCnt1 != 0 {
+	// 标记order
+	if len(filterOrderHashLists[0].OrderHash) > 0 && filterOrderHashLists[0].DelayedCount > 0 {
+		for _, v := range filterOrderHashLists[0].OrderHash {
+			orderhashstrs1 = append(orderhashstrs1, v.Hex())
+		}
+
 		if err = om.rds.MarkMinerOrders(orderhashstrs1, delayBlockCnt1); err != nil {
 			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 		}
 	}
-	if len(orderhashstrs2) > 0 && delayBlockCnt2 != 0 {
+	if len(filterOrderHashLists[1].OrderHash) > 0 && filterOrderHashLists[1].DelayedCount > 0 {
+		for _, v := range filterOrderHashLists[1].OrderHash {
+			orderhashstrs2 = append(orderhashstrs2, v.Hex())
+		}
 		if err = om.rds.MarkMinerOrders(orderhashstrs2, delayBlockCnt2); err != nil {
 			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 		}
@@ -342,12 +347,12 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
 		return list
 	}
-	var listBeforeCheckAccount []*types.OrderState
+
 	for _, v := range modelList {
 		state := &types.OrderState{}
 		v.ConvertUp(state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
-			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
+			list = append(list, state)
 		}
 	}
 
