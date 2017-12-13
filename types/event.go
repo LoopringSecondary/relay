@@ -46,8 +46,6 @@ type RinghashSubmittedEvent struct {
 	TxHash          common.Hash
 	Blocknumber     *big.Int
 	Time            *big.Int
-	UsedGas         *big.Int
-	UsedGasPrice    *big.Int
 }
 
 type AddressAuthorizedEvent struct {
@@ -158,8 +156,6 @@ type RingMinedEvent struct {
 	FeeRecipient       common.Address
 	ContractAddress    common.Address
 	IsRinghashReserved bool
-	UsedGas            *big.Int
-	UsedGasPrice       *big.Int
 }
 
 type WethDepositMethodEvent struct {

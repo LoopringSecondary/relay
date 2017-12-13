@@ -92,6 +92,8 @@ type MethodData struct {
 	Time            *big.Int
 	Value           *big.Int
 	Input           string
+	Gas 			*big.Int
+	GasPrice 		*big.Int
 }
 
 const (
