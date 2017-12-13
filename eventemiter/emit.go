@@ -49,11 +49,14 @@ const (
 	MinedOrderState                = "MinedOrderState" //orderbook send orderstate to miner
 
 	//Miner
-	Miner_DeleteOrderState = "Miner_DeleteOrderState"
-	Miner_NewOrderState    = "Miner_NewOrderState"
-	Miner_NewRing          = "Miner_NewRing"
-	Miner_RingMined        = "Miner_RingMined"
-	Miner_RingSubmitFailed = "Miner_RingSubmitFailed"
+	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
+	Miner_NewOrderState              = "Miner_NewOrderState"
+	Miner_NewRing                    = "Miner_NewRing"
+	Miner_RingMined                  = "Miner_RingMined"
+	Miner_RingSubmitFailed           = "Miner_RingSubmitFailed"
+	Miner_SubmitRing_Method          = "Miner_SubmitRing_Method"
+	Miner_SubmitRingHash_Method      = "Miner_SubmitRingHash_Method"
+	Miner_BatchSubmitRingHash_Method = "Miner_BatchSubmitRingHash_Method"
 
 	// Block
 	Block_New = "Block_New"
