@@ -311,6 +311,43 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	return &order, nil
 }
 
+type SubmitRingHashMethod struct {
+	RingMiner common.Address `fieldName:"ringminer"`
+	RingHash  common.Hash    `fieldName:"ringhash"`
+}
+
+func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethod, error) {
+	var dst types.RingHashSubmitMethod
+
+	dst.RingMiner = m.RingMiner
+	dst.RingHash = m.RingHash
+
+	return &dst, nil
+}
+
+type BatchSubmitRingHashMethod struct {
+	RingMinerList []common.Address `fieldName:"ringminerList"`
+	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
+}
+
+func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethod, error) {
+	var dst types.BatchSubmitRingHashMethod
+
+	length := len(m.RingMinerList)
+	if len(m.RingHashList) != length || length < 1 {
+		return nil, fmt.Errorf("batchSubmitRingHash method unpack error:orders length invalid")
+	}
+
+	dst.RingHashMinerMap = make(map[common.Hash]common.Address)
+	for i := 0; i < length; i++ {
+		ringhash := m.RingHashList[i]
+		ringminer := m.RingMinerList[i]
+		dst.RingHashMinerMap[ringhash] = ringminer
+	}
+
+	return &dst, nil
+}
+
 type WethWithdrawalMethod struct {
 	Value *big.Int `fieldName:"amount"`
 }

@@ -183,18 +183,21 @@ type WethWithdrawalMethod struct {
 	Blocknumber     *big.Int
 }
 
-type RingHashSubmitTxEvent struct {
+type RingHashSubmitMethod struct {
+	RingMiner    common.Address
+	RingHash     common.Hash
 	TxHash       common.Hash
 	UsedGas      *big.Int
 	UsedGasPrice *big.Int
 	Err          error
 }
 
-type BatchSubmitRingHashTxEvent struct {
-	TxHash       common.Hash
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
-	Err          error
+type BatchSubmitRingHashMethod struct {
+	RingHashMinerMap map[common.Hash]common.Address
+	TxHash           common.Hash
+	UsedGas          *big.Int
+	UsedGasPrice     *big.Int
+	Err              error
 }
 
 type ForkedEvent struct {
