@@ -326,7 +326,7 @@ func (l *ExtractorServiceImpl) handleCancelOrderMethod(input eventemitter.EventD
 func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 
-	var deposit types.WethDepositMethod
+	var deposit types.WethDepositMethodEvent
 	deposit.From = common.HexToAddress(contractData.From)
 	deposit.To = common.HexToAddress(contractData.To)
 	deposit.Value = contractData.Value

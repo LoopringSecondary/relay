@@ -162,8 +162,7 @@ type RingMinedEvent struct {
 	UsedGasPrice       *big.Int
 }
 
-// todo rename
-type WethDepositMethod struct {
+type WethDepositMethodEvent struct {
 	From            common.Address
 	To              common.Address
 	ContractAddress common.Address
@@ -173,7 +172,7 @@ type WethDepositMethod struct {
 	Blocknumber     *big.Int
 }
 
-type WethWithdrawalMethod struct {
+type WethWithdrawalMethodEvent struct {
 	From            common.Address
 	To              common.Address
 	ContractAddress common.Address
@@ -183,7 +182,7 @@ type WethWithdrawalMethod struct {
 	Blocknumber     *big.Int
 }
 
-type RingHashSubmitMethod struct {
+type RingHashSubmitMethodEvent struct {
 	RingMiner    common.Address
 	RingHash     common.Hash
 	TxHash       common.Hash
@@ -192,7 +191,7 @@ type RingHashSubmitMethod struct {
 	Err          error
 }
 
-type BatchSubmitRingHashMethod struct {
+type BatchSubmitRingHashMethodEvent struct {
 	RingHashMinerMap map[common.Hash]common.Address
 	TxHash           common.Hash
 	UsedGas          *big.Int

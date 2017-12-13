@@ -316,8 +316,8 @@ type SubmitRingHashMethod struct {
 	RingHash  common.Hash    `fieldName:"ringhash"`
 }
 
-func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethod, error) {
-	var dst types.RingHashSubmitMethod
+func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethodEvent, error) {
+	var dst types.RingHashSubmitMethodEvent
 
 	dst.RingMiner = m.RingMiner
 	dst.RingHash = m.RingHash
@@ -330,8 +330,8 @@ type BatchSubmitRingHashMethod struct {
 	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
 }
 
-func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethod, error) {
-	var dst types.BatchSubmitRingHashMethod
+func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethodEvent, error) {
+	var dst types.BatchSubmitRingHashMethodEvent
 
 	length := len(m.RingMinerList)
 	if len(m.RingHashList) != length || length < 1 {
@@ -352,8 +352,8 @@ type WethWithdrawalMethod struct {
 	Value *big.Int `fieldName:"amount"`
 }
 
-func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethod {
-	evt := &types.WethWithdrawalMethod{}
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
+	evt := &types.WethWithdrawalMethodEvent{}
 	evt.Value = e.Value
 
 	return evt
