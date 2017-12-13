@@ -53,8 +53,11 @@ type RingSubmitter struct {
 	dbService         dao.RdsService
 	marketCapProvider *marketcap.MarketCapProvider
 
-	newRingWatcher        *eventemitter.Watcher
-	ringhashSubmitWatcher *eventemitter.Watcher
+	newRingWatcher          *eventemitter.Watcher
+	ringhashSubmitWatcher   *eventemitter.Watcher
+	registryMethodWatcher   *eventemitter.Watcher
+	batchRegistryMethodWatcher   *eventemitter.Watcher
+	ringSubmitMethodWatcher *eventemitter.Watcher
 }
 
 type RingSubmitFailed struct {
@@ -200,20 +203,34 @@ func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error
 	return nil
 }
 
-func (submitter *RingSubmitter) handleSubmitRingEvent(e eventemitter.EventData) error {
+func (submitter *RingSubmitter) handleSubmitRingMethodEvent(e eventemitter.EventData) error {
 	if nil != e {
-		event := e.(*types.RingMinedEvent)
-		//excute ring failed
+		event := e.(types.SubmitRingMethodEvent)
 		if nil != event.Err {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())
+				return err
 			} else {
 				submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
 			}
-		} else {
-			submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.Ringhash, event.TxHash.Hex(), event.UsedGas)
-			eventemitter.Emit(eventemitter.Miner_RingMined, e)
 		}
+		return submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
+	}
+	return nil
+}
+
+func (submitter *RingSubmitter) handleBatchSubmitRingMethodEvent(e eventemitter.EventData) error {
+	if nil != e {
+		event := e.(types.BatchSubmitRingHashMethodEvent)
+		if nil != event.Err {
+			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
+				log.Errorf("err:%s", err.Error())
+				return err
+			} else {
+				submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
+			}
+		}
+		return submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
 	}
 	return nil
 }
@@ -230,10 +247,9 @@ func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error
 	}
 }
 
-func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) error {
+func (submitter *RingSubmitter) handleRegistryMethodEvent(e eventemitter.EventData) error {
 	if nil != e {
-		event := e.(*types.RinghashSubmittedEvent)
-		//registry failed
+		event := e.(*types.RingHashSubmitMethodEvent)
 		if nil != event.Err {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())
@@ -241,42 +257,47 @@ func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) er
 				submitter.submitFailed(ringhashes, errors.New("failed to execute ringhash registry:"+event.Err.Error()))
 			}
 		} else {
-			submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.RingHash, event.TxHash.Hex(), event.UsedGas)
+			submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
+		}
+	}
+	return nil
+}
 
-			var (
-				err         error
-				implAddress *ethaccessor.ProtocolAddress
-				exists      bool
-			)
-			info := &types.RingSubmitInfo{}
-			daoInfo, _ := submitter.dbService.GetRingForSubmitByHash(event.RingHash)
-			daoInfo.ConvertUp(info)
-			if types.IsZeroHash(info.Ringhash) {
-				err = errors.New("ring hash is zero")
-			} else {
-				if implAddress, exists = submitter.Accessor.ProtocolAddresses[info.ProtocolAddress]; !exists {
-					err = errors.New("doesn't contain this version of protocol:" + info.ProtocolAddress.Hex())
-				}
-				callMethod := submitter.Accessor.ContractCallMethod(submitter.Accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
-				var canSubmit types.Big
-				if err = callMethod(&canSubmit, "canSubmit", "latest", info.Ringhash, info.Miner); nil != err {
-					log.Errorf("err:%s", err.Error())
-				} else {
-					if canSubmit.Int() <= 0 {
-						err = errors.New("failed to call method:canSubmit")
-					}
-				}
+func (submitter *RingSubmitter) handleRegistryEvent(e eventemitter.EventData) error {
+	if nil != e {
+		event := e.(*types.RinghashSubmittedEvent)
+		var (
+			err         error
+			implAddress *ethaccessor.ProtocolAddress
+			exists      bool
+		)
+		info := &types.RingSubmitInfo{}
+		daoInfo, _ := submitter.dbService.GetRingForSubmitByHash(event.RingHash)
+		daoInfo.ConvertUp(info)
+		if types.IsZeroHash(info.Ringhash) {
+			err = errors.New("ring hash is zero")
+		} else {
+			if implAddress, exists = submitter.Accessor.ProtocolAddresses[info.ProtocolAddress]; !exists {
+				err = errors.New("doesn't contain this version of protocol:" + info.ProtocolAddress.Hex())
 			}
-
-			if nil == err {
-				if err = submitter.submitRing(info); nil != err {
-					log.Errorf("error:%s", err.Error())
-					submitter.dbService.UpdateRingSubmitInfoFailed([]common.Hash{info.Ringhash}, err.Error())
+			callMethod := submitter.Accessor.ContractCallMethod(submitter.Accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
+			var canSubmit types.Big
+			if err = callMethod(&canSubmit, "canSubmit", "latest", info.Ringhash, info.Miner); nil != err {
+				log.Errorf("err:%s", err.Error())
+			} else {
+				if canSubmit.Int() <= 0 {
+					err = errors.New("failed to call method:canSubmit")
 				}
 			}
 		}
-	}
 
+		if nil == err {
+			if err = submitter.submitRing(info); nil != err {
+				log.Errorf("error:%s", err.Error())
+				submitter.dbService.UpdateRingSubmitInfoFailed([]common.Hash{info.Ringhash}, err.Error())
+			}
+		}
+	}
 	return nil
 }
 
@@ -361,12 +382,28 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 func (submitter *RingSubmitter) stop() {
 	eventemitter.Un(eventemitter.Miner_NewRing, submitter.newRingWatcher)
 	eventemitter.Un(eventemitter.RingHashSubmitted, submitter.ringhashSubmitWatcher)
+	eventemitter.Un(eventemitter.Miner_SubmitRingHash_Method, submitter.registryMethodWatcher)
+	eventemitter.Un(eventemitter.Miner_BatchSubmitRingHash_Method, submitter.batchRegistryMethodWatcher)
+	eventemitter.Un(eventemitter.Miner_SubmitRing_Method, submitter.ringSubmitMethodWatcher)
 }
 
 func (submitter *RingSubmitter) start() {
 	newRingWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.newRings}
 	submitter.newRingWatcher = newRingWatcher
 	eventemitter.On(eventemitter.Miner_NewRing, submitter.newRingWatcher)
+
+	registryMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleRegistryMethodEvent}
+	submitter.ringhashSubmitWatcher = registryMethodWatcher
+	eventemitter.On(eventemitter.Miner_SubmitRingHash_Method, submitter.registryMethodWatcher)
+
+	ringSubmitMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleSubmitRingMethodEvent}
+	submitter.ringSubmitMethodWatcher = ringSubmitMethodWatcher
+	eventemitter.On(eventemitter.Miner_SubmitRing_Method, submitter.ringSubmitMethodWatcher)
+
+	//Miner_BatchSubmitRingHash_Method
+	batchRegistryMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleBatchSubmitRingMethodEvent}
+	submitter.batchRegistryMethodWatcher = batchRegistryMethodWatcher
+	eventemitter.On(eventemitter.Miner_BatchSubmitRingHash_Method, submitter.batchRegistryMethodWatcher)
 
 	watcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleRegistryEvent}
 	submitter.ringhashSubmitWatcher = watcher
