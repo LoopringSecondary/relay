@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/ipfs/go-ipfs-api"
 )
 
 type Gateway struct {
@@ -39,6 +40,9 @@ type Gateway struct {
 }
 
 var gateway Gateway
+
+var sh *shell.Shell
+var pubTopic string
 
 type Filter interface {
 	filter(o *types.Order) (bool, error)
@@ -68,6 +72,8 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
 	gateway.filters = append(gateway.filters, cutoffFilter)
+	sh = shell.NewLocalShell()
+	pubTopic = ipfsOptions.BroadcastTopics[0]
 }
 
 func HandleOrder(input eventemitter.EventData) error {
@@ -114,15 +120,23 @@ func HandleOrder(input eventemitter.EventData) error {
 
 	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 		//broadcast
-		fmt.Println("++++++++++1")
-		pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
-		fmt.Println("++++++++++2")
-		fmt.Println(pubErr)
+		sh := shell.NewLocalShell()
+		orderJson, err := order.MarshalJSON()
+		if err != nil {
+			log.Debugf("ipfs pub,marshal order error:%s", err.Error())
+			return err
+		}
+		pubErr := sh.PubSubPublish(pubTopic, string(orderJson))
+		if pubErr != nil {
+			log.Debugf("ipfs pub,pub sub publish error:%s", pubErr.Error())
+		}
 		if pubErr != nil {
 			log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.Hex())
 		} else {
-			fmt.Println("++++++++++3")
-			gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1)
+			if err = gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1); nil != err {
+				log.Error("update broadcast time error")
+				return err
+			}
 		}
 	}
 	return nil
