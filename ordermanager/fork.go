@@ -116,16 +116,3 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	// todo find order in contract
 	return nil
 }
-
-func getMinAmount(a1, a2, a3 *big.Int) *big.Int {
-	min := a1
-
-	if min.Cmp(a2) > 0 {
-		min = a2
-	}
-	if min.Cmp(a3) > 0 {
-		min = a3
-	}
-
-	return min
-}

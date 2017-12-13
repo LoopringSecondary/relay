@@ -44,8 +44,7 @@ const (
 )
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, err := test.GenerateAccessor(c)
+	accessor, err := test.GenerateAccessor()
 	if err != nil {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
@@ -62,7 +61,7 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -75,7 +74,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 	protocol := common.HexToAddress(wethAddress)
 	spender := common.HexToAddress(wethAddress)
 	amount, _ := new(big.Int).SetString("1000000000000000000", 0)
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, protocol)
 	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
@@ -85,8 +84,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, err := test.GenerateAccessor(c)
+	accessor, err := test.GenerateAccessor()
 	if err != nil {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
@@ -113,10 +111,10 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	)
 
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// get order
-	rds := test.GenerateDaoService(c)
+	rds := test.Rds()
 	if model, err = rds.GetOrderByHash(orderhash); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -141,7 +139,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	r := state.RawOrder.R
 
 	// call cancel order
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
 	if result, err = callMethod(account, "cancelOrder", nil, nil, nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
@@ -152,8 +150,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, _ := test.GenerateAccessor(c)
+	c := test.Cfg()
+	accessor, _ := test.GenerateAccessor()
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	if amount, err := accessor.GetCancelledOrFilled(protocol, common.HexToHash(cancelOrderHash), "latest"); err != nil {
@@ -168,7 +166,7 @@ func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	cutoff := big.NewInt(1522651087)
 
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -178,7 +176,7 @@ func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call cutoff
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
 	if result, err := callMethod(account, "setCutoff", nil, nil, nil, cutoff); nil != err {
@@ -189,8 +187,8 @@ func TestEthNodeAccessor_Cutoff(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCutoff(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, _ := test.GenerateAccessor(c)
+	c := test.Cfg()
+	accessor, _ := test.GenerateAccessor()
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	if timestamp, err := accessor.GetCutoff(protocol, common.HexToAddress(cutOffOwner), "latest"); err != nil {
@@ -202,7 +200,7 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 
 func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -212,7 +210,7 @@ func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call register token
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.TokenRegistryAbi, accessor.ProtocolAddresses[protocol].TokenRegistryAddress)
 	if result, err := callMethod(account, "registerToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
@@ -224,7 +222,7 @@ func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 
 func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -234,7 +232,7 @@ func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call unregister token
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.TokenRegistryAbi, accessor.ProtocolAddresses[protocol].TokenRegistryAddress)
 	if result, err := callMethod(account, "unregisterToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
@@ -245,8 +243,8 @@ func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, _ := test.GenerateAccessor(c)
+	c := test.Cfg()
+	accessor, _ := test.GenerateAccessor()
 
 	var result string
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
@@ -261,7 +259,7 @@ func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
 // 注册合约
 func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -271,7 +269,7 @@ func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call authorized protocol address
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.DelegateAbi, accessor.ProtocolAddresses[protocol].DelegateAddress)
 	if result, err := callMethod(account, "authorizeAddress", nil, nil, nil, protocol); nil != err {
@@ -283,7 +281,7 @@ func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 
 func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -293,7 +291,7 @@ func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call deAuthorized protocol address
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.DelegateAbi, accessor.ProtocolAddresses[protocol].DelegateAddress)
 	if result, err := callMethod(account, "deauthorizeAddress", nil, nil, nil, protocol); nil != err {
@@ -304,8 +302,8 @@ func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
 }
 
 func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
-	c := test.LoadConfig()
-	accessor, _ := test.GenerateAccessor(c)
+	c := test.Cfg()
+	accessor, _ := test.GenerateAccessor()
 
 	var result string
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
@@ -319,7 +317,7 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -331,7 +329,7 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	// call deAuthorized protocol address
 	wethAddr := common.HexToAddress(wethAddress)
 	amount, _ := new(big.Int).SetString("100", 0)
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
 	if result, err := callMethod(account, "deposit", nil, nil, amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -342,7 +340,7 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 
 func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 	// load config
-	c := test.LoadConfig()
+	c := test.Cfg()
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -354,7 +352,7 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 	// call deAuthorized protocol address
 	wethAddr := common.HexToAddress(wethAddress)
 	amount, _ := new(big.Int).SetString("100", 0)
-	accessor, _ := test.GenerateAccessor(c)
+	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
 	if result, err := callMethod(account, "withdraw", nil, nil, nil, amount); nil != err {
 		t.Fatalf("call method weth-withdraw error:%s", err.Error())

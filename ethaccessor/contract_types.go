@@ -278,12 +278,82 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	return list, nil
 }
 
+type CancelOrderMethod struct {
+	AddressList    [3]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB
+	OrderValues    [7]*big.Int       `fieldName:"orderValues"` // amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
+	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB"`
+	MarginSplit    uint8             `fieldName:"marginSplitPercentage"`
+	V              uint8             `fieldName:"v"`
+	R              [32]uint8         `fieldName:"r"`
+	S              [32]uint8         `fieldName:"s"`
+}
+
+// should add protocol
+func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
+	var order types.Order
+
+	order.Owner = m.AddressList[0]
+	order.TokenS = m.AddressList[1]
+	order.TokenB = m.AddressList[2]
+
+	order.AmountS = m.OrderValues[0]
+	order.AmountB = m.OrderValues[1]
+	order.Timestamp = m.OrderValues[2]
+	order.Ttl = m.OrderValues[3]
+	order.Salt = m.OrderValues[4]
+	order.LrcFee = m.OrderValues[5]
+
+	order.MarginSplitPercentage = m.MarginSplit
+	order.V = m.V
+	order.S = m.S
+	order.R = m.R
+
+	return &order, nil
+}
+
+type SubmitRingHashMethod struct {
+	RingMiner common.Address `fieldName:"ringminer"`
+	RingHash  common.Hash    `fieldName:"ringhash"`
+}
+
+func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethodEvent, error) {
+	var dst types.RingHashSubmitMethodEvent
+
+	dst.RingMiner = m.RingMiner
+	dst.RingHash = m.RingHash
+
+	return &dst, nil
+}
+
+type BatchSubmitRingHashMethod struct {
+	RingMinerList []common.Address `fieldName:"ringminerList"`
+	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
+}
+
+func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethodEvent, error) {
+	var dst types.BatchSubmitRingHashMethodEvent
+
+	length := len(m.RingMinerList)
+	if len(m.RingHashList) != length || length < 1 {
+		return nil, fmt.Errorf("batchSubmitRingHash method unpack error:orders length invalid")
+	}
+
+	dst.RingHashMinerMap = make(map[common.Hash]common.Address)
+	for i := 0; i < length; i++ {
+		ringhash := m.RingHashList[i]
+		ringminer := m.RingMinerList[i]
+		dst.RingHashMinerMap[ringhash] = ringminer
+	}
+
+	return &dst, nil
+}
+
 type WethWithdrawalMethod struct {
 	Value *big.Int `fieldName:"amount"`
 }
 
-func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethod {
-	evt := &types.WethWithdrawalMethod{}
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
+	evt := &types.WethWithdrawalMethodEvent{}
 	evt.Value = e.Value
 
 	return evt
