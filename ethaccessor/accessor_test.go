@@ -49,8 +49,8 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
 
-	tokenAddress := common.HexToAddress(balanceTokenAddress)
-	owner := common.HexToAddress(account1)
+	tokenAddress := common.HexToAddress(wethAddress)
+	owner := common.HexToAddress(wethOwner)
 	balance, err := accessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
 		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
@@ -328,7 +328,7 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 
 	// call deAuthorized protocol address
 	wethAddr := common.HexToAddress(wethAddress)
-	amount, _ := new(big.Int).SetString("100", 0)
+	amount, _ := new(big.Int).SetString("1000000", 0)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
 	if result, err := callMethod(account, "deposit", nil, nil, amount); nil != err {

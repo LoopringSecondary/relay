@@ -133,10 +133,10 @@ func (l *ExtractorServiceImpl) Start() {
 			// base filter
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {
-				log.Infof("extractor,get none block transaction")
+				log.Debugf("extractor,get none block transaction")
 				continue
 			} else {
-				log.Infof("extractor,get block transaction list length %d", txcnt)
+				log.Debugf("extractor,get block transaction list length %d", txcnt)
 			}
 
 			// detect chain fork
