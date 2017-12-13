@@ -178,6 +178,13 @@ type WethWithdrawalMethodEvent struct {
 	Blocknumber     *big.Int
 }
 
+type SubmitRingMethodEvent struct {
+	TxHash       common.Hash
+	UsedGas      *big.Int
+	UsedGasPrice *big.Int
+	Err          error
+}
+
 type RingHashSubmitMethodEvent struct {
 	RingMiner    common.Address
 	RingHash     common.Hash

@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -92,8 +93,16 @@ type MethodData struct {
 	Time            *big.Int
 	Value           *big.Int
 	Input           string
-	Gas 			*big.Int
-	GasPrice 		*big.Int
+	LogAmount       int
+	Gas             *big.Int
+	GasPrice        *big.Int
+}
+
+func (m *MethodData) IsValid() error {
+	if m.LogAmount < 1 {
+		return fmt.Errorf("method %s transaction logs == 0", m.Name)
+	}
+	return nil
 }
 
 const (
@@ -107,10 +116,14 @@ const (
 	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
-	SUBMITRING_METHOD_NAME       = "submitRing"
-	CANCELORDER_METHOD_NAME      = "cancelOrder"
-	WETH_DEPOSIT_METHOD_NAME     = "deposit"
-	WETH_WITHDRAWAL_METHOD_NAME  = "withdraw"
+
+	SUBMITRING_METHOD_NAME          = "submitRing"
+	CANCELORDER_METHOD_NAME         = "cancelOrder"
+	SUBMITRINGHASH_METHOD_NAME      = "submitRinghash"
+	BATCHSUBMITRINGHASH_METHOD_NAME = "batchSubmitRinghash"
+
+	WETH_DEPOSIT_METHOD_NAME    = "deposit"
+	WETH_WITHDRAWAL_METHOD_NAME = "withdraw"
 )
 
 func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
@@ -268,6 +281,28 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 
 		l.events[contract.Id] = contract
 		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
+	}
+
+	for name, method := range l.accessor.RinghashRegistryAbi.Methods {
+		if name != BATCHSUBMITRINGHASH_METHOD_NAME && name != SUBMITRINGHASH_METHOD_NAME {
+			continue
+		}
+
+		contract := newMethodData(&method, l.accessor.ProtocolImplAbi)
+		watcher := &eventemitter.Watcher{}
+
+		switch contract.Name {
+		case SUBMITRINGHASH_METHOD_NAME:
+			contract.Method = &ethaccessor.SubmitRingHashMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleSubmitRingHashMethod}
+		case BATCHSUBMITRINGHASH_METHOD_NAME:
+			contract.Method = &ethaccessor.BatchSubmitRingHashMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: l.handleBatchSubmitRingHashMethod}
+		}
+
+		eventemitter.On(contract.Id, watcher)
+		l.methods[contract.Id] = contract
+		log.Debugf("extracotr,contract method name:%s -> key:%s", contract.Name, contract.Id)
 	}
 }
 
