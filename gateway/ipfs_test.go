@@ -20,7 +20,6 @@ package gateway_test
 
 import (
 	"github.com/Loopring/relay/crypto"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/ethereum/go-ethereum/accounts"
