@@ -149,12 +149,13 @@ func (l *ExtractorServiceImpl) Start() {
 			for _, tx := range block.Transactions {
 				log.Debugf("extractor,get transaction hash:%s", tx.Hash)
 
-				// 解析method，获得ring内等orders并发送到orderbook保存
-				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), tx.BlockNumber.BigInt()); err != nil {
-					log.Errorf(err.Error())
+				eventErr := l.processEvent(&tx, block.Timestamp.BigInt())
+				if eventErr != nil {
+					log.Errorf(eventErr.Error())
 				}
 
-				if err := l.processEvent(&tx, block.Timestamp.BigInt()); err != nil {
+				// 解析method，获得ring内等orders并发送到orderbook保存
+				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), eventErr); err != nil {
 					log.Errorf(err.Error())
 				}
 			}
@@ -177,7 +178,7 @@ func (l *ExtractorServiceImpl) Restart() {
 	l.Start()
 }
 
-func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int) error {
+func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, evtError error) error {
 	var tx ethaccessor.Transaction
 	if err := l.accessor.Call(&tx, "eth_getTransactionByHash", txhash); err != nil {
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
@@ -211,8 +212,13 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *big.Int) error {
 	var receipt ethaccessor.TransactionReceipt
+
 	if err := l.accessor.Call(&receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
 		return fmt.Errorf("extractor,get transaction receipt error:%s", err.Error())
+	}
+
+	if len(receipt.Logs) == 0 {
+		return fmt.Errorf("extractor,transaction %s recipient do not have any logs", tx.Hash)
 	}
 
 	for _, evtLog := range receipt.Logs {
