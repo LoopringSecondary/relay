@@ -41,7 +41,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO(fk): add services
 type Node struct {
 	globalConfig      *config.GlobalConfig
 	rdsService        dao.RdsService
@@ -183,7 +182,7 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerAccessor() {
-	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common)
+	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, util.WethTokenAddress())
 	if nil != err {
 		log.Fatalf("err:%s", err.Error())
 	}

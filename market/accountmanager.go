@@ -44,8 +44,8 @@ type Balance struct {
 
 type Allowance struct {
 	//contractVersion string
-	token           string
-	allowance       *big.Int
+	token     string
+	allowance *big.Int
 }
 
 type AccountManager struct {
@@ -107,7 +107,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 			allowance := Allowance{
 				//contractVersion: contractVersion,
-				token: k }
+				token: k}
 
 			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
@@ -198,7 +198,8 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 			} else {
 				balance.Balance = amount
 			}
-			account.Balances[tokenAlias] = balance } else {
+			account.Balances[tokenAlias] = balance
+		} else {
 			oldBalance := balance.Balance
 			if isAdd {
 				balance.Balance = oldBalance.Sub(oldBalance, event.Value)
@@ -232,7 +233,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 		account := v.(Account)
 		allowance := Allowance{
 			//contractVersion: spender,
-			token: tokenAlias,
+			token:     tokenAlias,
 			allowance: event.Value}
 		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)

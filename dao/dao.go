@@ -45,7 +45,7 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 		return options.TablePrefix + defaultTableName
 	}
 
-	url := options.User + ":" + options.Password + "@tcp(" + options.Hostname + ":" + options.Port + ")/" + options.DbName + "?charset=utf8&parseTime=True&loc=" + options.Loc
+	url := options.User + ":" + options.Password + "@tcp(" + options.Hostname + ":" + options.Port + ")/" + options.DbName + "?charset=utf8&parseTime=True"
 	db, err := gorm.Open("mysql", url)
 	if err != nil {
 		log.Fatalf("mysql connection error:%s", err.Error())
@@ -73,6 +73,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &Token{})
 	tables = append(tables, &EventLog{})
+	tables = append(tables, &FilledOrder{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

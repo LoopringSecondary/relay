@@ -90,7 +90,6 @@ func HandleOrder(input eventemitter.EventData) error {
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil {
 		order.GeneratePrice()
-		// todo judge price
 
 		for _, v := range gateway.filters {
 			valid, err := v.filter(order)

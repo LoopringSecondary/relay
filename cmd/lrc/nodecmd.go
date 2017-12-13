@@ -79,7 +79,6 @@ func startNode(ctx *cli.Context) error {
 func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 	if "full" == globalConfig.Mode || "miner" == globalConfig.Mode {
 		minerUnlocked := false
-		println(globalConfig.Miner.Miner)
 		unlockAccs := []accounts.Account{}
 		if ctx.IsSet(utils.UnlockFlag.Name) {
 			unlocks := strings.Split(ctx.String(utils.UnlockFlag.Name), ",")

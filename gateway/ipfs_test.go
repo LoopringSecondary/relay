@@ -35,8 +35,8 @@ const (
 )
 
 func TestSingleOrder(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
 	// get keystore and unlock account
 	tokenAddressA := entity.Tokens[0]
@@ -71,25 +71,24 @@ func TestSingleOrder(t *testing.T) {
 }
 
 func TestRing(t *testing.T) {
-	c := test.LoadConfig()
-	entity := test.GenerateTomlEntity(c)
+	c := test.Cfg()
+	entity := test.GenerateTomlEntity()
 
-	rds := test.GenerateDaoService(c)
-	test.InitialMarketUtil(rds)
 	tokenAddressA := util.SupportTokens["lrc"].Protocol
 	tokenAddressB := util.SupportMarkets["weth"].Protocol
 
-	testAcc1 := entity.Accounts[0]
-	testAcc2 := entity.Accounts[1]
-
+	//testAcc1 := entity.Accounts[0]
+	//testAcc2 := entity.Accounts[1]
+	testAcc1 := accounts.Account{Address:common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	testAcc2 := accounts.Account{Address:common.HexToAddress("0x251f3bd45b06a8b29cb6d171131e192c1254fec1")}
 	// get keystore and unlock account
 	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	acc1 := accounts.Account{Address: testAcc1.Address}
 	acc2 := accounts.Account{Address: testAcc2.Address}
 
-	ks.Unlock(acc1, testAcc1.Passphrase)
-	ks.Unlock(acc2, testAcc2.Passphrase)
+	ks.Unlock(acc1, "1")
+	ks.Unlock(acc2, "1")
 
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
@@ -132,12 +131,12 @@ func TestPrepareProtocol(t *testing.T) {
 }
 
 func TestAllowance(t *testing.T) {
-	test.AllowanceToLoopring()
+	test.AllowanceToLoopring(nil, nil)
 }
 
 func pubMessage(sh *shell.Shell, data string) {
 	c := test.LoadConfig()
-	topic := c.Ipfs.ListenTopics[0]
+	topic := c.Ipfs.BroadcastTopics[0]
 	err := sh.PubSubPublish(topic, data)
 	if err != nil {
 		panic(err.Error())

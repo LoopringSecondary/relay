@@ -60,6 +60,10 @@ const (
 
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
+
+	// Methods
+	WethDepositMethod    = "WethDepositMethod"
+	WethWithdrawalMethod = "WethWithdrawalMethod"
 )
 
 var watchers map[string][]*Watcher
