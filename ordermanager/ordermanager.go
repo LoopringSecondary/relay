@@ -501,7 +501,7 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 }
 
 func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) error {
-	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
+	return om.rds.UpdateBroadcastTimeByHash(hash.Hex(), bt)
 }
 
 func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {

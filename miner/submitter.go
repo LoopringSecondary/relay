@@ -237,14 +237,14 @@ func (submitter *RingSubmitter) handleBatchSubmitRingMethodEvent(e eventemitter.
 
 //提交错误，执行错误
 func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error) {
-	if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
-		log.Errorf("err:%s", err.Error())
-	} else {
-		for _, ringhash := range ringhashes {
-			failedEvent := &types.RingSubmitFailedEvent{RingHash: ringhash}
-			eventemitter.Emit(eventemitter.Miner_RingSubmitFailed, failedEvent)
-		}
-	}
+	//if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
+	//	log.Errorf("err:%s", err.Error())
+	//} else {
+	//	for _, ringhash := range ringhashes {
+	//		failedEvent := &types.RingSubmitFailedEvent{RingHash: ringhash}
+	//		eventemitter.Emit(eventemitter.Miner_RingSubmitFailed, failedEvent)
+	//	}
+	//}
 }
 
 func (submitter *RingSubmitter) handleRegistryMethodEvent(e eventemitter.EventData) error {

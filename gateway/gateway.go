@@ -82,9 +82,8 @@ func HandleOrder(input eventemitter.EventData) error {
 	var broadcastTime int
 
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
-	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil {
+	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil && err.Error() == "record not found" {
 		order.GeneratePrice()
-
 		for _, v := range gateway.filters {
 			valid, err := v.filter(order)
 			if !valid {
@@ -92,41 +91,27 @@ func HandleOrder(input eventemitter.EventData) error {
 				return err
 			}
 		}
-
-		state := &types.OrderState{}
-		state.RawOrder = *order
-
-		broadcastTime = 0
-
-		if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
-			state.BroadcastTime = 1
-		}
-
 		state = &types.OrderState{}
 		state.RawOrder = *order
-
+		broadcastTime = 0
 		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
 	} else {
 		broadcastTime = state.BroadcastTime
-		return fmt.Errorf("gateway,order %s exist,will not insert again", order.Hash.Hex())
+		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
 	}
 
-	gateway.broadcast(state, broadcastTime)
-	return nil
-}
-
-func (g *Gateway) broadcast(state *types.OrderState, bt int) {
-	if gateway.isBroadcast && bt < gateway.maxBroadcastTime {
+	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 		//broadcast
-		go func() {
-			pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
-			if pubErr != nil {
-				log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.Hex())
-			} else {
-				gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1)
+		pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
+		if pubErr != nil {
+			log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.String())
+		} else {
+			if err = gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1); nil != err {
+				return err
 			}
-		}()
+		}
 	}
+	return nil
 }
 
 type BaseFilter struct {

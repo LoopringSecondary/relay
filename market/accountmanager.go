@@ -79,8 +79,12 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleTokenTransfer}
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
+	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
+	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
 	eventemitter.On(eventemitter.AccountTransfer, transferWatcher)
 	eventemitter.On(eventemitter.AccountApproval, approveWatcher)
+	eventemitter.On(eventemitter.WethDepositMethod, wethDepositWatcher)
+	eventemitter.On(eventemitter.WethWithdrawalMethod, wethWithdrawalWatcher)
 
 	return accountManager
 }
@@ -123,6 +127,19 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 	}
 }
 
+func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token common.Address) (balance, allowance *big.Int, err error) {
+	tokenAlias := util.AddressToAlias(address.Hex())
+	if tokenAlias == "" {
+		err = errors.New("unsupported token address")
+		return
+	}
+
+	account := a.GetBalance("v1.0", address.Hex())
+	balance = account.Balances[tokenAlias].Balance
+	allowance = account.Allowances[tokenAlias].allowance
+	return
+}
+
 func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 	cutoffTime, err := a.accessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
 	return int(cutoffTime.Int64()), err
@@ -148,8 +165,37 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		err = a.updateAllowance(*event)
-		log.Error(err.Error())
+		if err = a.updateAllowance(*event); nil != err {
+			log.Error(err.Error())
+		}
+	}
+	return
+}
+
+func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
+	event := input.(types.WethDepositMethodEvent)
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+		log.Info("the eth network may be forked. flush all cache")
+		a.c.Flush()
+		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
+	} else {
+		if err = a.updateWethBalanceByDeposit(event); nil != err {
+			log.Error(err.Error())
+		}
+	}
+	return
+}
+
+func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
+	event := input.(types.WethWithdrawalMethodEvent)
+	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+		log.Info("the eth network may be forked. flush all cache")
+		a.c.Flush()
+		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
+	} else {
+		if err = a.updateWethBalanceByWithdrawal(event); nil != err {
+			log.Error(err.Error())
+		}
 	}
 	return
 }
@@ -176,9 +222,9 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 
 	var address string
 	if !isAdd {
-		address = event.From.String()
+		address = strings.ToLower(event.From.String())
 	} else {
-		address = event.To.String()
+		address = strings.ToLower(event.To.String())
 	}
 
 	if tokenAlias == "" {
@@ -191,7 +237,7 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 		balance, ok := account.Balances[tokenAlias]
 		if !ok {
 			balance = Balance{Token: tokenAlias}
-			amount, err := a.GetBalanceFromAccessor(event.ContractAddress.String(), tokenAlias)
+			amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
 			if err != nil {
 				log.Error("get balance failed from accessor")
 			} else {
@@ -212,10 +258,37 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 	return nil
 }
 
+func (a *AccountManager) updateWethBalance(address string) error {
+	tokenAlias := "WETH"
+	address = strings.ToLower(address)
+	v, ok := a.c.Get(address)
+	if ok {
+		account := v.(Account)
+		balance := Balance{Token: tokenAlias}
+		amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
+		if err != nil {
+			log.Error("get balance failed from accessor")
+		} else {
+			balance.Balance = amount
+		}
+		account.Balances[tokenAlias] = balance
+		a.c.Set(address, account, cache.NoExpiration)
+	}
+	return nil
+}
+
+func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositMethodEvent) error {
+	return a.updateWethBalance(event.From.Hex())
+}
+
+func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalMethodEvent) error {
+	return a.updateWethBalance(event.From.Hex())
+}
+
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
 	spender := event.Spender.String()
-	address := event.Owner.String()
+	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
 	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
