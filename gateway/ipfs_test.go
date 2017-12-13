@@ -79,8 +79,8 @@ func TestRing(t *testing.T) {
 
 	//testAcc1 := entity.Accounts[0]
 	//testAcc2 := entity.Accounts[1]
-	testAcc1 := accounts.Account{Address:common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
-	testAcc2 := accounts.Account{Address:common.HexToAddress("0x251f3bd45b06a8b29cb6d171131e192c1254fec1")}
+	testAcc1 := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	testAcc2 := accounts.Account{Address: common.HexToAddress("0x251f3bd45b06a8b29cb6d171131e192c1254fec1")}
 	// get keystore and unlock account
 	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
