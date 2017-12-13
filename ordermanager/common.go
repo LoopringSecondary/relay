@@ -8,12 +8,31 @@ import (
 )
 
 func calculateAmountS(state *types.OrderState, req *ethaccessor.BatchErc20Req) {
-	cancelOrFilled := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
-	available := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilled)
-	state.AvailableAmountS = getMinAmount(available, req.Allowance.BigInt(), req.Balance.BigInt())
+	var available, cancelOrFilledRatS *big.Rat
+
+	balance := new(big.Rat).SetInt(req.Balance.BigInt())
+	allowance := new(big.Rat).SetInt(req.Allowance.BigInt())
+	amountRatS := new(big.Rat).SetInt(state.RawOrder.AmountS)
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		cancelOrFilledB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
+		cancelOrFilledRatB := new(big.Rat).SetInt(cancelOrFilledB)
+		cancelOrFilledRatS = new(big.Rat).Mul(state.RawOrder.Price, cancelOrFilledRatB)
+	} else {
+		cancelOrFilledS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
+		cancelOrFilledRatS = new(big.Rat).SetInt(cancelOrFilledS)
+	}
+
+	if cancelOrFilledRatS.Cmp(amountRatS) >= 0 {
+		available = new(big.Rat).SetInt64(0)
+	} else {
+		available = new(big.Rat).Sub(amountRatS, cancelOrFilledRatS)
+	}
+
+	state.AvailableAmountS = getMinAmount(available, balance, allowance)
 }
 
-func getMinAmount(a1, a2, a3 *big.Int) *big.Int {
+func getMinAmount(a1, a2, a3 *big.Rat) *big.Rat {
 	min := a1
 
 	if min.Cmp(a2) > 0 {

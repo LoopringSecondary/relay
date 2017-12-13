@@ -326,10 +326,10 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 
 func (om *OrderManagerImpl) IsFundInsufficient(state *types.OrderState) bool {
 	price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-	amount := new(big.Rat).SetInt(state.AvailableAmountS)
-	value := new(big.Rat).Mul(price, amount)
+	value := new(big.Rat).Mul(price, state.AvailableAmountS)
 
-	if value.Cmp(big.NewRat(1, 1)) > 0 {
+	// todo: get from config
+	if value.Cmp(new(big.Rat).SetInt64(1)) > 0 {
 		return false
 	}
 
