@@ -142,6 +142,9 @@ type MinerOptions struct {
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
 	GasLimit                int64
+	TimingMatcher struct {
+		RoundOrdersCount int
+	}
 	RateProvider            struct {
 		BaseUrl       string
 		Currency      string

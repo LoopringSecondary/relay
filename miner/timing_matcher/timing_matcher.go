@@ -61,6 +61,7 @@ type TimingMatcher struct {
 	evaluator       *miner.Evaluator
 	lastBlockNumber *big.Int
 	duration        *big.Int
+	roundOrderCount int
 
 	afterSubmitWatcher *eventemitter.Watcher
 	blockTriger        *eventemitter.Watcher
@@ -79,8 +80,9 @@ type Market struct {
 	BtoAOrderHashesExcludeNextRound []common.Hash
 }
 
-func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager) *TimingMatcher {
+func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager, roundOrderCount int) *TimingMatcher {
 	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
+	matcher.roundOrderCount = roundOrderCount
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(1)
@@ -125,12 +127,12 @@ func (matcher *TimingMatcher) blockTrigger(eventData eventemitter.EventData) err
 		for _, protocolAddress := range matcher.submitter.Accessor.ProtocolAddresses {
 			for _, market := range matcher.markets {
 				wg.Add(1)
-				go func(market *Market) {
+				go func(market *Market, contractAddress common.Address) {
 					defer func() {
 						wg.Add(-1)
 					}()
-					market.match(protocolAddress.ContractAddress)
-				}(market)
+					market.match(contractAddress)
+				}(market, protocolAddress.ContractAddress)
 			}
 		}
 		wg.Wait()
@@ -138,14 +140,17 @@ func (matcher *TimingMatcher) blockTrigger(eventData eventemitter.EventData) err
 	return nil
 }
 
+/**
+get orders from ordermanager
+ */
 func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
 	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
 
-	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
-	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
+	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, market.AtoBOrderHashesExcludeNextRound)
+	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, market.BtoAOrderHashesExcludeNextRound)
 
 	for _, order := range atoBOrders {
 		market.reduceRemainedAmountBeforeMatch(order)
@@ -168,6 +173,7 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 //sub the matched amount in new round.
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
+
 	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
 		//if len(matchedOrder.rounds) <= 0 {
 		//	delete(market.AtoBOrders, orderHash)

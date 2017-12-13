@@ -35,6 +35,7 @@ type Evaluator struct {
 	accessor              *ethaccessor.EthNodeAccessor
 }
 
+//todo:是否需要删除该部分，使用orderstate中的availableAmount
 func availableAmountS(filledOrder *types.FilledOrder) error {
 	filledOrder.AvailableAmountS, filledOrder.AvailableAmountB = filledOrder.OrderState.RemainedAmount()
 	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
