@@ -202,6 +202,11 @@ type BatchSubmitRingHashMethodEvent struct {
 	Err              error
 }
 
+type RingSubmitFailedEvent struct {
+	RingHash common.Hash
+	Err      error
+}
+
 type ForkedEvent struct {
 	DetectedBlock *big.Int
 	DetectedHash  common.Hash

@@ -88,8 +88,8 @@ type RdsService interface {
 	//ringSubmitInfo
 	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
 	UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error
-	UpdateRingSubmitInfoRegistryUsedGas(ringhash common.Hash, txHash string, usedGas *big.Int) error
-	UpdateRingSubmitInfoSubmitUsedGas(ringhash common.Hash, txHash string, usedGas *big.Int) error
+	UpdateRingSubmitInfoRegistryUsedGas(txHash string, usedGas *big.Int) error
+	UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error
 	UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)

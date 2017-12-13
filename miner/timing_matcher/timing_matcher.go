@@ -112,7 +112,7 @@ func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator
 func (matcher *TimingMatcher) Start() {
 	matcher.afterSubmitWatcher = &eventemitter.Watcher{Concurrent: false, Handle: matcher.afterSubmit}
 	//todo:the topic should contain submit success
-	eventemitter.On(eventemitter.Miner_RingMined, matcher.afterSubmitWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, matcher.afterSubmitWatcher)
 	eventemitter.On(eventemitter.Miner_RingSubmitFailed, matcher.afterSubmitWatcher)
 	matcher.blockTriger = &eventemitter.Watcher{Concurrent: false, Handle: matcher.blockTrigger}
 	eventemitter.On(eventemitter.Block_New, matcher.blockTriger)
