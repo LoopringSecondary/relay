@@ -127,6 +127,19 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 	}
 }
 
+func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token common.Address) (balance, allowance *big.Int, err error) {
+	tokenAlias := util.AddressToAlias(address.Hex())
+	if tokenAlias == "" {
+		err = errors.New("unsupported token address")
+		return
+	}
+
+	account := a.GetBalance("v1.0", address.Hex())
+	balance = account.Balances[tokenAlias].Balance
+	allowance = account.Allowances[tokenAlias].allowance
+	return
+}
+
 func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 	cutoffTime, err := a.accessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
 	return int(cutoffTime.Int64()), err
@@ -209,9 +222,9 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 
 	var address string
 	if !isAdd {
-		address = event.From.String()
+		address = strings.ToLower(event.From.String())
 	} else {
-		address = event.To.String()
+		address = strings.ToLower(event.To.String())
 	}
 
 	if tokenAlias == "" {
@@ -247,6 +260,7 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 
 func (a *AccountManager) updateWethBalance(address string) error {
 	tokenAlias := "WETH"
+	address = strings.ToLower(address)
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
@@ -274,7 +288,7 @@ func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawa
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
 	spender := event.Spender.String()
-	address := event.Owner.String()
+	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
 	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
