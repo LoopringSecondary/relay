@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
@@ -146,7 +145,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	if err != nil {
 		return err
 	}
-	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
 
 	return om.rds.Add(model)
 }

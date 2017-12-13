@@ -19,9 +19,9 @@
 package dao_test
 
 import (
-	"testing"
-	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/test"
+	"testing"
 )
 
 func TestRdsServiceImpl_AddRingMined(t *testing.T) {

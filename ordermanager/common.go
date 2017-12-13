@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
@@ -32,12 +33,6 @@ import (
 func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
 	blockNumberStr := blockNumberToString(blockNumber)
 
-	state.Status = types.ORDER_NEW
-	state.DealtAmountS = big.NewInt(0)
-	state.DealtAmountB = big.NewInt(0)
-	state.CancelledAmountS = big.NewInt(0)
-	state.CancelledAmountB = big.NewInt(0)
-
 	// get order cancelled or filled amount from chain
 	if cancelOrFilledAmount, err := accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {
 		return nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
@@ -46,19 +41,36 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 	}
 
 	// check order finished status
-	finished := isOrderFullFinished(state, mc)
-	state.SettleFinishedStatus(finished)
+	settleOrderStatus(state, mc)
+
 	if blockNumber == nil {
 		state.UpdatedBlock = big.NewInt(0)
 	} else {
 		state.UpdatedBlock = blockNumber
 	}
 
+	state.DealtAmountS = big.NewInt(0)
+	state.DealtAmountB = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
+
 	model := &dao.Order{}
-	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	var err error
+	model.Market, err = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	if err != nil {
+		return nil, fmt.Errorf("order manager,newOrderEntity error:%s", err.Error())
+	}
 	model.ConvertDown(state)
 
 	return model, nil
+}
+
+func settleOrderStatus(state *types.OrderState, mc *marketcap.MarketCapProvider) {
+	if state.CancelledAmountS.Cmp(big.NewInt(0)) == 0 {
+		state.Status = types.ORDER_NEW
+	} else {
+		finished := isOrderFullFinished(state, mc)
+		state.SettleFinishedStatus(finished)
+	}
 }
 
 func isOrderFullFinished(state *types.OrderState, mc *marketcap.MarketCapProvider) bool {

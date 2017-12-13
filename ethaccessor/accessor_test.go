@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	version              = "v_0_1"
+	version              = test.Version
 	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
