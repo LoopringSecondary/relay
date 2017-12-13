@@ -53,11 +53,11 @@ type RingSubmitter struct {
 	dbService         dao.RdsService
 	marketCapProvider *marketcap.MarketCapProvider
 
-	newRingWatcher          *eventemitter.Watcher
-	ringhashSubmitWatcher   *eventemitter.Watcher
-	registryMethodWatcher   *eventemitter.Watcher
-	batchRegistryMethodWatcher   *eventemitter.Watcher
-	ringSubmitMethodWatcher *eventemitter.Watcher
+	newRingWatcher             *eventemitter.Watcher
+	ringhashSubmitWatcher      *eventemitter.Watcher
+	registryMethodWatcher      *eventemitter.Watcher
+	batchRegistryMethodWatcher *eventemitter.Watcher
+	ringSubmitMethodWatcher    *eventemitter.Watcher
 }
 
 type RingSubmitFailed struct {
@@ -392,16 +392,16 @@ func (submitter *RingSubmitter) start() {
 	submitter.newRingWatcher = newRingWatcher
 	eventemitter.On(eventemitter.Miner_NewRing, submitter.newRingWatcher)
 
-	registryMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleRegistryMethodEvent}
+	registryMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleRegistryMethodEvent}
 	submitter.ringhashSubmitWatcher = registryMethodWatcher
 	eventemitter.On(eventemitter.Miner_SubmitRingHash_Method, submitter.registryMethodWatcher)
 
-	ringSubmitMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleSubmitRingMethodEvent}
+	ringSubmitMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleSubmitRingMethodEvent}
 	submitter.ringSubmitMethodWatcher = ringSubmitMethodWatcher
 	eventemitter.On(eventemitter.Miner_SubmitRing_Method, submitter.ringSubmitMethodWatcher)
 
 	//Miner_BatchSubmitRingHash_Method
-	batchRegistryMethodWatcher := &eventemitter.Watcher{Concurrent:false, Handle:submitter.handleBatchSubmitRingMethodEvent}
+	batchRegistryMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleBatchSubmitRingMethodEvent}
 	submitter.batchRegistryMethodWatcher = batchRegistryMethodWatcher
 	eventemitter.On(eventemitter.Miner_BatchSubmitRingHash_Method, submitter.batchRegistryMethodWatcher)
 

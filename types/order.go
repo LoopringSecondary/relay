@@ -173,22 +173,22 @@ func (o *Order) GeneratePrice() {
 // 根据big.Rat价格计算big.int remainAmount
 // buyNoMoreThanAmountB == true  已知remainAmountB计算remainAmountS
 // buyNoMoreThanAmountB == false 已知remainAmountS计算remainAmountB
-func (ord *OrderState) CalculateRemainAmount() {
-	const RATE = 1.0e18
-
-	price, _ := ord.RawOrder.Price.Float64()
-	price = price * RATE
-	bigPrice := big.NewInt(int64(price))
-	bigRate := big.NewInt(RATE)
-
-	if ord.RawOrder.BuyNoMoreThanAmountB == true {
-		beenRateAmountB := new(big.Int).Mul(ord.DealtAmountB, bigPrice)
-		ord.DealtAmountS = new(big.Int).Div(beenRateAmountB, bigRate)
-	} else {
-		beenRateAmountS := new(big.Int).Mul(ord.DealtAmountS, bigRate)
-		ord.DealtAmountB = new(big.Int).Div(beenRateAmountS, bigPrice)
-	}
-}
+//func (ord *OrderState) CalculateRemainAmount() {
+//	const RATE = 1.0e18
+//
+//	price, _ := ord.RawOrder.Price.Float64()
+//	price = price * RATE
+//	bigPrice := big.NewInt(int64(price))
+//	bigRate := big.NewInt(RATE)
+//
+//	if ord.RawOrder.BuyNoMoreThanAmountB == true {
+//		beenRateAmountB := new(big.Int).Mul(ord.DealtAmountB, bigPrice)
+//		ord.DealtAmountS = new(big.Int).Div(beenRateAmountB, bigRate)
+//	} else {
+//		beenRateAmountS := new(big.Int).Mul(ord.DealtAmountS, bigRate)
+//		ord.DealtAmountB = new(big.Int).Div(beenRateAmountS, bigPrice)
+//	}
+//}
 
 //RateAmountS、FeeSelection 需要提交到contract
 type FilledOrder struct {
@@ -219,9 +219,14 @@ type OrderState struct {
 	DealtAmountB     *big.Int    `json:"dealtAmountB"`
 	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
 	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
-	AvailableAmountS *big.Int    `json:"availableAmountS"`
+	AvailableAmountS *big.Rat    `json:"availableAmountS"`
 	Status           OrderStatus `json:"status"`
 	BroadcastTime    int         `json:"broadcastTime"`
+}
+
+type OrderDelayList struct {
+	OrderHash    []common.Hash
+	DelayedCount int
 }
 
 // 根据是否完全成交确定订单状态
