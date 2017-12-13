@@ -30,7 +30,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 	"sync"
 )
@@ -38,7 +37,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -78,7 +77,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.options = options
 	om.commonOpts = commonOpts
 	om.rds = rds
-	om.processor = newForkProcess(om.rds, accessor)
+	om.processor = newForkProcess(om.rds, accessor, market)
 	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
@@ -296,38 +295,51 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return isOrderFullFinished(state, om.mc)
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState {
 	var (
-		list            []*types.OrderState
-		modelList       []*dao.Order
-		currentBlock    *dao.Block
-		markBlockNumber *big.Int
-		err             error
-		orderhashstrs   []string
-		filterStatus    = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list                                               []*types.OrderState
+		modelList                                          []*dao.Order
+		currentBlock                                       *dao.Block
+		err                                                error
+		orderhashstrs1, orderhashstrs2                     []string
+		delayBlockCnt1, delayBlockCnt2, currentBlockNumber int64
+		filterStatus                                       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
-	for _, v := range filterOrderhashs {
-		orderhashstrs = append(orderhashstrs, v.Hex())
+	for _, v := range filterOrderHashLists[0].OrderHash {
+		orderhashstrs1 = append(orderhashstrs1, v.Hex())
+	}
+	for _, v := range filterOrderHashLists[1].OrderHash {
+		orderhashstrs2 = append(orderhashstrs2, v.Hex())
 	}
 
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
 	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
 		var b types.Block
 		currentBlock.ConvertUp(&b)
-		markBlockNumber = b.BlockNumber
+		delayBlockCnt1 = b.BlockNumber.Int64() + int64(filterOrderHashLists[0].DelayedCount)
+		delayBlockCnt2 = b.BlockNumber.Int64() + int64(filterOrderHashLists[1].DelayedCount)
+		currentBlockNumber = currentBlock.BlockNumber
 	} else {
-		markBlockNumber = big.NewInt(0)
+		delayBlockCnt1 = 0
+		delayBlockCnt2 = 0
+		currentBlockNumber = 0
 	}
 
 	// 标记miner提供的劣质订单
-	if err = om.rds.MarkMinerOrders(orderhashstrs, markBlockNumber.Int64()); err != nil {
-		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+	if len(orderhashstrs1) > 0 && delayBlockCnt1 != 0 {
+		if err = om.rds.MarkMinerOrders(orderhashstrs1, delayBlockCnt1); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		}
+	}
+	if len(orderhashstrs2) > 0 && delayBlockCnt2 != 0 {
+		if err = om.rds.MarkMinerOrders(orderhashstrs2, delayBlockCnt2); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		}
 	}
 
 	// 从数据库获取订单
-	markBlockNumber = new(big.Int).Sub(markBlockNumber, big.NewInt(int64(om.options.BlockPeriod)))
-	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
+	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
 		return list
 	}
 	var listBeforeCheckAccount []*types.OrderState
@@ -337,42 +349,6 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
 			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
-	}
-
-	// 批量查询订单账户的余额及授权
-	var erc20ReqList []*ethaccessor.BatchErc20Req
-	for _, v := range listBeforeCheckAccount {
-		spender, _ := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
-		batchReq := generateErc20Req(v, spender, nil)
-		erc20ReqList = append(erc20ReqList, batchReq)
-	}
-	if len(erc20ReqList) == 0 {
-		return list
-	}
-	if err := om.accessor.BatchErc20BalanceAndAllowance(erc20ReqList); err != nil {
-		log.Debugf("order manager,miner orders,batchErc20BalanceAndAllowance error:%s", err.Error())
-		return list
-	}
-
-	// 根据余额及授权过滤订单
-	var accountMarkList []string
-	for idx, req := range erc20ReqList {
-		v := listBeforeCheckAccount[idx]
-		if req.BalanceErr != nil || req.AllowanceErr != nil {
-			continue
-		}
-		calculateAmountS(v, req)
-		if isFundInsufficient(v, om.mc) {
-			accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
-		} else {
-			list = append(list, v)
-		}
-	}
-
-	// 标记余额/授权不足订单
-	accountForbiddenBlockMark := currentBlock.BlockNumber + int64(om.options.AccountPeriod)
-	if err = om.rds.MarkMinerOrders(accountMarkList, accountForbiddenBlockMark); err != nil {
-		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
 	return list

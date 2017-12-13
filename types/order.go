@@ -224,6 +224,11 @@ type OrderState struct {
 	BroadcastTime    int         `json:"broadcastTime"`
 }
 
+type OrderDelayList struct {
+	OrderHash    []common.Hash
+	DelayedCount int
+}
+
 // 根据是否完全成交确定订单状态
 func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
 	if isFullFinished {

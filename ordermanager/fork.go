@@ -28,18 +28,16 @@ import (
 )
 
 type forkProcessor struct {
-	dao           dao.RdsService
-	accessor      *ethaccessor.EthNodeAccessor
-	mc            *marketcap.MarketCapProvider
-	accountPeriod int64
+	dao      dao.RdsService
+	accessor *ethaccessor.EthNodeAccessor
+	mc       *marketcap.MarketCapProvider
 }
 
-func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, period int64) *forkProcessor {
+func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider) *forkProcessor {
 	processor := &forkProcessor{}
 	processor.dao = rds
 	processor.mc = mc
 	processor.accessor = accessor
-	processor.accountPeriod = period
 
 	return processor
 }
