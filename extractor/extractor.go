@@ -191,6 +191,9 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	)
 
 	// 过滤方法
+	if len(input) < 4 {
+		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
+	}
 	id := common.ToHex(input[0:4])
 	if contract, ok = l.methods[id]; !ok {
 		return fmt.Errorf("extractor,contract method id error:%s", id)
