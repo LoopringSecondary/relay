@@ -135,6 +135,11 @@ type LogOptions struct {
 	ZapOpts zap.Config
 }
 
+type TimingMatcher struct {
+	RoundOrdersCount int
+	Duration         int64
+	DelayedNumber    int64
+}
 type MinerOptions struct {
 	RingMaxLength           int    `required:"true"` //recommended value:4
 	Miner                   string `required:"true"` //private key, used to sign the ring
@@ -142,6 +147,7 @@ type MinerOptions struct {
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
 	GasLimit                int64
+	TimingMatcher           *TimingMatcher
 	RateProvider            struct {
 		BaseUrl       string
 		Currency      string

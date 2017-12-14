@@ -231,7 +231,7 @@ func AliasToAddress(t string) common.Address {
 
 func AddressToAlias(t string) string {
 	for k, v := range AllTokens {
-		if t == v.Protocol.Hex() {
+		if strings.ToUpper(t) == strings.ToUpper(v.Protocol.Hex()) {
 			return k
 		}
 	}

@@ -62,13 +62,13 @@ func TestMatch(t *testing.T) {
 	crypto.Initialize(c)
 	rdsService := dao.NewRdsService(cfg.Mysql)
 	userManager := usermanager.NewUserManager(rdsService)
-	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common)
+	accessor, _ := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, common.HexToAddress("0x"))
 	om := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rdsService, userManager, accessor, nil)
 
 	marketCapProvider := marketcap.NewMarketCapProvider(cfg.Miner)
 	submitter := miner.NewSubmitter(cfg.Miner, accessor, rdsService, marketCapProvider)
 	evaluator := miner.NewEvaluator(marketCapProvider, int64(1000000000000000), accessor)
-	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, om)
+	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, om, 1, 10)
 
 	m := miner.NewMiner(submitter, matcher, evaluator, accessor, marketCapProvider)
 	m.Start()
@@ -100,13 +100,13 @@ func TestPrepareTestData(t *testing.T) {
 }
 
 func TestAllowance(t *testing.T) {
-	//test.AllowanceToLoopring(nil, nil)
+	test.AllowanceToLoopring(nil, nil)
 	//b := new(big.Int)
 	//b.SetString("18428729675200069633", 0)
 	//println(common.Bytes2Hex(b.Bytes()))
-	v := new(big.Rat)
-	v.SetString("")
-	println(v.String())
+	//v := new(big.Rat)
+	//v.SetString("")
+	//println(v.String())
 }
 func TestSetTokenBalances(t *testing.T) {
 	test.SetTokenBalances()
