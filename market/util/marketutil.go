@@ -84,7 +84,7 @@ func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
 	for _, v := range tokens {
 		var token types.Token
 		v.ConvertUp(&token)
-		SupportTokens[v.Symbol] = token
+		SupportTokens[token.Symbol] = token
 		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
 	}
 
@@ -139,20 +139,20 @@ func TokenRegister(input eventemitter.EventData) error {
 
 	var token types.Token
 	token.Protocol = evt.Token
-	token.Symbol = evt.Symbol
+	token.Symbol = strings.ToUpper(evt.Symbol)
 	token.Deny = false
 	token.IsMarket = false
 	token.Time = evt.Time.Int64()
 
 	// todo: how to get source
 	token.Source = ""
-	SupportTokens[evt.Symbol] = token
-	AllTokens[evt.Symbol] = token
+	SupportTokens[token.Symbol] = token
+	AllTokens[token.Symbol] = token
 
 	pairsMap := make(map[string]TokenPair, 0)
 	for _, v := range SupportMarkets {
-		pairsMap[v.Symbol+"-"+evt.Symbol] = TokenPair{v.Protocol, evt.Token}
-		pairsMap[evt.Symbol+"-"+v.Symbol] = TokenPair{evt.Token, v.Protocol}
+		pairsMap[v.Symbol+"-"+token.Symbol] = TokenPair{v.Protocol, token.Protocol}
+		pairsMap[token.Symbol+"-"+v.Symbol] = TokenPair{token.Protocol, v.Protocol}
 	}
 	for _, v := range pairsMap {
 		AllTokenPairs = append(AllTokenPairs, v)
@@ -163,8 +163,8 @@ func TokenRegister(input eventemitter.EventData) error {
 func TokenUnRegister(input eventemitter.EventData) error {
 	evt := input.(*types.TokenUnRegisterEvent)
 
-	delete(SupportTokens, evt.Symbol)
-	delete(AllTokens, evt.Symbol)
+	delete(SupportTokens, strings.ToUpper(evt.Symbol))
+	delete(AllTokens, strings.ToUpper(evt.Symbol))
 
 	var list []TokenPair
 	for _, v := range AllTokenPairs {
@@ -216,12 +216,12 @@ func UnWrapToAddress(market string) (s, b common.Address) {
 }
 
 func IsSupportedMarket(market string) bool {
-	_, ok := SupportMarkets[market]
+	_, ok := SupportMarkets[strings.ToUpper(market)]
 	return ok
 }
 
 func IsSupportedToken(token string) bool {
-	_, ok := SupportTokens[token]
+	_, ok := SupportTokens[strings.ToUpper(token)]
 	return ok
 }
 

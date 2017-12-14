@@ -39,8 +39,8 @@ func TestSingleOrder(t *testing.T) {
 	entity := test.GenerateTomlEntity()
 
 	// get keystore and unlock account
-	tokenAddressA := entity.Tokens[0]
-	tokenAddressB := entity.Tokens[1]
+	tokenAddressA := util.AllTokens["LRC"].Protocol
+	tokenAddressB := util.AllTokens["WETH"].Protocol
 	testAcc := entity.Accounts[0]
 
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -50,7 +50,7 @@ func TestSingleOrder(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
@@ -74,27 +74,28 @@ func TestRing(t *testing.T) {
 	c := test.Cfg()
 	entity := test.GenerateTomlEntity()
 
-	tokenAddressA := util.SupportTokens["lrc"].Protocol
-	tokenAddressB := util.SupportMarkets["weth"].Protocol
+	tokenAddressA := util.SupportTokens["LRC"].Protocol
+	tokenAddressB := util.SupportMarkets["WETH"].Protocol
 
-	//testAcc1 := entity.Accounts[0]
-	//testAcc2 := entity.Accounts[1]
-	testAcc1 := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
-	testAcc2 := accounts.Account{Address: common.HexToAddress("0x251f3bd45b06a8b29cb6d171131e192c1254fec1")}
+	testAcc1 := entity.Accounts[0]
+	testAcc2 := entity.Accounts[1]
+	password1 := entity.Accounts[0].Passphrase
+	password2 := entity.Accounts[1].Passphrase
+
 	// get keystore and unlock account
 	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	acc1 := accounts.Account{Address: testAcc1.Address}
 	acc2 := accounts.Account{Address: testAcc2.Address}
 
-	ks.Unlock(acc1, "1")
-	ks.Unlock(acc2, "1")
+	ks.Unlock(acc1, password1)
+	ks.Unlock(acc2, password2)
 
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
