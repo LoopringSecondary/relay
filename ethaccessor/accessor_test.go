@@ -38,7 +38,7 @@ const (
 	registerTokenSymbol  = "wrdn"
 	wethAddress          = "0x88699e7fee2da0462981a08a15a3b940304cc516"
 	wethOwner            = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
-	transferToAccount 	 = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+	transferToAccount    = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
 )
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
@@ -380,5 +380,19 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 		t.Fatalf("call method weth-transfer error:%s", err.Error())
 	} else {
 		t.Logf("weth-transfer result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_LrcTokenAddress(t *testing.T) {
+	c := test.Cfg()
+
+	accessor, _ := test.GenerateAccessor()
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
+	var result string
+	if err := callMethod(&result, "lrcTokenAddress", "latest"); nil != err {
+		t.Fatalf("call method lrcTokenAddress error:%s", err.Error())
+	} else {
+		t.Logf("lrcTokenAddress:%s", result)
 	}
 }
