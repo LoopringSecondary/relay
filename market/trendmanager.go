@@ -455,7 +455,8 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 
 		if tickerInCache, ok := t.c.Get(trendKey); ok {
 			trendMap := tickerInCache.(map[string]Cache)
-			trendMap[market].Fills[len(trendMap[market].Fills)] = *newFillModel
+			fills := trendMap[market].Fills
+			fills = append(fills, *newFillModel)
 		} else {
 			fills := make([]dao.FillEvent, 0)
 			fills = append(fills, *newFillModel)

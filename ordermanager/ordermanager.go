@@ -37,7 +37,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -77,7 +77,7 @@ func NewOrderManager(options config.OrderManagerOptions,
 	om.options = options
 	om.commonOpts = commonOpts
 	om.rds = rds
-	om.processor = newForkProcess(om.rds, accessor)
+	om.processor = newForkProcess(om.rds, accessor, market)
 	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
@@ -135,12 +135,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
-	state.Status = types.ORDER_NEW
-	state.DealtAmountS = big.NewInt(0)
-	state.DealtAmountB = big.NewInt(0)
-	state.CancelledAmountS = big.NewInt(0)
-	state.CancelledAmountB = big.NewInt(0)
-
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	// order already exist in dao/order
@@ -148,38 +142,11 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		return nil
 	}
 
-	// get order cancelled or filled amount from chain
-	if cancelOrFilledAmount, err := om.accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, "latest"); err != nil {
-		return fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
-	} else {
-		state.CancelledAmountS = cancelOrFilledAmount
+	model, err := newOrderEntity(state, om.accessor, om.mc, nil)
+	if err != nil {
+		return err
 	}
-
-	// check order finished status
-	finished := om.IsOrderFullFinished(state)
-	state.SettleFinishedStatus(finished)
-
-	// check allowance and balance
-	var markBlockNumber int64 = 0
-	if state.Status != types.ORDER_FINISHED {
-		spender, _ := om.accessor.GetSenderAddress(state.RawOrder.Protocol)
-		req := generateErc20Req(state, spender)
-		if err := om.accessor.BatchErc20BalanceAndAllowance([]*ethaccessor.BatchErc20Req{req}); err != nil {
-			return fmt.Errorf("order manager,geteway new order,batchErc20BalanceAndAllowance error:%s", err.Error())
-		}
-		if req.AllowanceErr != nil || req.BalanceErr != nil {
-			return fmt.Errorf("order manager,gateway new order,order %s ab ")
-		}
-		calculateAmountS(state, req)
-		if ok := om.IsFundInsufficient(state); ok {
-			markBlockNumber = state.UpdatedBlock.Int64() + int64(om.options.AccountPeriod)
-		}
-	}
-
-	model := &dao.Order{}
-	model.MinerBlockMark = markBlockNumber
 	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
-	model.ConvertDown(state)
 
 	return om.rds.Add(model)
 }
@@ -240,7 +207,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	finished := om.IsOrderFullFinished(state)
+	finished := isOrderFullFinished(state, om.mc)
 	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
@@ -296,7 +263,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	finished := om.IsOrderFullFinished(state)
+	finished := isOrderFullFinished(state, om.mc)
 	state.SettleFinishedStatus(finished)
 
 	// update rds.Order
@@ -324,75 +291,55 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	return nil
 }
 
-func (om *OrderManagerImpl) IsFundInsufficient(state *types.OrderState) bool {
-	price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-	amount := new(big.Rat).SetInt(state.AvailableAmountS)
-	value := new(big.Rat).Mul(price, amount)
-
-	if value.Cmp(big.NewRat(1, 1)) > 0 {
-		return false
-	}
-
-	return true
-}
-
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
-	var valueOfRemainAmount *big.Rat
-
-	if state.RawOrder.BuyNoMoreThanAmountB {
-		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
-		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
-		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenB)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
-	} else {
-		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
-		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
-		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		price := om.mc.GetMarketCap(state.RawOrder.TokenS)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
-	}
-
-	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(1, 1)) > 0 {
-		return false
-	}
-
-	return true
+	return isOrderFullFinished(state, om.mc)
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderhashs []common.Hash) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState {
 	var (
-		list            []*types.OrderState
-		modelList       []*dao.Order
-		currentBlock    *dao.Block
-		markBlockNumber *big.Int
-		err             error
-		orderhashstrs   []string
-		filterStatus    = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list                                               []*types.OrderState
+		modelList                                          []*dao.Order
+		currentBlock                                       *dao.Block
+		err                                                error
+		orderhashstrs1, orderhashstrs2                     []string
+		delayBlockCnt1, delayBlockCnt2, currentBlockNumber int64
+		filterStatus                                       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
-	for _, v := range filterOrderhashs {
-		orderhashstrs = append(orderhashstrs, v.Hex())
+	for _, v := range filterOrderHashLists[0].OrderHash {
+		orderhashstrs1 = append(orderhashstrs1, v.Hex())
+	}
+	for _, v := range filterOrderHashLists[1].OrderHash {
+		orderhashstrs2 = append(orderhashstrs2, v.Hex())
 	}
 
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
 	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
 		var b types.Block
 		currentBlock.ConvertUp(&b)
-		markBlockNumber = b.BlockNumber
+		delayBlockCnt1 = b.BlockNumber.Int64() + int64(filterOrderHashLists[0].DelayedCount)
+		delayBlockCnt2 = b.BlockNumber.Int64() + int64(filterOrderHashLists[1].DelayedCount)
+		currentBlockNumber = currentBlock.BlockNumber
 	} else {
-		markBlockNumber = big.NewInt(0)
+		delayBlockCnt1 = 0
+		delayBlockCnt2 = 0
+		currentBlockNumber = 0
 	}
 
 	// 标记miner提供的劣质订单
-	if err = om.rds.MarkMinerOrders(orderhashstrs, markBlockNumber.Int64()); err != nil {
-		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+	if len(orderhashstrs1) > 0 && delayBlockCnt1 != 0 {
+		if err = om.rds.MarkMinerOrders(orderhashstrs1, delayBlockCnt1); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		}
+	}
+	if len(orderhashstrs2) > 0 && delayBlockCnt2 != 0 {
+		if err = om.rds.MarkMinerOrders(orderhashstrs2, delayBlockCnt2); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		}
 	}
 
 	// 从数据库获取订单
-	markBlockNumber = new(big.Int).Sub(markBlockNumber, big.NewInt(int64(om.options.BlockPeriod)))
-	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, markBlockNumber.Int64()); err != nil {
+	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
 		return list
 	}
 	var listBeforeCheckAccount []*types.OrderState
@@ -402,42 +349,6 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
 			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
 		}
-	}
-
-	// 批量查询订单账户的余额及授权
-	var erc20ReqList []*ethaccessor.BatchErc20Req
-	for _, v := range listBeforeCheckAccount {
-		spender, _ := om.accessor.GetSenderAddress(v.RawOrder.Protocol)
-		batchReq := generateErc20Req(v, spender)
-		erc20ReqList = append(erc20ReqList, batchReq)
-	}
-	if len(erc20ReqList) == 0 {
-		return list
-	}
-	if err := om.accessor.BatchErc20BalanceAndAllowance(erc20ReqList); err != nil {
-		log.Debugf("order manager,miner orders,batchErc20BalanceAndAllowance error:%s", err.Error())
-		return list
-	}
-
-	// 根据余额及授权过滤订单
-	var accountMarkList []string
-	for idx, req := range erc20ReqList {
-		v := listBeforeCheckAccount[idx]
-		if req.BalanceErr != nil || req.AllowanceErr != nil {
-			continue
-		}
-		calculateAmountS(v, req)
-		if om.IsFundInsufficient(v) {
-			accountMarkList = append(accountMarkList, v.RawOrder.Hash.Hex())
-		} else {
-			list = append(list, v)
-		}
-	}
-
-	// 标记余额/授权不足订单
-	accountForbiddenBlockMark := currentBlock.BlockNumber + int64(om.options.AccountPeriod)
-	if err = om.rds.MarkMinerOrders(accountMarkList, accountForbiddenBlockMark); err != nil {
-		log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 	}
 
 	return list
@@ -501,7 +412,7 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 }
 
 func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) error {
-	return om.rds.UpdateBroadcastTimeByHash(hash.Str(), bt)
+	return om.rds.UpdateBroadcastTimeByHash(hash.Hex(), bt)
 }
 
 func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {

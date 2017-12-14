@@ -51,6 +51,8 @@ func (p *IPFSPubServiceImpl) PublishOrder(order types.Order) error {
 	pubErr := p.sh.PubSubPublish(p.options.BroadcastTopics[0], string(orderJson))
 	if pubErr != nil {
 		log.Debugf("ipfs pub,pub sub publish error:%s", pubErr.Error())
+	} else {
+		log.Debugf("ipfs publish order:%s", order.Hash.Hex())
 	}
 	return pubErr
 }
