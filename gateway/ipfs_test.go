@@ -20,7 +20,6 @@ package gateway_test
 
 import (
 	"github.com/Loopring/relay/crypto"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -74,9 +73,10 @@ func TestRing(t *testing.T) {
 	c := test.Cfg()
 	entity := test.GenerateTomlEntity()
 
-	tokenAddressA := util.SupportTokens["lrc"].Protocol
-	tokenAddressB := util.SupportMarkets["weth"].Protocol
-
+	//tokenAddressA := util.SupportTokens["lrc"].Protocol
+	//tokenAddressB := util.SupportMarkets["weth"].Protocol
+	tokenAddressA := common.HexToAddress("0x88699e7FEE2Da0462981a08a15A3B940304CC516")
+	tokenAddressB := common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")
 	//testAcc1 := entity.Accounts[0]
 	//testAcc2 := entity.Accounts[1]
 	testAcc1 := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}

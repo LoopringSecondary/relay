@@ -73,6 +73,10 @@ account_period = 100
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
     gas_limit = 150000000
+    [miner.TimingMatcher]
+    		round_orders_count=50
+    		duration = 2
+    		delayed_number = 10
     [miner.rate_provider]
         base_url = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
         currency = "USD"

@@ -187,7 +187,7 @@ func init() {
 	crypto.Initialize(c)
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
-	tokens = []common.Address{common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51")}
+	//tokens = []common.Address{common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51"),common.HexToAddress("0x88699e7fee2da0462981a08a15a3b940304cc516")}
 }
 
 //setbalance after deploy token by protocol

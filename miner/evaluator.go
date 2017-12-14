@@ -33,24 +33,10 @@ type Evaluator struct {
 	marketCapProvider     *marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
 	accessor              *ethaccessor.EthNodeAccessor
-}
-
-//todo:是否需要删除该部分，使用orderstate中的availableAmount
-func availableAmountS(filledOrder *types.FilledOrder) error {
-	filledOrder.AvailableAmountS, filledOrder.AvailableAmountB = filledOrder.OrderState.RemainedAmount()
-	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
-
-	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-		filledOrder.AvailableAmountS.Mul(filledOrder.AvailableAmountB, sellPrice)
-	} else {
-		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountB, new(big.Rat).Inv(sellPrice))
-	}
-
-	return nil
+	lrcAddress            common.Address
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
-
 	ringState.LegalFee = new(big.Rat)
 
 	productAmountS := big.NewRat(int64(1), int64(1))
@@ -92,10 +78,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
 		filledOrder.BPrice.Inv(filledOrder.SPrice)
 
-		//todo:当以Sell为基准时，考虑账户余额、订单剩余金额的最小值
-		if err := availableAmountS(filledOrder); nil != err {
-			return err
-		}
+		filledOrder.SetAvailableAmount()
 		amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
 		amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 
@@ -181,6 +164,10 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	}
 }
 
+func (e *Evaluator) getMarketCap(tokenAddress common.Address) *big.Rat {
+	return e.marketCapProvider.GetMarketCap(tokenAddress)
+}
+
 func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
 	//the ring use the min MarginSplitPercentage as self's MarginSplitPercentage
@@ -209,7 +196,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving.Mul(filledOrder.FeeS, e.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenS))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, e.getMarketCap(filledOrder.OrderState.RawOrder.TokenS))
 			log.Debugf("miner,savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
@@ -217,7 +204,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
 			//todo:address of buy token
-			legalAmountOfSaving.Mul(filledOrder.FeeS, e.marketCapProvider.GetMarketCap(filledOrder.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving.Mul(filledOrder.FeeS, e.getMarketCap(filledOrder.OrderState.RawOrder.TokenB))
 		}
 
 		//compute lrcFee
@@ -225,7 +212,10 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
-		legalAmountOfLrc := new(big.Rat).Mul(e.marketCapProvider.GetMarketCap(lrcAddress), filledOrder.LrcFee)
+		if filledOrder.AvailableLrcBalance.Cmp(filledOrder.LrcFee) <= 0 {
+			filledOrder.LrcFee = filledOrder.AvailableLrcBalance
+		}
+		legalAmountOfLrc := new(big.Rat).Mul(e.getMarketCap(lrcAddress), filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -237,7 +227,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			filledOrder.LegalFee = legalAmountOfSaving
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, e.marketCapProvider.GetMarketCap(lrcAddress))
+			lrcReward.Quo(lrcReward, e.getMarketCap(lrcAddress))
 			log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}

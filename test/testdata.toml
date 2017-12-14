@@ -2,6 +2,9 @@ allowance_amount = 1000000
 
 
 [[accounts]]
+address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
+passphrase = "1"
+[[accounts]]
 address = "0x251f3bd45b06a8b29cb6d171131e192c1254fec1"
 passphrase = "1"
 

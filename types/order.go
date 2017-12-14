@@ -208,7 +208,23 @@ type FilledOrder struct {
 	SPrice *big.Rat `json:"SPrice"`
 	BPrice *big.Rat `json:"BPrice"`
 
-	//FullFilled	bool	//this order is fullfilled
+	AvailableLrcBalance    *big.Rat
+	AvailableTokenSBalance *big.Rat
+}
+
+func (filledOrder *FilledOrder) SetAvailableAmount() {
+	filledOrder.AvailableAmountS, filledOrder.AvailableAmountB = filledOrder.OrderState.RemainedAmount()
+	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
+	availableBalance := new(big.Rat).Set(filledOrder.AvailableTokenSBalance)
+	if availableBalance.Cmp(filledOrder.AvailableAmountS) < 0 {
+		filledOrder.AvailableAmountS = availableBalance
+		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountS, new(big.Rat).Inv(sellPrice))
+	}
+	if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
+		filledOrder.AvailableAmountS.Mul(filledOrder.AvailableAmountB, sellPrice)
+	} else {
+		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountS, new(big.Rat).Inv(sellPrice))
+	}
 }
 
 // 从[]byte解析时使用json.Unmarshal
@@ -222,6 +238,11 @@ type OrderState struct {
 	AvailableAmountS *big.Int    `json:"availableAmountS"`
 	Status           OrderStatus `json:"status"`
 	BroadcastTime    int         `json:"broadcastTime"`
+}
+
+type OrderDelayList struct {
+	OrderHash    []common.Hash
+	DelayedCount int
 }
 
 // 根据是否完全成交确定订单状态

@@ -160,7 +160,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/debug.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 
