@@ -366,7 +366,7 @@ func (l *ExtractorServiceImpl) handleBatchSubmitRingHashMethod(input eventemitte
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
+	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
 
 	return nil
 }
