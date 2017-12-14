@@ -179,7 +179,7 @@ func TokenUnRegister(input eventemitter.EventData) error {
 }
 
 func WethTokenAddress() common.Address {
-	return SupportMarkets["weth"].Protocol
+	return AllTokens["WETH"].Protocol
 }
 
 func WrapMarket(s, b string) (market string, err error) {
@@ -280,8 +280,4 @@ func getContractVersion(address string) string {
 
 func IsSupportedContract(address string) bool {
 	return getContractVersion(address) != ""
-}
-
-func GetWethAddress() common.Address {
-	return AllTokens["WETH"].Protocol
 }
