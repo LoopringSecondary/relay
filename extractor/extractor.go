@@ -191,7 +191,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	)
 
 	// 过滤方法
-	if len(input) < 4 {
+	if len(input) < 4 || len(tx.Input) < 10{
 		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
 	}
 	id := common.ToHex(input[0:4])
@@ -224,7 +224,8 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 	}
 
 	if len(receipt.Logs) == 0 {
-		return 0, fmt.Errorf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		log.Debugf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		return 0, nil
 	}
 
 	for _, evtLog := range receipt.Logs {
