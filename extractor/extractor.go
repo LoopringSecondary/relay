@@ -191,6 +191,9 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	)
 
 	// 过滤方法
+	if len(input) < 4 {
+		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
+	}
 	id := common.ToHex(input[0:4])
 	if contract, ok = l.methods[id]; !ok {
 		return fmt.Errorf("extractor,contract method id error:%s", id)
@@ -245,8 +248,11 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 			continue
 		}
 
+		// 记录event log
 		if l.commOpts.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
+				log.Debugf("extractor,json unmarshal evtlog error:%s", err.Error())
+			} else {
 				el := &dao.EventLog{}
 				el.Protocol = evtLog.Address
 				el.TxHash = tx.Hash
