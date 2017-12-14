@@ -393,7 +393,7 @@ func (submitter *RingSubmitter) start() {
 	eventemitter.On(eventemitter.Miner_NewRing, submitter.newRingWatcher)
 
 	registryMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleRegistryMethodEvent}
-	submitter.ringhashSubmitWatcher = registryMethodWatcher
+	submitter.registryMethodWatcher = registryMethodWatcher
 	eventemitter.On(eventemitter.Miner_SubmitRingHash_Method, submitter.registryMethodWatcher)
 
 	ringSubmitMethodWatcher := &eventemitter.Watcher{Concurrent: false, Handle: submitter.handleSubmitRingMethodEvent}
