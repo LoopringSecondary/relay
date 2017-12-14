@@ -156,12 +156,6 @@ type MinerOptions struct {
 	RateRatioCVSThreshold int64
 }
 
-type OrderManagerOptions struct {
-	TickerDuration int
-	BlockPeriod    int
-	AccountPeriod  int
-}
-
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee int64
