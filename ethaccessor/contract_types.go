@@ -232,6 +232,7 @@ type SubmitRingMethod struct {
 	SList              [][32]uint8         `fieldName:"sList"`
 	RingMiner          common.Address      `fieldName:"ringminer"`
 	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
+	Protocol           common.Address
 }
 
 // should add protocol, miner, feeRecipient
@@ -247,6 +248,7 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	for i := 0; i < length; i++ {
 		var order types.Order
 
+		order.Protocol = m.Protocol
 		order.Owner = m.AddressList[i][0]
 		order.TokenS = m.AddressList[i][1]
 		if i == length-1 {
@@ -263,8 +265,6 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.LrcFee = m.UintArgsList[i][5]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
-		// todo ???
-		order.LrcFee = big.NewInt(int64(m.Uint8ArgsList[i][1]))
 
 		order.BuyNoMoreThanAmountB = m.BuyNoMoreThanBList[i]
 
