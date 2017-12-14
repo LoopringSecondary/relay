@@ -71,7 +71,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 
 	// call register token
 	tokenAddress := common.HexToAddress(wethTokenAddress)
-	spender := common.HexToAddress(wethTokenAddress)
+	spender := common.HexToAddress(lrcTokenAddress)
 	amount, _ := new(big.Int).SetString("2000000000000000000", 0)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddress)
@@ -90,7 +90,7 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 	owner := common.HexToAddress(transferToAccount)
 	tokenAddress := common.HexToAddress(wethTokenAddress)
-	spender := common.HexToAddress(wethTokenAddress)
+	spender := common.HexToAddress(lrcTokenAddress)
 
 	if allowance, err := accessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
