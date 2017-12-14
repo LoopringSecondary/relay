@@ -20,7 +20,6 @@ package ordermanager
 
 import (
 	"fmt"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -48,8 +47,6 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options            config.OrderManagerOptions
-	commonOpts         *config.CommonOptions
 	rds                dao.RdsService
 	lock               sync.RWMutex
 	processor          *forkProcessor
@@ -65,16 +62,13 @@ type OrderManagerImpl struct {
 	forkWatcher        *eventemitter.Watcher
 }
 
-func NewOrderManager(options config.OrderManagerOptions,
-	commonOpts *config.CommonOptions,
+func NewOrderManager(
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
 	accessor *ethaccessor.EthNodeAccessor,
 	market *marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
-	om.options = options
-	om.commonOpts = commonOpts
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor, market)
 	om.accessor = accessor
