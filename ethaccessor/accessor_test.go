@@ -326,12 +326,12 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
-	// call deAuthorized protocol address
+	// call weth deposit
 	wethAddr := common.HexToAddress(wethAddress)
-	amount, _ := new(big.Int).SetString("1000000", 0)
+	amount := new(big.Int).SetInt64(1000000)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
-	if result, err := callMethod(account, "deposit", nil, nil, amount); nil != err {
+	if result, err := callMethod(account, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
 	} else {
 		t.Logf("weth-deposit result:%s", result)
@@ -354,7 +354,7 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 	amount, _ := new(big.Int).SetString("100", 0)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
-	if result, err := callMethod(account, "withdraw", nil, nil, nil, amount); nil != err {
+	if result, err := callMethod(account, "withdraw", big.NewInt(200000), big.NewInt(21000000000), nil, amount); nil != err {
 		t.Fatalf("call method weth-withdraw error:%s", err.Error())
 	} else {
 		t.Logf("weth-withdraw result:%s", result)

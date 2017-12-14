@@ -139,11 +139,12 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Debugf("extractor,get block transaction list length %d", txcnt)
 			}
 
+			// todo
 			// detect chain fork
-			if err := l.detectFork(currentBlock); err != nil {
-				log.Debugf("extractor,detect fork error:%s", err.Error())
-				continue
-			}
+			//if err := l.detectFork(currentBlock); err != nil {
+			//	log.Debugf("extractor,detect fork error:%s", err.Error())
+			//	continue
+			//}
 
 			// process block
 			for _, tx := range block.Transactions {
@@ -192,11 +193,13 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
-		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
+		log.Debugf("extractor,contract method id %s length invalid", common.ToHex(input))
+		return nil
 	}
 	id := common.ToHex(input[0:4])
 	if contract, ok = l.methods[id]; !ok {
-		return fmt.Errorf("extractor,contract method id error:%s", id)
+		log.Debugf("extractor,contract method id error:%s", id)
+		return nil
 	}
 
 	contract.BlockNumber = tx.BlockNumber.BigInt()
@@ -417,7 +420,7 @@ func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.Eve
 	contractMethod := contractData.Method.(*ethaccessor.WethWithdrawalMethod)
 
 	data := hexutil.MustDecode("0x" + contractData.Input[10:])
-	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+	if err := contractData.CAbi.UnpackMethodInput(&contractMethod.Value, contractData.Name, data); err != nil {
 		return fmt.Errorf("extractor,wethWithdrawal method,unpack error:%s", err.Error())
 	}
 

@@ -173,13 +173,13 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
-	event := input.(types.WethDepositMethodEvent)
+	event := input.(*types.WethDepositMethodEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		if err = a.updateWethBalanceByDeposit(event); nil != err {
+		if err = a.updateWethBalanceByDeposit(*event); nil != err {
 			log.Error(err.Error())
 		}
 	}
@@ -187,13 +187,13 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 }
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
-	event := input.(types.WethWithdrawalMethodEvent)
+	event := input.(*types.WethWithdrawalMethodEvent)
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		if err = a.updateWethBalanceByWithdrawal(event); nil != err {
+		if err = a.updateWethBalanceByWithdrawal(*event); nil != err {
 			log.Error(err.Error())
 		}
 	}
