@@ -50,7 +50,7 @@ type Node struct {
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
 	marketCapProvider *marketcap.MarketCapProvider
-	accountManager 	  market.AccountManager
+	accountManager    market.AccountManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
 

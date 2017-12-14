@@ -124,7 +124,7 @@ type RingSubmitInfo struct {
 	RegistryGasPrice string `gorm:"column:registry_gas_price;type:varchar(50)"`
 	RegistryUsedGas  string `gorm:"column:registry_used_gas;type:varchar(50)"`
 
-	ProtocolTxHash string `gorm:"column:submit_tx_hash;type:varchar(82)"`
+	ProtocolTxHash string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
 	RegistryTxHash string `gorm:"column:registry_tx_hash;type:varchar(82)"`
 
 	Miner string `gorm:"column:miner;type:varchar(42)"`
@@ -214,7 +214,7 @@ func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]common.Has
 		hashesStr []string
 	)
 
-	err = s.db.Model(&RingSubmitInfo{}).Where("registry_tx_hash = ? or submit_tx_hash = ? ", txHash.Hex(), txHash.Hex()).Pluck("ringhash", hashesStr).Error
+	err = s.db.Model(&RingSubmitInfo{}).Where("registry_tx_hash = ? or protocol_tx_hash = ? ", txHash.Hex(), txHash.Hex()).Pluck("ringhash", hashesStr).Error
 	for _, h := range hashesStr {
 		hashes = append(hashes, common.HexToHash(h))
 	}

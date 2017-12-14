@@ -66,7 +66,7 @@ type TimingMatcher struct {
 	roundOrderCount int
 	delayedNumber   int64
 	accounts        map[common.Address]*miner.Account
-	accountManager *marketLib.AccountManager
+	accountManager  *marketLib.AccountManager
 
 	afterSubmitWatcher *eventemitter.Watcher
 	blockTriger        *eventemitter.Watcher
@@ -87,7 +87,7 @@ type Market struct {
 	BtoAOrderHashesExcludeNextRound []common.Hash
 }
 
-func NewTimingMatcher( matcherOptions *config.TimingMatcher, submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager,accountManager *marketLib.AccountManager) *TimingMatcher {
+func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager, accountManager *marketLib.AccountManager) *TimingMatcher {
 	matcher := &TimingMatcher{}
 	matcher.submitter = submitter
 	matcher.evaluator = evaluator
@@ -156,7 +156,7 @@ func (matcher *TimingMatcher) blockTrigger(eventData eventemitter.EventData) err
 	return nil
 }
 
-func (matcher *TimingMatcher) getAccountBalance(address common.Address, tokenAddress common.Address) (*miner.TokenBalance,error) {
+func (matcher *TimingMatcher) getAccountBalance(address common.Address, tokenAddress common.Address) (*miner.TokenBalance, error) {
 	matcher.mtx.Lock()
 	defer matcher.mtx.Unlock()
 	var (
@@ -169,7 +169,6 @@ func (matcher *TimingMatcher) getAccountBalance(address common.Address, tokenAdd
 		matcher.accounts[address] = account
 	}
 
-	println("iiiiiiiii", address.Hex(), tokenAddress.Hex())
 	if b, e := account.Tokens[tokenAddress]; !e {
 		if balance, allowance, err := matcher.accountManager.GetBalanceByTokenAddress(address, tokenAddress); nil != err {
 			return nil, err
@@ -177,7 +176,6 @@ func (matcher *TimingMatcher) getAccountBalance(address common.Address, tokenAdd
 			b = &miner.TokenBalance{}
 			b.Allowance = new(big.Int).Set(balance)
 			b.Balance = new(big.Int).Set(allowance)
-			println("uiuiuiuiuiuiuiuiuiuiui", balance.String(), allowance.String())
 			account.Tokens[tokenAddress] = b
 			return b, nil
 		}
@@ -195,9 +193,8 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 
 	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
 
-	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash:market.AtoBOrderHashesExcludeNextRound, DelayedCount:market.matcher.delayedNumber})
-	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount,  &types.OrderDelayList{OrderHash:market.BtoAOrderHashesExcludeNextRound, DelayedCount:market.matcher.delayedNumber})
-
+	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: market.matcher.delayedNumber})
+	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: market.matcher.delayedNumber})
 
 	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
 	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
@@ -219,10 +216,6 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
 	}
-
-	println("popwqoepowqpoewq",len(atoBOrders),len(btoAOrders), len(market.BtoAOrders), len(market.AtoBOrders))
-
-
 }
 
 //sub the matched amount in new round.
@@ -269,26 +262,26 @@ func (market *Market) match() {
 				filledOrders := []*types.FilledOrder{}
 				var (
 					a2BLrcToken *miner.TokenBalance
-					a2BTokenS *miner.TokenBalance
+					a2BTokenS   *miner.TokenBalance
 					b2ALrcToken *miner.TokenBalance
-					b2ATokenS *miner.TokenBalance
-					err error
+					b2ATokenS   *miner.TokenBalance
+					err         error
 				)
-				if a2BLrcToken,err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, market.lrcAddress); nil != err {
+				if a2BLrcToken, err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, market.lrcAddress); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				}
-				if a2BTokenS,err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, a2BOrder.RawOrder.TokenS); nil != err {
+				if a2BTokenS, err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, a2BOrder.RawOrder.TokenS); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				}
 				filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*a2BOrder, a2BLrcToken.Available(), a2BTokenS.Available()))
 
-				if b2ALrcToken,err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, market.lrcAddress); nil != err {
+				if b2ALrcToken, err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, market.lrcAddress); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				}
-				if b2ATokenS,err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, b2AOrder.RawOrder.TokenS); nil != err {
+				if b2ATokenS, err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, b2AOrder.RawOrder.TokenS); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				}
