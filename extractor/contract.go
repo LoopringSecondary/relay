@@ -288,7 +288,7 @@ func (l *ExtractorServiceImpl) loadRingHashRegisteredContract() {
 			continue
 		}
 
-		contract := newMethodData(&method, l.accessor.ProtocolImplAbi)
+		contract := newMethodData(&method, l.accessor.RinghashRegistryAbi)
 		watcher := &eventemitter.Watcher{}
 
 		switch contract.Name {
