@@ -242,7 +242,7 @@ type OrderState struct {
 
 type OrderDelayList struct {
 	OrderHash    []common.Hash
-	DelayedCount int
+	DelayedCount int64
 }
 
 // 根据是否完全成交确定订单状态

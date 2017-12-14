@@ -37,7 +37,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -295,46 +295,32 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return isOrderFullFinished(state, om.mc)
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
 	var (
-		list                                               []*types.OrderState
-		modelList                                          []*dao.Order
-		currentBlock                                       *dao.Block
-		err                                                error
-		orderhashstrs1, orderhashstrs2                     []string
-		delayBlockCnt1, delayBlockCnt2, currentBlockNumber int64
-		filterStatus                                       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list               []*types.OrderState
+		modelList          []*dao.Order
+		err                error
+		currentBlockNumber int64
+		filterStatus       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
-	for _, v := range filterOrderHashLists[0].OrderHash {
-		orderhashstrs1 = append(orderhashstrs1, v.Hex())
-	}
-	for _, v := range filterOrderHashLists[1].OrderHash {
-		orderhashstrs2 = append(orderhashstrs2, v.Hex())
-	}
-
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err = om.rds.FindLatestBlock(); err == nil {
-		var b types.Block
-		currentBlock.ConvertUp(&b)
-		delayBlockCnt1 = b.BlockNumber.Int64() + int64(filterOrderHashLists[0].DelayedCount)
-		delayBlockCnt2 = b.BlockNumber.Int64() + int64(filterOrderHashLists[1].DelayedCount)
+	if currentBlock, err := om.rds.FindLatestBlock(); err == nil {
 		currentBlockNumber = currentBlock.BlockNumber
 	} else {
-		delayBlockCnt1 = 0
-		delayBlockCnt2 = 0
 		currentBlockNumber = 0
 	}
 
-	// 标记miner提供的劣质订单
-	if len(orderhashstrs1) > 0 && delayBlockCnt1 != 0 {
-		if err = om.rds.MarkMinerOrders(orderhashstrs1, delayBlockCnt1); err != nil {
-			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+	for _, orderDelay := range filterOrderHashLists {
+		delayNumber := currentBlockNumber + orderDelay.DelayedCount
+		orderHashes := []string{}
+		for _,hash := range orderDelay.OrderHash {
+			orderHashes = append(orderHashes, hash.Hex())
 		}
-	}
-	if len(orderhashstrs2) > 0 && delayBlockCnt2 != 0 {
-		if err = om.rds.MarkMinerOrders(orderhashstrs2, delayBlockCnt2); err != nil {
-			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		if len(orderHashes) > 0 && delayNumber != 0 {
+			if err = om.rds.MarkMinerOrders(orderHashes, delayNumber); err != nil {
+				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+			}
 		}
 	}
 
@@ -342,14 +328,14 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
 		return list
 	}
-	var listBeforeCheckAccount []*types.OrderState
 	for _, v := range modelList {
 		state := &types.OrderState{}
 		v.ConvertUp(state)
 		if !om.um.InWhiteList(state.RawOrder.TokenS) {
-			listBeforeCheckAccount = append(listBeforeCheckAccount, state)
+			list = append(list, state)
 		}
 	}
+	println("PPPPPP", len(modelList), len(list))
 
 	return list
 }

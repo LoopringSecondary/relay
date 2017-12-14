@@ -149,15 +149,15 @@ func (l *ExtractorServiceImpl) Start() {
 			for _, tx := range block.Transactions {
 				log.Debugf("extractor,get transaction hash:%s", tx.Hash)
 
-				logAmount, err := l.processEvent(&tx, block.Timestamp.BigInt())
+				_, err := l.processEvent(&tx, block.Timestamp.BigInt())
 				if err != nil {
 					log.Errorf(err.Error())
 				}
 
 				// 解析method，获得ring内等orders并发送到orderbook保存
-				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
-					log.Errorf(err.Error())
-				}
+				//if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
+				//	log.Errorf(err.Error())
+				//}
 			}
 		}
 	}()

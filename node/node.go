@@ -50,6 +50,7 @@ type Node struct {
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
 	marketCapProvider *marketcap.MarketCapProvider
+	accountManager 	  market.AccountManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
 
@@ -60,7 +61,6 @@ type Node struct {
 
 type RelayNode struct {
 	trendManager   market.TrendManager
-	accountManager market.AccountManager
 	jsonRpcService gateway.JsonrpcServiceImpl
 }
 
@@ -94,6 +94,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerExtractor()
 	n.registerGateway()
 	n.registerCrypto(nil)
+	n.registerAccountManager()
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
@@ -110,7 +111,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
-	n.registerAccountManager()
 	n.registerTrendManager()
 	n.registerJsonRpcService()
 }
@@ -206,18 +206,18 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.relayNode.accountManager = market.NewAccountManager(n.accessor)
+	n.accountManager = market.NewAccountManager(n.accessor)
 }
 
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.relayNode.accountManager, &ethForwarder, n.marketCapProvider)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.accountManager, &ethForwarder, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {
 	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.accessor, n.rdsService, n.marketCapProvider)
 	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, n.accessor)
-	matcher := timing_matcher.NewTimingMatcher(submitter, evaluator, n.orderManager, n.globalConfig.Miner.TimingMatcher)
+	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
 	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.accessor, n.marketCapProvider)
 }
 
