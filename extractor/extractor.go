@@ -191,7 +191,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	)
 
 	// 过滤方法
-	if len(input) < 4 || len(tx.Input) < 10{
+	if len(input) < 4 || len(tx.Input) < 10 {
 		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
 	}
 	id := common.ToHex(input[0:4])
@@ -297,6 +297,8 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+	ring.Protocol = common.HexToAddress(contract.To)
+
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
 		return fmt.Errorf("extractor,submitRing method,unpack error:%s", err.Error())
@@ -308,7 +310,10 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 
 	for _, v := range orderList {
 		if l.commOpts.Develop {
-			log.Debugf("extractor,submitRing method,order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+			log.Debugf("extractor,submitRing method,order,protocol:%s,owner:%s,tokenS:%s,tokenB:%s,"+
+				"amountS:%s,amountB:%s,timestamp:%s,lrcFee:%s,marginSplit:%d,buyNoMoreThanBAmount:%t",
+				v.Protocol.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(),
+				v.AmountS.String(), v.AmountB.String(), v.Timestamp.String(), v.LrcFee.String(), v.MarginSplitPercentage, v.BuyNoMoreThanAmountB)
 		}
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
 		eventemitter.Emit(eventemitter.Gateway, v)
