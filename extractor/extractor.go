@@ -245,8 +245,11 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 			continue
 		}
 
+		// 记录event log
 		if l.commOpts.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
+				log.Debugf("extractor,json unmarshal evtlog error:%s", err.Error())
+			} else {
 				el := &dao.EventLog{}
 				el.Protocol = evtLog.Address
 				el.TxHash = tx.Hash
