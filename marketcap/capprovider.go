@@ -112,6 +112,8 @@ func (p *MarketCapProvider) GetEthCap() *big.Rat {
 }
 
 func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
+	// todo: delete
+	return new(big.Rat).SetInt64(int64(1))
 
 	return p.GetMarketCapByCurrency(tokenAddress, p.currency)
 }

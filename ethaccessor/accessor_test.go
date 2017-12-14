@@ -39,6 +39,7 @@ const (
 	wethAddress          = "0x88699e7fee2da0462981a08a15a3b940304cc516"
 	wethOwner            = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
 	transferToAccount    = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+	lrcTokenAddress      = "0xEf82c1e65A207b0f1d0c311f48556F1C3979a822"
 )
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
@@ -47,7 +48,7 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
 
-	tokenAddress := common.HexToAddress(wethAddress)
+	tokenAddress := common.HexToAddress(lrcTokenAddress)
 	owner := common.HexToAddress(wethOwner)
 	balance, err := accessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
@@ -393,6 +394,6 @@ func TestEthNodeAccessor_LrcTokenAddress(t *testing.T) {
 	if err := callMethod(&result, "lrcTokenAddress", "latest"); nil != err {
 		t.Fatalf("call method lrcTokenAddress error:%s", err.Error())
 	} else {
-		t.Logf("lrcTokenAddress:%s", result)
+		t.Logf("lrcTokenAddress:%s", common.HexToAddress(result).Hex())
 	}
 }
