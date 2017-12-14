@@ -205,7 +205,7 @@ func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error
 
 func (submitter *RingSubmitter) handleSubmitRingMethodEvent(e eventemitter.EventData) error {
 	if nil != e {
-		event := e.(types.SubmitRingMethodEvent)
+		event := e.(*types.SubmitRingMethodEvent)
 		if nil != event.Err {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())
@@ -221,7 +221,7 @@ func (submitter *RingSubmitter) handleSubmitRingMethodEvent(e eventemitter.Event
 
 func (submitter *RingSubmitter) handleBatchSubmitRingMethodEvent(e eventemitter.EventData) error {
 	if nil != e {
-		event := e.(types.BatchSubmitRingHashMethodEvent)
+		event := e.(*types.BatchSubmitRingHashMethodEvent)
 		if nil != event.Err {
 			if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 				log.Errorf("err:%s", err.Error())

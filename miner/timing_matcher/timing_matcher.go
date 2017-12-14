@@ -19,9 +19,11 @@
 package timing_matcher
 
 import (
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	marketLib "github.com/Loopring/relay/market/util"
+	marketLib "github.com/Loopring/relay/market"
+	marketUtilLib "github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
@@ -61,14 +63,20 @@ type TimingMatcher struct {
 	evaluator       *miner.Evaluator
 	lastBlockNumber *big.Int
 	duration        *big.Int
+	roundOrderCount int
+	delayedNumber   int64
+	accounts        map[common.Address]*miner.Account
+	accountManager  *marketLib.AccountManager
 
 	afterSubmitWatcher *eventemitter.Watcher
 	blockTriger        *eventemitter.Watcher
 }
 
 type Market struct {
-	matcher *TimingMatcher
-	om      ordermanager.OrderManager
+	matcher         *TimingMatcher
+	om              ordermanager.OrderManager
+	protocolAddress common.Address
+	lrcAddress      common.Address
 
 	TokenA     common.Address
 	TokenB     common.Address
@@ -79,25 +87,35 @@ type Market struct {
 	BtoAOrderHashesExcludeNextRound []common.Hash
 }
 
-func NewTimingMatcher(submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager) *TimingMatcher {
-	matcher := &TimingMatcher{submitter: submitter, evaluator: evaluator}
+func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager, accountManager *marketLib.AccountManager) *TimingMatcher {
+	matcher := &TimingMatcher{}
+	matcher.submitter = submitter
+	matcher.evaluator = evaluator
+	matcher.accountManager = accountManager
+	matcher.roundOrderCount = matcherOptions.RoundOrdersCount
 	matcher.MatchedOrders = make(map[common.Hash]*OrderMatchState)
 	matcher.markets = []*Market{}
-	matcher.duration = big.NewInt(1)
+	matcher.duration = big.NewInt(matcherOptions.Duration)
+	matcher.delayedNumber = matcherOptions.DelayedNumber
+
 	matcher.lastBlockNumber = big.NewInt(0)
 	pairs := make(map[common.Address]common.Address)
-	for _, pair := range marketLib.AllTokenPairs {
+	for _, pair := range marketUtilLib.AllTokenPairs {
 		if addr, ok := pairs[pair.TokenS]; !ok || addr != pair.TokenB {
 			if addr1, ok1 := pairs[pair.TokenB]; !ok1 || addr1 != pair.TokenS {
-				pairs[pair.TokenS] = pair.TokenB
-				m := &Market{}
-				m.om = om
-				m.matcher = matcher
-				m.TokenA = pair.TokenS
-				m.TokenB = pair.TokenB
-				m.AtoBOrderHashesExcludeNextRound = []common.Hash{}
-				m.BtoAOrderHashesExcludeNextRound = []common.Hash{}
-				matcher.markets = append(matcher.markets, m)
+				for _, protocolAddress := range matcher.submitter.Accessor.ProtocolAddresses {
+					pairs[pair.TokenS] = pair.TokenB
+					m := &Market{}
+					m.protocolAddress = protocolAddress.ContractAddress
+					m.lrcAddress = protocolAddress.LrcTokenAddress
+					m.om = om
+					m.matcher = matcher
+					m.TokenA = pair.TokenS
+					m.TokenB = pair.TokenB
+					m.AtoBOrderHashesExcludeNextRound = []common.Hash{}
+					m.BtoAOrderHashesExcludeNextRound = []common.Hash{}
+					matcher.markets = append(matcher.markets, m)
+				}
 			}
 		} else {
 			log.Debugf("miner,timing matcher cann't find tokenPair tokenS:%s, tokenB:%s", pair.TokenS.Hex(), pair.TokenB.Hex())
@@ -121,36 +139,72 @@ func (matcher *TimingMatcher) blockTrigger(eventData eventemitter.EventData) err
 	nextBlockNumber := new(big.Int).Add(matcher.duration, matcher.lastBlockNumber)
 	if nextBlockNumber.Cmp(blockEvent.BlockNumber) <= 0 {
 		matcher.lastBlockNumber = blockEvent.BlockNumber
+		//accounts must be reset every round
+		matcher.accounts = make(map[common.Address]*miner.Account)
 		var wg sync.WaitGroup
-		for _, protocolAddress := range matcher.submitter.Accessor.ProtocolAddresses {
-			for _, market := range matcher.markets {
-				wg.Add(1)
-				go func(market *Market) {
-					defer func() {
-						wg.Add(-1)
-					}()
-					market.match(protocolAddress.ContractAddress)
-				}(market)
-			}
+		for _, market := range matcher.markets {
+			wg.Add(1)
+			go func(market *Market) {
+				defer func() {
+					wg.Add(-1)
+				}()
+				market.match()
+			}(market)
 		}
 		wg.Wait()
 	}
 	return nil
 }
 
+func (matcher *TimingMatcher) getAccountBalance(address common.Address, tokenAddress common.Address) (*miner.TokenBalance, error) {
+	matcher.mtx.Lock()
+	defer matcher.mtx.Unlock()
+	var (
+		account *miner.Account
+		exists  bool
+	)
+	if account, exists = matcher.accounts[address]; !exists {
+		account = &miner.Account{}
+		account.Tokens = make(map[common.Address]*miner.TokenBalance)
+		matcher.accounts[address] = account
+	}
+
+	if b, e := account.Tokens[tokenAddress]; !e {
+		if balance, allowance, err := matcher.accountManager.GetBalanceByTokenAddress(address, tokenAddress); nil != err {
+			return nil, err
+		} else {
+			b = &miner.TokenBalance{}
+			b.Allowance = new(big.Int).Set(balance)
+			b.Balance = new(big.Int).Set(allowance)
+			account.Tokens[tokenAddress] = b
+			return b, nil
+		}
+	} else {
+		return b, nil
+	}
+}
+
+/**
+get orders from ordermanager
+*/
 func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
 	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
 
-	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, 50, market.AtoBOrderHashesExcludeNextRound)
-	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, 50, market.BtoAOrderHashesExcludeNextRound)
+	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: market.matcher.delayedNumber})
+	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: market.matcher.delayedNumber})
+
+	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
+	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
 
 	for _, order := range atoBOrders {
 		market.reduceRemainedAmountBeforeMatch(order)
 		if !market.om.IsOrderFullFinished(order) {
 			market.AtoBOrders[order.RawOrder.Hash] = order
+		} else {
+			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
 	}
 
@@ -158,16 +212,16 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 		market.reduceRemainedAmountBeforeMatch(order)
 		if !market.om.IsOrderFullFinished(order) {
 			market.BtoAOrders[order.RawOrder.Hash] = order
+		} else {
+			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
 	}
-
-	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
-	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
 }
 
 //sub the matched amount in new round.
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
+
 	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
 		//if len(matchedOrder.rounds) <= 0 {
 		//	delete(market.AtoBOrders, orderHash)
@@ -179,9 +233,10 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 		}
 		//}
 	}
+
 }
 
-func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledOrder) *types.OrderState {
+func (market *Market) reduceAmountAfterFilled(filledOrder *types.FilledOrder) *types.OrderState {
 	filledOrderState := filledOrder.OrderState
 	var orderState *types.OrderState
 	if filledOrderState.RawOrder.TokenS == market.TokenA {
@@ -196,15 +251,43 @@ func (market *Market) reduceRemainedAmountAfterFilled(filledOrder *types.FilledO
 	return orderState
 }
 
-func (market *Market) match(protocolAddress common.Address) {
-	market.getOrdersForMatching(protocolAddress)
+func (market *Market) match() {
+	market.getOrdersForMatching(market.protocolAddress)
 	matchedOrderHashes := make(map[common.Hash]bool) //true:fullfilled, false:partfilled
 	ringStates := []*types.RingSubmitInfo{}
 	for _, a2BOrder := range market.AtoBOrders {
 		var ringForSubmit *types.RingSubmitInfo
 		for _, b2AOrder := range market.BtoAOrders {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
-				ringTmp := types.NewRing([]types.OrderState{*a2BOrder, *b2AOrder})
+				filledOrders := []*types.FilledOrder{}
+				var (
+					a2BLrcToken *miner.TokenBalance
+					a2BTokenS   *miner.TokenBalance
+					b2ALrcToken *miner.TokenBalance
+					b2ATokenS   *miner.TokenBalance
+					err         error
+				)
+				if a2BLrcToken, err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, market.lrcAddress); nil != err {
+					log.Errorf("err:%s", err.Error())
+					continue
+				}
+				if a2BTokenS, err = market.matcher.getAccountBalance(a2BOrder.RawOrder.Owner, a2BOrder.RawOrder.TokenS); nil != err {
+					log.Errorf("err:%s", err.Error())
+					continue
+				}
+				filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*a2BOrder, a2BLrcToken.Available(), a2BTokenS.Available()))
+
+				if b2ALrcToken, err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, market.lrcAddress); nil != err {
+					log.Errorf("err:%s", err.Error())
+					continue
+				}
+				if b2ATokenS, err = market.matcher.getAccountBalance(b2AOrder.RawOrder.Owner, b2AOrder.RawOrder.TokenS); nil != err {
+					log.Errorf("err:%s", err.Error())
+					continue
+				}
+				filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*b2AOrder, b2ALrcToken.Available(), b2ATokenS.Available()))
+
+				ringTmp := miner.NewRing(filledOrders)
 				market.matcher.evaluator.ComputeRing(ringTmp)
 				ringForSubmitTmp, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
 				if nil != err {
@@ -220,7 +303,7 @@ func (market *Market) match(protocolAddress common.Address) {
 		//对每个order标记已匹配以及减去已匹配的金额
 		if nil != ringForSubmit {
 			for _, filledOrder := range ringForSubmit.RawRing.Orders {
-				orderState := market.reduceRemainedAmountAfterFilled(filledOrder)
+				orderState := market.reduceAmountAfterFilled(filledOrder)
 				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = market.om.IsOrderFullFinished(orderState)
 				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
 			}
