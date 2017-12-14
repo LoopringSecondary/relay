@@ -75,7 +75,6 @@ type GlobalConfig struct {
 	Accessor       AccessorOptions
 	Common         CommonOptions
 	Miner          MinerOptions
-	OrderManager   OrderManagerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
 	Contract       ContractOptions
