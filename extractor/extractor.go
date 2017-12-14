@@ -224,7 +224,8 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 	}
 
 	if len(receipt.Logs) == 0 {
-		return 0, fmt.Errorf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		log.Debugf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		return 0, nil
 	}
 
 	for _, evtLog := range receipt.Logs {
