@@ -411,7 +411,7 @@ func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventD
 		log.Debugf("extractor,wethDeposit method,from:%s, to:%s, value:%s", deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
 	}
 
-	eventemitter.Emit(eventemitter.WethDepositMethod, deposit)
+	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
 	return nil
 }
 

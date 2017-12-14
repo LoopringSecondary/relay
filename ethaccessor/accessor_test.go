@@ -35,12 +35,10 @@ const (
 	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
-	account1             = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
 	registerTokenSymbol  = "wrdn"
-	balanceTokenAddress  = "0x478d07f3cBE07f01B5c7D66b4Ba57e5a3c520564"
-	balanceOwner         = ""
 	wethAddress          = "0x88699e7fee2da0462981a08a15a3b940304cc516"
 	wethOwner            = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
+	transferToAccount 	 = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
 )
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
@@ -349,7 +347,7 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
-	// call deAuthorized protocol address
+	// call weth withdrawal
 	wethAddr := common.HexToAddress(wethAddress)
 	amount, _ := new(big.Int).SetString("100", 0)
 	accessor, _ := test.GenerateAccessor()
@@ -358,5 +356,29 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 		t.Fatalf("call method weth-withdraw error:%s", err.Error())
 	} else {
 		t.Logf("weth-withdraw result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_WethTransfer(t *testing.T) {
+	// load config
+	c := test.Cfg()
+
+	// unlock account
+	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	account := accounts.Account{Address: common.HexToAddress(wethOwner)}
+	ks.Unlock(account, "201")
+	cyp := crypto.NewCrypto(true, ks)
+	crypto.Initialize(cyp)
+
+	// call weth transfer
+	wethAddr := common.HexToAddress(wethAddress)
+	amount := new(big.Int).SetInt64(100)
+	to := common.HexToAddress(transferToAccount)
+	accessor, _ := test.GenerateAccessor()
+	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
+	if result, err := callMethod(account, "transfer", big.NewInt(200000), big.NewInt(21000000000), nil, to, amount); nil != err {
+		t.Fatalf("call method weth-transfer error:%s", err.Error())
+	} else {
+		t.Logf("weth-transfer result:%s", result)
 	}
 }
