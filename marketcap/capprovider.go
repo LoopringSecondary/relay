@@ -112,6 +112,7 @@ func (p *MarketCapProvider) GetEthCap() *big.Rat {
 }
 
 func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
+
 	return p.GetMarketCapByCurrency(tokenAddress, p.currency)
 }
 
