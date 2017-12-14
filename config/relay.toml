@@ -25,11 +25,11 @@ account_period = 100
 	    encode_time = "iso8601"
 
 [mysql]
-    hostname = "127.0.0.1"
+    hostname = "ec2-52-199-80-249.ap-northeast-1.compute.amazonaws.com"
     port = "3306"
     user = "root"
     password = "111111"
-    db_name = "loopring_order_manager"
+    db_name = "loopring_miner"
     table_prefix = "lpr_"
     debug = false
 
@@ -68,7 +68,7 @@ account_period = 100
 [miner]
     ringMaxLength = 4
     feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
-    miner = "0x750aD4351bB728ceC7d639A9511F9D6488f1E259"
+    miner = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
     ifRegistryRingHash = false
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000

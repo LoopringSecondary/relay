@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
@@ -146,7 +145,6 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	if err != nil {
 		return err
 	}
-	model.Market, _ = util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
 
 	return om.rds.Add(model)
 }
@@ -295,32 +293,51 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return isOrderFullFinished(state, om.mc)
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists [2]*types.OrderDelayList) []*types.OrderState {
 	var (
-		list               []*types.OrderState
-		modelList          []*dao.Order
-		err                error
-		currentBlockNumber int64
-		filterStatus       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list                                               []*types.OrderState
+		modelList                                          []*dao.Order
+		currentBlock                                       *dao.Block
+		err                                                error
+		orderhashstrs1, orderhashstrs2                     []string
+		delayBlockCnt1, delayBlockCnt2, currentBlockNumber int64
+		filterStatus                                       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
+	if filterOrderHashLists[0] == nil || filterOrderHashLists[1] == nil {
+		return list
+	}
+
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err := om.rds.FindLatestBlock(); err == nil {
+	currentBlock, err = om.rds.FindLatestBlock()
+	if err == nil {
+		var b types.Block
+		currentBlock.ConvertUp(&b)
+		delayBlockCnt1 = b.BlockNumber.Int64() + int64(filterOrderHashLists[0].DelayedCount)
+		delayBlockCnt2 = b.BlockNumber.Int64() + int64(filterOrderHashLists[1].DelayedCount)
 		currentBlockNumber = currentBlock.BlockNumber
 	} else {
+		delayBlockCnt1 = 0
+		delayBlockCnt2 = 0
 		currentBlockNumber = 0
 	}
 
-	for _, orderDelay := range filterOrderHashLists {
-		delayNumber := currentBlockNumber + orderDelay.DelayedCount
-		orderHashes := []string{}
-		for _,hash := range orderDelay.OrderHash {
-			orderHashes = append(orderHashes, hash.Hex())
+	// 标记order
+	if len(filterOrderHashLists[0].OrderHash) > 0 && filterOrderHashLists[0].DelayedCount > 0 {
+		for _, v := range filterOrderHashLists[0].OrderHash {
+			orderhashstrs1 = append(orderhashstrs1, v.Hex())
 		}
-		if len(orderHashes) > 0 && delayNumber != 0 {
-			if err = om.rds.MarkMinerOrders(orderHashes, delayNumber); err != nil {
-				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
-			}
+
+		if err = om.rds.MarkMinerOrders(orderhashstrs1, delayBlockCnt1); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+		}
+	}
+	if len(filterOrderHashLists[1].OrderHash) > 0 && filterOrderHashLists[1].DelayedCount > 0 {
+		for _, v := range filterOrderHashLists[1].OrderHash {
+			orderhashstrs2 = append(orderhashstrs2, v.Hex())
+		}
+		if err = om.rds.MarkMinerOrders(orderhashstrs2, delayBlockCnt2); err != nil {
+			log.Debugf("order manager,provide orders for miner error:%s", err.Error())
 		}
 	}
 
@@ -328,6 +345,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
 		return list
 	}
+
 	for _, v := range modelList {
 		state := &types.OrderState{}
 		v.ConvertUp(state)
@@ -335,7 +353,6 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 			list = append(list, state)
 		}
 	}
-	println("PPPPPP", len(modelList), len(list))
 
 	return list
 }

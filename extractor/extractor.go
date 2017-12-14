@@ -133,10 +133,10 @@ func (l *ExtractorServiceImpl) Start() {
 			// base filter
 			txcnt := len(block.Transactions)
 			if txcnt < 1 {
-				log.Infof("extractor,get none block transaction")
+				log.Debugf("extractor,get none block transaction")
 				continue
 			} else {
-				log.Infof("extractor,get block transaction list length %d", txcnt)
+				log.Debugf("extractor,get block transaction list length %d", txcnt)
 			}
 
 			// detect chain fork
@@ -191,6 +191,9 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	)
 
 	// 过滤方法
+	if len(input) < 4 || len(tx.Input) < 10{
+		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
+	}
 	id := common.ToHex(input[0:4])
 	if contract, ok = l.methods[id]; !ok {
 		return fmt.Errorf("extractor,contract method id error:%s", id)
@@ -221,7 +224,8 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 	}
 
 	if len(receipt.Logs) == 0 {
-		return 0, fmt.Errorf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		log.Debugf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		return 0, nil
 	}
 
 	for _, evtLog := range receipt.Logs {
@@ -245,8 +249,11 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 			continue
 		}
 
+		// 记录event log
 		if l.commOpts.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
+				log.Debugf("extractor,json unmarshal evtlog error:%s", err.Error())
+			} else {
 				el := &dao.EventLog{}
 				el.Protocol = evtLog.Address
 				el.TxHash = tx.Hash
@@ -292,16 +299,16 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,unpack submitRing method error:%s", err.Error())
+		return fmt.Errorf("extractor,submitRing method,unpack error:%s", err.Error())
 	}
 	orderList, err := ring.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,handle submitRing convert order data error:%s", err.Error())
+		return fmt.Errorf("extractor,submitRing method,convert order data error:%s", err.Error())
 	}
 
 	for _, v := range orderList {
 		if l.commOpts.Develop {
-			log.Debugf("extractor,external submitRing order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+			log.Debugf("extractor,submitRing method,order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
 		}
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
 		eventemitter.Emit(eventemitter.Gateway, v)
@@ -316,11 +323,11 @@ func (l *ExtractorServiceImpl) handleSubmitRingHashMethod(input eventemitter.Eve
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,unpack submitRing method error:%s", err.Error())
+		return fmt.Errorf("extractor,submitRingHash method,unpack error:%s", err.Error())
 	}
 	evt, err := method.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,handle submitRing method convert order data error:%s", err.Error())
+		return fmt.Errorf("extractor,submitRingHash method,convert order data error:%s", err.Error())
 	}
 
 	evt.TxHash = common.HexToHash(contract.TxHash)
@@ -339,11 +346,11 @@ func (l *ExtractorServiceImpl) handleBatchSubmitRingHashMethod(input eventemitte
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,unpack batchSubmitRing method error:%s", err.Error())
+		return fmt.Errorf("extractor,batchSubmitRingHash method,unpack error:%s", err.Error())
 	}
 	evt, err := method.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,handle batchSubmitRing method convert order data error:%s", err.Error())
+		return fmt.Errorf("extractor,batchSubmitRingHash method,convert order data error:%s", err.Error())
 	}
 
 	evt.TxHash = common.HexToHash(contract.TxHash)
@@ -362,16 +369,16 @@ func (l *ExtractorServiceImpl) handleCancelOrderMethod(input eventemitter.EventD
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,unpack cancelOrder method error:%s", err.Error())
+		return fmt.Errorf("extractor,cancelOrder method,unpack error:%s", err.Error())
 	}
 
 	order, err := cancel.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,handle cancelOrder method convert order data error:%s", err.Error())
+		return fmt.Errorf("extractor,cancelOrder method,convert order data error:%s", err.Error())
 	}
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,external cancelOrder order,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
+		log.Debugf("extractor,cancelOrder method,order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 	}
 
 	order.Protocol = common.HexToAddress(contract.ContractAddress)
@@ -393,7 +400,7 @@ func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventD
 	deposit.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,weth deposit method,from:%s, to:%s, value:%s", deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
+		log.Debugf("extractor,wethDeposit method,from:%s, to:%s, value:%s", deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
 	}
 
 	eventemitter.Emit(eventemitter.WethDepositMethod, deposit)
@@ -406,7 +413,7 @@ func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.Eve
 
 	data := hexutil.MustDecode("0x" + contractData.Input[10:])
 	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
-		return fmt.Errorf("extractor,unpack weth withdrawal method error:%s", err.Error())
+		return fmt.Errorf("extractor,wethWithdrawal method,unpack error:%s", err.Error())
 	}
 
 	withdrawal := contractMethod.ConvertDown()
@@ -418,7 +425,7 @@ func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.Eve
 	withdrawal.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 
 	if l.commOpts.Develop {
-		log.Debugf("extractor,weth withdrawal method,from:%s, to:%s, value:%s", withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
+		log.Debugf("extractor,wethWithdrawal method,from:%s, to:%s, value:%s", withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
 	}
 
 	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)

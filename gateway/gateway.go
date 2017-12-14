@@ -137,9 +137,6 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if o.TokenB == o.TokenS {
 		return false, fmt.Errorf("gateway,base filter,order %s tokenB == tokenS", o.Hash.Hex())
 	}
-	if f.MinLrcFee.Cmp(o.LrcFee) >= 0 {
-		return false, fmt.Errorf("gateway,base filter,order %s lrc fee %s invalid", o.Hash.Hex(), o.LrcFee.String())
-	}
 	if len(o.Owner) != addrLength {
 		return false, fmt.Errorf("gateway,base filter,order %s owner %s address length error", o.Hash.Hex(), o.Owner.Hex())
 	}

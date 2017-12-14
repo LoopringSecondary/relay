@@ -57,9 +57,11 @@ var creator accounts.Account
 
 var accessor *ethaccessor.EthNodeAccessor
 
+const Version = "v_0_1"
+
 func PrepareTestData() {
 	c := loadConfig()
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address["v_0_1"])
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[Version])
 
 	//delegate registry
 	delegateAbi := accessor.DelegateAbi

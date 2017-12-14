@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"strings"
 )
 
 type Token struct {
@@ -36,7 +37,7 @@ type Token struct {
 // convert types/token to dao/token
 func (t *Token) ConvertDown(src *types.Token) error {
 	t.Protocol = src.Protocol.Hex()
-	t.Symbol = src.Symbol
+	t.Symbol = strings.ToUpper(src.Symbol)
 	t.Source = src.Source
 	t.CreateTime = src.Time
 	t.Deny = src.Deny
@@ -47,7 +48,7 @@ func (t *Token) ConvertDown(src *types.Token) error {
 // convert dao/token to types/token
 func (t *Token) ConvertUp(dst *types.Token) error {
 	dst.Protocol = common.HexToAddress(t.Protocol)
-	dst.Symbol = t.Symbol
+	dst.Symbol = strings.ToUpper(t.Symbol)
 	dst.Source = t.Source
 	dst.Time = t.CreateTime
 	dst.Deny = t.Deny
