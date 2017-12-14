@@ -73,7 +73,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 	// call register token
 	protocol := common.HexToAddress(wethAddress)
 	spender := common.HexToAddress(wethAddress)
-	amount, _ := new(big.Int).SetString("1000000000000000000", 0)
+	amount, _ := new(big.Int).SetString("2000000000000000000", 0)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, protocol)
 	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {

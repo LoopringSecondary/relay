@@ -32,6 +32,10 @@ import (
 func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
 	blockNumberStr := blockNumberToString(blockNumber)
 
+	state.DealtAmountS = big.NewInt(0)
+	state.DealtAmountB = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
+
 	// get order cancelled or filled amount from chain
 	if cancelOrFilledAmount, err := accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {
 		return nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
@@ -47,10 +51,6 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 	} else {
 		state.UpdatedBlock = blockNumber
 	}
-
-	state.DealtAmountS = big.NewInt(0)
-	state.DealtAmountB = big.NewInt(0)
-	state.CancelledAmountB = big.NewInt(0)
 
 	model := &dao.Order{}
 	var err error
