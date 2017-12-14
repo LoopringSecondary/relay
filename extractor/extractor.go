@@ -190,6 +190,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 		ok       bool
 	)
 
+	log.Debugf("----- input:%s", input)
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
 		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
@@ -395,6 +396,7 @@ func (l *ExtractorServiceImpl) handleCancelOrderMethod(input eventemitter.EventD
 func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 
+	log.Debugf("------- get into handleWethDeposit")
 	var deposit types.WethDepositMethodEvent
 	deposit.From = common.HexToAddress(contractData.From)
 	deposit.To = common.HexToAddress(contractData.To)
