@@ -21,7 +21,6 @@ package util
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -143,7 +142,7 @@ func getTokenAndMarketFromDB(rds dao.RdsService) (
 	return
 }
 
-func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
+func Initialize(rds dao.RdsService, contracts map[string]string) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
@@ -151,9 +150,7 @@ func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
 
 	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
 
-	for i := 0; i < len(conf.Contract.Versions); i++ {
-		ContractVersionConfig[conf.Contract.Versions[i]] = conf.Contract.Addresses[i]
-	}
+	ContractVersionConfig = contracts
 
 	// StartRefreshCron(rds)
 
