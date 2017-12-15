@@ -199,7 +199,6 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 }
 
 func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
-	log.Debugf("------- submmiter gas:%s, gasPrice:%s", ringSate.ProtocolGas.String(), ringSate.ProtocolGasPrice.String())
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
 		return err
 	} else {
