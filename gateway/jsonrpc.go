@@ -175,25 +175,12 @@ func (j *JsonrpcServiceImpl) Start() {
 	}
 	var (
 		listener net.Listener
-		httpsLister net.Listener
 		err      error
 	)
 	if listener, err = net.Listen("tcp", ":8083"); err != nil {
 		return
 	}
-	if httpsLister, err = net.Listen("tcp", ":8085"); err != nil {
-		return
-	}
 	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
-	go func() {
-		err := rpc.NewHTTPServer([]string{"*"}, handler).ServeTLS(httpsLister, "/data/relay/public.cer", "/data/relay/private.key")
-		if err != nil {
-			fmt.Println("https err")
-			fmt.Println(err)
-		} else {
-			log.Info(fmt.Sprintf("HTTPS endpoint opened on 8085", ))
-		}
-	}()
 	log.Info(fmt.Sprintf("HTTP endpoint opened on 8083"))
 
 	return
