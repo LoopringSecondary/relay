@@ -78,6 +78,7 @@ type GlobalConfig struct {
 	Log            LogOptions
 	Keystore       KeyStoreOptions
 	Contract       ContractOptions
+	MarketCap      MarketCapOptions
 }
 
 type JsonrpcOptions struct {
@@ -147,12 +148,12 @@ type MinerOptions struct {
 	ThrowIfLrcIsInsuffcient bool
 	GasLimit                int64
 	TimingMatcher           *TimingMatcher
-	RateProvider            struct {
-		BaseUrl       string
-		Currency      string
-		CurrenciesMap map[string]string //address -> name
-	}
-	RateRatioCVSThreshold int64
+	RateRatioCVSThreshold   int64
+}
+
+type MarketCapOptions struct {
+	BaseUrl  string
+	Currency string
 }
 
 type GatewayFiltersOptions struct {

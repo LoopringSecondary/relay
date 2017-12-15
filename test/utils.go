@@ -191,8 +191,8 @@ func GenerateDaoService() *dao.RdsServiceImpl {
 	return dao.NewRdsService(cfg.Mysql)
 }
 
-func GenerateMarketCap() *marketcap.MarketCapProvider {
-	return marketcap.NewMarketCapProvider(cfg.Miner)
+func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
+	return marketcap.NewMarketCapProvider(cfg.MarketCap)
 }
 
 func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB *big.Int) *types.Order {
@@ -205,7 +205,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(10000)
+	order.LrcFee = big.NewInt(10000000000)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner

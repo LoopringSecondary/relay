@@ -18,7 +18,12 @@
 
 package types
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"encoding/json"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+	"strconv"
+)
 
 type Token struct {
 	Protocol common.Address
@@ -26,5 +31,91 @@ type Token struct {
 	Source   string
 	Time     int64
 	Deny     bool
+	Decimals int64
 	IsMarket bool
+}
+
+type CurrencyMarketCap struct {
+	Id           string         `json:"id"`
+	Name         string         `json:"name"`
+	Symbol       string         `json:"symbol"`
+	Address      common.Address `json:"address"`
+	PriceUsd     *big.Rat       `json:"price_usd"`
+	PriceBtc     *big.Rat       `json:"price_btc"`
+	PriceCny     *big.Rat       `json:"price_cny"`
+	Volume24HCNY *big.Rat       `json:"24h_volume_cny"`
+	Volume24HUSD *big.Rat       `json:"24h_volume_usd"`
+	LastUpdated  int64          `json:"last_updated"`
+	Decimals     int64
+}
+
+func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
+	type Cap struct {
+		Id           string `json:"id"`
+		Name         string `json:"name"`
+		Symbol       string `json:"symbol"`
+		PriceUsd     string `json:"price_usd"`
+		PriceBtc     string `json:"price_btc"`
+		PriceCny     string `json:"price_cny"`
+		Volume24HCNY string `json:"24h_volume_cny"`
+		Volume24HUSD string `json:"24h_volume_usd"`
+		LastUpdated  string `json:"last_updated"`
+	}
+	c := &Cap{}
+	if err := json.Unmarshal(input, c); nil != err {
+		return err
+	} else {
+		cap.Id = c.Id
+		cap.Symbol = c.Symbol
+		cap.Name = c.Name
+		if "" == c.PriceUsd {
+			c.PriceUsd = "0.0"
+		}
+		if price, err1 := strconv.ParseFloat(c.PriceUsd, 10); nil != err1 {
+			return err1
+		} else {
+			cap.PriceUsd = new(big.Rat).SetFloat64(price)
+		}
+		if "" == c.PriceBtc {
+			c.PriceBtc = "0.0"
+		}
+		if price, err1 := strconv.ParseFloat(c.PriceBtc, 10); nil != err1 {
+			return err1
+		} else {
+			cap.PriceBtc = new(big.Rat).SetFloat64(price)
+		}
+		if "" == c.PriceCny {
+			c.PriceCny = "0.0"
+		}
+		if price, err1 := strconv.ParseFloat(c.PriceCny, 10); nil != err1 {
+			return err1
+		} else {
+			cap.PriceCny = new(big.Rat).SetFloat64(price)
+		}
+		if "" == c.Volume24HCNY {
+			c.Volume24HCNY = "0.0"
+		}
+		if price, err1 := strconv.ParseFloat(c.Volume24HCNY, 10); nil != err1 {
+			return err1
+		} else {
+			cap.Volume24HCNY = new(big.Rat).SetFloat64(price)
+		}
+		if "" == c.Volume24HUSD {
+			c.Volume24HUSD = "0.0"
+		}
+		if price, err1 := strconv.ParseFloat(c.Volume24HUSD, 10); nil != err1 {
+			return err1
+		} else {
+			cap.Volume24HUSD = new(big.Rat).SetFloat64(price)
+		}
+		if "" == c.LastUpdated {
+			c.LastUpdated = "0"
+		}
+		if lastUpdated, err1 := strconv.ParseInt(c.LastUpdated, 0, 0); nil != err1 {
+			return err1
+		} else {
+			cap.LastUpdated = lastUpdated
+		}
+	}
+	return nil
 }

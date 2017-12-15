@@ -30,10 +30,10 @@ import (
 type forkProcessor struct {
 	dao      dao.RdsService
 	accessor *ethaccessor.EthNodeAccessor
-	mc       *marketcap.MarketCapProvider
+	mc       marketcap.MarketCapProvider
 }
 
-func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider) *forkProcessor {
+func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc marketcap.MarketCapProvider) *forkProcessor {
 	processor := &forkProcessor{}
 	processor.dao = rds
 	processor.mc = mc

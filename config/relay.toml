@@ -63,7 +63,7 @@ name = "Loopring corporation"
 [miner]
     ringMaxLength = 4
     feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
-    miner = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
+    miner = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
     ifRegistryRingHash = false
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
@@ -72,11 +72,10 @@ name = "Loopring corporation"
     		round_orders_count=50
     		duration = 1
     		delayed_number = 10
-    [miner.rate_provider]
-        base_url = "https://api.coinmarketcap.com/v1/ticker/%s/?convert=CNY"
+
+[market_cap]
+        base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0"
         currency = "USD"
-            [miner.rate_provider.currencies_map]
-            "0x5132a8ce9a61b13b9cAEcd2261abF95323056423" = "Loopring"
 
 [gateway_filters]
     [gateway_filters.base_filter]
