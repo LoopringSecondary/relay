@@ -130,7 +130,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token common.Address) (balance, allowance *big.Int, err error) {
 	tokenAlias := util.AddressToAlias(token.Hex())
 	if tokenAlias == "" {
-		err = errors.New("unsupported token address")
+		err = errors.New("unsupported token address " + token.Hex())
 		return
 	}
 

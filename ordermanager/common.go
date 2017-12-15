@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -95,70 +94,6 @@ func isOrderFullFinished(state *types.OrderState, mc *marketcap.MarketCapProvide
 	}
 
 	return true
-}
-
-func isFundInsufficient(state *types.OrderState, mc *marketcap.MarketCapProvider) bool {
-	price := mc.GetMarketCap(state.RawOrder.TokenS)
-	value := new(big.Rat).Mul(price, state.AvailableAmountS)
-
-	// todo: get from config
-	if value.Cmp(new(big.Rat).SetInt64(1)) > 0 {
-		return false
-	}
-
-	return true
-}
-
-func calculateAmountS(state *types.OrderState, req *ethaccessor.BatchErc20Req) {
-	var available, cancelOrFilledRatS *big.Rat
-
-	balance := new(big.Rat).SetInt(req.Balance.BigInt())
-	allowance := new(big.Rat).SetInt(req.Allowance.BigInt())
-	amountRatS := new(big.Rat).SetInt(state.RawOrder.AmountS)
-
-	if state.RawOrder.BuyNoMoreThanAmountB {
-		cancelOrFilledB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
-		cancelOrFilledRatB := new(big.Rat).SetInt(cancelOrFilledB)
-		cancelOrFilledRatS = new(big.Rat).Mul(state.RawOrder.Price, cancelOrFilledRatB)
-	} else {
-		cancelOrFilledS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
-		cancelOrFilledRatS = new(big.Rat).SetInt(cancelOrFilledS)
-	}
-
-	if cancelOrFilledRatS.Cmp(amountRatS) >= 0 {
-		available = new(big.Rat).SetInt64(0)
-	} else {
-		available = new(big.Rat).Sub(amountRatS, cancelOrFilledRatS)
-	}
-
-	state.AvailableAmountS = getMinAmount(available, balance, allowance)
-}
-
-func getMinAmount(a1, a2, a3 *big.Rat) *big.Rat {
-	min := a1
-
-	if min.Cmp(a2) > 0 {
-		min = a2
-	}
-	if min.Cmp(a3) > 0 {
-		min = a3
-	}
-
-	return min
-}
-
-func generateErc20Req(state *types.OrderState, spender common.Address, blockNumber *big.Int) *ethaccessor.BatchErc20Req {
-	var batchReq ethaccessor.BatchErc20Req
-	batchReq.Spender = spender
-	batchReq.Owner = state.RawOrder.Owner
-	batchReq.Token = state.RawOrder.TokenS
-	if blockNumber == nil {
-		batchReq.BlockParameter = "latest"
-	} else {
-		batchReq.BlockParameter = types.BigintToHex(blockNumber)
-	}
-
-	return &batchReq
 }
 
 func blockNumberToString(blockNumber *big.Int) string {
