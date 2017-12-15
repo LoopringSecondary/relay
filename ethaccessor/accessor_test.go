@@ -36,9 +36,10 @@ const (
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
-	wethAddress          = "0x88699e7fee2da0462981a08a15a3b940304cc516"
 	wethOwner            = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
-	transferToAccount 	 = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+	transferToAccount    = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+	lrcTokenAddress      = "0xEf82c1e65A207b0f1d0c311f48556F1C3979a822"
+	wethTokenAddress     = "0xfc2cbce778ddbc4d50bb5b2fc91afe14a8e3953d"
 )
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
@@ -47,7 +48,7 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
 
-	tokenAddress := common.HexToAddress(wethAddress)
+	tokenAddress := common.HexToAddress(wethTokenAddress)
 	owner := common.HexToAddress(wethOwner)
 	balance, err := accessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
@@ -63,18 +64,18 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 
 	// unlock account
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	account := accounts.Account{Address: common.HexToAddress(wethOwner)}
-	ks.Unlock(account, "201")
+	account := accounts.Account{Address: common.HexToAddress(transferToAccount)}
+	ks.Unlock(account, "202")
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
 
 	// call register token
-	protocol := common.HexToAddress(wethAddress)
-	spender := common.HexToAddress(wethAddress)
+	tokenAddress := common.HexToAddress(wethTokenAddress)
+	spender := common.HexToAddress(lrcTokenAddress)
 	amount, _ := new(big.Int).SetString("2000000000000000000", 0)
 	accessor, _ := test.GenerateAccessor()
-	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, protocol)
-	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {
+	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddress)
+	if result, err := callMethod(account, "approve", big.NewInt(200000), big.NewInt(21000000000), nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -87,9 +88,9 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 		t.Fatalf("generate accessor error:%s", err.Error())
 	}
 
-	tokenAddress := common.HexToAddress(wethAddress)
-	owner := common.HexToAddress(wethOwner)
-	spender := common.HexToAddress(wethAddress)
+	owner := common.HexToAddress(transferToAccount)
+	tokenAddress := common.HexToAddress(wethTokenAddress)
+	spender := common.HexToAddress(lrcTokenAddress)
 
 	if allowance, err := accessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
@@ -325,7 +326,7 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call weth deposit
-	wethAddr := common.HexToAddress(wethAddress)
+	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount := new(big.Int).SetInt64(1000000)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
@@ -348,7 +349,7 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call weth withdrawal
-	wethAddr := common.HexToAddress(wethAddress)
+	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount, _ := new(big.Int).SetString("100", 0)
 	accessor, _ := test.GenerateAccessor()
 	callMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethAddr)
@@ -371,7 +372,7 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 	crypto.Initialize(cyp)
 
 	// call weth transfer
-	wethAddr := common.HexToAddress(wethAddress)
+	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount := new(big.Int).SetInt64(100)
 	to := common.HexToAddress(transferToAccount)
 	accessor, _ := test.GenerateAccessor()
@@ -380,5 +381,19 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 		t.Fatalf("call method weth-transfer error:%s", err.Error())
 	} else {
 		t.Logf("weth-transfer result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_LrcTokenAddress(t *testing.T) {
+	c := test.Cfg()
+
+	accessor, _ := test.GenerateAccessor()
+	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
+	var result string
+	if err := callMethod(&result, "lrcTokenAddress", "latest"); nil != err {
+		t.Fatalf("call method lrcTokenAddress error:%s", err.Error())
+	} else {
+		t.Logf("lrcTokenAddress:%s", common.HexToAddress(result).Hex())
 	}
 }
