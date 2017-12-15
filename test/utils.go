@@ -240,7 +240,7 @@ func PrepareTestData() {
 	//tokenregistry
 	tokenRegisterAbi := accessor.TokenRegistryAbi
 	tokenRegisterAddress := accessor.ProtocolAddresses[protocol].TokenRegistryAddress
-	for _, tokenAddr := range entity.Tokens {
+	for symbol, tokenAddr := range entity.Tokens {
 		callMethod := accessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
 		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
@@ -248,7 +248,7 @@ func PrepareTestData() {
 		} else {
 			if res.Int() <= 0 {
 				registryMethod := accessor.ContractSendTransactionMethod(tokenRegisterAbi, tokenRegisterAddress)
-				if hash, err := registryMethod(creator, "registerToken", nil, nil, nil, tokenAddr, "WETH"); nil != err {
+				if hash, err := registryMethod(creator, "registerToken", nil, nil, nil, tokenAddr, symbol); nil != err {
 					log.Errorf("token registry error:%s", err.Error())
 				} else {
 					log.Infof("token registry hash:%s", hash)
@@ -263,7 +263,7 @@ func PrepareTestData() {
 	for _, tokenAddr := range entity.Tokens {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
-			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(10000000000000000))); nil != err {
+			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(1000000000000000000))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -274,7 +274,6 @@ func PrepareTestData() {
 
 func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Account) {
 	if nil == tokens1 {
-		var tokens1 []common.Address
 		for _, v := range entity.Tokens {
 			tokens1 = append(tokens1, v)
 		}
@@ -282,17 +281,15 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 	if nil == orderAccounts1 {
 		orderAccounts1 = orderAccounts
 	}
+
 	for _, tokenAddr := range tokens1 {
 		callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddr)
-
 		for _, account := range orderAccounts1 {
-			//balance := &types.Big{}
-
 			var balance types.Big
 			if err := callMethod(&balance, "balanceOf", "latest", account.Address); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
-				log.Infof("token: %s, balance %s : %s", tokenAddr.Hex(), account.Address.Hex(), balance.BigInt().String())
+				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), balance.BigInt().String())
 			}
 
 			var allowance types.Big
@@ -300,7 +297,7 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
 					log.Error(err.Error())
 				} else {
-					log.Infof("token:%s, allowance: %s -> %s %s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), allowance.BigInt().String())
+					log.Infof("token:%s, owner:%s, spender:%s, allowance:%s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), allowance.BigInt().String())
 				}
 			}
 		}
@@ -308,24 +305,41 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 }
 
 //setbalance after deploy token by protocol
+//不能设置weth
 func SetTokenBalances() {
 	dummyTokenAbiStr := `[{"constant":true,"inputs":[],"name":"mintingFinished","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_subtractedValue","type":"uint256"}],"name":"decreaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"finishMinting","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_addedValue","type":"uint256"}],"name":"increaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_target","type":"address"},{"name":"_value","type":"uint256"}],"name":"setBalance","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"_name","type":"string"},{"name":"_symbol","type":"string"},{"name":"_decimals","type":"uint8"},{"name":"_totalSupply","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":false,"inputs":[],"name":"MintFinished","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
 	dummyTokenAbi := &abi.ABI{}
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
 
 	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
+	amount, _ := new(big.Int).SetString("10000000000000000000000", 0)
+	wethAmount, _ := new(big.Int).SetString("19973507197999000000", 0)
 
-	amount := new(big.Int)
-	amount.SetString("10000000000000000000000", 0)
+	// deposit weth
+	wethToken := entity.Tokens["WETH"]
+	for _, v := range entity.Accounts {
+		owner := accounts.Account{Address: v.Address}
+		sendTransactionMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethToken)
+		hash, err := sendTransactionMethod(owner, "deposit", big.NewInt(1000000), big.NewInt(21000000000), wethAmount)
+		if nil != err {
+			log.Fatalf("call method weth-deposit error:%s", err.Error())
+		} else {
+			log.Debugf("weth-deposit txhash:%s", hash)
+		}
+	}
 
-	for _, tokenAddress := range entity.Tokens {
+	// other token set balance
+	for symbol, tokenAddress := range entity.Tokens {
+		if symbol == "WETH" {
+			continue
+		}
 		sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
-
 		erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
+
 		for _, acc := range orderAccounts {
 			var res types.Big
 			if err := erc20Method(&res, "balanceOf", "latest", acc.Address); nil != err {
-				println(err.Error())
+				fmt.Errorf(err.Error())
 			}
 			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
 				hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, acc.Address, amount)
@@ -334,7 +348,7 @@ func SetTokenBalances() {
 				}
 				fmt.Printf("sendhash:%s", hash)
 			}
-			fmt.Printf("tokenAddress:", tokenAddress.Hex(), "useraddress:", acc.Address.Hex(), "balance:", res.BigInt().String())
+			fmt.Printf("tokenAddress:%s, useraddress:%s, balance:%s", tokenAddress.Hex(), acc.Address.Hex(), res.BigInt().String())
 		}
 		fmt.Printf(":", tokenAddress.Hex())
 	}
