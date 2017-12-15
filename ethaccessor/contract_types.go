@@ -119,6 +119,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.LrcFee = e.AmountsList[i][3]
 		fill.SplitS = e.AmountsList[i][4]
 		fill.SplitB = e.AmountsList[i][5]
+		fill.FillIndex = big.NewInt(int64(i))
 
 		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee)
 		list = append(list, &fill)

@@ -124,6 +124,7 @@ type OrderFilledEvent struct {
 	SplitS          *big.Int
 	SplitB          *big.Int
 	Market          string
+	FillIndex       *big.Int
 }
 
 type OrderCancelledEvent struct {

@@ -62,6 +62,8 @@ func (market *Market) match() {
 					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					if ringForSubmit.Received.Cmp(big.NewRat(int64(0), int64(1))) > 0 {
 						candidateRingList = append(candidateRingList, CandidateRing{received: ringForSubmit.Received, orderHashes: []common.Hash{a2BOrder.RawOrder.Hash, b2AOrder.RawOrder.Hash}})
+					} else {
+						log.Debugf("timing_matchher,market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					}
 				}
 			}
