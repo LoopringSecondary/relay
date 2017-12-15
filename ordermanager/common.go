@@ -63,7 +63,7 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 }
 
 func settleOrderStatus(state *types.OrderState, mc *marketcap.MarketCapProvider) {
-	if state.CancelledAmountS.Cmp(big.NewInt(0)) == 0 {
+	if new(big.Int).Add(state.CancelledAmountS, state.DealtAmountS).Cmp(big.NewInt(0)) <= 0 {
 		state.Status = types.ORDER_NEW
 	} else {
 		finished := isOrderFullFinished(state, mc)

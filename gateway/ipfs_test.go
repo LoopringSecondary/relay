@@ -89,8 +89,8 @@ func TestRing(t *testing.T) {
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
-	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("100"+suffix, 0)
 	order1 := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
@@ -101,8 +101,8 @@ func TestRing(t *testing.T) {
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
-	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("200"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
 	order2 := test.CreateOrder(
 		tokenAddressB,
 		tokenAddressA,
