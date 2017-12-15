@@ -233,12 +233,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 		return err
 	}
 
-	// judge status
-	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order cancelled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
-	}
-
-	// calculate remainAmount
+	// calculate remainAmount and cancelled amount should be saved whether order is finished or not
 	if state.RawOrder.BuyNoMoreThanAmountB {
 		state.CancelledAmountB = new(big.Int).Add(state.CancelledAmountB, event.AmountCancelled)
 		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amountb:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountB.String())
@@ -249,6 +244,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// update order status
 	settleOrderStatus(state, om.mc)
+	state.UpdatedBlock = event.Blocknumber
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {

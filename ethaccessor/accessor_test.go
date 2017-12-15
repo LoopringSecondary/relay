@@ -19,12 +19,10 @@
 package ethaccessor_test
 
 import (
-	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
@@ -32,7 +30,7 @@ import (
 
 const (
 	version              = test.Version
-	cancelOrderHash      = "0x944ba4acc516fa0d2a7ae9d730bfe452da96661992f88eb564278e78e468cee5"
+	cancelOrderHash      = "0xfc76695401613d76340d254b10dc613850d96b42ea6e09129a1ee3d97a012c0d"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
@@ -90,7 +88,7 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_CancelOrder(t *testing.T) {
+func TestEthNodeAccessor_CancelOrderEvent(t *testing.T) {
 	var (
 		model        *dao.Order
 		state        types.OrderState
