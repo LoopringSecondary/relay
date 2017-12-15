@@ -19,12 +19,10 @@
 package ethaccessor_test
 
 import (
-	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
@@ -32,7 +30,7 @@ import (
 
 const (
 	version              = test.Version
-	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
+	cancelOrderHash      = "0xfc76695401613d76340d254b10dc613850d96b42ea6e09129a1ee3d97a012c0d"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
@@ -59,17 +57,8 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	// load config
-	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(transferToAccount)}
-	ks.Unlock(account, "202")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call register token
 	tokenAddress := common.HexToAddress(wethTokenAddress)
 	spender := common.HexToAddress(lrcTokenAddress)
 	amount, _ := new(big.Int).SetString("2000000000000000000", 0)
@@ -99,14 +88,14 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_CancelOrder(t *testing.T) {
+func TestEthNodeAccessor_CancelOrderEvent(t *testing.T) {
 	var (
 		model        *dao.Order
 		state        types.OrderState
 		err          error
 		result       string
 		orderhash    = common.HexToHash(cancelOrderHash)
-		cancelAmount = big.NewInt(1980)
+		cancelAmount = big.NewInt(100)
 	)
 
 	// load config
@@ -121,12 +110,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: state.RawOrder.Owner}
-	ks.Unlock(account, "202")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
 	// create cancel order contract function parameters
 	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
@@ -141,7 +125,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
-	if result, err = callMethod(account, "cancelOrder", nil, nil, nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
+	if result, err = callMethod(account, "cancelOrder", big.NewInt(200000), big.NewInt(21000000000), nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	} else {
 		t.Logf("cancelOrder result:%s", result)
@@ -162,19 +146,10 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 
 // cutoff的值必须在两个块的timestamp之间
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
+	c := test.Cfg()
+	account := accounts.Account{Address: common.HexToAddress(cutOffOwner)}
 	cutoff := big.NewInt(1522651087)
 
-	// load config
-	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	account := accounts.Account{Address: common.HexToAddress(cutOffOwner)}
-	ks.Unlock(account, "202")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
-
-	// call cutoff
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
@@ -198,17 +173,9 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenRegister(t *testing.T) {
-	// load config
 	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
-	ks.Unlock(account, "101")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call register token
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.TokenRegistryAbi, accessor.ProtocolAddresses[protocol].TokenRegistryAddress)
@@ -220,17 +187,9 @@ func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
-	// load config
 	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
-	ks.Unlock(account, "101")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call unregister token
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.TokenRegistryAbi, accessor.ProtocolAddresses[protocol].TokenRegistryAddress)
@@ -257,17 +216,9 @@ func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
 
 // 注册合约
 func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
-	// load config
 	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
-	ks.Unlock(account, "101")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call authorized protocol address
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.DelegateAbi, accessor.ProtocolAddresses[protocol].DelegateAddress)
@@ -279,17 +230,9 @@ func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 }
 
 func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
-	// load config
 	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
-	ks.Unlock(account, "101")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call deAuthorized protocol address
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.DelegateAbi, accessor.ProtocolAddresses[protocol].DelegateAddress)
@@ -315,17 +258,8 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	// load config
-	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(wethOwner)}
-	ks.Unlock(account, "201")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call weth deposit
 	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount := new(big.Int).SetInt64(1000000)
 	accessor, _ := test.GenerateAccessor()
@@ -338,17 +272,8 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
-	// load config
-	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(wethOwner)}
-	ks.Unlock(account, "201")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call weth withdrawal
 	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount, _ := new(big.Int).SetString("100", 0)
 	accessor, _ := test.GenerateAccessor()
@@ -361,17 +286,8 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethTransfer(t *testing.T) {
-	// load config
-	c := test.Cfg()
-
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: common.HexToAddress(wethOwner)}
-	ks.Unlock(account, "201")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
-	// call weth transfer
 	wethAddr := common.HexToAddress(wethTokenAddress)
 	amount := new(big.Int).SetInt64(100)
 	to := common.HexToAddress(transferToAccount)

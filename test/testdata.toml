@@ -1,18 +1,12 @@
 allowance_amount = 1000000
 
 [[accounts]]
-address = "0x251f3bd45b06a8b29cb6d171131e192c1254fec1"
-passphrase = "1"
+address = "0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135"
+passphrase = "201"
 [[accounts]]
-address = "0x3a49f1f84234615caa46e9c89ad3c53e8f142b6c"
-passphrase = "1"
-[[accounts]]
-address = "0xb7e0dae0a3e4e146bcaf0fe782be5afb14041a10"
-passphrase = "1"
-[[accounts]]
-address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
-passphrase = "1"
+address = "0xb1018949b241d76a1ab2094f473e9befeabb5ead"
+passphrase = "202"
 
 [creator]
-address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
-passphrase = "1"
+address = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
+passphrase = "101"

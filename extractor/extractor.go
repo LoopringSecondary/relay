@@ -318,10 +318,8 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 
 	for _, v := range orderList {
 		if l.commOpts.Develop {
-			log.Debugf("extractor,submitRing method,order,protocol:%s,owner:%s,tokenS:%s,tokenB:%s,"+
-				"amountS:%s,amountB:%s,timestamp:%s,lrcFee:%s,marginSplit:%d,buyNoMoreThanBAmount:%t",
-				v.Protocol.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(),
-				v.AmountS.String(), v.AmountB.String(), v.Timestamp.String(), v.LrcFee.String(), v.MarginSplitPercentage, v.BuyNoMoreThanAmountB)
+			log.Debugf("extractor,submitRing method,order,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s",
+				v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
 		}
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
 		eventemitter.Emit(eventemitter.Gateway, v)
