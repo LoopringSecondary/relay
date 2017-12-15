@@ -109,8 +109,7 @@ func PrepareTestData() {
 	for _, tokenAddr := range tokens {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
-			println("###", acc.Address.Hex())
-			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(int64(0))); nil != err {
+			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(10000000000000000))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -167,17 +166,24 @@ func init() {
 	}
 
 	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	c := crypto.NewCrypto(false, ks)
+	crypto.Initialize(c)
+	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
 	creator = accounts.Account{Address: common.HexToAddress(testData.Creator.Address)}
 	ks.Unlock(creator, testData.Creator.Passphrase)
+
 	for _, accTmp := range testData.Accounts {
 		account := accounts.Account{Address: common.HexToAddress(accTmp.Address)}
 		orderAccounts = append(orderAccounts, account)
 		if err := ks.Unlock(account, accTmp.Passphrase); nil != err {
 			println("===", accTmp.Address, err.Error())
 		} else {
-			println("(((((", accTmp.Address)
+			println("unlocked:%s", accTmp.Address)
 		}
+		//sendMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, accessor.WethAddress)
+		//
+		//sendMethod(account, "deposit", big.NewInt(106762), big.NewInt(21000000000), big.NewInt(1000000000000000))
 	}
 
 	// set supported tokens
@@ -185,69 +191,48 @@ func init() {
 		tokens = append(tokens, token.Protocol)
 	}
 
-	c := crypto.NewCrypto(false, ks)
-	crypto.Initialize(c)
-	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
-
 	//tokens = []common.Address{common.HexToAddress("0x98C9D14a894d19a38744d41CD016D89Cf9699a51"),common.HexToAddress("0x88699e7fee2da0462981a08a15a3b940304cc516")}
 }
 
 //setbalance after deploy token by protocol
 func SetTokenBalances() {
-	tokens := []string{"LRC", "EOS", "REP", "NEO", "QTUM", "RDN", "RCN", "YOYO", "WETH"}
-	addresses := []string{"251f3bd45b06a8b29cb6d171131e192c1254fec1", "0x5ed4698829d8fedac58d75a90dc111416ffd4e2c"}
+	//tokens := []string{"LRC", "EOS", "REP", "NEO", "QTUM", "RDN", "RCN", "YOYO", "WETH"}
 	dummyTokenAbiStr := `[{"constant":true,"inputs":[],"name":"mintingFinished","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_subtractedValue","type":"uint256"}],"name":"decreaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"finishMinting","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_addedValue","type":"uint256"}],"name":"increaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_target","type":"address"},{"name":"_value","type":"uint256"}],"name":"setBalance","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"_name","type":"string"},{"name":"_symbol","type":"string"},{"name":"_decimals","type":"uint8"},{"name":"_totalSupply","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":false,"inputs":[],"name":"MintFinished","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
 	dummyTokenAbi := &abi.ABI{}
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
-	//var delegateAddress common.Address
-	//for _, impl := range accessor.ProtocolAddresses {
-	//	delegateAddress = impl.DelegateAddress
-	//}
-	//for _,token := range tokens {
-	//	erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, common.HexToAddress(token))
-	//
-	//	for _,addr := range addresses {
-	//		var res types.Big
-	//		var allow types.Big
-	//		erc20Method(&res, "balanceOf", "latest", common.HexToAddress(addr))
-	//		if err := erc20Method(&allow, "allowance", "latest", common.HexToAddress(addr),delegateAddress);nil != err {
-	//			println(err.Error())
-	//		}
-	//		println("token:", token, "addr:", addr, "balance:", res.BigInt().String(), "allowance", allow.BigInt().String())
-	//	}
-	//}
 
-	sender := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
 
 	amount := new(big.Int)
 	amount.SetString("10000000000000000000000", 0)
-	for _, implAddress := range accessor.ProtocolAddresses {
-		callMethod := accessor.ContractCallMethod(accessor.TokenRegistryAbi, implAddress.TokenRegistryAddress)
-		for _, token := range tokens {
-			var tokenAddressStr string
-			if err := callMethod(&tokenAddressStr, "getAddressBySymbol", "latest", token); nil != err {
+
+	//for _, implAddress := range accessor.ProtocolAddresses {
+	//callMethod := accessor.ContractCallMethod(accessor.TokenRegistryAbi, implAddress.TokenRegistryAddress)
+	for _, tokenAddress := range tokens {
+		//var tokenAddressStr string
+		//if err := callMethod(&tokenAddressStr, "getAddressBySymbol", "latest", token); nil != err {
+		//	println(err.Error())
+		//}
+		//tokenAddress := common.HexToAddress(tokenAddressStr)
+		sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
+
+		erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
+		for _, acc := range orderAccounts {
+			var res types.Big
+			if err := erc20Method(&res, "balanceOf", "latest", acc.Address); nil != err {
 				println(err.Error())
 			}
-			tokenAddress := common.HexToAddress(tokenAddressStr)
-			sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
-
-			erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-			for _, address := range addresses {
-				var res types.Big
-				if err := erc20Method(&res, "balanceOf", "latest", common.HexToAddress(address)); nil != err {
+			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
+				hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, acc.Address, amount)
+				if nil != err {
 					println(err.Error())
 				}
-				if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
-					hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(18000000000), nil, common.HexToAddress(address), amount)
-					if nil != err {
-						println(err.Error())
-					}
-					println("sendhash:", hash)
-					//time.Sleep(20 * time.Second)
-				}
-				println("token:", token, "tokenAddress:", tokenAddress.Hex(), "useraddress:", address, "balance:", res.BigInt().String())
+				println("sendhash:", hash)
+				//time.Sleep(20 * time.Second)
 			}
-			println(token, ":", tokenAddress.Hex())
+			println("tokenAddress:", tokenAddress.Hex(), "useraddress:", acc.Address.Hex(), "balance:", res.BigInt().String())
 		}
+		println(":", tokenAddress.Hex())
+		//}
 	}
 }

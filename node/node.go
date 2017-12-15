@@ -76,6 +76,9 @@ type MineNode struct {
 func (n *MineNode) Start() {
 	n.miner.Start()
 }
+func (n *MineNode) Stop() {
+	n.miner.Stop()
+}
 
 func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
@@ -159,14 +162,14 @@ func (n *Node) Wait() {
 
 func (n *Node) Stop() {
 	n.lock.RLock()
-
+	n.mineNode.Stop()
 	//
 	//n.p2pListener.Stop()
 	//n.chainListener.Stop()
 	//n.orderbook.Stop()
 	//n.miner.Stop()
 
-	close(n.stop)
+	//close(n.stop)
 
 	n.lock.RUnlock()
 }
@@ -198,7 +201,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.globalConfig.OrderManager, &n.globalConfig.Common, n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
+	n.orderManager = ordermanager.NewOrderManager(n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
 }
 
 func (n *Node) registerTrendManager() {

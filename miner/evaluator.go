@@ -20,20 +20,20 @@ package miner
 
 import (
 	"errors"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
+	"math"
+	"math/big"
+
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"math"
-	"math/big"
 )
 
 type Evaluator struct {
 	marketCapProvider     *marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
 	accessor              *ethaccessor.EthNodeAccessor
-	lrcAddress            common.Address
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -152,20 +152,17 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	e.computeFeeOfRingAndOrder(ringState)
 
 	//cvs
-	if cvs, err := PriceRateCVSquare(ringState); nil != err {
+	cvs, err := PriceRateCVSquare(ringState)
+	if nil != err {
 		return err
 	} else {
-		log.Debugf("miner,ringState.length:%d ,  cvs:%s", len(ringState.Orders), cvs.String())
+		log.Debugf("miner, ringhash:%s, legalFee:%s, length of orders:%d, cvs:%s", ringState.Hash.Hex(), ringState.LegalFee.String(), len(ringState.Orders), cvs.String())
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
 			return errors.New("miner,cvs must less than RateRatioCVSThreshold")
 		}
 	}
-}
-
-func (e *Evaluator) getMarketCap(tokenAddress common.Address) *big.Rat {
-	return e.marketCapProvider.GetMarketCap(tokenAddress)
 }
 
 func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
@@ -197,7 +194,6 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
 			legalAmountOfSaving.Mul(filledOrder.FeeS, e.getMarketCap(filledOrder.OrderState.RawOrder.TokenS))
-			log.Debugf("miner,savingAmount:%s", savingAmount.FloatString(10))
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
@@ -208,7 +204,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		}
 
 		//compute lrcFee
-		rate := new(big.Rat).Quo(filledOrder.AvailableAmountS, new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS))
+		rate := new(big.Rat).Quo(filledOrder.FillAmountS, new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS))
 		filledOrder.LrcFee = new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.LrcFee)
 		filledOrder.LrcFee.Mul(filledOrder.LrcFee, rate)
 
@@ -228,7 +224,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
 			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
 			lrcReward.Quo(lrcReward, e.getMarketCap(lrcAddress))
-			log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+			//log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 			filledOrder.LrcReward = lrcReward
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
@@ -249,7 +245,6 @@ func PriceRateCVSquare(ringState *types.Ring) (*big.Int, error) {
 	scale, _ := new(big.Int).SetString("10000", 0)
 	for _, filledOrder := range ringState.Orders {
 		rawOrder := filledOrder.OrderState.RawOrder
-		log.Debugf("miner,rawOrder.AmountS:%s, filledOrder.RateAmountS:%s", rawOrder.AmountS.String(), filledOrder.RateAmountS.FloatString(10))
 		s1b0, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
 		//s1b0 = s1b0.Mul(s1b0, rawOrder.AmountB)
 
@@ -260,7 +255,6 @@ func PriceRateCVSquare(ringState *types.Ring) (*big.Int, error) {
 		}
 		ratio := new(big.Int).Set(scale)
 		ratio.Mul(ratio, s1b0).Div(ratio, s0b1)
-		log.Debugf("miner,ratio:%s", ratio.String())
 		rateRatios = append(rateRatios, ratio)
 	}
 	return CVSquare(rateRatios, scale), nil
@@ -285,6 +279,10 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	}
 
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
+}
+
+func (e *Evaluator) getMarketCap(tokenAddress common.Address) *big.Rat {
+	return e.marketCapProvider.GetMarketCap(tokenAddress)
 }
 
 func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64, accessor *ethaccessor.EthNodeAccessor) *Evaluator {

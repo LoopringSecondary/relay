@@ -75,7 +75,6 @@ type GlobalConfig struct {
 	Accessor       AccessorOptions
 	Common         CommonOptions
 	Miner          MinerOptions
-	OrderManager   OrderManagerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
 	Contract       ContractOptions
@@ -154,12 +153,6 @@ type MinerOptions struct {
 		CurrenciesMap map[string]string //address -> name
 	}
 	RateRatioCVSThreshold int64
-}
-
-type OrderManagerOptions struct {
-	TickerDuration int
-	BlockPeriod    int
-	AccountPeriod  int
 }
 
 type GatewayFiltersOptions struct {

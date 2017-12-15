@@ -120,6 +120,11 @@ func Emit(topic string, eventData EventData) {
 	wg.Wait()
 }
 
+//todo: impl it
+func NewWatcher() {
+
+}
+
 func init() {
 	watchers = make(map[string][]*Watcher)
 	mtx = &sync.Mutex{}

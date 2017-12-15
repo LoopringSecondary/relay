@@ -297,6 +297,11 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	evt.UsedGas = contract.Gas
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor,submitRing method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
@@ -343,6 +348,10 @@ func (l *ExtractorServiceImpl) handleSubmitRingHashMethod(input eventemitter.Eve
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
+	if l.commOpts.Develop {
+		log.Debugf("extractor,submitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
 	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
 
 	return nil
@@ -366,7 +375,11 @@ func (l *ExtractorServiceImpl) handleBatchSubmitRingHashMethod(input eventemitte
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
+	if l.commOpts.Develop {
+		log.Debugf("extractor,batchSubmitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
+	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
 
 	return nil
 }

@@ -22,12 +22,26 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"sync"
 )
 
 type TokenBalance struct {
 	TokenAddress common.Address
 	Balance      *big.Int
 	Allowance    *big.Int
+	mtx          sync.Mutex
+}
+
+func (t *TokenBalance) addAllowance(increment *big.Int) {
+	t.mtx.Lock()
+	defer t.mtx.Unlock()
+	t.Allowance.Add(t.Allowance, increment)
+}
+
+func (t *TokenBalance) addBalance(increment *big.Int) {
+	t.mtx.Lock()
+	defer t.mtx.Unlock()
+	t.Balance.Add(t.Balance, increment)
 }
 
 func (t *TokenBalance) Available() *big.Int {

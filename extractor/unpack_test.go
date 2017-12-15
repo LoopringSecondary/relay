@@ -65,3 +65,23 @@ func TestExtractorServiceImpl_UnpackWethWithdrawalMethod(t *testing.T) {
 	evt := withdrawal.ConvertDown()
 	t.Logf("withdrawal event value:%s", evt.Value)
 }
+
+func TestExtractorServiceImpl_UnpackSubmitRingHashMethod(t *testing.T) {
+	input := "0xae201a700000000000000000000000004bad3053d574cd54513babe21db3f09bea1d387da0b3871b768ec39f2d21e782177cca3762caafeb93a74b56e377b9cbc18e7c1f"
+
+	var method ethaccessor.SubmitRingHashMethod
+	accessor, _ := test.GenerateAccessor()
+
+	data := hexutil.MustDecode("0x" + input[10:])
+
+	if err := accessor.RinghashRegistryAbi.UnpackMethodInput(&method, "submitRinghash", data); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	ringhash, err := method.ConvertDown()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	t.Logf("ringhash:%s, ringminer:%s", ringhash.RingHash.Hex(), ringhash.RingMiner.Hex())
+}
