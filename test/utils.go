@@ -122,7 +122,7 @@ func GenerateOrderManager() *ordermanager.OrderManagerImpl {
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(cfg.OrderManager, &cfg.Common, rds, um, accessor, mc)
+	ob := ordermanager.NewOrderManager(rds, um, accessor, mc)
 	return ob
 }
 
@@ -160,7 +160,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/debug.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 

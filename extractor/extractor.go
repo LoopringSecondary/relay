@@ -139,25 +139,26 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Debugf("extractor,get block transaction list length %d", txcnt)
 			}
 
+			// todo
 			// detect chain fork
-			if err := l.detectFork(currentBlock); err != nil {
-				log.Debugf("extractor,detect fork error:%s", err.Error())
-				continue
-			}
+			//if err := l.detectFork(currentBlock); err != nil {
+			//	log.Debugf("extractor,detect fork error:%s", err.Error())
+			//	continue
+			//}
 
 			// process block
 			for _, tx := range block.Transactions {
 				log.Debugf("extractor,get transaction hash:%s", tx.Hash)
 
-				_, err := l.processEvent(&tx, block.Timestamp.BigInt())
+				logAmount, err := l.processEvent(&tx, block.Timestamp.BigInt())
 				if err != nil {
 					log.Errorf(err.Error())
 				}
 
 				// 解析method，获得ring内等orders并发送到orderbook保存
-				//if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
-				//	log.Errorf(err.Error())
-				//}
+				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
+					log.Errorf(err.Error())
+				}
 			}
 		}
 	}()
@@ -192,11 +193,13 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
-		return fmt.Errorf("extractor,contract method id %s length invalid", common.ToHex(input))
+		log.Debugf("extractor,contract method id %s length invalid", common.ToHex(input))
+		return nil
 	}
 	id := common.ToHex(input[0:4])
 	if contract, ok = l.methods[id]; !ok {
-		return fmt.Errorf("extractor,contract method id error:%s", id)
+		log.Debugf("extractor,contract method id error:%s", id)
+		return nil
 	}
 
 	contract.BlockNumber = tx.BlockNumber.BigInt()
@@ -294,6 +297,11 @@ func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventDa
 	evt.UsedGas = contract.Gas
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
+
+	if l.commOpts.Develop {
+		log.Debugf("extractor,submitRing method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
@@ -340,6 +348,10 @@ func (l *ExtractorServiceImpl) handleSubmitRingHashMethod(input eventemitter.Eve
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
+	if l.commOpts.Develop {
+		log.Debugf("extractor,submitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
 	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
 
 	return nil
@@ -363,7 +375,11 @@ func (l *ExtractorServiceImpl) handleBatchSubmitRingHashMethod(input eventemitte
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
+	if l.commOpts.Develop {
+		log.Debugf("extractor,batchSubmitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	}
+
+	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
 
 	return nil
 }
@@ -408,7 +424,7 @@ func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventD
 		log.Debugf("extractor,wethDeposit method,from:%s, to:%s, value:%s", deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
 	}
 
-	eventemitter.Emit(eventemitter.WethDepositMethod, deposit)
+	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
 	return nil
 }
 
@@ -417,7 +433,7 @@ func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.Eve
 	contractMethod := contractData.Method.(*ethaccessor.WethWithdrawalMethod)
 
 	data := hexutil.MustDecode("0x" + contractData.Input[10:])
-	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+	if err := contractData.CAbi.UnpackMethodInput(&contractMethod.Value, contractData.Name, data); err != nil {
 		return fmt.Errorf("extractor,wethWithdrawal method,unpack error:%s", err.Error())
 	}
 
@@ -504,7 +520,6 @@ func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
 			v.Owner = common.HexToAddress(ord.Owner)
-			v.Market, _ = util.WrapMarketByAddress(v.TokenS.Hex(), v.TokenB.Hex())
 
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {

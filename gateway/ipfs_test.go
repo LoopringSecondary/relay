@@ -35,7 +35,9 @@ import (
 )
 
 const (
-	suffix = "00"
+	suffix       = "00"
+	TOKEN_SYMBOL = "LRC"
+	WETH         = "WETH"
 )
 
 func TestSingleOrder(t *testing.T) {
@@ -43,8 +45,8 @@ func TestSingleOrder(t *testing.T) {
 	entity := test.GenerateTomlEntity()
 
 	// get keystore and unlock account
-	tokenAddressA := util.AllTokens["LRC"].Protocol
-	tokenAddressB := util.AllTokens["WETH"].Protocol
+	tokenAddressA := util.AllTokens[TOKEN_SYMBOL].Protocol
+	tokenAddressB := util.AllTokens[WETH].Protocol
 	testAcc := entity.Accounts[0]
 
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -78,8 +80,8 @@ func TestRing(t *testing.T) {
 	c := test.Cfg()
 	entity := test.GenerateTomlEntity()
 
-	tokenAddressA := util.SupportTokens["LRC"].Protocol
-	tokenAddressB := util.SupportMarkets["WETH"].Protocol
+	tokenAddressA := util.SupportTokens[TOKEN_SYMBOL].Protocol
+	tokenAddressB := util.SupportMarkets[WETH].Protocol
 
 	testAcc1 := entity.Accounts[0]
 	testAcc2 := entity.Accounts[1]
@@ -133,6 +135,10 @@ func TestRing(t *testing.T) {
 
 func TestPrepareProtocol(t *testing.T) {
 	test.PrepareTestData()
+}
+
+func TestPrepareAccount(t *testing.T) {
+	test.SetTokenBalances()
 }
 
 func TestAllowance(t *testing.T) {
