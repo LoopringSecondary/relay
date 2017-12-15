@@ -19,6 +19,7 @@
 package test
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
@@ -41,25 +42,13 @@ import (
 	"time"
 )
 
-type Account struct {
-	Address    string
-	Passphrase string
-}
-
-type TestData struct {
-	Tokens          []string
-	Accounts        []Account
-	Creator         Account
-	AllowanceAmount int64
-}
-
 type AccountEntity struct {
 	Address    common.Address
 	Passphrase string
 }
 
 type TestEntity struct {
-	Tokens          []common.Address
+	Tokens          map[string]common.Address
 	Accounts        []AccountEntity
 	Creator         AccountEntity
 	KeystoreDir     string
@@ -75,26 +64,21 @@ var (
 	cfg           *config.GlobalConfig
 	rds           dao.RdsService
 	entity        *TestEntity
-	testData      = &TestData{}
-	tokens        = []common.Address{}
 	orderAccounts = []accounts.Account{}
 	creator       accounts.Account
 	accessor      *ethaccessor.EthNodeAccessor
+	protocol      common.Address
 )
 
 func init() {
 	cfg = loadConfig()
-
 	rds = GenerateDaoService()
 	util.Initialize(rds, cfg)
 	loadTestData()
-	generateEntity()
 	unlockAccounts()
-	// set supported tokens
-	for _, token := range util.AllTokens {
-		tokens = append(tokens, token.Protocol)
-	}
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
+
+	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
 }
 
 func loadConfig() *config.GlobalConfig {
@@ -106,6 +90,19 @@ func loadConfig() *config.GlobalConfig {
 }
 
 func loadTestData() {
+	entity = new(TestEntity)
+
+	type Account struct {
+		Address    string
+		Passphrase string
+	}
+
+	type TestData struct {
+		Accounts        []Account
+		Creator         Account
+		AllowanceAmount int64
+	}
+
 	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/test/testdata.toml"
 
 	io, err := os.Open(file)
@@ -114,43 +111,47 @@ func loadTestData() {
 	}
 	defer io.Close()
 
-	if err := toml.NewDecoder(io).Decode(testData); err != nil {
-		panic(err)
-	}
-}
-
-func unlockAccounts() {
-	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	creator = accounts.Account{Address: common.HexToAddress(testData.Creator.Address)}
-	ks.Unlock(creator, testData.Creator.Passphrase)
-	for _, accTmp := range testData.Accounts {
-		account := accounts.Account{Address: common.HexToAddress(accTmp.Address)}
-		orderAccounts = append(orderAccounts, account)
-		if err := ks.Unlock(account, accTmp.Passphrase); nil != err {
-			log.Errorf("test util init,unlock account:%s error:%s", accTmp.Address, err.Error())
-		} else {
-			log.Debugf("test util unlock account:%s success", accTmp.Address)
-		}
+	var testData TestData
+	if err := toml.NewDecoder(io).Decode(&testData); err != nil {
+		log.Fatalf(err.Error())
 	}
 
-	c := crypto.NewCrypto(false, ks)
-	crypto.Initialize(c)
-}
-
-func generateEntity() {
-	for _, v := range util.SupportTokens {
-		entity.Tokens = append(entity.Tokens, v.Protocol)
-	}
-
+	entity.Accounts = make([]AccountEntity, 0)
 	for _, v := range testData.Accounts {
 		var acc AccountEntity
 		acc.Address = common.HexToAddress(v.Address)
 		acc.Passphrase = v.Passphrase
 		entity.Accounts = append(entity.Accounts, acc)
 	}
+
+	entity.Tokens = make(map[string]common.Address)
+	for symbol, token := range util.AllTokens {
+		entity.Tokens[symbol] = token.Protocol
+	}
+
 	entity.Creator = AccountEntity{Address: common.HexToAddress(testData.Creator.Address), Passphrase: testData.Creator.Passphrase}
 	entity.KeystoreDir = cfg.Keystore.Keydir
 	entity.AllowanceAmount = testData.AllowanceAmount
+}
+
+func unlockAccounts() {
+	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	c := crypto.NewCrypto(false, ks)
+	crypto.Initialize(c)
+	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
+
+	creator = accounts.Account{Address: entity.Creator.Address}
+	ks.Unlock(creator, entity.Creator.Passphrase)
+
+	for _, accTmp := range entity.Accounts {
+		account := accounts.Account{Address: accTmp.Address}
+		orderAccounts = append(orderAccounts, account)
+		if err := ks.Unlock(account, accTmp.Passphrase); nil != err {
+			log.Fatalf("unlock account:%s error:%s", accTmp.Address.Hex(), err.Error())
+		} else {
+			log.Debugf("unlocked:%s", accTmp.Address.Hex())
+		}
+	}
 }
 
 func Rds() dao.RdsService       { return rds }
@@ -194,10 +195,6 @@ func GenerateMarketCap() *marketcap.MarketCapProvider {
 	return marketcap.NewMarketCapProvider(cfg.Miner)
 }
 
-func LoadConfig() *config.GlobalConfig {
-	return loadConfig()
-}
-
 func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
@@ -208,21 +205,18 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(120701538919177881)
+	order.LrcFee = big.NewInt(10000)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
 	order.Hash = order.GenerateHash()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
-		panic(err.Error())
+		log.Fatalf(err.Error())
 	}
 	return order
 }
 
 func PrepareTestData() {
-	c := loadConfig()
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[Version])
-
 	//delegate registry
 	delegateAbi := accessor.DelegateAbi
 	delegateAddress := accessor.ProtocolAddresses[protocol].DelegateAddress
@@ -246,7 +240,7 @@ func PrepareTestData() {
 	//tokenregistry
 	tokenRegisterAbi := accessor.TokenRegistryAbi
 	tokenRegisterAddress := accessor.ProtocolAddresses[protocol].TokenRegistryAddress
-	for _, tokenAddr := range tokens {
+	for _, tokenAddr := range entity.Tokens {
 		callMethod := accessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
 		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
@@ -266,11 +260,10 @@ func PrepareTestData() {
 	}
 
 	//approve
-	for _, tokenAddr := range tokens {
+	for _, tokenAddr := range entity.Tokens {
 		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
 		for _, acc := range orderAccounts {
-			println("###", acc.Address.Hex())
-			if hash, err := erc20SendMethod(acc, "approve", nil, nil, nil, delegateAddress, big.NewInt(int64(0))); nil != err {
+			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(10000000000000000))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -281,7 +274,10 @@ func PrepareTestData() {
 
 func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Account) {
 	if nil == tokens1 {
-		tokens1 = tokens
+		var tokens1 []common.Address
+		for _, v := range entity.Tokens {
+			tokens1 = append(tokens1, v)
+		}
 	}
 	if nil == orderAccounts1 {
 		orderAccounts1 = orderAccounts
@@ -313,8 +309,6 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 
 //setbalance after deploy token by protocol
 func SetTokenBalances() {
-	tokens := []string{"LRC", "EOS", "REP", "NEO", "QTUM", "RDN", "RCN", "YOYO", "WETH"}
-	addresses := []string{"0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135", "0xb1018949b241d76a1ab2094f473e9befeabb5ead"}
 	dummyTokenAbiStr := `[{"constant":true,"inputs":[],"name":"mintingFinished","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_amount","type":"uint256"}],"name":"mint","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_subtractedValue","type":"uint256"}],"name":"decreaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"finishMinting","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_addedValue","type":"uint256"}],"name":"increaseApproval","outputs":[{"name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_target","type":"address"},{"name":"_value","type":"uint256"}],"name":"setBalance","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"_name","type":"string"},{"name":"_symbol","type":"string"},{"name":"_decimals","type":"uint8"},{"name":"_totalSupply","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"amount","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":false,"inputs":[],"name":"MintFinished","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"previousOwner","type":"address"},{"indexed":true,"name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
 	dummyTokenAbi := &abi.ABI{}
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
@@ -322,36 +316,26 @@ func SetTokenBalances() {
 	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
 
 	amount := new(big.Int)
-	amount.SetString("20000000000000000000000", 0)
-	for _, implAddress := range accessor.ProtocolAddresses {
-		callMethod := accessor.ContractCallMethod(accessor.TokenRegistryAbi, implAddress.TokenRegistryAddress)
-		for _, token := range tokens {
-			var tokenAddressStr string
-			if err := callMethod(&tokenAddressStr, "getAddressBySymbol", "latest", token); nil != err {
+	amount.SetString("10000000000000000000000", 0)
+
+	for _, tokenAddress := range entity.Tokens {
+		sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
+
+		erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
+		for _, acc := range orderAccounts {
+			var res types.Big
+			if err := erc20Method(&res, "balanceOf", "latest", acc.Address); nil != err {
 				println(err.Error())
 			}
-			tokenAddress := common.HexToAddress(tokenAddressStr)
-			//fmt.Printf("token symbol:%s, token address:%s", token, tokenAddress.Hex())
-			sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
-
-			erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-			for _, address := range addresses {
-				var res types.Big
-				if err := erc20Method(&res, "balanceOf", "latest", common.HexToAddress(address)); nil != err {
-					println(err.Error())
+			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
+				hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, acc.Address, amount)
+				if nil != err {
+					fmt.Errorf(err.Error())
 				}
-				if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
-					hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(18000000000), nil, common.HexToAddress(address), amount)
-					if nil != err {
-						println(err.Error())
-					}
-					println("sendhash:", hash)
-					//time.Sleep(20 * time.Second)
-				}
-				println("token:", token, "tokenAddress:", tokenAddress.Hex(), "useraddress:", address, "balance:", res.BigInt().String())
+				fmt.Printf("sendhash:%s", hash)
 			}
-			println(token, ":", tokenAddress.Hex())
+			fmt.Printf("tokenAddress:", tokenAddress.Hex(), "useraddress:", acc.Address.Hex(), "balance:", res.BigInt().String())
 		}
+		fmt.Printf(":", tokenAddress.Hex())
 	}
 }
-
