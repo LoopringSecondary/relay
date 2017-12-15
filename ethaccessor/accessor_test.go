@@ -32,7 +32,7 @@ import (
 
 const (
 	version              = test.Version
-	cancelOrderHash      = "0x50abf49842feb1cb5e145e2835612a2a32534759c7e17484583f0d26b504ac75"
+	cancelOrderHash      = "0x944ba4acc516fa0d2a7ae9d730bfe452da96661992f88eb564278e78e468cee5"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
@@ -106,7 +106,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		err          error
 		result       string
 		orderhash    = common.HexToHash(cancelOrderHash)
-		cancelAmount = big.NewInt(1980)
+		cancelAmount = big.NewInt(100)
 	)
 
 	// load config
@@ -121,12 +121,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	// unlock account
-	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: state.RawOrder.Owner}
-	ks.Unlock(account, "202")
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
 
 	// create cancel order contract function parameters
 	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
@@ -141,7 +136,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	callMethod := accessor.ContractSendTransactionMethod(accessor.ProtocolImplAbi, protocol)
-	if result, err = callMethod(account, "cancelOrder", nil, nil, nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
+	if result, err = callMethod(account, "cancelOrder", big.NewInt(200000), big.NewInt(21000000000), nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	} else {
 		t.Logf("cancelOrder result:%s", result)

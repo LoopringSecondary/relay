@@ -38,7 +38,7 @@ const (
 
 func TestSingleOrder(t *testing.T) {
 	c := test.Cfg()
-	entity := test.GenerateTomlEntity()
+	entity := test.Entity()
 
 	// get keystore and unlock account
 	tokenAddressA := util.AllTokens[TOKEN_SYMBOL].Protocol
@@ -74,27 +74,13 @@ func TestSingleOrder(t *testing.T) {
 
 func TestRing(t *testing.T) {
 	c := test.Cfg()
-	entity := test.GenerateTomlEntity()
+	entity := test.Entity()
 
 	tokenAddressA := util.SupportTokens[TOKEN_SYMBOL].Protocol
 	tokenAddressB := util.SupportMarkets[WETH].Protocol
 
-	testAcc1 := entity.Accounts[0]
-	testAcc2 := entity.Accounts[1]
-	password1 := entity.Accounts[0].Passphrase
-	password2 := entity.Accounts[1].Passphrase
-
-	// get keystore and unlock account
-	ks := keystore.NewKeyStore(entity.KeystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
-
-	acc1 := accounts.Account{Address: testAcc1.Address}
-	acc2 := accounts.Account{Address: testAcc2.Address}
-
-	ks.Unlock(acc1, password1)
-	ks.Unlock(acc2, password2)
-
-	cyp := crypto.NewCrypto(true, ks)
-	crypto.Initialize(cyp)
+	account1 := entity.Accounts[0]
+	account2 := entity.Accounts[1]
 
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
@@ -105,7 +91,7 @@ func TestRing(t *testing.T) {
 		tokenAddressA,
 		tokenAddressB,
 		protocol,
-		acc1.Address,
+		account1.Address,
 		amountS1,
 		amountB1,
 	)
@@ -117,7 +103,7 @@ func TestRing(t *testing.T) {
 		tokenAddressB,
 		tokenAddressA,
 		protocol,
-		acc2.Address,
+		account2.Address,
 		amountS2,
 		amountB2,
 	)

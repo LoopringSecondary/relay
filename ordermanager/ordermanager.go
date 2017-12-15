@@ -121,19 +121,13 @@ func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	return nil
 }
 
-// 来自ipfs的新订单
-// 所有来自ipfs的订单都是新订单
+// 所有来自gateway的订单都是新订单
 func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
-
-	// order already exist in dao/order
-	if _, err := om.rds.GetOrderByHash(state.RawOrder.Hash); err == nil {
-		return nil
-	}
 
 	model, err := newOrderEntity(state, om.accessor, om.mc, nil)
 	if err != nil {
@@ -199,8 +193,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	finished := isOrderFullFinished(state, om.mc)
-	state.SettleFinishedStatus(finished)
+	settleOrderStatus(state, om.mc)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -255,8 +248,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	finished := isOrderFullFinished(state, om.mc)
-	state.SettleFinishedStatus(finished)
+	settleOrderStatus(state, om.mc)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
