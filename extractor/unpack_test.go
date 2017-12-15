@@ -21,6 +21,7 @@ package extractor_test
 import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/test"
+	"github.com/ethereum/bak/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"testing"
 )
@@ -43,11 +44,29 @@ func TestExtractorServiceImpl_UnpackSubmitRingMethod(t *testing.T) {
 	}
 
 	for k, v := range orders {
-		t.Logf("order :%d tokenS:%s", k, v.TokenS.Hex())
-		t.Logf("order :%d tokenB:%s", k, v.TokenB.Hex())
-		t.Logf("order :%d amountS:%s", k, v.AmountS.String())
-		t.Logf("order :%d amountB:%s", k, v.AmountB.String())
+		t.Log(k, "tokenS", v.TokenS.Hex())
+		t.Log(k, "tokenB", v.TokenB.Hex())
+
+		t.Log(k, "amountS", v.AmountS.String())
+		t.Log(k, "amountB", v.AmountB.String())
+		t.Log(k, "timestamp", v.Timestamp.String())
+		t.Log(k, "ttl", v.Ttl.String())
+		t.Log(k, "salt", v.Salt.String())
+		t.Log(k, "lrcFee", v.LrcFee.String())
+		t.Log(k, "rateAmountS", ring.UintArgsList[k][6].String())
+
+		t.Log(k, "marginSplitpercentage", v.MarginSplitPercentage)
+		t.Log(k, "feeSelectionList", ring.Uint8ArgsList[k][1])
+
+		t.Log(k, "buyNoMoreThanAmountB", v.BuyNoMoreThanAmountB)
+
+		t.Log("v", v.V)
+		t.Log("s", v.S.Hex())
+		t.Log("r", v.R.Hex())
 	}
+
+	t.Log("ringminer", ring.RingMiner.Hex())
+	t.Log("feeRecipient", ring.FeeRecipient.Hex())
 }
 
 func TestExtractorServiceImpl_UnpackWethWithdrawalMethod(t *testing.T) {
@@ -84,4 +103,42 @@ func TestExtractorServiceImpl_UnpackSubmitRingHashMethod(t *testing.T) {
 	}
 
 	t.Logf("ringhash:%s, ringminer:%s", ringhash.RingHash.Hex(), ringhash.RingMiner.Hex())
+}
+
+func TestExtractorServiceImpl_UnpackCancelOrderMethod(t *testing.T) {
+	input := "0x47a99e43000000000000000000000000b1018949b241d76a1ab2094f473e9befeabb5ead000000000000000000000000529540ee6862158f47d647ae023098f6705210a9000000000000000000000000667b8a1021c324b4f42e77d46f5a7a2a2a3cdfc60000000000000000000000000000000000000000000000000000000000004e2000000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000000000000000000000000000000000005a33d324000000000000000000000000000000000000000000000000000000000083d60000000000000000000000000000000000000000000000000000000000000003e80000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c8c2ccb736eb22424dee71115565d46a1fcf91beb1b12a59488de2757254051020a9d5b0698742580b4a7ec2090e1f24b8b466be253e162994e4887720446807c"
+
+	var method ethaccessor.CancelOrderMethod
+	accessor, _ := test.GenerateAccessor()
+
+	data := hexutil.MustDecode("0x" + input[10:])
+
+	for i := 0; i < len(data)/32; i++ {
+		t.Logf("index:%d -> %s", i, common.ToHex(data[i*32:(i+1)*32]))
+	}
+
+	if err := accessor.ProtocolImplAbi.UnpackMethodInput(&method, "cancelOrder", data); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	order, err := method.ConvertDown()
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	t.Log("owner", order.Owner.Hex())
+	t.Log("tokenS", order.TokenS.Hex())
+	t.Log("tokenB", order.TokenB.Hex())
+	t.Log("amountS", order.AmountS.String())
+	t.Log("amountB", order.AmountB.String())
+	t.Log("timestamp", order.Timestamp.String())
+	t.Log("ttl", order.Ttl.String())
+	t.Log("salt", order.Salt.String())
+	t.Log("lrcFee", order.LrcFee.String())
+	t.Log("cancelAmount", method.OrderValues[6].String())
+	t.Log("buyNoMoreThanAmountB", order.BuyNoMoreThanAmountB)
+	t.Log("marginSplitpercentage", order.MarginSplitPercentage)
+	t.Log("v", order.V)
+	t.Log("s", order.S.Hex())
+	t.Log("r", order.R.Hex())
 }

@@ -30,7 +30,7 @@ import (
 
 const (
 	version              = test.Version
-	cancelOrderHash      = "0xfc76695401613d76340d254b10dc613850d96b42ea6e09129a1ee3d97a012c0d"
+	cancelOrderHash      = "0x296c419975d523f0427231c9aa0192bf9972b15731408c5e214227c95ddf991d"
 	cutOffOwner          = "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
@@ -88,7 +88,7 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_CancelOrderEvent(t *testing.T) {
+func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
 		model        *dao.Order
 		state        types.OrderState

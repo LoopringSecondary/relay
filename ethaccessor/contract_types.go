@@ -281,12 +281,12 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 
 type CancelOrderMethod struct {
 	AddressList    [3]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB
-	OrderValues    [7]*big.Int       `fieldName:"orderValues"` // amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
+	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
 	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB"`
 	MarginSplit    uint8             `fieldName:"marginSplitPercentage"`
 	V              uint8             `fieldName:"v"`
-	R              [32]uint8         `fieldName:"r"`
-	S              [32]uint8         `fieldName:"s"`
+	R              [32]byte          `fieldName:"r"`
+	S              [32]byte          `fieldName:"s"`
 }
 
 // should add protocol
@@ -304,7 +304,9 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.Salt = m.OrderValues[4]
 	order.LrcFee = m.OrderValues[5]
 
+	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit
+
 	order.V = m.V
 	order.S = m.S
 	order.R = m.R
