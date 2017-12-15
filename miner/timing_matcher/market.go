@@ -45,6 +45,7 @@ type Market struct {
 	BtoAOrderHashesExcludeNextRound []common.Hash
 }
 
+//todo:miner 需要有足够的lrc，否则费用选择分润时，收不到任何收益
 func (market *Market) match() {
 	market.getOrdersForMatching(market.protocolAddress)
 	matchedOrderHashes := make(map[common.Hash]bool) //true:fullfilled, false:partfilled
@@ -58,6 +59,7 @@ func (market *Market) match() {
 					log.Errorf("err:%s", err.Error())
 					continue
 				} else {
+					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					if ringForSubmit.Received.Cmp(big.NewRat(int64(0), int64(1))) > 0 {
 						candidateRingList = append(candidateRingList, CandidateRing{received: ringForSubmit.Received, orderHashes: []common.Hash{a2BOrder.RawOrder.Hash, b2AOrder.RawOrder.Hash}})
 					}

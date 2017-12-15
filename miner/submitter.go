@@ -47,7 +47,7 @@ type RingSubmitter struct {
 	registeredRings map[common.Hash]types.RingSubmitInfo
 
 	dbService         dao.RdsService
-	marketCapProvider *marketcap.MarketCapProvider
+	marketCapProvider marketcap.MarketCapProvider
 
 	stopFuncs []func()
 }
@@ -57,7 +57,7 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.gasLimit = big.NewInt(options.GasLimit)
 	submitter.dbService = dbService
@@ -451,7 +451,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)
 
 	cost := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))
-	cost = cost.Mul(cost, submitter.marketCapProvider.GetEthCap())
+	c, err := submitter.marketCapProvider.GetEthCap()
+	cost = cost.Mul(cost, c)
 	received := new(big.Rat).Sub(ringState.LegalFee, cost)
 	ringForSubmit.Received = received
 

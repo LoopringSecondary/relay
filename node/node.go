@@ -49,7 +49,7 @@ type Node struct {
 	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
-	marketCapProvider *marketcap.MarketCapProvider
+	marketCapProvider marketcap.MarketCapProvider
 	accountManager    market.AccountManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
@@ -89,7 +89,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMysql()
 
 	util.Initialize(n.rdsService, n.globalConfig)
-	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.Miner)
+	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()
 	n.registerIPFSSubService()
@@ -230,4 +230,8 @@ func (n *Node) registerGateway() {
 
 func (n *Node) registerUserManager() {
 	n.userManager = usermanager.NewUserManager(n.rdsService)
+}
+
+func (n *Node) registerMarketCap() {
+	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.MarketCap)
 }

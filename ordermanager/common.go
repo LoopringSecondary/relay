@@ -28,7 +28,7 @@ import (
 	"math/big"
 )
 
-func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc *marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
+func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
 	blockNumberStr := blockNumberToString(blockNumber)
 
 	state.DealtAmountS = big.NewInt(0)
@@ -62,7 +62,7 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 	return model, nil
 }
 
-func settleOrderStatus(state *types.OrderState, mc *marketcap.MarketCapProvider) {
+func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) {
 	if state.CancelledAmountS.Cmp(big.NewInt(0)) == 0 {
 		state.Status = types.ORDER_NEW
 	} else {
@@ -71,20 +71,20 @@ func settleOrderStatus(state *types.OrderState, mc *marketcap.MarketCapProvider)
 	}
 }
 
-func isOrderFullFinished(state *types.OrderState, mc *marketcap.MarketCapProvider) bool {
+func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
 	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
 		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
 		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
 		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		price := mc.GetMarketCap(state.RawOrder.TokenB)
+		price, _ := mc.GetMarketCap(state.RawOrder.TokenB)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
 	} else {
 		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
 		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
 		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		price := mc.GetMarketCap(state.RawOrder.TokenS)
+		price, _ := mc.GetMarketCap(state.RawOrder.TokenS)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
 	}
 

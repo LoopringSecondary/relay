@@ -20,15 +20,15 @@ package marketcap
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"math/big"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -56,134 +56,157 @@ const (
 	BTC
 )
 
-type MarketCapProvider struct {
-	baseUrl       string
-	currenciesMap map[common.Address]*CurrencyMarketCap
-	currency      LegalCurrency
+type MarketCapProvider interface {
+	Start()
+	Stop()
+
+	LegalCurrencyValue(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error)
+	LegalCurrencyValueByCurrency(tokenAddress common.Address, amount *big.Rat, currencyStr string) (*big.Rat, error)
+	GetMarketCap(tokenAddress common.Address) (*big.Rat, error)
+	GetEthCap() (*big.Rat, error)
+	GetMarketCapByCurrency(tokenAddress common.Address, currencyStr string) (*big.Rat, error)
 }
 
-type CurrencyMarketCap struct {
-	Id           string         `json:"id"`
-	Name         string         `json:"name"`
-	Symbol       string         `json:"symbol"`
-	Address      common.Address `json:"address"`
-	PriceUsd     float64        `json:"price_usd"`
-	PriceBtc     float64        `json:"price_btc"`
-	PriceCny     float64        `json:"price_cny"`
-	Volume24HCNY float64        `json:"24h_volume_cny"`
-	Volume24HUSD float64        `json:"24h_volume_usd"`
+type CapProvider_CoinMarketCap struct {
+	baseUrl         string
+	tokenMarketCaps map[common.Address]*types.CurrencyMarketCap
+	idToAddress     map[string]common.Address
+	currency        string
+	stopChan        chan bool
 }
 
-func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
-	type Cap struct {
-		PriceUsd     string `json:"price_usd"`
-		PriceBtc     string `json:"price_btc"`
-		PriceCny     string `json:"price_cny"`
-		Volume24HCNY string `json:"24h_volume_cny"`
-		Volume24HUSD string `json:"24h_volume_usd"`
-	}
-	var c *Cap = &Cap{}
-	if err := json.Unmarshal(input, c); nil != err {
-		return err
+
+func (p *CapProvider_CoinMarketCap) LegalCurrencyValue(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error) {
+	return p.LegalCurrencyValueByCurrency(tokenAddress, amount, p.currency)
+}
+
+func (p *CapProvider_CoinMarketCap) LegalCurrencyValueByCurrency(tokenAddress common.Address, amount *big.Rat, currencyStr string) (*big.Rat, error) {
+	if c,exists := p.tokenMarketCaps[tokenAddress]; !exists {
+		return nil, errors.New("not found tokenCap:" + tokenAddress.Hex())
 	} else {
-		var err1 error
-		if cap.PriceUsd, err1 = strconv.ParseFloat(c.PriceUsd, 10); nil != err1 {
-			return err1
-		}
-		if cap.PriceBtc, err1 = strconv.ParseFloat(c.PriceBtc, 10); nil != err1 {
-			return err1
-		}
-		if cap.PriceCny, err1 = strconv.ParseFloat(c.PriceCny, 10); nil != err1 {
-			return err1
-		}
-		if cap.Volume24HCNY, err1 = strconv.ParseFloat(c.Volume24HCNY, 10); nil != err1 {
-			return err1
-		}
-		if cap.Volume24HUSD, err1 = strconv.ParseFloat(c.Volume24HUSD, 10); nil != err1 {
-			return err1
-		}
+		v := new(big.Rat).SetFrac64(1, c.Decimals)
+		v.Quo(amount, v)
+		price,_ := p.GetMarketCapByCurrency(tokenAddress, currencyStr)
+		v.Mul(price, v)
+		return v, nil
 	}
-	return nil
 }
 
-func (p *MarketCapProvider) GetEthCap() *big.Rat {
-	//todo:
-	return new(big.Rat).SetInt64(int64(1))
-}
-
-func (p *MarketCapProvider) GetMarketCap(tokenAddress common.Address) *big.Rat {
-
+func (p *CapProvider_CoinMarketCap) GetMarketCap(tokenAddress common.Address) (*big.Rat, error) {
 	return p.GetMarketCapByCurrency(tokenAddress, p.currency)
 }
 
-func (p *MarketCapProvider) GetMarketCapByCurrency(tokenAddress common.Address, currency LegalCurrency) *big.Rat {
-	if c, ok := p.currenciesMap[tokenAddress]; ok {
-		v := new(big.Rat)
+func (p *CapProvider_CoinMarketCap) GetEthCap() (*big.Rat, error) {
+	return p.GetMarketCapByCurrency(util.AllTokens["WETH"].Protocol, p.currency)
+}
+
+func (p *CapProvider_CoinMarketCap) GetMarketCapByCurrency(tokenAddress common.Address, currencyStr string) (*big.Rat, error) {
+	currency := StringToLegalCurrency(currencyStr)
+	if c, exists := p.tokenMarketCaps[tokenAddress]; exists {
+		var v *big.Rat
 		switch currency {
 		case CNY:
-			v = v.SetFloat64(c.PriceCny)
+			v = c.PriceCny
 		case USD:
-			v = v.SetFloat64(c.PriceUsd)
+			v = c.PriceUsd
 		case BTC:
-			v = v.SetFloat64(c.PriceBtc)
+			v = c.PriceBtc
 		}
-		return v
+		return new(big.Rat).Set(v), nil
 	} else {
-		return new(big.Rat).SetInt64(int64(1))
+		err := errors.New("not found tokenCap:" + tokenAddress.Hex())
+		res := new(big.Rat).SetInt64(int64(1))
+		if nil != err {
+			log.Errorf("get MarketCap of token:%, occurs error:%s. the value will be default value:%s", tokenAddress.Hex(), err.Error(), res.String())
+		}
+		return res, err
 	}
 }
 
-func (p *MarketCapProvider) Stop() {
-	//todo:
+func (p *CapProvider_CoinMarketCap) Stop() {
+	p.stopChan <- true
 }
 
-func (p *MarketCapProvider) Start() {
+func (p *CapProvider_CoinMarketCap) Start() {
 	go func() {
 		for {
-			for _, c := range p.currenciesMap {
-				select {
-				case <-time.After(7 * time.Second):
-					url := fmt.Sprintf(p.baseUrl, c.Name)
-					resp, err := http.Get(url)
-					if err != nil {
-						log.Errorf("can't get new currency cap, err:%s", err.Error())
-					}
-					defer resp.Body.Close()
-
-					body, err := ioutil.ReadAll(resp.Body)
-					if nil != err {
-						log.Errorf("err:%s", err.Error())
-					} else {
-						var caps []*CurrencyMarketCap
-						err := json.Unmarshal([]byte(body), &caps)
-						if nil != err {
-							log.Errorf("err:%s", err.Error())
-						} else {
-							c.PriceCny = caps[0].PriceCny
-							c.PriceUsd = caps[0].PriceUsd
-							c.PriceBtc = caps[0].PriceBtc
-							c.Volume24HCNY = caps[0].Volume24HCNY
-							c.Volume24HUSD = caps[0].Volume24HUSD
-						}
-					}
+			select {
+			case <-time.After(1 * time.Minute):
+				log.Infof("marketCap sycing...")
+				if err := p.syncMarketCap(); nil != err {
+					log.Errorf("can't sync marketcap, time:%d", time.Now().Unix())
+				}
+			case stopped := <-p.stopChan:
+				if stopped {
+					break
 				}
 			}
 		}
 	}()
 }
 
-func NewMarketCapProvider(options config.MinerOptions) *MarketCapProvider {
-	provider := &MarketCapProvider{}
-	provider.baseUrl = options.RateProvider.BaseUrl
-	provider.currency = StringToLegalCurrency(options.RateProvider.Currency)
-	provider.currenciesMap = make(map[common.Address]*CurrencyMarketCap)
+func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
+	resp, err := http.Get(p.baseUrl)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if nil != err {
+		return err
+	} else {
+		var caps []*types.CurrencyMarketCap
+		if err := json.Unmarshal(body, &caps); nil != err {
+			return err
+		} else {
+			syncedTokens := make(map[common.Address]bool)
+			for _, tokenCap := range caps {
+				if tokenAddress, exists := p.idToAddress[strings.ToUpper(tokenCap.Id)]; exists {
+					p.tokenMarketCaps[tokenAddress].PriceUsd = tokenCap.PriceUsd
+					p.tokenMarketCaps[tokenAddress].PriceBtc = tokenCap.PriceBtc
+					p.tokenMarketCaps[tokenAddress].PriceCny = tokenCap.PriceCny
+					p.tokenMarketCaps[tokenAddress].Volume24HCNY = tokenCap.Volume24HCNY
+					p.tokenMarketCaps[tokenAddress].Volume24HUSD = tokenCap.Volume24HUSD
+					p.tokenMarketCaps[tokenAddress].LastUpdated = tokenCap.LastUpdated
+					syncedTokens[p.tokenMarketCaps[tokenAddress].Address] = true
+				}
+			}
+			for _, tokenCap := range p.tokenMarketCaps {
+				if _, exists := syncedTokens[tokenCap.Address]; !exists {
+					log.Errorf("token:%s, id:%s, can't sync marketcap at time:%d, it't last updated time:%d", tokenCap.Symbol, tokenCap.Id, time.Now().Unix(), tokenCap.LastUpdated)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func NewMarketCapProvider(options config.MarketCapOptions) *CapProvider_CoinMarketCap {
+	provider := &CapProvider_CoinMarketCap{}
+	provider.baseUrl = options.BaseUrl
+	provider.currency = options.Currency
+	provider.tokenMarketCaps = make(map[common.Address]*types.CurrencyMarketCap)
+	provider.idToAddress = make(map[string]common.Address)
 
 	for _, v := range util.AllTokens {
-		c := &CurrencyMarketCap{}
+		c := &types.CurrencyMarketCap{}
 		c.Address = v.Protocol
-		c.Id = v.Symbol
-		c.Name = v.Source
-		provider.currenciesMap[c.Address] = c
+		c.Id = v.Source
+		c.Name = v.Symbol
+		c.Symbol = v.Symbol
+		c.Decimals = v.Decimals
+		provider.tokenMarketCaps[c.Address] = c
+		provider.idToAddress[strings.ToUpper(c.Id)] = c.Address
 	}
+
+	if err := provider.syncMarketCap(); nil != err {
+		log.Fatalf("can't sync marketcap with error:%s", err.Error())
+	}
+
 	return provider
 }

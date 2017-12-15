@@ -31,7 +31,7 @@ import (
 )
 
 type Evaluator struct {
-	marketCapProvider     *marketcap.MarketCapProvider
+	marketCapProvider     marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
 	accessor              *ethaccessor.EthNodeAccessor
 }
@@ -80,21 +80,21 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
 		filledOrder.SetAvailableAmount()
 		amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
-		amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
+		//amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 
 		//根据用户设置，判断是以卖还是买为基准
 		//买入不超过amountB
 		filledOrder.RateAmountS = new(big.Rat).Set(amountS)
 		filledOrder.RateAmountS.Mul(amountS, ringState.ReducedRate)
 		//if BuyNoMoreThanAmountB , AvailableAmountS need to be reduced by the ratePrice
-		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-			availbleAmountB := new(big.Rat).Set(filledOrder.AvailableAmountB)
-			availableAmountS := new(big.Rat).Mul(filledOrder.RateAmountS, availbleAmountB)
-			availableAmountS.Quo(availableAmountS, amountB)
-			if filledOrder.AvailableAmountB.Cmp(new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)) < 0 {
-				filledOrder.AvailableAmountS.Set(availableAmountS)
-			}
-		}
+		//if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
+		//	availbleAmountB := new(big.Rat).Set(filledOrder.AvailableAmountB)
+		//	availableAmountS := new(big.Rat).Mul(filledOrder.RateAmountS, availbleAmountB)
+		//	availableAmountS.Quo(availableAmountS, amountB)
+		//	if filledOrder.AvailableAmountB.Cmp(new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)) < 0 {
+		//		filledOrder.AvailableAmountS.Set(availableAmountS)
+		//	}
+		//}
 
 		//与上一订单的买入进行比较
 		var lastOrder *types.FilledOrder
@@ -167,15 +167,6 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
 func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
-	//the ring use the min MarginSplitPercentage as self's MarginSplitPercentage
-	minShareRate := new(big.Rat).SetInt(big.NewInt(0))
-	for _, order := range ringState.Orders {
-		percentage := new(big.Rat).SetInt64(int64(order.OrderState.RawOrder.MarginSplitPercentage))
-		if minShareRate.Cmp(percentage) > 0 {
-			minShareRate = percentage
-		}
-	}
-
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
 		if implAddress, exists := e.accessor.ProtocolAddresses[filledOrder.OrderState.RawOrder.Protocol]; exists {
@@ -193,14 +184,13 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving.Mul(filledOrder.FeeS, e.getMarketCap(filledOrder.OrderState.RawOrder.TokenS))
+			legalAmountOfSaving = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenS, filledOrder.FeeS)
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
-			//todo:address of buy token
-			legalAmountOfSaving.Mul(filledOrder.FeeS, e.getMarketCap(filledOrder.OrderState.RawOrder.TokenB))
+			legalAmountOfSaving = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenB, filledOrder.FeeS)
 		}
 
 		//compute lrcFee
@@ -211,7 +201,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		if filledOrder.AvailableLrcBalance.Cmp(filledOrder.LrcFee) <= 0 {
 			filledOrder.LrcFee = filledOrder.AvailableLrcBalance
 		}
-		legalAmountOfLrc := new(big.Rat).Mul(e.getMarketCap(lrcAddress), filledOrder.LrcFee)
+		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
 
 		//the lrcreward should be set when select  MarginSplit as the selection of fee
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
@@ -219,16 +209,14 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			filledOrder.LegalFee = legalAmountOfLrc
 		} else {
 			filledOrder.FeeSelection = 1
-			legalAmountOfSaving.Mul(legalAmountOfSaving, minShareRate)
+			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
+			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
+			filledOrder.LrcReward = legalAmountOfLrc
+			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
 			filledOrder.LegalFee = legalAmountOfSaving
-			lrcReward := new(big.Rat).Set(legalAmountOfSaving)
-			lrcReward.Quo(lrcReward, new(big.Rat).SetInt64(int64(2)))
-			lrcReward.Quo(lrcReward, e.getMarketCap(lrcAddress))
 			//log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-			filledOrder.LrcReward = lrcReward
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
-
 	}
 
 }
@@ -281,11 +269,11 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func (e *Evaluator) getMarketCap(tokenAddress common.Address) *big.Rat {
-	return e.marketCapProvider.GetMarketCap(tokenAddress)
+func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Rat) *big.Rat {
+	c, _ := e.marketCapProvider.LegalCurrencyValue(tokenAddress, amount)
+	return c
 }
 
-func NewEvaluator(marketCapProvider *marketcap.MarketCapProvider, rateRatioCVSThreshold int64, accessor *ethaccessor.EthNodeAccessor) *Evaluator {
-
+func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64, accessor *ethaccessor.EthNodeAccessor) *Evaluator {
 	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, accessor: accessor}
 }

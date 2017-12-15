@@ -52,7 +52,7 @@ type OrderManagerImpl struct {
 	processor          *forkProcessor
 	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
-	mc                 *marketcap.MarketCapProvider
+	mc                 marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
 	newOrderWatcher    *eventemitter.Watcher
 	ringMinedWatcher   *eventemitter.Watcher
@@ -66,7 +66,7 @@ func NewOrderManager(
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
 	accessor *ethaccessor.EthNodeAccessor,
-	market *marketcap.MarketCapProvider) *OrderManagerImpl {
+	market marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
 	om.rds = rds

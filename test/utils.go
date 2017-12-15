@@ -58,6 +58,7 @@ var (
 func Initialize() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
+	println("PPPPP")
 	util.Initialize(rds, cfg)
 }
 
@@ -130,11 +131,12 @@ func GenerateDaoService() *dao.RdsServiceImpl {
 	return dao.NewRdsService(cfg.Mysql)
 }
 
-func GenerateMarketCap() *marketcap.MarketCapProvider {
-	return marketcap.NewMarketCapProvider(cfg.Miner)
+func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
+	return marketcap.NewMarketCapProvider(cfg.MarketCap)
 }
 
 func LoadConfig() *config.GlobalConfig {
+	println("dsjlkfjlasdfsd")
 	return loadConfig()
 }
 
@@ -148,7 +150,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(10000)
+	order.LrcFee = big.NewInt(10000000000)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
@@ -160,7 +162,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/debug.toml"
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/relay.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 
