@@ -68,6 +68,7 @@ var (
 func StartRefreshCron(rds dao.RdsService) {
 	mktCron := cron.New()
 	mktCron.AddFunc("1 0/10 * * * *", func() {
+		log.Info("start market util refresh.....")
 		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
 	})
 	mktCron.Start()
@@ -139,7 +140,6 @@ func getTokenAndMarketFromDB(rds dao.RdsService) (
 		allTokenPairs = append(allTokenPairs, v)
 	}
 
-	StartRefreshCron(rds)
 	return
 }
 
@@ -154,6 +154,8 @@ func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
 	for i := 0; i < len(conf.Contract.Versions); i++ {
 		ContractVersionConfig[conf.Contract.Versions[i]] = conf.Contract.Addresses[i]
 	}
+
+	// StartRefreshCron(rds)
 
 	tokenRegisterWatcher := &eventemitter.Watcher{false, TokenRegister}
 	tokenUnRegisterWatcher := &eventemitter.Watcher{false, TokenUnRegister}
