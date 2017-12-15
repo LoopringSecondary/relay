@@ -31,7 +31,7 @@ type Token struct {
 	Source     string `gorm:"column:source;type:varchar(200)"`
 	CreateTime int64  `gorm:"column:create_time"`
 	Deny       bool   `gorm:"column:deny"`
-	Decimals   int	`gorm:"column:decimals"`
+	Decimals   int    `gorm:"column:decimals"`
 	IsMarket   bool   `gorm:"column:is_market"`
 }
 

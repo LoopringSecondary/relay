@@ -40,13 +40,13 @@ type CurrencyMarketCap struct {
 	Name         string         `json:"name"`
 	Symbol       string         `json:"symbol"`
 	Address      common.Address `json:"address"`
-	PriceUsd     *big.Rat        `json:"price_usd"`
-	PriceBtc     *big.Rat        `json:"price_btc"`
-	PriceCny     *big.Rat        `json:"price_cny"`
-	Volume24HCNY *big.Rat        `json:"24h_volume_cny"`
-	Volume24HUSD *big.Rat        `json:"24h_volume_usd"`
+	PriceUsd     *big.Rat       `json:"price_usd"`
+	PriceBtc     *big.Rat       `json:"price_btc"`
+	PriceCny     *big.Rat       `json:"price_cny"`
+	Volume24HCNY *big.Rat       `json:"24h_volume_cny"`
+	Volume24HUSD *big.Rat       `json:"24h_volume_usd"`
 	LastUpdated  int64          `json:"last_updated"`
-	Decimals int64
+	Decimals     int64
 }
 
 func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {

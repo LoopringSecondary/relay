@@ -75,18 +75,17 @@ type CapProvider_CoinMarketCap struct {
 	stopChan        chan bool
 }
 
-
 func (p *CapProvider_CoinMarketCap) LegalCurrencyValue(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error) {
 	return p.LegalCurrencyValueByCurrency(tokenAddress, amount, p.currency)
 }
 
 func (p *CapProvider_CoinMarketCap) LegalCurrencyValueByCurrency(tokenAddress common.Address, amount *big.Rat, currencyStr string) (*big.Rat, error) {
-	if c,exists := p.tokenMarketCaps[tokenAddress]; !exists {
+	if c, exists := p.tokenMarketCaps[tokenAddress]; !exists {
 		return nil, errors.New("not found tokenCap:" + tokenAddress.Hex())
 	} else {
 		v := new(big.Rat).SetFrac64(1, c.Decimals)
 		v.Quo(amount, v)
-		price,_ := p.GetMarketCapByCurrency(tokenAddress, currencyStr)
+		price, _ := p.GetMarketCapByCurrency(tokenAddress, currencyStr)
 		v.Mul(price, v)
 		return v, nil
 	}
