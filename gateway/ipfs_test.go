@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	suffix       = "00000000000000" //0.0001
+	suffix       = "0000000000000000" //0.01
 	TOKEN_SYMBOL = "LRC"
 	WETH         = "WETH"
 )
@@ -60,7 +60,7 @@ func TestSingleOrder(t *testing.T) {
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
-
+	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
@@ -68,6 +68,7 @@ func TestSingleOrder(t *testing.T) {
 		account.Address,
 		amountS1,
 		amountB1,
+		lrcFee1,
 	)
 	bs, _ := order.MarshalJSON()
 
@@ -80,8 +81,8 @@ func TestRing(t *testing.T) {
 	c := test.Cfg()
 	entity := test.Entity()
 
-	tokenAddressA := util.SupportTokens[TOKEN_SYMBOL].Protocol
-	tokenAddressB := util.SupportMarkets[WETH].Protocol
+	lrc := util.SupportTokens[TOKEN_SYMBOL].Protocol
+	eth := util.SupportMarkets[WETH].Protocol
 
 	account1 := entity.Accounts[0]
 	account2 := entity.Accounts[1]
@@ -89,27 +90,33 @@ func TestRing(t *testing.T) {
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
+	// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
 	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("100"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("30000"+suffix, 0)
+	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20)) // 20个lrc
 	order1 := test.CreateOrder(
-		tokenAddressA,
-		tokenAddressB,
+		eth,
+		lrc,
 		protocol,
 		account1.Address,
 		amountS1,
 		amountB1,
+		lrcFee1,
 	)
 	bs1, _ := order1.MarshalJSON()
 
-	amountS2, _ := new(big.Int).SetString("200"+suffix, 0)
+	// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
+	amountS2, _ := new(big.Int).SetString("100000"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
+	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order2 := test.CreateOrder(
-		tokenAddressB,
-		tokenAddressA,
+		lrc,
+		eth,
 		protocol,
 		account2.Address,
 		amountS2,
 		amountB2,
+		lrcFee2,
 	)
 	bs2, _ := order2.MarshalJSON()
 
@@ -184,6 +191,7 @@ func TestMatcher_Case1(t *testing.T) {
 
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
+	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order1 := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
@@ -191,11 +199,13 @@ func TestMatcher_Case1(t *testing.T) {
 		entity.Accounts[0].Address,
 		amountS1,
 		amountB1,
+		lrcFee1,
 	)
 	bs1, _ := order1.MarshalJSON()
 
 	amountS2, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
+	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order2 := test.CreateOrder(
 		tokenAddressB,
 		tokenAddressA,
@@ -203,6 +213,7 @@ func TestMatcher_Case1(t *testing.T) {
 		entity.Accounts[1].Address,
 		amountS2,
 		amountB2,
+		lrcFee2,
 	)
 	bs2, _ := order2.MarshalJSON()
 
@@ -244,6 +255,7 @@ func TestMatcher_Case2(t *testing.T) {
 
 	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("100"+suffix, 0)
+	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order1 := test.CreateOrder(
 		tokenAddressA,
 		tokenAddressB,
@@ -251,12 +263,14 @@ func TestMatcher_Case2(t *testing.T) {
 		entity.Accounts[0].Address,
 		amountS1,
 		amountB1,
+		lrcFee1,
 	)
 	bs1, _ := order1.MarshalJSON()
 	println(string(bs1))
 
 	amountS2, _ := new(big.Int).SetString("50"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("5"+suffix, 0)
+	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order2 := test.CreateOrder(
 		tokenAddressB,
 		tokenAddressA,
@@ -264,6 +278,7 @@ func TestMatcher_Case2(t *testing.T) {
 		entity.Accounts[1].Address,
 		amountS2,
 		amountB2,
+		lrcFee2,
 	)
 	bs2, _ := order2.MarshalJSON()
 	//bs3, _ := order2.MarshalJSON()

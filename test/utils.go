@@ -195,7 +195,7 @@ func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 	return marketcap.NewMarketCapProvider(cfg.MarketCap)
 }
 
-func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB *big.Int) *types.Order {
+func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
 	order.TokenS = tokenS
@@ -205,7 +205,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
-	order.LrcFee = big.NewInt(1e16) // 0.01
+	order.LrcFee = lrcFee
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
