@@ -89,7 +89,7 @@ func (p *CapProvider_CoinMarketCap) LegalCurrencyValueByCurrency(tokenAddress co
 	if c, exists := p.tokenMarketCaps[tokenAddress]; !exists {
 		return nil, errors.New("not found tokenCap:" + tokenAddress.Hex())
 	} else {
-		v := new(big.Rat).SetInt64(c.Decimals)
+		v := new(big.Rat).SetInt(c.Decimals)
 		v.Quo(amount, v)
 		price, _ := p.GetMarketCapByCurrency(tokenAddress, currencyStr)
 		v.Mul(price, v)
@@ -204,7 +204,7 @@ func NewMarketCapProvider(options config.MarketCapOptions) *CapProvider_CoinMark
 		c.Id = v.Source
 		c.Name = v.Symbol
 		c.Symbol = v.Symbol
-		c.Decimals = v.Decimals
+		c.Decimals = new(big.Int).Set(v.Decimals)
 		provider.tokenMarketCaps[c.Address] = c
 		provider.idToAddress[strings.ToUpper(c.Id)] = c.Address
 	}

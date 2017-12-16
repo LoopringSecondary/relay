@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"strings"
 )
 
@@ -41,7 +42,7 @@ func (t *Token) ConvertDown(src *types.Token) error {
 	t.Symbol = strings.ToUpper(src.Symbol)
 	t.Source = src.Source
 	t.CreateTime = src.Time
-	t.Decimals = int(src.Decimals)
+	t.Decimals = len(src.Decimals.String()) - 1
 	t.Deny = src.Deny
 
 	return nil
@@ -54,7 +55,8 @@ func (t *Token) ConvertUp(dst *types.Token) error {
 	dst.Source = t.Source
 	dst.Time = t.CreateTime
 	dst.Deny = t.Deny
-	dst.Decimals = int64(t.Decimals)
+	dst.Decimals = new(big.Int)
+	dst.Decimals.SetString("1" + strings.Repeat("0", t.Decimals), 0)
 	dst.IsMarket = t.IsMarket
 
 	return nil
