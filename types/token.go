@@ -31,7 +31,7 @@ type Token struct {
 	Source   string
 	Time     int64
 	Deny     bool
-	Decimals int64
+	Decimals *big.Int
 	IsMarket bool
 }
 
@@ -46,7 +46,7 @@ type CurrencyMarketCap struct {
 	Volume24HCNY *big.Rat       `json:"24h_volume_cny"`
 	Volume24HUSD *big.Rat       `json:"24h_volume_usd"`
 	LastUpdated  int64          `json:"last_updated"`
-	Decimals     int64
+	Decimals     *big.Int
 }
 
 func (cap *CurrencyMarketCap) UnmarshalJSON(input []byte) error {
