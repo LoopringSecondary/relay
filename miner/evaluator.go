@@ -60,10 +60,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 	productPrice := new(big.Rat)
 	productPrice.Quo(productAmountS, productAmountB)
 	//todo:change pow to big.Int
-	priceOfFloat, exact := productPrice.Float64()
-	if !exact {
-		return errors.New("price is too large.")
-	}
+	priceOfFloat, _ := productPrice.Float64()
 	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.Orders)))
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	ringState.ReducedRate = new(big.Rat)
