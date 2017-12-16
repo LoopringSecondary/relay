@@ -61,6 +61,7 @@ type MarketCapProvider interface {
 	Stop()
 
 	LegalCurrencyValue(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error)
+	LegalCurrencyValueOfEth(amount *big.Rat) (*big.Rat, error)
 	LegalCurrencyValueByCurrency(tokenAddress common.Address, amount *big.Rat, currencyStr string) (*big.Rat, error)
 	GetMarketCap(tokenAddress common.Address) (*big.Rat, error)
 	GetEthCap() (*big.Rat, error)
@@ -76,6 +77,11 @@ type CapProvider_CoinMarketCap struct {
 }
 
 func (p *CapProvider_CoinMarketCap) LegalCurrencyValue(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error) {
+	return p.LegalCurrencyValueByCurrency(tokenAddress, amount, p.currency)
+}
+
+func (p *CapProvider_CoinMarketCap) LegalCurrencyValueOfEth(amount *big.Rat) (*big.Rat, error) {
+	tokenAddress := util.AllTokens["WETH"].Protocol
 	return p.LegalCurrencyValueByCurrency(tokenAddress, amount, p.currency)
 }
 

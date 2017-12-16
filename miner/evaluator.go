@@ -36,7 +36,7 @@ type Evaluator struct {
 	accessor              *ethaccessor.EthNodeAccessor
 }
 
-func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
+func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat) error {
 	ringState.LegalFee = new(big.Rat)
 
 	productAmountS := big.NewRat(int64(1), int64(1))
@@ -60,12 +60,15 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	productPrice := new(big.Rat)
 	productPrice.Quo(productAmountS, productAmountB)
 	//todo:change pow to big.Int
-	priceOfFloat, _ := productPrice.Float64()
+	priceOfFloat, exact := productPrice.Float64()
+	if !exact {
+		return errors.New("price is too large.")
+	}
 	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.Orders)))
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	ringState.ReducedRate = new(big.Rat)
 	ringState.ReducedRate.Inv(rate)
-	log.Debugf("miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
+	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
@@ -149,23 +152,23 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	}
 
 	//compute the fee of this ring and orders, and set the feeSelection
-	e.computeFeeOfRingAndOrder(ringState)
+	e.computeFeeOfRingAndOrder(ringState, minerLrcBalance)
 
 	//cvs
 	cvs, err := PriceRateCVSquare(ringState)
 	if nil != err {
 		return err
 	} else {
-		log.Debugf("miner, ringhash:%s, legalFee:%s, length of orders:%d, cvs:%s", ringState.Hash.Hex(), ringState.LegalFee.String(), len(ringState.Orders), cvs.String())
+		log.Debugf("Miner, ringhash:%s, legalFee:%s, length of orders:%d, cvs:%s", ringState.Hash.Hex(), ringState.LegalFee.String(), len(ringState.Orders), cvs.String())
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
-			return errors.New("miner,cvs must less than RateRatioCVSThreshold")
+			return errors.New("Miner,cvs must less than RateRatioCVSThreshold")
 		}
 	}
 }
 
-func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
+func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring, minerLrcBalance *big.Rat) {
 
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
@@ -203,18 +206,21 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		}
 		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
 
-		//the lrcreward should be set when select  MarginSplit as the selection of fee
-		if legalAmountOfLrc.Cmp(legalAmountOfSaving) > 0 {
-			filledOrder.FeeSelection = 0
-			filledOrder.LegalFee = legalAmountOfLrc
-		} else {
+		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
+		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
+		if legalAmountOfLrc.Cmp(legalAmountOfSaving) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
 			filledOrder.FeeSelection = 1
 			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
 			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
 			filledOrder.LrcReward = legalAmountOfLrc
 			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
 			filledOrder.LegalFee = legalAmountOfSaving
-			//log.Debugf("miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+
+			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
+			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+		} else {
+			filledOrder.FeeSelection = 0
+			filledOrder.LegalFee = legalAmountOfLrc
 		}
 		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
 	}
@@ -239,7 +245,7 @@ func PriceRateCVSquare(ringState *types.Ring) (*big.Int, error) {
 		s0b1 := new(big.Int).SetBytes(rawOrder.AmountS.Bytes())
 		//s0b1 = s0b1.Mul(s0b1, rawOrder.AmountB)
 		if s1b0.Cmp(s0b1) > 0 {
-			return nil, errors.New("miner,rateAmountS must less than amountS")
+			return nil, errors.New("Miner,rateAmountS must less than amountS")
 		}
 		ratio := new(big.Int).Set(scale)
 		ratio.Mul(ratio, s1b0).Div(ratio, s0b1)
