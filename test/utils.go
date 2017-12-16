@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v_0_1"
-	DebugFile = "debug.toml"
+	DebugFile = "relay.toml"
 )
 
 var (
@@ -82,6 +82,13 @@ func init() {
 }
 
 func loadConfig() *config.GlobalConfig {
+	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
+	c := config.LoadConfig(path)
+	log.Initialize(c.Log)
+
+	return c
+}
+func LoadConfig() *config.GlobalConfig {
 	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)

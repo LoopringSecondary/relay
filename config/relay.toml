@@ -34,8 +34,8 @@ name = "Loopring corporation"
 
 [ipfs]
     server = "127.0.0.1"
-    port = 8080
-    listen_topics = ["test_topic_broad_fk"]
+    port = 5001
+    listen_topics = ["test_topic_broad_yhy"]
     broadcast_topics = ["test_topic_broad_fk"]
 
 [gateway]
@@ -74,7 +74,7 @@ name = "Loopring corporation"
     		delayed_number = 10
 
 [market_cap]
-        base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0"
+        base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
         currency = "USD"
 
 [gateway_filters]
