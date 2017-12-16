@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	suffix       = "00"
+	suffix       = "00000000000000" //0.0001
 	TOKEN_SYMBOL = "LRC"
 	WETH         = "WETH"
 )
