@@ -162,6 +162,7 @@ type RingSubmitInfo struct {
 	SubmitTxHash   common.Hash
 	RegistryTxHash common.Hash
 	Received       *big.Rat
+	LegalCost      *big.Rat
 }
 
 type RingSubmitInputs struct {

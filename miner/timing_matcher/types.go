@@ -42,8 +42,9 @@ type OrderMatchState struct {
 }
 
 type CandidateRing struct {
-	orderHashes []common.Hash
-	received    *big.Rat
+	filledOrders map[common.Hash]*big.Rat
+	received     *big.Rat
+	cost         *big.Rat
 }
 
 type CandidateRingList []CandidateRing
