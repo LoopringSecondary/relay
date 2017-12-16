@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/naoina/toml"
@@ -99,6 +100,14 @@ type IpfsOptions struct {
 	Port            int
 	ListenTopics    []string
 	BroadcastTopics []string
+}
+
+func (opts IpfsOptions) Url() string {
+	url := opts.Server
+	if !strings.HasSuffix(url, ":") {
+		url = url + ":"
+	}
+	return url + strconv.Itoa(opts.Port)
 }
 
 type AccessorOptions struct {
