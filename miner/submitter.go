@@ -456,18 +456,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	received := new(big.Rat).Sub(ringState.LegalFee, c)
 	ringForSubmit.Received = received
 
-	// todo delete after test
-	if submitter.ifRegistryRingHash {
-		log.Debugf("miner,submitter generate ring info, register gas:%s,register gasPrice:%s, register cost:%s",
-			ringForSubmit.RegistryGas.String(), ringForSubmit.RegistryGasPrice.String(),
-			new(big.Rat).SetFrac(registryCost, big.NewInt(1e18)).FloatString(8))
-	}
-	log.Debugf("------miner,submmiter generate ring info, protocol gas:%s, protocol gasPrice:%s, protocol cost:%s, total cost:%s",
-		ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String(),
-		new(big.Rat).SetFrac(protocolCost, big.NewInt(1e18)).FloatString(8),
-		cost.FloatString(8))
-
-	log.Debugf("------miner,submitter generate ring info, cost:%s, legalFee:%s, received:%s", cost.FloatString(0), ringState.LegalFee.FloatString(0), received.FloatString(0))
+	log.Debugf("miner,submitter generate ring info, legal cost:%s, legalFee:%s, received:%s",  ringForSubmit.LegalCost.FloatString(2), ringState.LegalFee.FloatString(2), received.FloatString(2))
 
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
 		// todo: warning
