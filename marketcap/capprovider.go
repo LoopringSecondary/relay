@@ -21,6 +21,7 @@ package marketcap
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
@@ -151,7 +152,8 @@ func (p *CapProvider_CoinMarketCap) Start() {
 }
 
 func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
-	resp, err := http.Get(p.baseUrl)
+	url := fmt.Sprintf(p.baseUrl, p.currency)
+	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
@@ -183,6 +185,7 @@ func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
 			}
 			for _, tokenCap := range p.tokenMarketCaps {
 				if _, exists := syncedTokens[tokenCap.Address]; !exists {
+					//todo:
 					log.Errorf("token:%s, id:%s, can't sync marketcap at time:%d, it't last updated time:%d", tokenCap.Symbol, tokenCap.Id, time.Now().Unix(), tokenCap.LastUpdated)
 				}
 			}

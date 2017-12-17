@@ -32,13 +32,14 @@ type IPFSPubService interface {
 type IPFSPubServiceImpl struct {
 	options *config.IpfsOptions
 	sh      *shell.Shell
+	url     string
 }
 
 func NewIPFSPubService(options *config.IpfsOptions) *IPFSPubServiceImpl {
 	l := &IPFSPubServiceImpl{}
-
+	l.url = options.Url()
 	l.options = options
-	l.sh = shell.NewLocalShell()
+	l.sh = shell.NewShell(l.url)
 	return l
 }
 
