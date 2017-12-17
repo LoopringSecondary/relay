@@ -232,21 +232,21 @@ func (market *Market) reduceAmountAfterFilled(filledOrder *types.FilledOrder) *t
 func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*types.RingSubmitInfo, error) {
 	filledOrders := []*types.FilledOrder{}
 	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
-	minerLrcBalance, _ := market.matcher.getAccountBalance(market.matcher.submitter.Miner.Address, market.lrcAddress)
+	minerLrcBalance, _ := market.matcher.getAccountAvailableAmount(market.matcher.submitter.Miner.Address, market.lrcAddress)
 	for _, order := range orders {
-		lrcToken, err := market.matcher.getAccountBalance(order.RawOrder.Owner, market.lrcAddress)
+		lrcTokenBalance, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
 		if nil != err {
 			return nil, err
 		}
-		tokenS, err := market.matcher.getAccountBalance(order.RawOrder.Owner, order.RawOrder.TokenS)
+		tokenS, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
 		if nil != err {
 			return nil, err
 		}
-		filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*order, lrcToken.Available(), tokenS.Available()))
+		filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenS))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)
-	if err := market.matcher.evaluator.ComputeRing(ringTmp, new(big.Rat).SetInt(minerLrcBalance.Available())); nil != err {
+	if err := market.matcher.evaluator.ComputeRing(ringTmp, minerLrcBalance); nil != err {
 		return nil, err
 	} else {
 		return market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
