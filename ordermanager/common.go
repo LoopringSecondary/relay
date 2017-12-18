@@ -28,6 +28,8 @@ import (
 	"math/big"
 )
 
+var dustOrderValue int64
+
 func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
 	blockNumberStr := blockNumberToString(blockNumber)
 
@@ -90,8 +92,8 @@ func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider
 		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
 	}
 
-	// todo: get compare number from config, and if valueOfRemainAmount is nil procedure of this may have problem
-	minValue := big.NewInt(1)
+	// todo: if valueOfRemainAmount is nil procedure of this may have problem
+	minValue := big.NewInt(dustOrderValue)
 	if valueOfRemainAmount == nil || valueOfRemainAmount.Cmp(new(big.Rat).SetInt(minValue)) > 0 {
 		return false
 	}
