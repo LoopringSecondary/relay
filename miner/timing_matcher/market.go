@@ -64,7 +64,7 @@ func (market *Market) match() {
 						for _, filledOrder := range ringForSubmit.RawRing.Orders {
 							candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
 						}
-						candidateRingList = append(candidateRingList)
+						candidateRingList = append(candidateRingList, candidateRing)
 					} else {
 						log.Debugf("timing_matchher,market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.FloatString(0), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					}

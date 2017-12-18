@@ -190,6 +190,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	state.UpdatedBlock = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
+	state.SplitAmountS = new(big.Int).Add(state.SplitAmountS, event.SplitS)
+	state.SplitAmountB = new(big.Int).Add(state.SplitAmountB, event.SplitB)
+
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
@@ -200,7 +203,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.UpdatedBlock); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.SplitAmountS, state.SplitAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 

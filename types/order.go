@@ -233,6 +233,8 @@ type OrderState struct {
 	UpdatedBlock     *big.Int    `json:"updatedBlock"`
 	DealtAmountS     *big.Int    `json:"dealtAmountS"`
 	DealtAmountB     *big.Int    `json:"dealtAmountB"`
+	SplitAmountS     *big.Int    `json:"splitAmountS"`
+	SplitAmountB     *big.Int    `json:"splitAmountB"`
 	CancelledAmountS *big.Int    `json:"cancelledAmountS"`
 	CancelledAmountB *big.Int    `json:"cancelledAmountB"`
 	Status           OrderStatus `json:"status"`
@@ -259,14 +261,16 @@ func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remain
 	if orderState.RawOrder.BuyNoMoreThanAmountB {
 		reducedAmountB := new(big.Rat)
 		reducedAmountB.Add(reducedAmountB, new(big.Rat).SetInt(orderState.DealtAmountB)).
-			Add(reducedAmountB, new(big.Rat).SetInt(orderState.CancelledAmountB))
+			Add(reducedAmountB, new(big.Rat).SetInt(orderState.CancelledAmountB)).
+			Add(reducedAmountB, new(big.Rat).SetInt(orderState.SplitAmountB))
 		sellPrice := new(big.Rat).SetFrac(orderState.RawOrder.AmountS, orderState.RawOrder.AmountB)
 		remainedAmountB.Sub(new(big.Rat).SetInt(orderState.RawOrder.AmountB), reducedAmountB)
 		remainedAmountS.Mul(remainedAmountB, sellPrice)
 	} else {
 		reducedAmountS := new(big.Rat)
 		reducedAmountS.Add(reducedAmountS, new(big.Rat).SetInt(orderState.DealtAmountS)).
-			Add(reducedAmountS, new(big.Rat).SetInt(orderState.CancelledAmountS))
+			Add(reducedAmountS, new(big.Rat).SetInt(orderState.CancelledAmountS)).
+			Add(reducedAmountS, new(big.Rat).SetInt(orderState.SplitAmountS))
 		buyPrice := new(big.Rat).SetFrac(orderState.RawOrder.AmountB, orderState.RawOrder.AmountS)
 		remainedAmountS.Sub(new(big.Rat).SetInt(orderState.RawOrder.AmountS), reducedAmountS)
 		remainedAmountB.Mul(remainedAmountS, buyPrice)
