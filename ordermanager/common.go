@@ -33,6 +33,8 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 
 	state.DealtAmountS = big.NewInt(0)
 	state.DealtAmountB = big.NewInt(0)
+	state.SplitAmountS = big.NewInt(0)
+	state.SplitAmountB = big.NewInt(0)
 	state.CancelledAmountB = big.NewInt(0)
 
 	// get order cancelled or filled amount from chain
@@ -75,13 +77,15 @@ func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider
 	var valueOfRemainAmount *big.Rat
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		cancelOrFilledAmountB := new(big.Int).Add(state.DealtAmountB, state.CancelledAmountB)
+		dealtAndSplitAmountB := new(big.Int).Add(state.DealtAmountB, state.SplitAmountB)
+		cancelOrFilledAmountB := new(big.Int).Add(dealtAndSplitAmountB, state.CancelledAmountB)
 		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
 		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
 		price, _ := mc.GetMarketCap(state.RawOrder.TokenB)
 		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
 	} else {
-		cancelOrFilledAmountS := new(big.Int).Add(state.DealtAmountS, state.CancelledAmountS)
+		dealtAndSplitAmountS := new(big.Int).Add(state.DealtAmountS, state.SplitAmountS)
+		cancelOrFilledAmountS := new(big.Int).Add(dealtAndSplitAmountS, state.CancelledAmountS)
 		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
 		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
 		price, _ := mc.GetMarketCap(state.RawOrder.TokenS)

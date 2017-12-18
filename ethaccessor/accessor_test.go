@@ -65,10 +65,11 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 
-	tokenAddress := wethTokenAddress
-	spender := lrcTokenAddress
-	amount, _ := new(big.Int).SetString("2000000000000000000", 0)
+	tokenAddress := lrcTokenAddress
+	amount, _ := new(big.Int).SetString("100000000000000000000000", 0) // 10万lrc
 	accessor, _ := test.GenerateAccessor()
+	protocol := test.Protocol()
+	spender := accessor.ProtocolAddresses[protocol].DelegateAddress
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddress)
 	if result, err := callMethod(account, "approve", big.NewInt(200000), big.NewInt(21000000000), nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())

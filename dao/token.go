@@ -56,7 +56,7 @@ func (t *Token) ConvertUp(dst *types.Token) error {
 	dst.Time = t.CreateTime
 	dst.Deny = t.Deny
 	dst.Decimals = new(big.Int)
-	dst.Decimals.SetString("1" + strings.Repeat("0", t.Decimals), 0)
+	dst.Decimals.SetString("1"+strings.Repeat("0", t.Decimals), 0)
 	dst.IsMarket = t.IsMarket
 
 	return nil

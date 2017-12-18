@@ -156,7 +156,6 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 	if nil != err {
 		return err
 	} else {
-		log.Debugf("Miner, ringhash:%s, legalFee:%s, length of orders:%d, cvs:%s", ringState.Hash.Hex(), ringState.LegalFee.String(), len(ringState.Orders), cvs.String())
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {

@@ -59,15 +59,14 @@ func (market *Market) match() {
 					log.Errorf("err:%s", err.Error())
 					continue
 				} else {
-					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					if ringForSubmit.Received.Cmp(big.NewRat(int64(0), int64(1))) > 0 {
 						candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 						for _, filledOrder := range ringForSubmit.RawRing.Orders {
 							candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
 						}
-						candidateRingList = append(candidateRingList)
+						candidateRingList = append(candidateRingList, candidateRing)
 					} else {
-						log.Debugf("timing_matchher,market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
+						log.Debugf("timing_matchher,market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.FloatString(0), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					}
 				}
 			}
