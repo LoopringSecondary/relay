@@ -26,19 +26,27 @@ import (
 	"math/big"
 )
 
-func (l *ExtractorServiceImpl) startDetectFork() {
-	forkWatcher := &eventemitter.Watcher{Concurrent: true, Handle: l.processFork}
-	eventemitter.On(eventemitter.ExtractorFork, forkWatcher)
+type forkDetector struct {
+	db       dao.RdsService
+	accessor *ethaccessor.EthNodeAccessor
 }
 
-func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
+func newForkDetector(db dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *forkDetector {
+	detector := &forkDetector{}
+	detector.accessor = accessor
+	detector.db = db
+
+	return detector
+}
+
+func (detector *forkDetector) detect(block *types.Block) error {
 	var (
 		latestBlock   types.Block
 		newBlockModel dao.Block
 		forkEvent     types.ForkedEvent
 	)
 
-	latestBlockModel, err := l.dao.FindLatestBlock()
+	latestBlockModel, err := detector.db.FindLatestBlock()
 	if err != nil {
 		return err
 	}
@@ -56,13 +64,13 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 		if err := newBlockModel.ConvertUp(block); err != nil {
 			return err
 		}
-		if err := l.dao.Add(newBlockModel); err != nil {
+		if err := detector.db.Add(newBlockModel); err != nil {
 			return err
 		}
 	}
 
 	// 已经分叉,寻找分叉块,出错则在下一个块继续检查
-	forkBlock, err := l.getForkedBlock(block)
+	forkBlock, err := detector.getForkedBlock(block)
 	if err != nil {
 		return err
 	}
@@ -70,7 +78,7 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	// 更新block分叉标记
 	model := dao.Block{}
 	if err := model.ConvertDown(forkBlock); err == nil {
-		l.dao.SetForkBlock(forkBlock.BlockHash)
+		detector.db.SetForkBlock(forkBlock.BlockHash)
 	}
 
 	// 发送分叉事件
@@ -85,24 +93,21 @@ func (l *ExtractorServiceImpl) detectFork(block *types.Block) error {
 	return nil
 }
 
-func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block, error) {
+func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, error) {
 	var (
 		ethBlock    ethaccessor.Block
 		parentBlock types.Block
 	)
 
 	// 如果数据库已存在,则该block即为分叉根节点
-	if parentBlockModel, err := l.dao.FindBlockByParentHash(block.ParentHash); err == nil {
-		if err := parentBlockModel.ConvertUp(&parentBlock); err != nil {
-			return nil, err
-		} else {
-			return &parentBlock, nil
-		}
+	if parentBlockModel, err := detector.db.FindBlockByParentHash(block.ParentHash); err == nil {
+		parentBlockModel.ConvertUp(&parentBlock)
+		return &parentBlock, nil
 	}
 
 	// 如果不存在,则查询以太坊
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	if err := l.accessor.Call(&ethBlock, "eth_getBlockByNumber", parentBlockNumber, false); err != nil {
+	if err := detector.accessor.Call(&ethBlock, "eth_getBlockByNumber", parentBlockNumber, false); err != nil {
 		return nil, err
 	}
 
@@ -111,10 +116,5 @@ func (l *ExtractorServiceImpl) getForkedBlock(block *types.Block) (*types.Block,
 	preBlock.BlockHash = ethBlock.Hash
 	preBlock.ParentHash = ethBlock.ParentHash
 
-	return l.getForkedBlock(preBlock)
-}
-
-func (l *ExtractorServiceImpl) processFork(input eventemitter.EventData) error {
-	l.Restart()
-	return nil
+	return detector.getForkedBlock(preBlock)
 }

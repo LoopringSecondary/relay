@@ -197,8 +197,8 @@ type CutoffFilter struct {
 
 // 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
 func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
-	if f.om.IsOrderCutoff(o.Owner, o.Timestamp) {
-		return false, fmt.Errorf("gateway,cutoff filter order %s create time %s is out of range", o.Owner.Hex(), o.Timestamp.String())
+	if f.om.IsOrderCutoff(o.Protocol, o.Owner, o.Timestamp) {
+		return false, fmt.Errorf("gateway,cutoff filter order:%s should be cutoff", o.Owner.Hex())
 	}
 
 	return true, nil

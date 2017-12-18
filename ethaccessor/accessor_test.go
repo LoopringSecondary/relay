@@ -154,8 +154,8 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 // cutoff的值必须在两个块的timestamp之间
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	c := test.Cfg()
-	account := accounts.Account{Address: account1}
-	cutoff := big.NewInt(1522651087)
+	account := accounts.Account{Address: account2}
+	cutoff := big.NewInt(1518700280)
 
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])

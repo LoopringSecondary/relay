@@ -72,6 +72,7 @@ type GlobalConfig struct {
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
 	GatewayFilters GatewayFiltersOptions
+	OrderManager   OrderManagerOptions
 	Gateway        GateWayOptions
 	Accessor       AccessorOptions
 	Common         CommonOptions
@@ -93,6 +94,12 @@ type ContractOptions struct {
 
 func (c *GlobalConfig) defaultConfig() {
 
+}
+
+type OrderManagerOptions struct {
+	CutoffCacheExpireTime int64
+	CutoffCacheCleanTime  int64
+	DustOrderValue        int64
 }
 
 type IpfsOptions struct {
