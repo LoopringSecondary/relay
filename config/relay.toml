@@ -28,6 +28,11 @@ name = "Loopring corporation"
     table_prefix = "lpr_"
     debug = false
 
+[order_manager]
+    cutoff_cache_expire_time = 864000
+    cutoff_cache_clean_time = 0
+    dust_order_value = 1
+
 [contract]
     versions = ["v1.0", "v1.0-test"]
     addresses = ["0xc01172a87f6cc20e1e3b9ad13a9e715fbc2d5aa9", "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D"]
