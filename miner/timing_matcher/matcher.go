@@ -160,6 +160,7 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 	roundState := &RoundState{
 		round:          matcher.lastBlockNumber,
 		ringHash:       ringHash,
+		tokenS:         filledOrder.OrderState.RawOrder.TokenS,
 		matchedAmountB: filledOrder.FillAmountB,
 		matchedAmountS: filledOrder.FillAmountS,
 	}
@@ -189,7 +190,9 @@ func (matcher *TimingMatcher) getAccountAvailableAmount(address common.Address, 
 		}
 		if roundStates, exists := matcher.matchedBalances[address]; exists {
 			for _, round := range roundStates {
-				availableAmount.Sub(availableAmount, round.matchedAmountS)
+				if round.tokenS == tokenAddress {
+					availableAmount.Sub(availableAmount, round.matchedAmountS)
+				}
 			}
 		}
 		return availableAmount, nil
