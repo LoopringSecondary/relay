@@ -461,7 +461,7 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	if q.PageSize <= 0 || q.PageSize > 20 {
 		ps = 20
 	} else {
-		ps = q.PageIndex
+		ps = q.PageSize
 	}
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]

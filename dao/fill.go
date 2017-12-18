@@ -86,7 +86,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
-	err = s.db.Where(query).Order("create_time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&fills).Error
+	err = s.db.Where(query).Order("create_time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&fills).Error
 	if err != nil {
 		return res, err
 	}

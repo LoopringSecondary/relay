@@ -31,6 +31,7 @@ import (
 	"sort"
 	"sync"
 	"time"
+	"strings"
 )
 
 const (
@@ -229,7 +230,9 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 		result.Open = trends[0].Open
 		result.Close = trends[len(trends)-1].Close
 	}
-	result.Change = fmt.Sprintf("%.2f%%", 100*result.Last/result.Open)
+	if result.Open > 0 && result.Close > 0 {
+		result.Change = fmt.Sprintf("%.2f%%", 100*result.Last/result.Open)
+	}
 
 	result.Vol = vol
 	result.Amount = amount
@@ -248,12 +251,12 @@ func (t *TrendManager) insertTrend() {
 
 	for _, mkt := range util.AllMarkets {
 		now := time.Now()
-		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC)
+		firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 1, 0, time.UTC)
 
 		for i := 1; i < 10; i++ {
 
 			start := firstSecondThisHour.Unix() - int64(i*60*60)
-			end := firstSecondThisHour.Unix() - int64((i-1)*60*60)
+			end := firstSecondThisHour.Unix() - int64((i-1)*60*60) - 1
 
 			trends, err := t.rds.TrendQueryByTime(mkt, start, end)
 			if err != nil {
@@ -361,6 +364,9 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 		return fills[i].CreateTime < fills[j].CreateTime
 	})
 
+	//fmt.Println("fills before aggregate..........")
+	//fmt.Println(fills)
+
 	for _, data := range fills {
 
 		if util.IsBuy(data.TokenS) {
@@ -376,7 +382,7 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 		if high == 0 || high < price {
 			high = price
 		}
-		if low == 0 || low < price {
+		if low == 0 || low > price {
 			low = price
 		}
 	}
@@ -396,6 +402,8 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 }
 
 func (t *TrendManager) GetTrends(market string) (trends []Trend, err error) {
+
+	market = strings.ToUpper(market)
 
 	if t.cacheReady {
 		if trendCache, ok := t.c.Get(trendKey); !ok {
@@ -455,8 +463,11 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 
 		if tickerInCache, ok := t.c.Get(trendKey); ok {
 			trendMap := tickerInCache.(map[string]Cache)
-			fills := trendMap[market].Fills
-			fills = append(fills, *newFillModel)
+			tc := trendMap[market]
+			tc.Fills = append(tc.Fills, *newFillModel)
+			trendMap[market] = tc
+			t.c.Set(trendKey, trendMap, cache.NoExpiration)
+			t.reCalTicker(market)
 		} else {
 			fills := make([]dao.FillEvent, 0)
 			fills = append(fills, *newFillModel)

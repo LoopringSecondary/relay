@@ -20,7 +20,7 @@ name = "Loopring corporation"
 	    encode_time = "iso8601"
 
 [mysql]
-    hostname = "ec2-52-199-80-249.ap-northeast-1.compute.amazonaws.com"
+    hostname = "13.112.62.24"
     port = "3306"
     user = "root"
     password = "111111"
