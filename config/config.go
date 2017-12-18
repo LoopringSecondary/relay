@@ -148,7 +148,7 @@ type TimingMatcher struct {
 	RoundOrdersCount int
 	Duration         int64
 	DelayedNumber    int64
-	FlushRoundCount int64
+	FlushRoundCount  int64
 }
 type MinerOptions struct {
 	RingMaxLength           int    `required:"true"` //recommended value:4
@@ -164,6 +164,7 @@ type MinerOptions struct {
 type MarketCapOptions struct {
 	BaseUrl  string
 	Currency string
+	Duration int
 }
 
 type GatewayFiltersOptions struct {

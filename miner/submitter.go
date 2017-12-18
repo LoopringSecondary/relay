@@ -162,7 +162,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 	} else {
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
-	if registryData, err := ringhashRegistryAbi.Pack("submitRinghash",
+	if registryData, err := ringhashRegistryAbi.Pack("batchSubmitRinghash",
 		miners,
 		ringhashes); nil != err {
 		return err

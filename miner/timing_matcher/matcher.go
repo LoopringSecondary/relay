@@ -117,13 +117,14 @@ func (matcher *TimingMatcher) deleteRoundStateAfterSubmit(ringHash common.Hash) 
 	matcher.mtx.Lock()
 	defer matcher.mtx.Unlock()
 
+	log.Debugf("the ring:%s has been execute, remove the round states", ringHash.Hex())
 	if ringState, ok := matcher.MinedRings[ringHash]; ok {
 		log.Debugf("MinedRings ringhash:%s will be removed", ringHash.Hex())
 		delete(matcher.MinedRings, ringHash)
 		for _, orderHash := range ringState.orderHashes {
 			if minedState, ok := matcher.MatchedOrders[orderHash]; ok {
 				owner := minedState.orderState.RawOrder.Owner
-				if _,exists := matcher.matchedBalances[owner]; exists {
+				if _, exists := matcher.matchedBalances[owner]; exists {
 					delete(matcher.matchedBalances[owner], ringHash)
 				}
 				if len(minedState.rounds) <= 1 {
@@ -163,7 +164,7 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 		matchedAmountS: filledOrder.FillAmountS,
 	}
 
-	if _,exists := matcher.matchedBalances[owner]; !exists {
+	if _, exists := matcher.matchedBalances[owner]; !exists {
 		matcher.matchedBalances[owner] = make(map[common.Hash]*RoundState)
 	}
 
@@ -172,7 +173,7 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 	matcher.MatchedOrders[filledOrder.OrderState.RawOrder.Hash] = matchState
 }
 
-//todo:impl it
+//TODO:impl it
 func (matcher *TimingMatcher) flushRoundStates() {
 
 }
@@ -186,15 +187,11 @@ func (matcher *TimingMatcher) getAccountAvailableAmount(address common.Address, 
 		if availableAmount.Cmp(allowanceAmount) > 0 {
 			availableAmount = allowanceAmount
 		}
-		if roundStates,exists := matcher.matchedBalances[address]; exists {
+		if roundStates, exists := matcher.matchedBalances[address]; exists {
 			for _, round := range roundStates {
 				availableAmount.Sub(availableAmount, round.matchedAmountS)
 			}
 		}
-		if availableAmount.Cmp(new(big.Rat).SetInt64(int64(0))) < 0 {
-			return nil, err
-		} else {
-			return availableAmount, nil
-		}
+		return availableAmount, nil
 	}
 }
