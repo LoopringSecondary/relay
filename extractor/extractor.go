@@ -212,7 +212,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	contract.BlockNumber = blockNumber
 	contract.Input = tx.Input
 	contract.Gas = tx.Gas.BigInt()
-	contract.GasPrice = tx.Gas.BigInt()
+	contract.GasPrice = tx.GasPrice.BigInt()
 	contract.LogAmount = logAmount
 
 	eventemitter.Emit(contract.Id, contract)
