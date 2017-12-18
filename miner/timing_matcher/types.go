@@ -38,7 +38,7 @@ type RoundState struct {
 
 type OrderMatchState struct {
 	orderState types.OrderState
-	rounds     []*RoundState
+	rounds     map[common.Hash]*RoundState
 }
 
 type CandidateRing struct {

@@ -74,6 +74,7 @@ type CapProvider_CoinMarketCap struct {
 	tokenMarketCaps map[common.Address]*types.CurrencyMarketCap
 	idToAddress     map[string]common.Address
 	currency        string
+	duration        int
 	stopChan        chan bool
 }
 
@@ -137,7 +138,7 @@ func (p *CapProvider_CoinMarketCap) Start() {
 	go func() {
 		for {
 			select {
-			case <-time.After(1 * time.Minute):
+			case <-time.After(time.Duration(p.duration) * time.Minute):
 				log.Infof("marketCap sycing...")
 				if err := p.syncMarketCap(); nil != err {
 					log.Errorf("can't sync marketcap, time:%d", time.Now().Unix())
@@ -200,7 +201,11 @@ func NewMarketCapProvider(options config.MarketCapOptions) *CapProvider_CoinMark
 	provider.currency = options.Currency
 	provider.tokenMarketCaps = make(map[common.Address]*types.CurrencyMarketCap)
 	provider.idToAddress = make(map[string]common.Address)
-
+	provider.duration = options.Duration
+	if provider.duration <= 0 {
+		//default 5 min
+		provider.duration = 5
+	}
 	for _, v := range util.AllTokens {
 		c := &types.CurrencyMarketCap{}
 		c.Address = v.Protocol

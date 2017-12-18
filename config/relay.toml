@@ -20,7 +20,7 @@ name = "Loopring corporation"
 	    encode_time = "iso8601"
 
 [mysql]
-    hostname = "ec2-52-199-80-249.ap-northeast-1.compute.amazonaws.com"
+    hostname = "127.0.0.1"
     port = "3306"
     user = "root"
     password = "111111"
@@ -35,7 +35,7 @@ name = "Loopring corporation"
 [ipfs]
     server = "127.0.0.1"
     port = 5001
-    listen_topics = ["test_topic_broad_yhy"]
+    listen_topics = ["test_topic_broad_fk"]
     broadcast_topics = ["test_topic_broad_fk"]
 
 [gateway]
@@ -72,10 +72,12 @@ name = "Loopring corporation"
     		round_orders_count=50
     		duration = 1
     		delayed_number = 10
+    		flush_round_count = 100
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
         currency = "USD"
+        duration = 5
 
 [gateway_filters]
     [gateway_filters.base_filter]
@@ -83,5 +85,5 @@ name = "Loopring corporation"
         max_price = 1000000000000
 
 [keystore]
-    keydir = "ks_dir"
+    keydir = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/ks_dir"
 
