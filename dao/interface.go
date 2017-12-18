@@ -47,7 +47,7 @@ type RdsService interface {
 	GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, currentBlockNumber int64) ([]*Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
-	SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error
+	SetCutOff(owner common.Address, cutoffTime *big.Int) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
@@ -73,8 +73,8 @@ type RdsService interface {
 	RollBackCancel(from, to int64) error
 
 	// cutoff event table
-	FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error)
-	FindValidCutoffEvents() ([]CutOffEvent, error)
+	GetCutoffEvent(protocol, owner common.Address) (*CutOffEvent, error)
+	DelCutoffEvent(protocol, owner common.Address) error
 	UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
 	RollBackCutoff(from, to int64) error
 

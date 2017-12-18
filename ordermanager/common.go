@@ -28,6 +28,8 @@ import (
 	"math/big"
 )
 
+var dustOrderValue int64
+
 func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccessor, mc marketcap.MarketCapProvider, blockNumber *big.Int) (*dao.Order, error) {
 	blockNumberStr := blockNumberToString(blockNumber)
 
@@ -81,19 +83,18 @@ func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider
 		cancelOrFilledAmountB := new(big.Int).Add(dealtAndSplitAmountB, state.CancelledAmountB)
 		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
 		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		price, _ := mc.GetMarketCap(state.RawOrder.TokenB)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountB)
+		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenB, ratRemainAmountB)
 	} else {
 		dealtAndSplitAmountS := new(big.Int).Add(state.DealtAmountS, state.SplitAmountS)
 		cancelOrFilledAmountS := new(big.Int).Add(dealtAndSplitAmountS, state.CancelledAmountS)
 		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
 		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		price, _ := mc.GetMarketCap(state.RawOrder.TokenS)
-		valueOfRemainAmount = new(big.Rat).Mul(price, ratRemainAmountS)
+		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
 	}
 
-	// todo: get compare number from config
-	if valueOfRemainAmount.Cmp(big.NewRat(1, 1)) > 0 {
+	// todo: if valueOfRemainAmount is nil procedure of this may have problem
+	minValue := big.NewInt(dustOrderValue)
+	if valueOfRemainAmount == nil || valueOfRemainAmount.Cmp(new(big.Rat).SetInt(minValue)) > 0 {
 		return false
 	}
 
