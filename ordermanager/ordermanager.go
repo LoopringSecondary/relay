@@ -52,7 +52,7 @@ type OrderManagerImpl struct {
 	processor          *forkProcessor
 	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
-	mc                 *marketcap.MarketCapProvider
+	mc                 marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
 	newOrderWatcher    *eventemitter.Watcher
 	ringMinedWatcher   *eventemitter.Watcher
@@ -66,7 +66,7 @@ func NewOrderManager(
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
 	accessor *ethaccessor.EthNodeAccessor,
-	market *marketcap.MarketCapProvider) *OrderManagerImpl {
+	market marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
 	om.rds = rds
@@ -121,19 +121,13 @@ func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	return nil
 }
 
-// 来自ipfs的新订单
-// 所有来自ipfs的订单都是新订单
+// 所有来自gateway的订单都是新订单
 func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
 	om.lock.Lock()
 	defer om.lock.Unlock()
 
 	state := input.(*types.OrderState)
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
-
-	// order already exist in dao/order
-	if _, err := om.rds.GetOrderByHash(state.RawOrder.Hash); err == nil {
-		return nil
-	}
 
 	model, err := newOrderEntity(state, om.accessor, om.mc, nil)
 	if err != nil {
@@ -199,8 +193,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	finished := isOrderFullFinished(state, om.mc)
-	state.SettleFinishedStatus(finished)
+	settleOrderStatus(state, om.mc)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -240,12 +233,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 		return err
 	}
 
-	// judge status
-	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order cancelled event error:order %s status is %d ", event.OrderHash.Hex(), state.Status)
-	}
-
-	// calculate remainAmount
+	// calculate remainAmount and cancelled amount should be saved whether order is finished or not
 	if state.RawOrder.BuyNoMoreThanAmountB {
 		state.CancelledAmountB = new(big.Int).Add(state.CancelledAmountB, event.AmountCancelled)
 		log.Debugf("order manager,handle order cancelled event,order:%s cancelled amountb:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountB.String())
@@ -255,8 +243,8 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	finished := isOrderFullFinished(state, om.mc)
-	state.SettleFinishedStatus(finished)
+	settleOrderStatus(state, om.mc)
+	state.UpdatedBlock = event.Blocknumber
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {

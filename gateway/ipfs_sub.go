@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/gateway/ipfs"
 	"github.com/Loopring/relay/types"
-	"github.com/ipfs/go-ipfs-api"
+
+	"github.com/Loopring/relay/log"
 	"sync"
 )
 
@@ -48,17 +49,16 @@ type IPFSSubService interface {
 
 type IPFSSubServiceImpl struct {
 	options config.IpfsOptions
-	sh      *shell.Shell
 	subs    map[string]*subProxy
 	stop    chan struct{}
 	mtx     sync.Mutex
+	url     string
 }
 
 func NewIPFSSubService(options config.IpfsOptions) *IPFSSubServiceImpl {
 	l := &IPFSSubServiceImpl{}
-
+	l.url = options.Url()
 	l.options = options
-	l.sh = shell.NewLocalShell()
 	l.subs = make(map[string]*subProxy)
 
 	// TODO: get topics from mysql and combine with toml config
@@ -140,14 +140,14 @@ func (l *IPFSSubServiceImpl) Restart() {
 
 type subProxy struct {
 	topic    string
-	iterator *shell.PubSubSubscription
+	iterator *ipfs.PubSubSubscription
 	stop     chan struct{}
 }
 
 func (l *IPFSSubServiceImpl) newSubProxy(topic string) (*subProxy, error) {
 	s := &subProxy{}
 	s.topic = topic
-	scribe, err := l.sh.PubSubSubscribe(topic)
+	scribe, err := ipfs.PubSubSubscribe(l.url, topic)
 	if err != nil {
 		return nil, err
 	}
@@ -163,22 +163,14 @@ func (p *subProxy) listen() {
 		for {
 			record, err := p.iterator.Next()
 			if err != nil {
-				if err.Error() == "EOF" {
-					log.Fatalf("ipfs sub,ipfs client shut down!")
-				} else {
-					log.Errorf("ipfs sub,iterator next err:%s", err.Error())
-					continue
-				}
+				log.Fatalf("ipfs sub,ipfs occurs err:%s shut down!", err.Error())
 			}
-
-			data := record.Data()
 			ord := &types.Order{}
-			if err := ord.UnmarshalJSON(data); err != nil {
+			if err := ord.UnmarshalJSON(record.Data()); err != nil {
 				log.Errorf("ipfs sub,failed to accept data %s", err.Error())
 				continue
 			}
-
-			log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(data))
+			log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(record.Data()))
 			eventemitter.Emit(eventemitter.Gateway, ord)
 		}
 	}()

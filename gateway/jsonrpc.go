@@ -149,10 +149,10 @@ type JsonrpcServiceImpl struct {
 	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
 	ethForwarder   *EthForwarder
-	marketCap      *marketcap.MarketCapProvider
+	marketCap      marketcap.MarketCapProvider
 }
 
-func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder, capProvider *marketcap.MarketCapProvider) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, ethForwarder *EthForwarder, capProvider marketcap.MarketCapProvider) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.trendManager = trendManager
@@ -324,7 +324,7 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 
 	rst := PriceQuote{currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price := j.marketCap.GetMarketCapByCurrency(v.Protocol, marketcap.StringToLegalCurrency(currency))
+		price, _ := j.marketCap.GetMarketCapByCurrency(v.Protocol, currency)
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 	}

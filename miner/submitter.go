@@ -37,7 +37,7 @@ import (
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
 	Accessor           *ethaccessor.EthNodeAccessor
-	miner              accounts.Account
+	Miner              accounts.Account
 	ks                 *keystore.KeyStore
 	feeReceipt         common.Address //used to receive fee
 	ifRegistryRingHash bool
@@ -47,7 +47,7 @@ type RingSubmitter struct {
 	registeredRings map[common.Hash]types.RingSubmitInfo
 
 	dbService         dao.RdsService
-	marketCapProvider *marketcap.MarketCapProvider
+	marketCapProvider marketcap.MarketCapProvider
 
 	stopFuncs []func()
 }
@@ -57,13 +57,13 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider *marketcap.MarketCapProvider) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.gasLimit = big.NewInt(options.GasLimit)
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
 	submitter.Accessor = accessor
-	submitter.miner = accounts.Account{Address: common.HexToAddress(options.Miner)}
+	submitter.Miner = accounts.Account{Address: common.HexToAddress(options.Miner)}
 
 	submitter.feeReceipt = common.HexToAddress(options.FeeRecepient)
 	submitter.ifRegistryRingHash = options.IfRegistryRingHash
@@ -84,13 +84,13 @@ func (submitter *RingSubmitter) listenNewRings() {
 						daoInfo := &dao.RingSubmitInfo{}
 						daoInfo.ConvertDown(info)
 						if err := submitter.dbService.Add(daoInfo); nil != err {
-							log.Errorf("miner submitter,insert new ring err:%s", err.Error())
+							log.Errorf("Miner submitter,insert new ring err:%s", err.Error())
 						} else {
 							for _, filledOrder := range info.RawRing.Orders {
 								daoOrder := &dao.FilledOrder{}
 								daoOrder.ConvertDown(filledOrder, info.Ringhash)
 								if err1 := submitter.dbService.Add(daoOrder); nil != err1 {
-									log.Errorf("miner submitter,insert filled Order err:%s", err1.Error())
+									log.Errorf("Miner submitter,insert filled Order err:%s", err1.Error())
 								}
 							}
 						}
@@ -170,7 +170,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 		if gas, gasPrice, err1 := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
 			return err1
 		} else {
-			if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
+			if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
 				return err
 			} else {
 				submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash)
@@ -189,7 +189,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
 
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, nil, ringState.RegistryData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringhashRegistryAddress, ringState.RegistryGas, ringState.RegistryGasPrice, nil, ringState.RegistryData); nil != err {
 		return err
 	} else {
 		ringState.RegistryTxHash = common.HexToHash(txHash)
@@ -199,7 +199,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 }
 
 func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
 		return err
 	} else {
 		ringSate.SubmitTxHash = common.HexToHash(txHash)
@@ -399,7 +399,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	if types.IsZeroHash(ringState.Hash) {
 		ringState.Hash = ringState.GenerateHash()
 	}
-	ringForSubmit.Miner = submitter.miner.Address
+	ringForSubmit.Miner = submitter.Miner.Address
 
 	ringForSubmit.ProtocolAddress = protocolAddress
 	ringForSubmit.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
@@ -411,7 +411,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		ringhashRegistryAbi := submitter.Accessor.RinghashRegistryAbi
 		ringhashRegistryAddress := implAddress.RinghashRegistryAddress
 		ringForSubmit.RegistryData, err = ringhashRegistryAbi.Pack("submitRinghash",
-			submitter.miner.Address,
+			submitter.Miner.Address,
 			ringForSubmit.Ringhash)
 		if nil != err {
 			return nil, err
@@ -426,7 +426,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		registryCost.Mul(ringForSubmit.RegistryGas, ringForSubmit.RegistryGasPrice)
 	}
 
-	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.miner.Address, submitter.feeReceipt)
+	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.Miner.Address, submitter.feeReceipt)
 	ringForSubmit.ProtocolData, err = protocolAbi.Pack("submitRing",
 		ringSubmitArgs.AddressList,
 		ringSubmitArgs.UintArgsList,
@@ -451,8 +451,9 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)
 
 	cost := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))
-	cost = cost.Mul(cost, submitter.marketCapProvider.GetEthCap())
-	received := new(big.Rat).Sub(ringState.LegalFee, cost)
+	c, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(cost)
+	ringForSubmit.LegalCost = c
+	received := new(big.Rat).Sub(ringState.LegalFee, c)
 	ringForSubmit.Received = received
 
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {

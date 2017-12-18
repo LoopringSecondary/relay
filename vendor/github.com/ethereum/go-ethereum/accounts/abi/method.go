@@ -211,15 +211,16 @@ func (method Method) tupleUnpackInputs(v interface{}, input []byte) error {
 	j := 0
 	for i := 0; i < len(method.Inputs); i++ {
 		toUnpack := method.Inputs[i]
-		if toUnpack.Type.T == ArrayTy {
-			// need to move this up because they read sequentially
-			j += toUnpack.Type.Size
-		}
 		marshalledValue, err := toGoType((i+j)*32, toUnpack.Type, input)
 		if err != nil {
 			return err
 		}
 		reflectValue := reflect.ValueOf(marshalledValue)
+
+		if toUnpack.Type.T == ArrayTy {
+			// need to move this up because they read sequentially
+			j += toUnpack.Type.Size - 1
+		}
 
 		switch value.Kind() {
 		case reflect.Struct:
