@@ -456,7 +456,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	received := new(big.Rat).Sub(ringState.LegalFee, c)
 	ringForSubmit.Received = received
 
-	log.Debugf("miner,submitter generate ring info, legal cost:%s, legalFee:%s, received:%s",  ringForSubmit.LegalCost.FloatString(2), ringState.LegalFee.FloatString(2), received.FloatString(2))
+	log.Debugf("miner,submitter generate ring info, legal cost:%s, legalFee:%s, received:%s", ringForSubmit.LegalCost.FloatString(2), ringState.LegalFee.FloatString(2), received.FloatString(2))
 
 	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
 		// todo: warning
