@@ -61,7 +61,7 @@ func (market *Market) match() {
 					continue
 				} else {
 					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s, LegalCost:%s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String(), ringForSubmit.LegalCost.String())
-					if ringForSubmit.Received.Cmp(big.NewRat(int64(0), int64(1))) > 0 {
+					if ringForSubmit.Received.Sign() > 0 {
 						candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 						for _, filledOrder := range ringForSubmit.RawRing.Orders {
 							candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
@@ -98,7 +98,7 @@ func (market *Market) match() {
 			log.Debugf("generate RingSubmitInfo err:%s", err.Error())
 			continue
 		} else {
-			if ringForSubmit.Received.Cmp(big.NewRat(int64(0), int64(1))) > 0 {
+			if ringForSubmit.Received.Sign() > 0 {
 				for _, filledOrder := range ringForSubmit.RawRing.Orders {
 					orderState := market.reduceAmountAfterFilled(filledOrder)
 					isFullFilled := market.om.IsOrderFullFinished(orderState)
@@ -140,7 +140,7 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			rate.Sub(amountS, filledOrder.FillAmountS).Quo(rate, amountS)
 			remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
 			remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
-			if remainedReceived.Cmp(new(big.Rat).SetInt64(int64(0))) <= 0 {
+			if remainedReceived.Sign() <= 0 {
 				continue
 			}
 
@@ -242,14 +242,14 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 		if nil != err {
 			return nil, err
 		}
-		tokenS, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
+		tokenSBalance, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
 		if nil != err {
 			return nil, err
 		}
-		if tokenS.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
+		if tokenSBalance.Sign() <= 0 {
 			return nil, errors.New(order.RawOrder.Owner.Hex() + "'s balance or allowance is zero. ")
 		}
-		filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenS))
+		filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)
