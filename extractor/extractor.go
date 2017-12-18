@@ -51,6 +51,7 @@ type ExtractorServiceImpl struct {
 	options      config.AccessorOptions
 	commOpts     config.CommonOptions
 	accessor     *ethaccessor.EthNodeAccessor
+	detector     *forkDetector
 	dao          dao.RdsService
 	stop         chan struct{}
 	lock         sync.RWMutex
@@ -72,7 +73,7 @@ func NewExtractorService(options config.AccessorOptions,
 	l.syncComplete = false
 
 	l.loadContract()
-	l.startDetectFork()
+	l.detector = newForkDetector(rds, accessor)
 
 	return &l
 }
@@ -139,9 +140,8 @@ func (l *ExtractorServiceImpl) Start() {
 				log.Debugf("extractor,get block transaction list length %d", txcnt)
 			}
 
-			// todo
 			// detect chain fork
-			//if err := l.detectFork(currentBlock); err != nil {
+			//if err := l.detector.detect(currentBlock); err != nil {
 			//	log.Debugf("extractor,detect fork error:%s", err.Error())
 			//	continue
 			//}
