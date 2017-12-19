@@ -166,7 +166,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	// save event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
 	if err == nil {
-		return fmt.Errorf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
+		log.Debugf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
+		return nil
 	}
 
 	newFillModel := &dao.FillEvent{}
@@ -191,7 +192,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 
 	// judge order status
 	if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-		return fmt.Errorf("order manager,handle order filled event error:order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
+		log.Debugf("order manager,handle order filled event,order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
+		return nil
 	}
 
 	// calculate dealt amount
@@ -224,7 +226,8 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// save event
 	_, err := om.rds.FindCancelEvent(event.OrderHash, event.TxHash)
 	if err == nil {
-		return fmt.Errorf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
+		log.Debugf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
+		return nil
 	}
 	newCancelEventModel := &dao.CancelEvent{}
 	if err := newCancelEventModel.ConvertDown(event); err != nil {

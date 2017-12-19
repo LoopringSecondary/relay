@@ -39,6 +39,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 )
 
 type AccountEntity struct {
@@ -55,7 +56,7 @@ type TestEntity struct {
 }
 
 const (
-	Version   = "v_0_1"
+	Version   = "v1.0"
 	DebugFile = "debug.toml"
 )
 
@@ -164,6 +165,7 @@ func Rds() dao.RdsService       { return rds }
 func Cfg() *config.GlobalConfig { return cfg }
 func Entity() *TestEntity       { return entity }
 func Protocol() common.Address  { return common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version]) }
+func Delegate() common.Address  { return accessor.ProtocolAddresses[protocol].DelegateAddress }
 
 func GenerateAccessor() (*ethaccessor.EthNodeAccessor, error) {
 	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
@@ -208,7 +210,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(1513601210) //big.NewInt(time.Now().Unix())
+	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = lrcFee
@@ -278,6 +280,12 @@ func PrepareTestData() {
 	}
 }
 
+func humanNumber(amount *big.Int) string {
+	base := new(big.Int).SetInt64(1e18)
+	ret := new(big.Rat).SetFrac(amount, base)
+	return ret.FloatString(6)
+}
+
 func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Account) {
 	if nil == tokens1 {
 		for _, v := range entity.Tokens {
@@ -295,7 +303,7 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 			if err := callMethod(&balance, "balanceOf", "latest", account.Address); nil != err {
 				log.Errorf("err:%s", err.Error())
 			} else {
-				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), balance.BigInt().String())
+				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), humanNumber(balance.BigInt()))
 			}
 
 			var allowance types.Big
@@ -303,7 +311,7 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
 					log.Error(err.Error())
 				} else {
-					log.Infof("token:%s, owner:%s, spender:%s, allowance:%s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), allowance.BigInt().String())
+					log.Infof("token:%s, owner:%s, spender:%s, allowance:%s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), humanNumber(allowance.BigInt()))
 				}
 			}
 		}
@@ -319,14 +327,14 @@ func SetTokenBalances() {
 
 	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
 	amount, _ := new(big.Int).SetString("10000000000000000000000", 0)
-	wethAmount, _ := new(big.Int).SetString("19973507197999000000", 0)
+	wethAmount, _ := new(big.Int).SetString("179992767978000000000", 0)
 
 	// deposit weth
 	wethToken := entity.Tokens["WETH"]
 	for _, v := range entity.Accounts {
 		owner := accounts.Account{Address: v.Address}
 		sendTransactionMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethToken)
-		hash, err := sendTransactionMethod(owner, "deposit", big.NewInt(1000000), big.NewInt(21000000000), wethAmount)
+		hash, err := sendTransactionMethod(owner, "deposit", nil, nil, wethAmount)
 		if nil != err {
 			log.Fatalf("call method weth-deposit error:%s", err.Error())
 		} else {
@@ -348,7 +356,7 @@ func SetTokenBalances() {
 				fmt.Errorf(err.Error())
 			}
 			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
-				hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, acc.Address, amount)
+				hash, err := sendTransactionMethod(sender, "setBalance", nil, nil, nil, acc.Address, amount)
 				if nil != err {
 					fmt.Errorf(err.Error())
 				}

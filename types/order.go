@@ -212,7 +212,6 @@ type FilledOrder struct {
 	AvailableTokenSBalance *big.Rat
 }
 
-
 func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat) *FilledOrder {
 	filledOrder := &FilledOrder{}
 	filledOrder.OrderState = orderState
@@ -235,7 +234,6 @@ func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBal
 
 	return filledOrder
 }
-
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
