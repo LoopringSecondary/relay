@@ -78,7 +78,6 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 
 		filledOrder.BPrice.Inv(filledOrder.SPrice)
 
-		filledOrder.SetAvailableAmount()
 		amountS := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS)
 		//amountB := new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)
 
