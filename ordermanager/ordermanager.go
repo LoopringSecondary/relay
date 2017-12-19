@@ -46,6 +46,7 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
+	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
 
 type OrderManagerImpl struct {
@@ -435,6 +436,26 @@ func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.A
 		}
 		rs, _ := state.RemainedAmount()
 		totalAmount.Add(totalAmount, rs.Num())
+	}
+
+	return totalAmount, nil
+}
+
+func (om *OrderManagerImpl) GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error) {
+	orderList, err := om.rds.GetFrozenLrcFee(owner, statusSet)
+	if err != nil {
+		return nil, err
+	}
+
+	totalAmount := big.NewInt(0)
+
+	if len(orderList) == 0 {
+		return totalAmount, nil
+	}
+
+	for _, v := range orderList {
+		lrcFee, _ := new(big.Int).SetString(v.LrcFee, 0)
+		totalAmount.Add(totalAmount, lrcFee)
 	}
 
 	return totalAmount, nil

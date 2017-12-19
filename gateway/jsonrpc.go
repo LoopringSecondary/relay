@@ -345,6 +345,15 @@ func (j *JsonrpcServiceImpl) GetFrozenAmount(owner, token string) (frozenAmount 
 	if err != nil {
 		return "", err
 	}
+
+	if token == "LRC" {
+		allLrcFee, err := j.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
+		if err != nil {
+			return "", err
+		}
+		amount.Add(amount, allLrcFee)
+	}
+
 	return types.BigintToHex(amount), err
 }
 
