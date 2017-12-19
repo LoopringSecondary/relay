@@ -169,7 +169,9 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 }
 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
+
 	event := input.(*types.ApprovalEvent)
+	log.Debugf("received approval event, %s, %s", event.ContractAddress.Hex(), event.Owner.Hex())
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
@@ -302,6 +304,8 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 			allowance: event.Value}
 		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
+	} else {
+		log.Debugf("can't get balance  by address : %s ", address)
 	}
 	return nil
 }
