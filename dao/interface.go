@@ -55,6 +55,7 @@ type RdsService interface {
 	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error
 	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error)
+	GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([]Order, error)
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)
