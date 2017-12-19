@@ -88,7 +88,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	// register
 	n.registerMysql()
 
-	util.Initialize(n.rdsService, n.globalConfig)
+	util.Initialize(n.rdsService, n.globalConfig.Common.ProtocolImpl.Address)
 	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()

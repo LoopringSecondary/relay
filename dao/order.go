@@ -25,6 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"strings"
+	"strconv"
 )
 
 // order amountS 上限1e30
@@ -270,9 +272,10 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error; err != nil {
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 		return pageResult, err
 	}
+
 	for _, v := range orders {
 		data = append(data, v)
 	}
@@ -311,4 +314,27 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"updated_block":      blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
+}
+
+func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([] Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+	err = s.db.Model(&Order{}).Where("token_s = ? and owner = ? and status in " + buildStatusInSet(statusSet), token.Hex(), owner.Hex()).Find(&list).Error
+	return list, err
+}
+
+func buildStatusInSet(statusSet []types.OrderStatus) string {
+	if len(statusSet) == 0 {
+		return ""
+	}
+	result := "("
+	strSet := make([]string, 0)
+	for _, s := range statusSet {
+		strSet = append(strSet, strconv.Itoa(int(s)))
+	}
+	result += strings.Join(strSet, ",")
+	result += ")"
+	return result
 }
