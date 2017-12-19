@@ -165,13 +165,16 @@ func (p *subProxy) listen() {
 			if err != nil {
 				log.Fatalf("ipfs sub,ipfs occurs err:%s shut down!", err.Error())
 			}
-			ord := &types.Order{}
-			if err := ord.UnmarshalJSON(record.Data()); err != nil {
-				log.Errorf("ipfs sub,failed to accept data %s", err.Error())
-				continue
+			//record.data() have to contain two char: '{' and '}'
+			if len(record.Data()) > 2 {
+				ord := &types.Order{}
+				if err := ord.UnmarshalJSON(record.Data()); err != nil {
+					log.Errorf("ipfs sub,failed to accept data %s", err.Error())
+					continue
+				}
+				log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(record.Data()))
+				eventemitter.Emit(eventemitter.Gateway, ord)
 			}
-			log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(record.Data()))
-			eventemitter.Emit(eventemitter.Gateway, ord)
 		}
 	}()
 }

@@ -156,7 +156,6 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 	if nil != err {
 		return err
 	} else {
-		log.Debugf("Miner, ringhash:%s, legalFee:%s, length of orders:%d, cvs:%s", ringState.Hash.Hex(), ringState.LegalFee.String(), len(ringState.Orders), cvs.String())
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
@@ -201,8 +200,9 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring, minerLrcBala
 		if filledOrder.AvailableLrcBalance.Cmp(filledOrder.LrcFee) <= 0 {
 			filledOrder.LrcFee = filledOrder.AvailableLrcBalance
 		}
-		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
 
+		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
+		log.Debugf("raw.lrc:%s, AvailableLrcBalance:%s, legalAmountOfLrc:%s saving:%s", filledOrder.OrderState.RawOrder.LrcFee.String(), filledOrder.AvailableLrcBalance.FloatString(0), legalAmountOfLrc.String(), legalAmountOfSaving.String())
 		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
 		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
 		if legalAmountOfLrc.Cmp(legalAmountOfSaving) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {

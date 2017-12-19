@@ -201,7 +201,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
+	n.orderManager = ordermanager.NewOrderManager(&n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
 }
 
 func (n *Node) registerTrendManager() {

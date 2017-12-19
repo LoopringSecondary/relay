@@ -21,7 +21,6 @@ package timing_matcher
 import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -30,6 +29,9 @@ import (
 
 func (matcher *TimingMatcher) listenNewBlock() {
 	newBlockChan := make(chan *types.BlockEvent)
+
+	go matcher.flushRoundStates()
+
 	go func() {
 		for {
 			select {
@@ -37,14 +39,8 @@ func (matcher *TimingMatcher) listenNewBlock() {
 				if nil != blockEvent {
 					nextBlockNumber := new(big.Int).Add(matcher.duration, matcher.lastBlockNumber)
 					if nextBlockNumber.Cmp(blockEvent.BlockNumber) <= 0 {
-						for _, v := range matcher.MatchedOrders {
-							for _, round := range v.rounds {
-								log.Debugf("matched order status in last round orderhash:%s, matcheAmountS:%s", v.orderState.RawOrder.Hash.Hex(), round.matchedAmountS.String())
-							}
-						}
+						log.Debugf("miner starts a new match round")
 						matcher.lastBlockNumber = blockEvent.BlockNumber
-						//accounts must be reset every round
-						matcher.accounts = make(map[common.Address]*miner.Account)
 						var wg sync.WaitGroup
 						for _, market := range matcher.markets {
 							wg.Add(1)
@@ -85,7 +81,7 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 			select {
 			case ringhash := <-submitEventChan:
 				log.Debugf("received mined event, this round will be removed, ringhash:%s", ringhash.Hex())
-				matcher.deleteRoundAfterSubmit(ringhash)
+				matcher.deleteRoundStateAfterSubmit(ringhash)
 			}
 		}
 	}()

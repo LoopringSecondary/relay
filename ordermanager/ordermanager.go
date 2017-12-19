@@ -20,6 +20,7 @@ package ordermanager
 
 import (
 	"fmt"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -42,11 +43,12 @@ type OrderManager interface {
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
-	IsOrderCutoff(owner common.Address, createTime *big.Int) bool
+	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 }
 
 type OrderManagerImpl struct {
+	options            *config.OrderManagerOptions
 	rds                dao.RdsService
 	lock               sync.RWMutex
 	processor          *forkProcessor
@@ -63,19 +65,23 @@ type OrderManagerImpl struct {
 }
 
 func NewOrderManager(
+	options *config.OrderManagerOptions,
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
 	accessor *ethaccessor.EthNodeAccessor,
 	market marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
+	om.options = options
 	om.rds = rds
 	om.processor = newForkProcess(om.rds, accessor, market)
 	om.accessor = accessor
 	om.um = userManager
 	om.mc = market
-	om.cutoffCache = NewCutoffCache(rds)
+	om.cutoffCache = NewCutoffCache(rds, options.CutoffCacheExpireTime, options.CutoffCacheCleanTime)
 	om.accessor = accessor
+
+	dustOrderValue = om.options.DustOrderValue
 
 	return om
 }
@@ -158,7 +164,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	// save event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
 	if err == nil {
-		return fmt.Errorf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:", event.RingIndex.String(), event.OrderHash.Hex())
+		return fmt.Errorf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
 	}
 
 	newFillModel := &dao.FillEvent{}
@@ -190,6 +196,9 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	state.UpdatedBlock = event.Blocknumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
+	state.SplitAmountS = new(big.Int).Add(state.SplitAmountS, event.SplitS)
+	state.SplitAmountB = new(big.Int).Add(state.SplitAmountB, event.SplitB)
+
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
@@ -200,7 +209,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		log.Errorf(err.Error())
 		return err
 	}
-	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.UpdatedBlock); err != nil {
+	if err := om.rds.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.SplitAmountS, state.SplitAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
 
@@ -260,13 +269,26 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
-	if err := om.rds.SettleOrdersCutoffStatus(event.Owner, event.Cutoff); err != nil {
-		log.Debugf("order manager,handle cutoff event,%s", err.Error())
-	}
-	if err := om.cutoffCache.Add(event); err != nil {
-		return err
+	protocol := event.ContractAddress
+	owner := event.Owner
+	currentCutoff := event.Cutoff
+	lastCutoff, ok := om.cutoffCache.Get(event.ContractAddress, event.Owner)
+
+	var addErr, delErr error
+	if !ok {
+		addErr = om.cutoffCache.Add(event)
+	} else if ok && lastCutoff.Cmp(event.Cutoff) >= 0 {
+		log.Debugf("order manager, handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
+	} else {
+		delErr = om.cutoffCache.Del(event.ContractAddress, event.Owner)
+		addErr = om.cutoffCache.Add(event)
 	}
 
+	if addErr != nil || delErr != nil {
+		return fmt.Errorf("order manager,handle cutoff error: cutoffCache add or del failed")
+	}
+
+	om.rds.SetCutOff(owner, currentCutoff)
 	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
 	return nil
 }
@@ -389,6 +411,6 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
 }
 
-func (om *OrderManagerImpl) IsOrderCutoff(owner common.Address, createTime *big.Int) bool {
-	return om.cutoffCache.IsOrderCutoff(owner, createTime)
+func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool {
+	return om.cutoffCache.IsOrderCutoff(protocol, owner, createTime)
 }

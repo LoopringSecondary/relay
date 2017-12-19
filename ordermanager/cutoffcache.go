@@ -19,71 +19,99 @@
 package ordermanager
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	gocache "github.com/patrickmn/go-cache"
 	"math/big"
-	"sync"
 	"time"
 )
 
 type CutoffCache struct {
-	cache map[common.Address]*big.Int
-	rds   dao.RdsService
-	mtx   sync.Mutex
+	cache  *gocache.Cache
+	expire time.Duration
+	clean  time.Duration
+	rds    dao.RdsService
 }
 
-func NewCutoffCache(rds dao.RdsService) *CutoffCache {
+func NewCutoffCache(rds dao.RdsService, expire, clean int64) *CutoffCache {
 	cache := &CutoffCache{}
 	cache.rds = rds
-	cache.cache = make(map[common.Address]*big.Int)
+	cache.expire = time.Duration(expire) * time.Second
 
-	if cutoffEvents, err := rds.FindValidCutoffEvents(); err == nil {
-		for _, v := range cutoffEvents {
-			var event types.CutoffEvent
-			v.ConvertUp(&event)
-			cache.cache[event.Owner] = event.Cutoff
-		}
+	if clean > 0 {
+		cache.clean = time.Duration(clean) * time.Second
+	} else {
+		cache.clean = gocache.NoExpiration
 	}
+	cache.cache = gocache.New(cache.expire, cache.clean)
 
 	return cache
 }
 
+// 合约验证的是创建时间
+func (c *CutoffCache) IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool {
+	cutoff, ok := c.Get(protocol, owner)
+	if !ok || cutoff.Cmp(createTime) < 0 {
+		return false
+	}
+	return true
+}
+
+func (c *CutoffCache) Get(protocol, owner common.Address) (*big.Int, bool) {
+	cutoff, ok := c.get(protocol, owner)
+	if !ok {
+		if entity, err := c.rds.GetCutoffEvent(protocol, owner); err == nil {
+			var evt types.CutoffEvent
+			entity.ConvertUp(&evt)
+			cutoff = evt.Cutoff
+			c.set(protocol, owner, cutoff)
+		} else {
+			return big.NewInt(0), false
+		}
+	}
+
+	return cutoff, true
+}
+
 func (c *CutoffCache) Add(event *types.CutoffEvent) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
-	nowtime := time.Now().Unix()
-	if event.Cutoff.Cmp(big.NewInt(nowtime)) < 0 {
-		return fmt.Errorf("cutoff cache,cutoff time:%s < nowtime:%d", event.Cutoff.String(), nowtime)
-	}
-
-	var err error
-
-	model := &dao.CutOffEvent{}
-	model.ConvertDown(event)
-	if _, ok := c.cache[event.Owner]; !ok {
-		err = c.rds.Add(model)
-	} else {
-		err = c.rds.UpdateCutoffByProtocolAndOwner(event.ContractAddress, event.Owner, event.TxHash, event.Blocknumber, event.Cutoff, event.Time)
-	}
-
-	if err != nil {
+	entity := new(dao.CutOffEvent)
+	entity.ConvertDown(event)
+	if err := c.rds.Add(entity); err != nil {
 		return err
 	}
 
-	c.cache[event.Owner] = event.Cutoff
+	return c.set(event.ContractAddress, event.Owner, event.Cutoff)
+}
 
+func (c *CutoffCache) Del(protocol, owner common.Address) error {
+	if err := c.rds.DelCutoffEvent(protocol, owner); err != nil {
+		return err
+	}
+	c.del(protocol, owner)
 	return nil
 }
 
-// 合约验证的是创建时间
-func (c *CutoffCache) IsOrderCutoff(owner common.Address, createTime *big.Int) bool {
-	cutoffTime, ok := c.cache[owner]
-	if !ok || (ok && cutoffTime.Cmp(createTime) < 0) {
-		return false
-	}
+func (c *CutoffCache) set(protocol, owner common.Address, cutoff *big.Int) error {
+	key := formatKey(protocol, owner)
+	return c.cache.Add(key, cutoff, c.expire)
+}
 
-	return true
+func (c *CutoffCache) get(protocol, owner common.Address) (*big.Int, bool) {
+	key := formatKey(protocol, owner)
+	data, ok := c.cache.Get(key)
+	if !ok {
+		return nil, false
+	}
+	return data.(*big.Int), true
+}
+
+func (c *CutoffCache) del(protocol, owner common.Address) {
+	key := formatKey(protocol, owner)
+	c.cache.Delete(key)
+}
+
+func formatKey(protocol, owner common.Address) string {
+	return protocol.Hex() + "-" + owner.Hex()
 }

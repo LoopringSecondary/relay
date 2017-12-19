@@ -138,6 +138,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
 			e := eventData.([]*types.RingSubmitInfo)
+			log.Debugf("received ringstates length:%d", len(e))
 			ringSubmitInfoChan <- e
 			return nil
 		},
@@ -162,7 +163,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 	} else {
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
-	if registryData, err := ringhashRegistryAbi.Pack("submitRinghash",
+	if registryData, err := ringhashRegistryAbi.Pack("batchSubmitRinghash",
 		miners,
 		ringhashes); nil != err {
 		return err
@@ -456,7 +457,9 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	received := new(big.Rat).Sub(ringState.LegalFee, c)
 	ringForSubmit.Received = received
 
-	if received.Cmp(big.NewRat(int64(0), int64(1))) <= 0 {
+	log.Debugf("miner,submitter generate ring info, legal cost:%s, legalFee:%s, received:%s", ringForSubmit.LegalCost.FloatString(2), ringState.LegalFee.FloatString(2), received.FloatString(2))
+
+	if received.Sign() <= 0 {
 		// todo: warning
 		//return nil, errors.New("received can't be less than 0")
 	}

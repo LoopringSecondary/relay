@@ -22,13 +22,12 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"time"
 )
 
 type CutOffEvent struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner       string `gorm:"column:owner;type:varchar(42);unique_index"`
+	Owner       string `gorm:"column:owner;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
@@ -59,31 +58,23 @@ func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCutoffEventByOwnerAddress(owner common.Address) (*CutOffEvent, error) {
+func (s *RdsServiceImpl) GetCutoffEvent(protocol, owner common.Address) (*CutOffEvent, error) {
 	var (
 		model CutOffEvent
 		err   error
 	)
 
-	err = s.db.Where("owner = ?", owner.Hex()).First(&model).Error
+	err = s.db.Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).First(&model).Error
 
 	return &model, err
 }
 
-func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
+func (s *RdsServiceImpl) DelCutoffEvent(protocol, owner common.Address) error {
+	return s.db.Delete(CutOffEvent{}, "contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Error
 }
 
-func (s *RdsServiceImpl) FindValidCutoffEvents() ([]CutOffEvent, error) {
-	var (
-		list []CutOffEvent
-		err  error
-	)
-
-	nowtime := time.Now().Unix()
-	err = s.db.Where("cutoff > (?)", nowtime).Find(&list).Error
-
-	return list, err
+func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
+	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
 }
 
 func (s *RdsServiceImpl) UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {

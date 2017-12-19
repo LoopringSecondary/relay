@@ -32,13 +32,14 @@ type minedRing struct {
 type RoundState struct {
 	round          *big.Int
 	ringHash       common.Hash
+	tokenS         common.Address
 	matchedAmountS *big.Rat
 	matchedAmountB *big.Rat
 }
 
 type OrderMatchState struct {
 	orderState types.OrderState
-	rounds     []*RoundState
+	rounds     map[common.Hash]*RoundState
 }
 
 type CandidateRing struct {

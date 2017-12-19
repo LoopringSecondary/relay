@@ -39,7 +39,6 @@ import (
 	"math/big"
 	"os"
 	"strings"
-	"time"
 )
 
 type AccountEntity struct {
@@ -57,7 +56,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v_0_1"
-	DebugFile = "relay.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -190,7 +189,7 @@ func GenerateOrderManager() *ordermanager.OrderManagerImpl {
 	if err != nil {
 		panic(err)
 	}
-	ob := ordermanager.NewOrderManager(rds, um, accessor, mc)
+	ob := ordermanager.NewOrderManager(&cfg.OrderManager, rds, um, accessor, mc)
 	return ob
 }
 
@@ -209,7 +208,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(time.Now().Unix())
+	order.Timestamp = big.NewInt(1513601210) //big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = lrcFee

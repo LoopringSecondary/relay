@@ -20,13 +20,18 @@ name = "Loopring corporation"
 	    encode_time = "iso8601"
 
 [mysql]
-    hostname = "13.112.62.24"
+    hostname = "127.0.0.1"
     port = "3306"
     user = "root"
     password = "111111"
     db_name = "loopring_miner"
     table_prefix = "lpr_"
     debug = false
+
+[order_manager]
+    cutoff_cache_expire_time = 864000
+    cutoff_cache_clean_time = 0
+    dust_order_value = 1
 
 [contract]
     versions = ["v1.0", "v1.0-test"]
@@ -35,7 +40,7 @@ name = "Loopring corporation"
 [ipfs]
     server = "127.0.0.1"
     port = 5001
-    listen_topics = ["test_topic_broad_yhy"]
+    listen_topics = ["test_topic_broad_fk"]
     broadcast_topics = ["test_topic_broad_fk"]
 
 [gateway]
@@ -70,12 +75,14 @@ name = "Loopring corporation"
     gas_limit = 150000000
     [miner.TimingMatcher]
     		round_orders_count=50
-    		duration = 1
+    		duration = 3
     		delayed_number = 10
+    		flush_round_count = 100
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
         currency = "USD"
+        duration = 5
 
 [gateway_filters]
     [gateway_filters.base_filter]
@@ -83,5 +90,5 @@ name = "Loopring corporation"
         max_price = 1000000000000
 
 [keystore]
-    keydir = "ks_dir"
+    keydir = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/ks_dir"
 

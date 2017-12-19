@@ -53,6 +53,8 @@ type Order struct {
 	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
 	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
 	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
+	SplitAmountS          string  `gorm:"column:split_amount_s;type:varchar(30)"`
+	SplitAmountB          string  `gorm:"column:split_amount_b;type:varchar(30)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
@@ -72,6 +74,8 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.AmountB = src.AmountB.String()
 	o.DealtAmountS = state.DealtAmountS.String()
 	o.DealtAmountB = state.DealtAmountB.String()
+	o.SplitAmountS = state.SplitAmountS.String()
+	o.SplitAmountB = state.SplitAmountB.String()
 	o.CancelledAmountS = state.CancelledAmountS.String()
 	o.CancelledAmountB = state.CancelledAmountB.String()
 	o.LrcFee = src.LrcFee.String()
@@ -104,6 +108,8 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.AmountB, _ = new(big.Int).SetString(o.AmountB, 0)
 	state.DealtAmountS, _ = new(big.Int).SetString(o.DealtAmountS, 0)
 	state.DealtAmountB, _ = new(big.Int).SetString(o.DealtAmountB, 0)
+	state.SplitAmountS, _ = new(big.Int).SetString(o.SplitAmountS, 0)
+	state.SplitAmountB, _ = new(big.Int).SetString(o.SplitAmountB, 0)
 	state.CancelledAmountS, _ = new(big.Int).SetString(o.CancelledAmountS, 0)
 	state.CancelledAmountB, _ = new(big.Int).SetString(o.CancelledAmountB, 0)
 	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
@@ -230,7 +236,7 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 	return true
 }
 
-func (s *RdsServiceImpl) SettleOrdersCutoffStatus(owner common.Address, cutoffTime *big.Int) error {
+func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
 	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
 	err := s.db.Model(&Order{}).Where("create_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
 	return err
@@ -286,11 +292,13 @@ func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash).Update("broadcast_time", bt).Error
 }
 
-func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, blockNumber *big.Int) error {
+func (s *RdsServiceImpl) UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error {
 	items := map[string]interface{}{
 		"status":         uint8(status),
 		"dealt_amount_s": dealtAmountS.String(),
 		"dealt_amount_b": dealtAmountB.String(),
+		"split_amount_s": splitAmountS.String(),
+		"split_amount_b": splitAmountB.String(),
 		"updated_block":  blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
