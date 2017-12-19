@@ -102,19 +102,9 @@ func (l *ExtractorServiceImpl) Start() {
 			currentBlock.BlockHash = block.Hash
 			currentBlock.CreateTime = block.Timestamp.Int64()
 
-			// sync chain block number
+			// sync blocks on chain
 			if l.syncComplete == false {
-				var syncBlock types.Big
-				if err := l.accessor.Call(&syncBlock, "eth_blockNumber"); err != nil {
-					log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
-				}
-				if syncBlock.BigInt().Cmp(currentBlock.BlockNumber) <= 0 && l.syncComplete == false {
-					eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
-					l.syncComplete = true
-					log.Debugf("extractor,sync chain block complete!")
-				} else {
-					log.Debugf("extractor,chain block syncing... ")
-				}
+				l.sync(currentBlock.BlockNumber)
 			}
 
 			// emit new block
@@ -177,6 +167,20 @@ func (l *ExtractorServiceImpl) Restart() {
 	l.Stop()
 	time.Sleep(1 * time.Second)
 	l.Start()
+}
+
+func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
+	var syncBlock types.Big
+	if err := l.accessor.Call(&syncBlock, "eth_blockNumber"); err != nil {
+		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
+	}
+	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
+		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
+		l.syncComplete = true
+		log.Debugf("extractor,sync chain block complete!")
+	} else {
+		log.Debugf("extractor,chain block syncing... ")
+	}
 }
 
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
