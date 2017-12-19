@@ -24,9 +24,9 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"time"
-	"strings"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // order amountS 上限1e30
@@ -316,12 +316,12 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }
 
-func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([] Order, error) {
+func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
-	err = s.db.Model(&Order{}).Where("token_s = ? and owner = ? and status in " + buildStatusInSet(statusSet), token.Hex(), owner.Hex()).Find(&list).Error
+	err = s.db.Model(&Order{}).Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).Find(&list).Error
 	return list, err
 }
 

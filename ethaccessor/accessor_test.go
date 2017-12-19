@@ -38,6 +38,7 @@ var (
 	account2             = test.Entity().Accounts[1].Address
 	lrcTokenAddress      = util.AllTokens["LRC"].Protocol
 	wethTokenAddress     = util.AllTokens["WETH"].Protocol
+	delegateAddress      = test.Delegate()
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
@@ -65,13 +66,13 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 
-	tokenAddress := lrcTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000000", 0) // 10万lrc
+	tokenAddress := wethTokenAddress
+	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
+	spender := delegateAddress
+
 	accessor, _ := test.GenerateAccessor()
-	protocol := test.Protocol()
-	spender := accessor.ProtocolAddresses[protocol].DelegateAddress
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddress)
-	if result, err := callMethod(account, "approve", big.NewInt(200000), big.NewInt(21000000000), nil, spender, amount); nil != err {
+	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -86,7 +87,7 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 	owner := account2
 	tokenAddress := wethTokenAddress
-	spender := lrcTokenAddress
+	spender := delegateAddress
 
 	if allowance, err := accessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
