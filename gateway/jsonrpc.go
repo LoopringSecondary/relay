@@ -332,7 +332,7 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 	return rst, nil
 }
 
-func (j *JsonrpcServiceImpl) GetFrozenAmount(owner, token string) (frozenAmount string, err error) {
+func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string) (frozenAmount string, err error) {
 	statusSet := make([]types.OrderStatus, 0)
 	statusSet = append(statusSet, types.ORDER_NEW)
 	statusSet = append(statusSet, types.ORDER_PARTIAL)
