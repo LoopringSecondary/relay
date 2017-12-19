@@ -21,7 +21,6 @@ package util
 import (
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -29,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
+	"github.com/robfig/cron"
 )
 
 const WeiToEther = 1e18
@@ -61,15 +61,30 @@ var (
 	SupportMarkets map[string]types.Token // token symbol to contract hex address
 	AllMarkets     []string
 	AllTokenPairs  []TokenPair
+	ContractVersionConfig = map[string]string{}
 )
 
-var ContractVersionConfig = map[string]string{}
+func StartRefreshCron(rds dao.RdsService) {
+	mktCron := cron.New()
+	mktCron.AddFunc("1 0/10 * * * *", func() {
+		log.Info("start market util refresh.....")
+		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
+	})
+	mktCron.Start()
+}
 
-func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
+func getTokenAndMarketFromDB(rds dao.RdsService) (
+	supportTokens map[string]types.Token,
+	supportMarkets map[string]types.Token,
+	allTokens map[string]types.Token,
+	allMarkets []string,
+	allTokenPairs []TokenPair) {
 
-	SupportTokens = make(map[string]types.Token)
-	SupportMarkets = make(map[string]types.Token)
-	AllTokens = make(map[string]types.Token)
+	supportTokens = make(map[string]types.Token)
+	allTokens = make(map[string]types.Token)
+	supportMarkets = make(map[string]types.Token)
+	allMarkets = make([]string, 0)
+	allTokenPairs = make([]TokenPair, 0)
 
 	tokens, err := rds.FindUnDeniedTokens()
 	if err != nil {
@@ -84,7 +99,7 @@ func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
 	for _, v := range tokens {
 		var token types.Token
 		v.ConvertUp(&token)
-		SupportTokens[token.Symbol] = token
+		supportTokens[token.Symbol] = token
 		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
 	}
 
@@ -92,41 +107,52 @@ func Initialize(rds dao.RdsService, conf *config.GlobalConfig) {
 	for _, v := range markets {
 		var token types.Token
 		v.ConvertUp(&token)
-		SupportMarkets[token.Symbol] = token
+		supportMarkets[token.Symbol] = token
 	}
 
 	// set all tokens
-	for k, v := range SupportTokens {
-		AllTokens[k] = v
+	for k, v := range supportTokens {
+		allTokens[k] = v
 	}
-	for k, v := range SupportMarkets {
-		AllTokens[k] = v
+	for k, v := range supportMarkets {
+		allTokens[k] = v
 	}
 
 	// set all markets
-	for _, k := range SupportTokens { // lrc,omg
-		for _, kk := range SupportMarkets { //eth
+	for _, k := range supportTokens { // lrc,omg
+		for _, kk := range supportMarkets { //eth
 			symbol := k.Symbol + "-" + kk.Symbol
-			AllMarkets = append(AllMarkets, symbol)
+			allMarkets = append(allMarkets, symbol)
 			log.Infof("market util,supported market:%s", symbol)
 		}
 	}
 
 	// set all token pairs
 	pairsMap := make(map[string]TokenPair, 0)
-	for _, v := range SupportMarkets {
-		for _, vv := range SupportTokens {
+	for _, v := range supportMarkets {
+		for _, vv := range supportTokens {
 			pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
 			pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
 		}
 	}
 	for _, v := range pairsMap {
-		AllTokenPairs = append(AllTokenPairs, v)
+		allTokenPairs = append(allTokenPairs, v)
 	}
 
-	for i := 0; i < len(conf.Contract.Versions); i++ {
-		ContractVersionConfig[conf.Contract.Versions[i]] = conf.Contract.Addresses[i]
-	}
+	return
+}
+
+func Initialize(rds dao.RdsService, contracts map[string]string) {
+
+	SupportTokens = make(map[string]types.Token)
+	SupportMarkets = make(map[string]types.Token)
+	AllTokens = make(map[string]types.Token)
+
+	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
+
+	ContractVersionConfig = contracts
+
+	// StartRefreshCron(rds)
 
 	tokenRegisterWatcher := &eventemitter.Watcher{false, TokenRegister}
 	tokenUnRegisterWatcher := &eventemitter.Watcher{false, TokenUnRegister}
@@ -144,8 +170,7 @@ func TokenRegister(input eventemitter.EventData) error {
 	token.IsMarket = false
 	token.Time = evt.Time.Int64()
 
-	// todo: how to get source
-	token.Source = ""
+	// todo: how to get source token.Source = ""
 	SupportTokens[token.Symbol] = token
 	AllTokens[token.Symbol] = token
 
