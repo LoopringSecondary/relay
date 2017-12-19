@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,12 +51,10 @@ type ExtractorServiceImpl struct {
 	commOpts     config.CommonOptions
 	accessor     *ethaccessor.EthNodeAccessor
 	detector     *forkDetector
+	processor    *AbiProcessor
 	dao          dao.RdsService
 	stop         chan struct{}
 	lock         sync.RWMutex
-	events       map[common.Hash]EventData
-	methods      map[string]MethodData
-	protocols    map[common.Address]string
 	syncComplete bool
 }
 
@@ -72,7 +69,7 @@ func NewExtractorService(options config.AccessorOptions,
 	l.dao = rds
 	l.syncComplete = false
 
-	l.loadContract()
+	l.processor = newAbiProcessor(accessor, rds)
 	l.detector = newForkDetector(rds, accessor)
 
 	return &l
@@ -191,8 +188,8 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 	input := common.FromHex(tx.Input)
 	var (
-		contract MethodData
-		ok       bool
+		method MethodData
+		ok     bool
 	)
 
 	// 过滤方法
@@ -200,26 +197,16 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 		log.Debugf("extractor,contract method id %s length invalid", common.ToHex(input))
 		return nil
 	}
+
 	id := common.ToHex(input[0:4])
-	if contract, ok = l.methods[id]; !ok {
+	if method, ok = l.processor.GetMethod(id); !ok {
 		log.Debugf("extractor,contract method id error:%s", id)
 		return nil
 	}
 
-	contract.BlockNumber = tx.BlockNumber.BigInt()
-	contract.Time = time
-	contract.ContractAddress = tx.To
-	contract.From = tx.From
-	contract.To = tx.To
-	contract.TxHash = tx.Hash
-	contract.Value = tx.Value.BigInt()
-	contract.BlockNumber = blockNumber
-	contract.Input = tx.Input
-	contract.Gas = tx.Gas.BigInt()
-	contract.GasPrice = tx.GasPrice.BigInt()
-	contract.LogAmount = logAmount
+	method.FullFilled(&tx, time, logAmount)
 
-	eventemitter.Emit(contract.Id, contract)
+	eventemitter.Emit(method.Id, method)
 	return nil
 }
 
@@ -237,13 +224,13 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 
 	for _, evtLog := range receipt.Logs {
 		var (
-			contract EventData
-			ok       bool
+			event EventData
+			ok    bool
 		)
 
 		// 过滤合约
 		protocolAddr := common.HexToAddress(evtLog.Address)
-		if _, ok := l.protocols[protocolAddr]; !ok {
+		if ok := l.processor.HasContract(protocolAddr); !ok {
 			log.Debugf("extractor, unsupported protocol %s", protocolAddr.Hex())
 			continue
 		}
@@ -251,7 +238,7 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 		// 过滤事件
 		data := hexutil.MustDecode(evtLog.Data)
 		id := common.HexToHash(evtLog.Topics[0])
-		if contract, ok = l.events[id]; !ok {
+		if event, ok = l.processor.GetEvent(id); !ok {
 			log.Debugf("extractor,contract event id error:%s", id.Hex())
 			continue
 		}
@@ -273,467 +260,18 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 
 		if nil != data && len(data) > 0 {
 			// 解析事件
-			if err := contract.CAbi.Unpack(contract.Event, contract.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
+			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
 				log.Errorf("extractor,unpack event error:%s", err.Error())
 				continue
 			}
 		}
 
-		contract.Topics = evtLog.Topics
-		contract.BlockNumber = evtLog.BlockNumber.BigInt()
-		contract.Time = time
-		contract.ContractAddress = evtLog.Address
-		contract.TxHash = tx.Hash
-
-		eventemitter.Emit(contract.Id.Hex(), contract)
+		// full filled event and emit to abi processor
+		event.FullFilled(&evtLog, time, tx.Hash)
+		eventemitter.Emit(event.Id.Hex(), event)
 	}
 
 	return len(receipt.Logs), nil
-}
-
-// 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
-func (l *ExtractorServiceImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-
-	// emit to miner
-	var evt types.SubmitRingMethodEvent
-	evt.TxHash = common.HexToHash(contract.TxHash)
-	evt.UsedGas = contract.Gas
-	evt.UsedGasPrice = contract.GasPrice
-	evt.Err = contract.IsValid()
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,submitRing method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
-	}
-
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
-
-	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-	ring.Protocol = common.HexToAddress(contract.To)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,submitRing method,unpack error:%s", err.Error())
-	}
-	orderList, err := ring.ConvertDown()
-	if err != nil {
-		return fmt.Errorf("extractor,submitRing method,convert order data error:%s", err.Error())
-	}
-
-	for _, v := range orderList {
-		if l.commOpts.Develop {
-			log.Debugf("extractor,submitRing method,order,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s",
-				v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
-		}
-		v.Protocol = common.HexToAddress(contract.ContractAddress)
-		eventemitter.Emit(eventemitter.Gateway, v)
-	}
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleSubmitRingHashMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-	method := contract.Method.(*ethaccessor.SubmitRingHashMethod)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,submitRingHash method,unpack error:%s", err.Error())
-	}
-	evt, err := method.ConvertDown()
-	if err != nil {
-		return fmt.Errorf("extractor,submitRingHash method,convert order data error:%s", err.Error())
-	}
-
-	evt.TxHash = common.HexToHash(contract.TxHash)
-	evt.UsedGas = contract.Gas
-	evt.UsedGasPrice = contract.GasPrice
-	evt.Err = contract.IsValid()
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,submitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
-	}
-
-	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleBatchSubmitRingHashMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-	method := contract.Method.(*ethaccessor.BatchSubmitRingHashMethod)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,batchSubmitRingHash method,unpack error:%s", err.Error())
-	}
-	evt, err := method.ConvertDown()
-	if err != nil {
-		return fmt.Errorf("extractor,batchSubmitRingHash method,convert order data error:%s", err.Error())
-	}
-
-	evt.TxHash = common.HexToHash(contract.TxHash)
-	evt.UsedGas = contract.Gas
-	evt.UsedGasPrice = contract.GasPrice
-	evt.Err = contract.IsValid()
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,batchSubmitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
-	}
-
-	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleCancelOrderMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-	cancel := contract.Method.(*ethaccessor.CancelOrderMethod)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,cancelOrder method,unpack error:%s", err.Error())
-	}
-
-	order, err := cancel.ConvertDown()
-	if err != nil {
-		return fmt.Errorf("extractor,cancelOrder method,convert order data error:%s", err.Error())
-	}
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,cancelOrder method,order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
-	}
-
-	order.Protocol = common.HexToAddress(contract.ContractAddress)
-	eventemitter.Emit(eventemitter.Gateway, order)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleWethDepositMethod(input eventemitter.EventData) error {
-	contractData := input.(MethodData)
-
-	var deposit types.WethDepositMethodEvent
-	deposit.From = common.HexToAddress(contractData.From)
-	deposit.To = common.HexToAddress(contractData.To)
-	deposit.Value = contractData.Value
-	deposit.Time = contractData.Time
-	deposit.Blocknumber = contractData.BlockNumber
-	deposit.TxHash = common.HexToHash(contractData.TxHash)
-	deposit.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,wethDeposit method,from:%s, to:%s, value:%s", deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
-	}
-
-	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleWethWithdrawalMethod(input eventemitter.EventData) error {
-	contractData := input.(MethodData)
-	contractMethod := contractData.Method.(*ethaccessor.WethWithdrawalMethod)
-
-	data := hexutil.MustDecode("0x" + contractData.Input[10:])
-	if err := contractData.CAbi.UnpackMethodInput(&contractMethod.Value, contractData.Name, data); err != nil {
-		return fmt.Errorf("extractor,wethWithdrawal method,unpack error:%s", err.Error())
-	}
-
-	withdrawal := contractMethod.ConvertDown()
-	withdrawal.From = common.HexToAddress(contractData.From)
-	withdrawal.To = common.HexToAddress(contractData.To)
-	withdrawal.Time = contractData.Time
-	withdrawal.Blocknumber = contractData.BlockNumber
-	withdrawal.TxHash = common.HexToHash(contractData.TxHash)
-	withdrawal.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,wethWithdrawal method,from:%s, to:%s, value:%s", withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
-	}
-
-	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleRingMinedEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,ring mined event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
-	contractEvent.RingHash = common.HexToHash(contractData.Topics[1])
-
-	ringmined, fills, err := contractEvent.ConvertDown()
-	if err != nil {
-		return err
-	}
-	ringmined.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	ringmined.TxHash = common.HexToHash(contractData.TxHash)
-	ringmined.Time = contractData.Time
-	ringmined.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,ring mined event,ringhash:%s, ringIndex:%s, miner:%s, feeRecipient:%s,isRinghashReserved:%t",
-			ringmined.Ringhash.Hex(),
-			ringmined.RingIndex.String(),
-			ringmined.Miner.Hex(),
-			ringmined.FeeRecipient.Hex(),
-			ringmined.IsRinghashReserved)
-	}
-
-	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
-
-	var (
-		fillList      []*types.OrderFilledEvent
-		orderhashList []string
-	)
-	for _, fill := range fills {
-		fill.TxHash = common.HexToHash(contractData.TxHash)
-		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-		fill.Time = contractData.Time
-		fill.Blocknumber = contractData.BlockNumber
-		fill.Market, _ = util.WrapMarketByAddress(fill.TokenS.Hex(), fill.TokenB.Hex())
-
-		if l.commOpts.Develop {
-			log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
-				fill.Ringhash.Hex(),
-				fill.AmountS.String(),
-				fill.AmountB.String(),
-				fill.OrderHash.Hex(),
-				fill.LrcFee.String(),
-				fill.LrcReward.String(),
-				fill.NextOrderHash.Hex(),
-				fill.PreOrderHash.Hex(),
-				fill.RingIndex.String(),
-			)
-		}
-
-		fillList = append(fillList, fill)
-		orderhashList = append(orderhashList, fill.OrderHash.Hex())
-	}
-
-	ordermap, err := l.dao.GetOrdersByHash(orderhashList)
-	if err != nil {
-		return err
-	}
-	for _, v := range fillList {
-		if ord, ok := ordermap[v.OrderHash.Hex()]; ok {
-			v.TokenS = common.HexToAddress(ord.TokenS)
-			v.TokenB = common.HexToAddress(ord.TokenB)
-			v.Owner = common.HexToAddress(ord.Owner)
-
-			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
-		} else {
-			log.Debugf("extractor,order filled event cann't match order %s", ord.OrderHash)
-		}
-	}
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleOrderCancelledEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,order cancelled event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.OrderCancelledEvent)
-	contractEvent.OrderHash = common.HexToHash(contractData.Topics[1])
-
-	evt := contractEvent.ConvertDown()
-	evt.TxHash = common.HexToHash(contractData.TxHash)
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,order cancelled event,orderhash:%s, cancelAmount:%s", evt.OrderHash.Hex(), evt.AmountCancelled.String())
-	}
-
-	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleCutoffTimestampEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,cutoff timestamp changed event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.CutoffTimestampChangedEvent)
-	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
-
-	evt := contractEvent.ConvertDown()
-	evt.TxHash = common.HexToHash(contractData.TxHash)
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,cutoffTimestampChanged event,ownerAddress:%s, cutOffTime:%s", evt.Owner.Hex(), evt.Cutoff.String())
-	}
-
-	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleTransferEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-
-	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,token transfer event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
-	contractEvent.From = common.HexToAddress(contractData.Topics[1])
-	contractEvent.To = common.HexToAddress(contractData.Topics[2])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-	}
-
-	eventemitter.Emit(eventemitter.AccountTransfer, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleApprovalEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,token approval event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
-	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
-	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,approval event,owner:%s, spender:%s, value:%s", evt.Owner.Hex(), evt.Spender.Hex(), evt.Value.String())
-	}
-
-	eventemitter.Emit(eventemitter.AccountApproval, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleTokenRegisteredEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	contractEvent := contractData.Event.(*ethaccessor.TokenRegisteredEvent)
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,token registered event,address:%s, symbol:%s", evt.Token.Hex(), evt.Symbol)
-	}
-
-	eventemitter.Emit(eventemitter.TokenRegistered, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleTokenUnRegisteredEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	contractEvent := contractData.Event.(*ethaccessor.TokenUnRegisteredEvent)
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,token unregistered event,address:%s, symbol:%s", evt.Token.Hex(), evt.Symbol)
-	}
-
-	eventemitter.Emit(eventemitter.TokenUnRegistered, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleRinghashSubmitEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,ringhash registered event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.RingHashSubmittedEvent)
-	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
-	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-	evt.TxHash = common.HexToHash(contractData.TxHash)
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,ringhash submit event,ringhash:%s, ringMiner:%s", evt.RingHash.Hex(), evt.RingMiner.Hex())
-	}
-
-	eventemitter.Emit(eventemitter.RingHashSubmitted, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleAddressAuthorizedEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,address authorized event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.AddressAuthorizedEvent)
-	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,address authorized event address:%s, number:%d", evt.Protocol.Hex(), evt.Number)
-	}
-
-	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
-
-	return nil
-}
-
-func (l *ExtractorServiceImpl) handleAddressDeAuthorizedEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,address deauthorized event indexed fields number error")
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.AddressDeAuthorizedEvent)
-	contractEvent.ContractAddress = common.HexToAddress(contractData.Topics[1])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-
-	if l.commOpts.Develop {
-		log.Debugf("extractor,address deauthorized event,address:%s, number:%d", evt.Protocol.Hex(), evt.Number)
-	}
-
-	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
-
-	return nil
 }
 
 // todo: modify
