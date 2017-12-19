@@ -42,6 +42,7 @@ type RingSubmitter struct {
 	feeReceipt         common.Address //used to receive fee
 	ifRegistryRingHash bool
 	gasLimit           *big.Int
+	gasPriceLimit      *big.Int
 
 	//todo:
 	registeredRings map[common.Hash]types.RingSubmitInfo
@@ -60,6 +61,7 @@ type RingSubmitFailed struct {
 func NewSubmitter(options config.MinerOptions, accessor *ethaccessor.EthNodeAccessor, dbService dao.RdsService, marketCapProvider marketcap.MarketCapProvider) *RingSubmitter {
 	submitter := &RingSubmitter{}
 	submitter.gasLimit = big.NewInt(options.GasLimit)
+	submitter.gasPriceLimit = big.NewInt(options.GasPriceLimit)
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
 	submitter.Accessor = accessor
@@ -421,8 +423,11 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		if nil != err {
 			return nil, err
 		}
-		if ringForSubmit.RegistryGas.Cmp(submitter.gasLimit) > 0 {
+		if submitter.gasLimit.Sign() > 0 && ringForSubmit.RegistryGas.Cmp(submitter.gasLimit) > 0 {
 			ringForSubmit.RegistryGas.Set(submitter.gasLimit)
+		}
+		if submitter.gasPriceLimit.Sign() > 0 && ringForSubmit.RegistryGasPrice.Cmp(submitter.gasPriceLimit) > 0 {
+			ringForSubmit.RegistryGasPrice.Set(submitter.gasPriceLimit)
 		}
 		ringForSubmit.RegistryGas.Add(ringForSubmit.RegistryGas, big.NewInt(1000))
 
@@ -448,8 +453,11 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	if nil != err {
 		return nil, err
 	}
-	if ringForSubmit.ProtocolGas.Cmp(submitter.gasLimit) > 0 {
+	if submitter.gasLimit.Sign() > 0 && ringForSubmit.ProtocolGas.Cmp(submitter.gasLimit) > 0 {
 		ringForSubmit.ProtocolGas.Set(submitter.gasLimit)
+	}
+	if submitter.gasPriceLimit.Sign() > 0 && ringForSubmit.ProtocolGasPrice.Cmp(submitter.gasPriceLimit) > 0 {
+		ringForSubmit.ProtocolGasPrice.Set(submitter.gasPriceLimit)
 	}
 	ringForSubmit.ProtocolGas.Add(ringForSubmit.ProtocolGas, big.NewInt(1000))
 	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)

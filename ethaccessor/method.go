@@ -130,8 +130,6 @@ func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address)
 	}
 	gasPrice = gasPriceBig.BigInt()
 	gas = gasBig.BigInt()
-	//todo:optimize it
-	gasPrice = big.NewInt(14000000000)
 	return
 }
 
