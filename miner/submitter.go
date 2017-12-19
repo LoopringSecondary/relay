@@ -168,8 +168,8 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 		ringhashes); nil != err {
 		return err
 	} else {
-		if gas, gasPrice, err1 := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
-			return err1
+		if gas, gasPrice, err := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
+			return err
 		} else {
 			if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
 				return err
@@ -424,6 +424,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		if ringForSubmit.RegistryGas.Cmp(submitter.gasLimit) > 0 {
 			ringForSubmit.RegistryGas.Set(submitter.gasLimit)
 		}
+		ringForSubmit.RegistryGas.Add(ringForSubmit.RegistryGas, big.NewInt(1000))
+
 		registryCost.Mul(ringForSubmit.RegistryGas, ringForSubmit.RegistryGasPrice)
 	}
 
@@ -449,6 +451,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	if ringForSubmit.ProtocolGas.Cmp(submitter.gasLimit) > 0 {
 		ringForSubmit.ProtocolGas.Set(submitter.gasLimit)
 	}
+	ringForSubmit.ProtocolGas.Add(ringForSubmit.ProtocolGas, big.NewInt(1000))
 	protocolCost := new(big.Int).Mul(ringForSubmit.ProtocolGas, ringForSubmit.ProtocolGasPrice)
 
 	cost := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))

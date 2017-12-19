@@ -136,14 +136,19 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			if isFullFilled {
 				continue
 			}
+			var remainedAmountS *big.Rat
+			availableAmountS := new(big.Rat)
+			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
+			if amountS.Cmp(availableAmountS) > 0 {
+				remainedAmountS = availableAmountS
+			}
 			rate := new(big.Rat)
-			rate.Sub(amountS, filledOrder.FillAmountS).Quo(rate, amountS)
+			rate.Quo(remainedAmountS, amountS)
 			remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
 			remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
 			if remainedReceived.Sign() <= 0 {
 				continue
 			}
-
 			for hash, amount := range ring.filledOrders {
 				ring.filledOrders[hash] = amount.Mul(amount, rate)
 			}
@@ -249,7 +254,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 		if tokenSBalance.Sign() <= 0 {
 			return nil, errors.New(order.RawOrder.Owner.Hex() + "'s balance or allowance is zero. ")
 		}
-		filledOrders = append(filledOrders, miner.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
+		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)

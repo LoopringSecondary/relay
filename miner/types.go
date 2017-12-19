@@ -20,7 +20,6 @@ package miner
 
 import (
 	"github.com/Loopring/relay/types"
-	"math/big"
 )
 
 func NewRing(filledOrders []*types.FilledOrder) *types.Ring {
@@ -28,12 +27,4 @@ func NewRing(filledOrders []*types.FilledOrder) *types.Ring {
 	ring.Orders = filledOrders
 	ring.Hash = ring.GenerateHash()
 	return ring
-}
-
-func ConvertOrderStateToFilledOrder(orderState types.OrderState, lrcBalance, tokenSBalance *big.Rat) *types.FilledOrder {
-	filledOrder := &types.FilledOrder{}
-	filledOrder.OrderState = orderState
-	filledOrder.AvailableLrcBalance = new(big.Rat).Set(lrcBalance)
-	filledOrder.AvailableTokenSBalance = new(big.Rat).Set(tokenSBalance)
-	return filledOrder
 }

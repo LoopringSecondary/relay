@@ -212,9 +212,16 @@ type FilledOrder struct {
 	AvailableTokenSBalance *big.Rat
 }
 
-func (filledOrder *FilledOrder) SetAvailableAmount() {
+
+func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat) *FilledOrder {
+	filledOrder := &FilledOrder{}
+	filledOrder.OrderState = orderState
+	filledOrder.AvailableLrcBalance = new(big.Rat).Set(lrcBalance)
+	filledOrder.AvailableTokenSBalance = new(big.Rat).Set(tokenSBalance)
+
 	filledOrder.AvailableAmountS, filledOrder.AvailableAmountB = filledOrder.OrderState.RemainedAmount()
 	sellPrice := new(big.Rat).SetFrac(filledOrder.OrderState.RawOrder.AmountS, filledOrder.OrderState.RawOrder.AmountB)
+
 	availableBalance := new(big.Rat).Set(filledOrder.AvailableTokenSBalance)
 	if availableBalance.Cmp(filledOrder.AvailableAmountS) < 0 {
 		filledOrder.AvailableAmountS = availableBalance
@@ -225,7 +232,10 @@ func (filledOrder *FilledOrder) SetAvailableAmount() {
 	} else {
 		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountS, new(big.Rat).Inv(sellPrice))
 	}
+
+	return filledOrder
 }
+
 
 // 从[]byte解析时使用json.Unmarshal
 type OrderState struct {
