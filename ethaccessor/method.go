@@ -130,6 +130,8 @@ func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address)
 	}
 	gasPrice = gasPriceBig.BigInt()
 	gas = gasBig.BigInt()
+	//todo:optimize it
+	gasPrice = big.NewInt(14000000000)
 	return
 }
 
@@ -168,8 +170,6 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
-	//todo:optimize it
-	gasPrice = big.NewInt(14000000000)
 	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gas must be setted.")
 	}
