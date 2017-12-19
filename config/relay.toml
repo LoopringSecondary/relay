@@ -73,6 +73,7 @@ name = "Loopring corporation"
     throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
     gas_limit = 150000000
+    gas_price_limit = 10000000000
     [miner.TimingMatcher]
     		round_orders_count=50
     		duration = 3
