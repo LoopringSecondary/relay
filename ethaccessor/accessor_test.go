@@ -31,7 +31,6 @@ import (
 
 var (
 	version              = test.Version
-	cancelOrderHash      = "0xd93399fc4347ad19f0793733af821dddc8b53c520f461fcaa1526f3c525f3296"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
 	account1             = test.Entity().Accounts[0].Address
@@ -98,12 +97,12 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
-		model        *dao.Order
-		state        types.OrderState
-		err          error
-		result       string
-		orderhash    = common.HexToHash(cancelOrderHash)
-		cancelAmount = big.NewInt(1000000000)
+		model           *dao.Order
+		state           types.OrderState
+		err             error
+		result          string
+		orderhash       = common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
+		cancelAmount, _ = new(big.Int).SetString("1000000000000000000000", 0)
 	)
 
 	// load config
@@ -143,9 +142,10 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	c := test.Cfg()
 	accessor, _ := test.GenerateAccessor()
+	orderhash := common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	if amount, err := accessor.GetCancelledOrFilled(protocol, common.HexToHash(cancelOrderHash), "latest"); err != nil {
+	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
 		t.Logf("cancelOrFilled amount:%s", amount.String())
