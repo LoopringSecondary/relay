@@ -21,7 +21,7 @@ package dao
 // order amountS 上限1e30
 type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
-	Interval   string  `gorm:"column:interval;type:varchar(42)"`
+	Intervals  string  `gorm:"column:intervals;type:varchar(42)"`
 	Market     string  `gorm:"column:market;type:varchar(42)"`
 	Vol        float64 `gorm:"column:vol;type:float"`
 	Amount     float64 `gorm:"column:amount;type:float"`
@@ -62,7 +62,7 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 	return
 }
 
-func (s *RdsServiceImpl) TrendQueryByTime(market string, start, end int64) (trends []Trend, err error) {
-	err = s.db.Where("market = ? and start > ? and end <= ?", market, start, end).Order("start desc").Find(&trends).Error
+func (s *RdsServiceImpl) TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error) {
+	err = s.db.Where("intervals = ? and market = ? and start = ? and end = ?", intervals, market, start, end).Order("start desc").Find(&trends).Error
 	return
 }

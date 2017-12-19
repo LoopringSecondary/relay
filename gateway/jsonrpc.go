@@ -278,15 +278,15 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
 		result.Data = append(result.Data, fill)
 	}
-	fmt.Println(result)
 	return result, nil
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 
-	for _, t := range res {
+	for i, t := range res {
 		j.fillBuyAndSell(&t, contractVersion)
+		res[i] = t
 	}
 	return
 }

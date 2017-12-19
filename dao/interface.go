@@ -80,7 +80,7 @@ type RdsService interface {
 
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
-	TrendQueryByTime(market string, start, end int64) (trends []Trend, err error)
+	TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error)
 
 	// white list
 	GetWhiteList() ([]WhiteList, error)
