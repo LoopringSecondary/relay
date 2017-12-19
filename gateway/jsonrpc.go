@@ -332,6 +332,22 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 	return rst, nil
 }
 
+func (j *JsonrpcServiceImpl) GetFrozenAmount(owner, token string) (frozenAmount string, err error) {
+	statusSet := make([]types.OrderStatus, 0)
+	statusSet = append(statusSet, types.ORDER_NEW)
+	statusSet = append(statusSet, types.ORDER_PARTIAL)
+
+	tokenAddress := util.AliasToAddress(token)
+	if tokenAddress.Hex() == "" {
+		return "", errors.New("unsupported token alias " + token)
+	}
+	amount, err := j.orderManager.GetFrozenAmount(common.HexToAddress(owner), tokenAddress, statusSet)
+	if err != nil {
+		return "", err
+	}
+	return types.BigintToHex(amount), err
+}
+
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
@@ -465,38 +481,6 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	}
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
-	}
-	if q.Owner != "" {
-		rst["owner"] = q.Owner
-	}
-	if q.OrderHash != "" {
-		rst["order_hash"] = q.OrderHash
-	}
-	if q.RingHash != "" {
-		rst["ring_hash"] = q.RingHash
-	}
-
-	return rst, pi, ps
-}
-
-func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
-	rst := make(map[string]string)
-	var pi, ps int
-	if q.Market != "" {
-		rst["market"] = q.Market
-	}
-	if q.PageIndex <= 0 {
-		pi = 1
-	} else {
-		pi = q.PageIndex
-	}
-	if q.PageSize <= 0 || q.PageSize > 20 {
-		ps = 20
-	} else {
-		ps = q.PageIndex
-	}
-	if q.ContractVersion != "" {
-		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner

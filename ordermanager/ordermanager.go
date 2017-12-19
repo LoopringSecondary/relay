@@ -45,6 +45,7 @@ type OrderManager interface {
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
+	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
 
 type OrderManagerImpl struct {
@@ -413,4 +414,28 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 
 func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool {
 	return om.cutoffCache.IsOrderCutoff(protocol, owner, createTime)
+}
+
+func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error) {
+	orderList, err := om.rds.GetFrozenAmount(owner, token, statusSet)
+	if err != nil {
+		return nil, err
+	}
+
+	totalAmount := big.NewInt(0)
+
+	if len(orderList) == 0 {
+		return totalAmount, nil
+	}
+
+	for _, v := range orderList {
+		var state types.OrderState
+		if err := v.ConvertUp(&state); err != nil {
+			continue
+		}
+		rs, _ := state.RemainedAmount()
+		totalAmount.Add(totalAmount, rs.Num())
+	}
+
+	return totalAmount, nil
 }
