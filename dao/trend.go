@@ -21,8 +21,8 @@ package dao
 // order amountS 上限1e30
 type Trend struct {
 	ID         int     `gorm:"column:id;primary_key;"`
-	Intervals  string  `gorm:"column:intervals;type:varchar(42)"`
-	Market     string  `gorm:"column:market;type:varchar(42)"`
+	Market     string  `gorm:"column:market;type:varchar(42);unique_index:market_intervals_start"`
+	Intervals  string  `gorm:"column:intervals;type:varchar(42);unique_index:market_intervals_start"`
 	Vol        float64 `gorm:"column:vol;type:float"`
 	Amount     float64 `gorm:"column:amount;type:float"`
 	CreateTime int64   `gorm:"column:create_time;type:bigint"`
@@ -30,7 +30,7 @@ type Trend struct {
 	Close      float64 `gorm:"column:close;type:float"`
 	High       float64 `gorm:"column:high;type:float"`
 	Low        float64 `gorm:"column:low;type:float"`
-	Start      int64   `gorm:"column:start;type:bigint"`
+	Start      int64   `gorm:"column:start;type:bigint;unique_index:market_intervals_start"`
 	End        int64   `gorm:"column:end;type:bigint"`
 }
 

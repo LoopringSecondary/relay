@@ -93,6 +93,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager = TrendManager{rds: dao, cron: cron.New()}
 		trendManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 		trendManager.refreshCache()
+		trendManager.startScheduleUpdate()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
 		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 		//trendManager.startScheduleUpdate()
@@ -153,7 +154,6 @@ func (t *TrendManager) refreshCache() {
 	t.c.Set(tickerKey, tickerMap, cache.NoExpiration)
 
 	t.cacheReady = true
-	t.startScheduleUpdate()
 
 }
 
@@ -345,6 +345,7 @@ func (t *TrendManager) insertTrend() {
 		}(mkt)
 	}
 	wg.Wait()
+	fmt.Println("start refresh cache............")
 	t.refreshCache()
 }
 
