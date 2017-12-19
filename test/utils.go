@@ -39,6 +39,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"time"
 )
 
 type AccountEntity struct {
@@ -208,7 +209,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(1513601210) //big.NewInt(time.Now().Unix())
+	order.Timestamp = big.NewInt(time.Now().Unix())
 	order.Ttl = big.NewInt(8640000)
 	order.Salt = big.NewInt(1000)
 	order.LrcFee = lrcFee

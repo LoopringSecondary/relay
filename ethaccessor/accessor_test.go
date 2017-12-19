@@ -31,7 +31,7 @@ import (
 
 var (
 	version              = test.Version
-	cancelOrderHash      = "0x296c419975d523f0427231c9aa0192bf9972b15731408c5e214227c95ddf991d"
+	cancelOrderHash      = "0xd93399fc4347ad19f0793733af821dddc8b53c520f461fcaa1526f3c525f3296"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
 	account1             = test.Entity().Accounts[0].Address
@@ -102,7 +102,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		err          error
 		result       string
 		orderhash    = common.HexToHash(cancelOrderHash)
-		cancelAmount = big.NewInt(100)
+		cancelAmount = big.NewInt(1000000000)
 	)
 
 	// load config

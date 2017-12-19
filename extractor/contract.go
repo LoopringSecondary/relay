@@ -54,7 +54,7 @@ func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
 	return c
 }
 
-func (event EventData) FullFilled(evtLog *ethaccessor.Log, blockTime *big.Int, txhash string) {
+func (event *EventData) FullFilled(evtLog *ethaccessor.Log, blockTime *big.Int, txhash string) {
 	event.Topics = evtLog.Topics
 	event.BlockNumber = evtLog.BlockNumber.BigInt()
 	event.Time = blockTime
@@ -90,7 +90,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, logAmount int) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, logAmount int) {
 	method.BlockNumber = tx.BlockNumber.BigInt()
 	method.Time = blockTime
 	method.ContractAddress = tx.To
