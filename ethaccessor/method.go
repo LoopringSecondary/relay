@@ -155,11 +155,11 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 	if txData, err := rlp.EncodeToBytes(tx); nil != err {
 		return err
 	} else {
+		log.Debugf("txhash:%s, nonce:%d, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Nonce(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
 		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
 		if err != nil {
 			log.Errorf("accessor, Sign and send transaction error:%s", err.Error())
 		}
-		log.Debugf("txhash:%s, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
 		return err
 	}
 }
