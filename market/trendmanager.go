@@ -29,9 +29,9 @@ import (
 	"github.com/robfig/cron"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 )
 
 const (
@@ -237,7 +237,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 	result.Low = low
 
 	if result.Open > 0 && result.Last > 0 {
-		result.Change = fmt.Sprintf("%.2f%%", 100*(result.Last - result.Open)/result.Open)
+		result.Change = fmt.Sprintf("%.2f%%", 100*(result.Last-result.Open)/result.Open)
 	}
 
 	result.Vol = vol
@@ -270,7 +270,7 @@ func (t *TrendManager) insertTrend() {
 				end := firstSecondThisHour.Unix() - int64((i-1)*60*60) - 1
 
 				trends, _ := t.rds.TrendQueryByTime(OneHour, tmpMkt, start, end)
-				if len(trends) > 0  {
+				if len(trends) > 0 {
 					log.Println("current interval trend exsit")
 					return
 				}
@@ -511,7 +511,7 @@ func (t *TrendManager) reCalTicker(market string) {
 func ConvertUp(src dao.Trend) Trend {
 
 	return Trend{
-		Intervals:   src.Intervals,
+		Intervals:  src.Intervals,
 		Market:     src.Market,
 		Vol:        src.Vol,
 		Amount:     src.Amount,

@@ -31,13 +31,13 @@ import (
 
 var (
 	version              = test.Version
-	cancelOrderHash      = "0x296c419975d523f0427231c9aa0192bf9972b15731408c5e214227c95ddf991d"
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
 	account1             = test.Entity().Accounts[0].Address
 	account2             = test.Entity().Accounts[1].Address
 	lrcTokenAddress      = util.AllTokens["LRC"].Protocol
 	wethTokenAddress     = util.AllTokens["WETH"].Protocol
+	delegateAddress      = test.Delegate()
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
@@ -65,13 +65,13 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 
-	tokenAddress := lrcTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000000", 0) // 10万lrc
+	tokenAddress := wethTokenAddress
+	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
+	spender := delegateAddress
+
 	accessor, _ := test.GenerateAccessor()
-	protocol := test.Protocol()
-	spender := accessor.ProtocolAddresses[protocol].DelegateAddress
 	callMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddress)
-	if result, err := callMethod(account, "approve", big.NewInt(200000), big.NewInt(21000000000), nil, spender, amount); nil != err {
+	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -86,7 +86,7 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 	owner := account2
 	tokenAddress := wethTokenAddress
-	spender := lrcTokenAddress
+	spender := delegateAddress
 
 	if allowance, err := accessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
@@ -97,12 +97,12 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
-		model        *dao.Order
-		state        types.OrderState
-		err          error
-		result       string
-		orderhash    = common.HexToHash(cancelOrderHash)
-		cancelAmount = big.NewInt(100)
+		model           *dao.Order
+		state           types.OrderState
+		err             error
+		result          string
+		orderhash       = common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
+		cancelAmount, _ = new(big.Int).SetString("1000000000000000000000", 0)
 	)
 
 	// load config
@@ -142,9 +142,10 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	c := test.Cfg()
 	accessor, _ := test.GenerateAccessor()
+	orderhash := common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	if amount, err := accessor.GetCancelledOrFilled(protocol, common.HexToHash(cancelOrderHash), "latest"); err != nil {
+	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
 		t.Logf("cancelOrFilled amount:%s", amount.String())

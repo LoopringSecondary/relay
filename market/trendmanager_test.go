@@ -19,20 +19,20 @@
 package market_test
 
 import (
-	"github.com/Loopring/relay/test"
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/market"
-	"testing"
 	"fmt"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"testing"
 	"time"
 )
 
 var (
-	tm    *market.TrendManager
+	tm *market.TrendManager
 )
 
 func prepare() {

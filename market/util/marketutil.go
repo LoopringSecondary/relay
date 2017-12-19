@@ -26,9 +26,9 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/robfig/cron"
 	"math/big"
 	"strings"
-	"github.com/robfig/cron"
 )
 
 const WeiToEther = 1e18
@@ -56,11 +56,11 @@ func FloatToByte(amount float64) []byte {
 }
 
 var (
-	SupportTokens  map[string]types.Token // token symbol to entity
-	AllTokens      map[string]types.Token
-	SupportMarkets map[string]types.Token // token symbol to contract hex address
-	AllMarkets     []string
-	AllTokenPairs  []TokenPair
+	SupportTokens         map[string]types.Token // token symbol to entity
+	AllTokens             map[string]types.Token
+	SupportMarkets        map[string]types.Token // token symbol to contract hex address
+	AllMarkets            []string
+	AllTokenPairs         []TokenPair
 	ContractVersionConfig = map[string]string{}
 )
 
