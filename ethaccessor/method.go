@@ -168,7 +168,6 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
-
 	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gas must be setted.")
 	}

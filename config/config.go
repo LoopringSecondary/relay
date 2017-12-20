@@ -164,6 +164,7 @@ type MinerOptions struct {
 	IfRegistryRingHash      bool
 	ThrowIfLrcIsInsuffcient bool
 	GasLimit                int64
+	GasPriceLimit           int64
 	TimingMatcher           *TimingMatcher
 	RateRatioCVSThreshold   int64
 }
