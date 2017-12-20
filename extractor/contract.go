@@ -131,6 +131,8 @@ const (
 
 	WETH_DEPOSIT_METHOD_NAME    = "deposit"
 	WETH_WITHDRAWAL_METHOD_NAME = "withdraw"
+
+	APPROVAL_METHOD_NAME = "approve"
 )
 
 type AbiProcessor struct {
@@ -282,6 +284,21 @@ func (processor *AbiProcessor) loadErc20Contract() {
 		eventemitter.On(contract.Id.Hex(), watcher)
 		processor.events[contract.Id] = contract
 		log.Debugf("extracotr,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
+	}
+
+	for name, method := range processor.accessor.Erc20Abi.Methods {
+		if name != APPROVAL_METHOD_NAME {
+			continue
+		}
+
+		contract := newMethodData(&method, processor.accessor.Erc20Abi)
+		contract.Method = &ethaccessor.ApproveMethod{}
+		watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApproveMethod}
+		eventemitter.On(contract.Id, watcher)
+
+		processor.methods[contract.Id] = contract
+
+		log.Debugf("extractor,contract method name:%s -> key:%s", contract.Name, contract.Id)
 	}
 }
 
@@ -501,6 +518,30 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	order.Protocol = common.HexToAddress(contract.ContractAddress)
 	eventemitter.Emit(eventemitter.Gateway, order)
 
+	return nil
+}
+
+func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData) error {
+	contractData := input.(MethodData)
+	contractMethod := contractData.Method.(*ethaccessor.ApproveMethod)
+
+	data := hexutil.MustDecode("0x" + contractData.Input[10:])
+	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+		return fmt.Errorf("extractor,approve method,unpack error:%s", err.Error())
+	}
+
+	approve := contractMethod.ConvertDown()
+	approve.Owner = common.HexToAddress(contractData.From)
+	approve.From = common.HexToAddress(contractData.From)
+	approve.To = common.HexToAddress(contractData.To)
+	approve.Time = contractData.Time
+	approve.Blocknumber = contractData.BlockNumber
+	approve.TxHash = common.HexToHash(contractData.TxHash)
+	approve.ContractAddress = common.HexToAddress(contractData.ContractAddress)
+
+	log.Debugf("extractor,approve method, owner:%s, spender:%s, value:%s", approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+
+	eventemitter.Emit(eventemitter.ApproveMethod, approve)
 	return nil
 }
 

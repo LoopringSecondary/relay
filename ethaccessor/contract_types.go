@@ -362,6 +362,19 @@ func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
 	return evt
 }
 
+type ApproveMethod struct {
+	Spender common.Address `fieldName:"spender"`
+	Value   *big.Int       `fieldName:"value"`
+}
+
+func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
+	evt := &types.ApproveMethodEvent{}
+	evt.Spender = e.Spender
+	evt.Value = e.Value
+
+	return evt
+}
+
 type ProtocolAddress struct {
 	Version         string
 	ContractAddress common.Address

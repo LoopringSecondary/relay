@@ -64,10 +64,13 @@ const (
 
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
+	ChainForkDetected = "ChainForkDetected"
+	ChainForkProcess  = "ChainForkProcess"
 
 	// Methods
 	WethDepositMethod    = "WethDepositMethod"
 	WethWithdrawalMethod = "WethWithdrawalMethod"
+	ApproveMethod        = "ApproveMethod"
 )
 
 var watchers map[string][]*Watcher

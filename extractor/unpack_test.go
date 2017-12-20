@@ -142,3 +142,22 @@ func TestExtractorServiceImpl_UnpackCancelOrderMethod(t *testing.T) {
 	t.Log("s", order.S.Hex())
 	t.Log("r", order.R.Hex())
 }
+
+func TestExtractorServiceImpl_UnpackApproveMethod(t *testing.T) {
+	input := "0x095ea7b300000000000000000000000045aa504eb94077eec4bf95a10095a8e3196fc5910000000000000000000000000000000000000000000000008ac7230489e80000"
+
+	var method ethaccessor.ApproveMethod
+	accessor, _ := test.GenerateAccessor()
+
+	data := hexutil.MustDecode("0x" + input[10:])
+	for i := 0; i < len(data)/32; i++ {
+		t.Logf("index:%d -> %s", i, common.ToHex(data[i*32:(i+1)*32]))
+	}
+
+	if err := accessor.Erc20Abi.UnpackMethodInput(&method, "approve", data); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	approve := method.ConvertDown()
+	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Value.String())
+}

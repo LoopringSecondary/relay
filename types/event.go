@@ -179,6 +179,19 @@ type WethWithdrawalMethodEvent struct {
 	Blocknumber     *big.Int
 }
 
+type ApproveMethodEvent struct {
+	From            common.Address
+	To              common.Address
+	ContractAddress common.Address
+	TxHash          common.Hash
+	Spender         common.Address
+	Value           *big.Int
+	Time            *big.Int
+	Blocknumber     *big.Int
+	Owner           common.Address
+	Success         bool
+}
+
 type SubmitRingMethodEvent struct {
 	TxHash       common.Hash
 	UsedGas      *big.Int
