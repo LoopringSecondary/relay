@@ -32,6 +32,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"strconv"
 )
 
 const (
@@ -367,9 +368,9 @@ func (t *TrendManager) insertTrend() {
 	t.refreshCache()
 }
 
-func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error) {
+func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend Trend, err error) {
 
-	if len(fills) == 0 {
+	if len(fills) == 0 && len(trends) == 0 {
 		err = errors.New("fills can't be nil")
 		return
 	}
@@ -377,6 +378,24 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent) (trend Trend, err error)
 	now := time.Now()
 	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 1, 0, now.Location())
 	lastSecondThisHour := firstSecondThisHour.Unix() + 60 * 60 - 1
+
+	if len(fills) == 0 {
+		lastTrend := trends[len(trends) - 1]
+		return Trend{
+			Intervals:  OneHour,
+			Market:     lastTrend.Market,
+			CreateTime: time.Now().Unix(),
+			Start:      firstSecondThisHour.Unix(),
+			End:        lastSecondThisHour,
+			High:		lastTrend.High,
+			Low:		lastTrend.Low,
+			Vol:		0,
+			Amount:		0,
+			Open:		lastTrend.Open,
+			Close:		lastTrend.Close,
+		}, nil
+	}
+
 
 	trend = Trend{
 		Intervals:  OneHour,
@@ -441,7 +460,7 @@ func (t *TrendManager) GetTrends(market string) (trends []Trend, err error) {
 		} else {
 			tc := trendCache.(map[string]Cache)[market]
 			trends = make([]Trend, 0)
-			trendInFills, aggErr := t.aggregate(tc.Fills)
+			trendInFills, aggErr := t.aggregate(tc.Fills, tc.Trends)
 			if aggErr == nil {
 				trends = append(trends, trendInFills)
 			}
@@ -463,6 +482,8 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 			tickerMap := tickerInCache.(map[string]Ticker)
 			tickers = make([]Ticker, 0)
 			for _, v := range tickerMap {
+				v.Buy = strconv.FormatFloat(v.Last, 'f', -1, 64)
+				v.Sell = strconv.FormatFloat(v.Last, 'f', -1, 64)
 				tickers = append(tickers, v)
 			}
 		} else {
