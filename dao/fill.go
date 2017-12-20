@@ -127,9 +127,9 @@ func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end
 func buildTimeQueryString(start, end int64) string {
 	rst := ""
 	if start != 0 && end == 0 {
-		rst += "create_time > " + fmt.Sprintf("%v", start)
+		rst += "create_time >= " + fmt.Sprintf("%v", start)
 	} else if start != 0 && end != 0 {
-		rst += "create_time > " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
+		rst += "create_time >= " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
 	} else if start == 0 && end != 0 {
 		rst += "create_time <= " + fmt.Sprintf("%v", end)
 	}
