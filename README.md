@@ -37,6 +37,7 @@ The environment variables: $GOROOT and $GOPATH must be set.
 ```
 
 ###run as miner
+
 - step 1: You must have a eth account to sign and submit ring. Run `account ` to create or import it.
 ```
 > build/bin/account --help
