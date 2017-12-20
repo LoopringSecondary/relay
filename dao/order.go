@@ -250,7 +250,8 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 		err  error
 	)
 
-	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol.Hex(), tokenS.Hex(), tokenB.Hex()).
+	filterList := []types.OrderStatus{ types.ORDER_NEW, types.ORDER_PARTIAL }
+	err = s.db.Where("protocol = ? and token_s = ? and token_b = ? and status in (?)", protocol.Hex(), tokenS.Hex(), tokenB.Hex(), filterList).
 		Order("price desc").Limit(length).Find(&list).Error
 
 	return list, err
