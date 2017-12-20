@@ -66,7 +66,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 
 	tokenAddress := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
+	amount, _ := new(big.Int).SetString("10000000000000000000", 0) // 100weth
 	spender := delegateAddress
 
 	accessor, _ := test.GenerateAccessor()
@@ -101,7 +101,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state           types.OrderState
 		err             error
 		result          string
-		orderhash       = common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
+		orderhash       = common.HexToHash("0x38a4ff508746feddb75e1652e2c430e23a179f949f331ebe81e624801b4b6f4d")
 		cancelAmount, _ = new(big.Int).SetString("1000000000000000000000", 0)
 	)
 

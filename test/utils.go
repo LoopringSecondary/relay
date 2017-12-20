@@ -180,7 +180,7 @@ func GenerateExtractor() *extractor.ExtractorServiceImpl {
 	if err != nil {
 		panic(err)
 	}
-	l := extractor.NewExtractorService(cfg.Accessor, cfg.Common, accessor, rds)
+	l := extractor.NewExtractorService(cfg.Common, accessor, rds)
 	return l
 }
 
