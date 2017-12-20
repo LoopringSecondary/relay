@@ -293,6 +293,9 @@ func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Tic
 
 func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err error) {
 	res, err = j.trendManager.GetTrends(market)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Start < res[j].Start
+	})
 	return
 }
 
