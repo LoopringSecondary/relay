@@ -115,13 +115,13 @@ func (market *Market) match() {
 	}
 
 	for orderHash, _ := range market.AtoBOrders {
-		if fullFilled, exists := matchedOrderHashes[orderHash]; !exists || fullFilled {
+		if fullFilled, exists := matchedOrderHashes[orderHash]; (!exists && len(market.AtoBOrders) >= market.matcher.roundOrderCount) || fullFilled {
 			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, orderHash)
 		}
 	}
 
 	for orderHash, _ := range market.BtoAOrders {
-		if fullFilled, exists := matchedOrderHashes[orderHash]; !exists || fullFilled {
+		if fullFilled, exists := matchedOrderHashes[orderHash]; (!exists && len(market.BtoAOrders) >= market.matcher.roundOrderCount) || fullFilled {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, orderHash)
 		}
 	}

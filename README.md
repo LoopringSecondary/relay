@@ -24,11 +24,26 @@ go get -u github.com/kardianos/govendor
 
 ## install
 install from source:
+The environment variables: $GOROOT and $GOPATH must be set. 
 ```
-git clone https://github.com/Loopring/relay.git
+> go get -u github.com/Loopring/relay
+> cd $GOPATH/github.com/Loopring/relay
+> make relay
 ```
 
-## run
+## run as relay
 ```
-go run cmd/lrc/* --unlocks "0x750ad4351bb728cec7d639a9511f9d6488f1e259,0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2,0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A" --mode=(full, miner, relayer)
+> build/bin/relay --mode=relay
+```
+
+###run as miner
+- step 1: You must have a eth account to sign and submit ring. Run `account ` to create or import it.
+```
+> build/bin/account --help
+```
+- step 2: You must modify config file. Set `miner.miner` to eth account which can be found in `keystore-dir`.
+Then, you can run as follow.
+```
+> build/bin/relay  --mode=miner --unlocks $mineraddress --passwords $passwords
+
 ```
