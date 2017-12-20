@@ -36,10 +36,11 @@ The environment variables: $GOROOT and $GOPATH must be set.
 > build/bin/relay --mode=relay
 ```
 
-###run as miner
+##run as miner
+
 - step 1: You must have a eth account to sign and submit ring. Run `account ` to create or import it.
 ```
-> build/bin/account --help
+> build/bin/relay account --help
 ```
 - step 2: You must modify config file. Set `miner.miner` to eth account which can be found in `keystore-dir`.
 Then, you can run as follow.
