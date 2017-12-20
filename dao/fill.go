@@ -69,6 +69,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.FillIndex = src.FillIndex.Int64()
+	f.Market = src.Market
 
 	return nil
 }
