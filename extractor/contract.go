@@ -581,7 +581,6 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 		fill.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 		fill.Time = contractData.Time
 		fill.Blocknumber = contractData.BlockNumber
-		fill.Market, _ = util.WrapMarketByAddress(fill.TokenS.Hex(), fill.TokenB.Hex())
 
 		log.Debugf("extractor,order filled event,ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 			fill.Ringhash.Hex(),
@@ -609,7 +608,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 			v.TokenS = common.HexToAddress(ord.TokenS)
 			v.TokenB = common.HexToAddress(ord.TokenB)
 			v.Owner = common.HexToAddress(ord.Owner)
-
+			v.Market, _ = util.WrapMarketByAddress(v.TokenB.Hex(), v.TokenS.Hex())
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {
 			log.Debugf("extractor,order filled event cann't match order %s", ord.OrderHash)
