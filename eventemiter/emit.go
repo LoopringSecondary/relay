@@ -21,6 +21,7 @@ package eventemitter
 import (
 	"github.com/Loopring/relay/log"
 	"sync"
+	"github.com/Loopring/ringminer/eventemiter"
 )
 
 //todo:more stronger if it has cache, but, the more the nearer to eventsourcing
@@ -124,8 +125,31 @@ func Emit(topic string, eventData EventData) {
 }
 
 //todo: impl it
-func NewWatcher() {
+func NewSerialWatcher(topic string, handle func(e EventData) error) (stopFunc func(), err error) {
+	dataChan := make(chan EventData)
+	go func() {
+		for {
+			select {
+			case event := <-dataChan:
+				handle(event)
+			}
+		}
+	}()
 
+	watcher := &eventemitter.Watcher{
+		Concurrent: false,
+		Handle: func(eventData eventemitter.EventData) error {
+			e := eventData
+			dataChan <- e
+			return nil
+		},
+	}
+	eventemitter.On(topic, watcher)
+
+	return func() {
+		close(dataChan)
+		eventemitter.Un(topic, watcher)
+	}, nil
 }
 
 func init() {

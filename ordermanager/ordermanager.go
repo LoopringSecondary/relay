@@ -311,24 +311,23 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		filterStatus       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
+	for _, orderDelay := range filterOrderHashLists {
+		orderHashes := []string{}
+		for _, hash := range orderDelay.OrderHash {
+			orderHashes = append(orderHashes, hash.Hex())
+		}
+		if len(orderHashes) > 0 && orderDelay.DelayedCount != 0 {
+			if err = om.rds.MarkMinerOrders(orderHashes, orderDelay.DelayedCount); err != nil {
+				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+			}
+		}
+	}
+
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
 	if currentBlock, err := om.rds.FindLatestBlock(); err == nil {
 		currentBlockNumber = currentBlock.BlockNumber
 	} else {
 		currentBlockNumber = 0
-	}
-
-	for _, orderDelay := range filterOrderHashLists {
-		delayNumber := currentBlockNumber + orderDelay.DelayedCount
-		orderHashes := []string{}
-		for _, hash := range orderDelay.OrderHash {
-			orderHashes = append(orderHashes, hash.Hex())
-		}
-		if len(orderHashes) > 0 && delayNumber != 0 {
-			if err = om.rds.MarkMinerOrders(orderHashes, delayNumber); err != nil {
-				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
-			}
-		}
 	}
 
 	// 从数据库获取订单
@@ -339,7 +338,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	for _, v := range modelList {
 		state := &types.OrderState{}
 		v.ConvertUp(state)
-		if !om.um.InWhiteList(state.RawOrder.TokenS) {
+		if om.um.InWhiteList(state.RawOrder.Owner) {
 			list = append(list, state)
 		}
 	}
