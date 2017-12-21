@@ -48,7 +48,7 @@ func (s *RdsServiceImpl) FindWhiteListUserByAddress(address common.Address) (*Wh
 		err  error
 	)
 
-	err = s.db.Where("owner = ?", address.Hex()).First(&user).Error
+	err = s.db.Where("owner = ? and is_deleted = ?", address.Hex(), false).First(&user).Error
 
 	return &user, err
 }
