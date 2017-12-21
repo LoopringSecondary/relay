@@ -81,6 +81,7 @@ type GlobalConfig struct {
 	Keystore       KeyStoreOptions
 	Contract       ContractOptions
 	MarketCap      MarketCapOptions
+	UserManager    UserManagerOptions
 }
 
 type JsonrpcOptions struct {
@@ -194,6 +195,11 @@ type MysqlOptions struct {
 	DbName      string
 	TablePrefix string
 	Debug       bool
+}
+
+type UserManagerOptions struct {
+	WhiteListCacheExpireTime int64
+	WhiteListCacheCleanTime  int64
 }
 
 func Validator(cv reflect.Value) (bool, error) {
