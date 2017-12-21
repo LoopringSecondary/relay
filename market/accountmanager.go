@@ -70,7 +70,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 
 	accountManager := AccountManager{accessor: accessor}
 	var blockNumber types.Big
-	err := accessor.Call(&blockNumber, "eth_blockNumber")
+	err := accessor.RetryCall(2, &blockNumber, "eth_blockNumber")
 	if err != nil {
 		log.Fatal("init account manager failed, can't get newest block number")
 		return accountManager
