@@ -63,11 +63,11 @@ func (market *Market) match() {
 					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s, LegalCost:%s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String(), ringForSubmit.LegalCost.String())
 					//todo:for test, release this limit
 					//if ringForSubmit.Received.Sign() > 0 {
-						candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
-						for _, filledOrder := range ringForSubmit.RawRing.Orders {
-							candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
-						}
-						candidateRingList = append(candidateRingList, candidateRing)
+					candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
+					for _, filledOrder := range ringForSubmit.RawRing.Orders {
+						candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
+					}
+					candidateRingList = append(candidateRingList, candidateRing)
 					//} else {
 					//	log.Debugf("timing_matchher, market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.FloatString(0), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					//}
@@ -101,15 +101,15 @@ func (market *Market) match() {
 		} else {
 			//todo:for test, release this limit
 			//if ringForSubmit.Received.Sign() > 0 {
-				for _, filledOrder := range ringForSubmit.RawRing.Orders {
-					orderState := market.reduceAmountAfterFilled(filledOrder)
-					isFullFilled := market.om.IsOrderFullFinished(orderState)
-					matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = isFullFilled
-					market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
+			for _, filledOrder := range ringForSubmit.RawRing.Orders {
+				orderState := market.reduceAmountAfterFilled(filledOrder)
+				isFullFilled := market.om.IsOrderFullFinished(orderState)
+				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = isFullFilled
+				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
 
-					list = market.reduceReceivedOfCandidateRing(list, filledOrder, isFullFilled)
-				}
-				ringSubmitInfos = append(ringSubmitInfos, ringForSubmit)
+				list = market.reduceReceivedOfCandidateRing(list, filledOrder, isFullFilled)
+			}
+			ringSubmitInfos = append(ringSubmitInfos, ringForSubmit)
 			//} else {
 			//	log.Debugf("ring:%s will not be submitted,because of received:%s", ringForSubmit.RawRing.Hash.Hex(), ringForSubmit.Received.String())
 			//}
@@ -173,7 +173,7 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	// log.Debugf("timing matcher,market tokenA:%s, tokenB:%s, atob hash length:%d, btoa hash length:%d", market.TokenA.Hex(), market.TokenB.Hex(), len(market.AtoBOrderHashesExcludeNextRound), len(market.BtoAOrderHashesExcludeNextRound))
 
 	deleyedNumber := market.matcher.delayedNumber + rand.Int63n(market.matcher.delayedNumber)
-	deleyedNumber = market.matcher.lastBlockNumber.Int64() + deleyedNumber / 2
+	deleyedNumber = market.matcher.lastBlockNumber.Int64() + deleyedNumber/2
 
 	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
