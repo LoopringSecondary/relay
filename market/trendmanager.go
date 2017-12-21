@@ -29,10 +29,10 @@ import (
 	"github.com/robfig/cron"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"strconv"
 )
 
 const (
@@ -276,7 +276,7 @@ func (t *TrendManager) insertTrend() {
 					return
 				}
 
-				lastTrends, _ := t.rds.TrendQueryByTime(OneHour, tmpMkt, start - int64(60*60) , end - int64(60*60))
+				lastTrends, _ := t.rds.TrendQueryByTime(OneHour, tmpMkt, start-int64(60*60), end-int64(60*60))
 				if len(lastTrends) > 1 {
 					log.Println("found more than one last trend!")
 					wg.Done()
@@ -302,8 +302,8 @@ func (t *TrendManager) insertTrend() {
 					var (
 						vol    float64
 						amount float64
-						open float64
-						low float64
+						open   float64
+						low    float64
 					)
 
 					if len(lastTrends) == 0 {
@@ -323,7 +323,6 @@ func (t *TrendManager) insertTrend() {
 					})
 
 					for _, data := range fills {
-
 
 						if util.IsBuy(data.TokenS) {
 							vol += util.StringToFloat(data.AmountB)
@@ -377,25 +376,24 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend T
 
 	now := time.Now()
 	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 1, 0, now.Location())
-	lastSecondThisHour := firstSecondThisHour.Unix() + 60 * 60 - 1
+	lastSecondThisHour := firstSecondThisHour.Unix() + 60*60 - 1
 
 	if len(fills) == 0 {
-		lastTrend := trends[len(trends) - 1]
+		lastTrend := trends[len(trends)-1]
 		return Trend{
 			Intervals:  OneHour,
 			Market:     lastTrend.Market,
 			CreateTime: time.Now().Unix(),
 			Start:      firstSecondThisHour.Unix(),
 			End:        lastSecondThisHour,
-			High:		lastTrend.High,
-			Low:		lastTrend.Low,
-			Vol:		0,
-			Amount:		0,
-			Open:		lastTrend.Open,
-			Close:		lastTrend.Close,
+			High:       lastTrend.High,
+			Low:        lastTrend.Low,
+			Vol:        0,
+			Amount:     0,
+			Open:       lastTrend.Open,
+			Close:      lastTrend.Close,
 		}, nil
 	}
-
 
 	trend = Trend{
 		Intervals:  OneHour,
