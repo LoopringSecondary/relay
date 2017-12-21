@@ -309,7 +309,12 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	b, bErr := j.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)
-		account.Balances["ETH"] = ethBalance
+		newBalances := make(map[string]market.Balance)
+		for k, v := range account.Balances {
+			newBalances[k] = v
+		}
+		newBalances["ETH"] = ethBalance
+		account.Balances = newBalances
 	}
 	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
