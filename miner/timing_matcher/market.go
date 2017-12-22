@@ -214,7 +214,7 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 		//	delete(market.BtoAOrders, orderHash)
 		//} else {
 		for _, matchedRound := range matchedOrder.rounds {
-			if matchedRound.round.Cmp(matchedRound.clearRound) > 0 {
+			if market.matcher.lastBlockNumber.Cmp(matchedRound.clearRound) <= 0 {
 				orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
 				orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
 			}
