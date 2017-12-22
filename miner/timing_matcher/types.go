@@ -58,5 +58,5 @@ func (ringList CandidateRingList) Swap(i, j int) {
 	ringList[i], ringList[j] = ringList[j], ringList[i]
 }
 func (ringList CandidateRingList) Less(i, j int) bool {
-	return ringList[i].received.Cmp(ringList[j].received) < 0
+	return ringList[i].received.Cmp(ringList[j].received) > 0
 }

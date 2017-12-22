@@ -70,7 +70,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 
 	accountManager := AccountManager{accessor: accessor}
 	var blockNumber types.Big
-	err := accessor.Call(&blockNumber, "eth_blockNumber")
+	err := accessor.RetryCall(2, &blockNumber, "eth_blockNumber")
 	if err != nil {
 		log.Fatal("init account manager failed, can't get newest block number")
 		return accountManager
@@ -147,19 +147,31 @@ func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 
 func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {
 	event := input.(*types.TransferEvent)
+
+	log.Info("received transfer event...")
+
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		a.updateBalance(*event, true)
-		a.updateBalance(*event, false)
+		tokenAlias := util.AddressToAlias(event.ContractAddress.Hex())
+		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.From.Hex())
+		if errFrom != nil {
+			return errFrom
+		}
+		errTo := a.updateBalanceAndAllowance(tokenAlias, event.To.Hex())
+		if errTo != nil {
+			return errTo
+		}
 	}
 	return nil
 }
 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
+
 	event := input.(*types.ApprovalEvent)
+	log.Debugf("received approval event, %s, %s", event.ContractAddress.Hex(), event.Owner.Hex())
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
@@ -217,15 +229,9 @@ func buildAllowanceKey(version, token string) string {
 	return token
 }
 
-func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) error {
-	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
+func (a *AccountManager) updateBalanceAndAllowance(tokenAlias, address string) error {
 
-	var address string
-	if !isAdd {
-		address = strings.ToLower(event.From.String())
-	} else {
-		address = strings.ToLower(event.To.String())
-	}
+	address = strings.ToLower(address)
 
 	if tokenAlias == "" {
 		return errors.New("unsupported token type : " + tokenAlias)
@@ -234,25 +240,21 @@ func (a *AccountManager) updateBalance(event types.TransferEvent, isAdd bool) er
 	v, ok := a.c.Get(address)
 	if ok {
 		account := v.(Account)
-		balance, ok := account.Balances[tokenAlias]
-		if !ok {
-			balance = Balance{Token: tokenAlias}
-			amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
-			if err != nil {
-				log.Error("get balance failed from accessor")
-			} else {
-				balance.Balance = amount
-			}
-			account.Balances[tokenAlias] = balance
-		} else {
-			oldBalance := balance.Balance
-			if isAdd {
-				balance.Balance = oldBalance.Sub(oldBalance, event.Value)
-			} else {
-				balance.Balance = oldBalance.Add(oldBalance, event.Value)
-			}
-			account.Balances[tokenAlias] = balance
+		balance := Balance{Token: tokenAlias}
+		amount, err := a.GetBalanceFromAccessor(tokenAlias, address)
+		if err != nil {
+			log.Error("get balance failed from accessor")
+			return err
 		}
+		balance.Balance = amount
+		account.Balances[tokenAlias] = balance
+		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, "v1.0")
+		if err != nil {
+			log.Error("get allowance failed from accessor")
+			return err
+		}
+		allowance := Allowance{token: tokenAlias, allowance: allowanceAmount}
+		account.Allowances[tokenAlias] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}
 	return nil
@@ -309,6 +311,8 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 			allowance: event.Value}
 		account.Allowances[buildAllowanceKey(spender, tokenAlias)] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
+	} else {
+		log.Debugf("can't get balance  by address : %s ", address)
 	}
 	return nil
 }

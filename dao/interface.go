@@ -54,6 +54,8 @@ type RdsService interface {
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error
 	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error
+	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error)
+	GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([]Order, error)
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)
@@ -80,10 +82,11 @@ type RdsService interface {
 
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
-	TrendQueryByTime(market string, start, end int64) (trends []Trend, err error)
+	TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error)
 
 	// white list
 	GetWhiteList() ([]WhiteList, error)
+	FindWhiteListUserByAddress(address common.Address) (*WhiteList, error)
 
 	//ringSubmitInfo
 	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error

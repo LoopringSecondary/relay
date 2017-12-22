@@ -181,7 +181,7 @@ func (j *JsonrpcServiceImpl) Start() {
 		return
 	}
 	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
-	log.Info(fmt.Sprintf("HTTP endpoint opened: http://%s", ":8083"))
+	log.Info(fmt.Sprintf("HTTP endpoint opened on 8083"))
 
 	return
 }
@@ -278,21 +278,24 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
 		result.Data = append(result.Data, fill)
 	}
-	fmt.Println(result)
 	return result, nil
 }
 
 func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 
-	for _, t := range res {
+	for i, t := range res {
 		j.fillBuyAndSell(&t, contractVersion)
+		res[i] = t
 	}
 	return
 }
 
 func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err error) {
 	res, err = j.trendManager.GetTrends(market)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Start < res[j].Start
+	})
 	return
 }
 
@@ -306,7 +309,12 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	b, bErr := j.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)
-		account.Balances["ETH"] = ethBalance
+		newBalances := make(map[string]market.Balance)
+		for k, v := range account.Balances {
+			newBalances[k] = v
+		}
+		newBalances["ETH"] = ethBalance
+		account.Balances = newBalances
 	}
 	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
@@ -330,6 +338,31 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 	}
 
 	return rst, nil
+}
+
+func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string) (frozenAmount string, err error) {
+	statusSet := make([]types.OrderStatus, 0)
+	statusSet = append(statusSet, types.ORDER_NEW)
+	statusSet = append(statusSet, types.ORDER_PARTIAL)
+
+	tokenAddress := util.AliasToAddress(token)
+	if tokenAddress.Hex() == "" {
+		return "", errors.New("unsupported token alias " + token)
+	}
+	amount, err := j.orderManager.GetFrozenAmount(common.HexToAddress(owner), tokenAddress, statusSet)
+	if err != nil {
+		return "", err
+	}
+
+	if token == "LRC" {
+		allLrcFee, err := j.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
+		if err != nil {
+			return "", err
+		}
+		amount.Add(amount, allLrcFee)
+	}
+
+	return types.BigintToHex(amount), err
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
@@ -461,42 +494,10 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	if q.PageSize <= 0 || q.PageSize > 20 {
 		ps = 20
 	} else {
-		ps = q.PageIndex
+		ps = q.PageSize
 	}
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
-	}
-	if q.Owner != "" {
-		rst["owner"] = q.Owner
-	}
-	if q.OrderHash != "" {
-		rst["order_hash"] = q.OrderHash
-	}
-	if q.RingHash != "" {
-		rst["ring_hash"] = q.RingHash
-	}
-
-	return rst, pi, ps
-}
-
-func orderQueryToMap(q FillQuery) (map[string]string, int, int) {
-	rst := make(map[string]string)
-	var pi, ps int
-	if q.Market != "" {
-		rst["market"] = q.Market
-	}
-	if q.PageIndex <= 0 {
-		pi = 1
-	} else {
-		pi = q.PageIndex
-	}
-	if q.PageSize <= 0 || q.PageSize > 20 {
-		ps = 20
-	} else {
-		ps = q.PageIndex
-	}
-	if q.ContractVersion != "" {
-		rst["contract_version"] = util.ContractVersionConfig[q.ContractVersion]
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner

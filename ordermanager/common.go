@@ -38,6 +38,7 @@ func newOrderEntity(state *types.OrderState, accessor *ethaccessor.EthNodeAccess
 	state.SplitAmountS = big.NewInt(0)
 	state.SplitAmountB = big.NewInt(0)
 	state.CancelledAmountB = big.NewInt(0)
+	state.CancelledAmountS = big.NewInt(0)
 
 	// get order cancelled or filled amount from chain
 	if cancelOrFilledAmount, err := accessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {

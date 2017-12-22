@@ -19,6 +19,7 @@
 package usermanager
 
 import (
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,13 +33,15 @@ type UserManager interface {
 
 type UserManagerImpl struct {
 	rds       dao.RdsService
+	options   *config.UserManagerOptions
 	whiteList *WhiteListCache
 }
 
-func NewUserManager(rds dao.RdsService) *UserManagerImpl {
+func NewUserManager(options *config.UserManagerOptions, rds dao.RdsService) *UserManagerImpl {
 	impl := &UserManagerImpl{}
 	impl.rds = rds
-	impl.whiteList = newWhiteListCache(impl.rds)
+	impl.options = options
+	impl.whiteList = newWhiteListCache(impl.options, impl.rds)
 
 	return impl
 }

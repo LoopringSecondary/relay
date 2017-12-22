@@ -69,6 +69,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.FillIndex = src.FillIndex.Int64()
+	f.Market = src.Market
 
 	return nil
 }
@@ -86,7 +87,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
-	err = s.db.Where(query).Order("create_time desc").Offset(pageIndex - 1).Limit(pageSize).Find(&fills).Error
+	err = s.db.Where(query).Order("create_time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&fills).Error
 	if err != nil {
 		return res, err
 	}
@@ -126,9 +127,9 @@ func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end
 func buildTimeQueryString(start, end int64) string {
 	rst := ""
 	if start != 0 && end == 0 {
-		rst += "create_time > " + fmt.Sprintf("%v", start)
+		rst += "create_time >= " + fmt.Sprintf("%v", start)
 	} else if start != 0 && end != 0 {
-		rst += "create_time > " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
+		rst += "create_time >= " + fmt.Sprintf("%v", start) + " AND create_time <= " + fmt.Sprintf("%v", end)
 	} else if start == 0 && end != 0 {
 		rst += "create_time <= " + fmt.Sprintf("%v", end)
 	}

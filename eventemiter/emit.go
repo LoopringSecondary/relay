@@ -19,6 +19,7 @@
 package eventemitter
 
 import (
+	"github.com/Loopring/relay/log"
 	"sync"
 )
 
@@ -63,10 +64,13 @@ const (
 
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
+	ChainForkDetected = "ChainForkDetected"
+	ChainForkProcess  = "ChainForkProcess"
 
 	// Methods
 	WethDepositMethod    = "WethDepositMethod"
 	WethWithdrawalMethod = "WethWithdrawalMethod"
+	ApproveMethod        = "ApproveMethod"
 )
 
 var watchers map[string][]*Watcher
@@ -113,7 +117,9 @@ func Emit(topic string, eventData EventData) {
 				defer func() {
 					wg.Add(-1)
 				}()
-				ob.Handle(eventData)
+				if err := ob.Handle(eventData); err != nil {
+					log.Errorf(err.Error())
+				}
 			}(ob)
 		}
 	}
@@ -121,8 +127,30 @@ func Emit(topic string, eventData EventData) {
 }
 
 //todo: impl it
-func NewWatcher() {
+func NewSerialWatcher(topic string, handle func(e EventData) error) (stopFunc func(), err error) {
+	dataChan := make(chan EventData)
+	go func() {
+		for {
+			select {
+			case event := <-dataChan:
+				handle(event)
+			}
+		}
+	}()
 
+	watcher := &Watcher{
+		Concurrent: false,
+		Handle: func(eventData EventData) error {
+			dataChan <- eventData
+			return nil
+		},
+	}
+	On(topic, watcher)
+
+	return func() {
+		close(dataChan)
+		Un(topic, watcher)
+	}, nil
 }
 
 func init() {

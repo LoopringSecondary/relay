@@ -24,6 +24,8 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -39,6 +41,7 @@ type Order struct {
 	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
 	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
 	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
+	ValidTime             int64   `gorm:"column:valid_time;type:bigint"`
 	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
 	Salt                  int64   `gorm:"column:salt;type:bigint"`
 	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
@@ -85,7 +88,8 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.OrderHash = src.Hash.Hex()
 	o.TokenB = src.TokenB.Hex()
 	o.TokenS = src.TokenS.Hex()
-	o.CreateTime = src.Timestamp.Int64()
+	o.CreateTime = time.Now().Unix()
+	o.ValidTime = src.Timestamp.Int64()
 	o.Ttl = src.Ttl.Int64()
 	o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
@@ -118,7 +122,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
 	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
 	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
-	state.RawOrder.Timestamp = big.NewInt(o.CreateTime)
+	state.RawOrder.Timestamp = big.NewInt(o.ValidTime)
 	state.RawOrder.Ttl = big.NewInt(o.Ttl)
 	state.RawOrder.Salt = big.NewInt(o.Salt)
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
@@ -170,7 +174,8 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 
 	nowtime := time.Now().Unix()
 	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
-		Where("create_time + ttl > ? ", nowtime).
+		Where("valid_time < ?", nowtime).
+		Where("valid_time + ttl > ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
 		Where("miner_block_mark = ? or miner_block_mark <= ?", 0, currentBlockNumber).
 		Order("price desc").
@@ -205,30 +210,35 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		err  error
 	)
 
-	if from < to {
+	if from >= to {
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.Where("updated_block between ? and ? and create_time + ttl > ?", from, to, nowtime).Find(&list).Error
+	err = s.db.Where("updated_block > ? and updated_block <= ?", from, to).
+		Where("valid_time < ?", nowtime).
+		Where("valid_time + ttl > ?", nowtime).
+		Find(&list).Error
 
 	return list, err
 }
 
+// todo useless
 func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
 
-	err = s.db.Where("create_time < ?", cutoffTime).Find(&list).Error
+	err = s.db.Where("valid_time < ?", cutoffTime).Find(&list).Error
 
 	return list, err
 }
 
+// todo useless
 func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 	model := Order{}
-	err := s.db.Where("order_hash = ? and create_time < ?").Find(&model).Error
+	err := s.db.Where("order_hash = ? and valid_time < ?").Find(&model).Error
 	if err != nil {
 		return false
 	}
@@ -238,7 +248,7 @@ func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
 
 func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
 	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
-	err := s.db.Model(&Order{}).Where("create_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
+	err := s.db.Model(&Order{}).Where("valid_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 
@@ -248,8 +258,15 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 		err  error
 	)
 
-	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol.Hex(), tokenS.Hex(), tokenB.Hex()).
-		Order("price desc").Limit(length).Find(&list).Error
+	filterStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
+	nowtime := time.Now().Unix()
+	err = s.db.Where("protocol = ?", protocol.Hex()).
+		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
+		Where("status in (?)", filterStatus).
+		Where("valid_time < ?", nowtime).
+		Order("price desc").
+		Limit(length).
+		Find(&list).Error
 
 	return list, err
 }
@@ -270,9 +287,10 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&orders).Error; err != nil {
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("valid_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 		return pageResult, err
 	}
+
 	for _, v := range orders {
 		data = append(data, v)
 	}
@@ -311,4 +329,36 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"updated_block":      blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
+}
+
+func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+	err = s.db.Model(&Order{}).Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).Find(&list).Error
+	return list, err
+}
+
+func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+	err = s.db.Model(&Order{}).Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).Find(&list).Error
+	return list, err
+}
+
+func buildStatusInSet(statusSet []types.OrderStatus) string {
+	if len(statusSet) == 0 {
+		return ""
+	}
+	result := "("
+	strSet := make([]string, 0)
+	for _, s := range statusSet {
+		strSet = append(strSet, strconv.Itoa(int(s)))
+	}
+	result += strings.Join(strSet, ",")
+	result += ")"
+	return result
 }

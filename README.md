@@ -27,7 +27,7 @@ install from source:
 The environment variables: $GOROOT and $GOPATH must be set. 
 ```
 > go get -u github.com/Loopring/relay
-> cd $GOPATH/github.com/Loopring/relay
+> cd $GOPATH/src/github.com/Loopring/relay
 > make relay
 ```
 
@@ -36,7 +36,9 @@ The environment variables: $GOROOT and $GOPATH must be set.
 > build/bin/relay --mode=relay
 ```
 
+
 ##run as miner
+
 
 - step 1: You must have a eth account to sign and submit ring. Run `account ` to create or import it.
 ```

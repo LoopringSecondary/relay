@@ -35,7 +35,7 @@ type RingMinedEvent struct {
 	IsRinghashReserved bool   `gorm:"column:is_ring_hash_reserved;" json:"isRinghashReserved"`
 	BlockNumber        int64  `gorm:"column:block_number;type:bigint" json:"blockNumber"`
 	TotalLrcFee        string `gorm:"column:total_lrc_fee;type:varchar(30)" json:"totalLrcFee"`
-	TradeAmount        int    `gorm:"column:trade_amount"`
+	TradeAmount        int    `gorm:"column:trade_amount" json:"tradeAmount"`
 	Time               int64  `gorm:"column:time;type:bigint" json:"timestamp"`
 }
 
