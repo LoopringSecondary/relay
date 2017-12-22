@@ -36,9 +36,11 @@ import (
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
+	"math/big"
 )
 
 type Node struct {
@@ -67,6 +69,10 @@ type RelayNode struct {
 func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
 	n.jsonRpcService.Start()
+}
+
+func (n *RelayNode) Stop() {
+	//
 }
 
 type MineNode struct {
@@ -129,11 +135,14 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 
-	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterSyncExtractor}
+	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
+
+	chainForkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterChainFork}
+	eventemitter.On(eventemitter.ChainForkDetected, chainForkWatcher)
 }
 
-func (n *Node) startAfterSyncExtractor(input eventemitter.EventData) error {
+func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
 	n.marketCapProvider.Start()
 
@@ -145,6 +154,22 @@ func (n *Node) startAfterSyncExtractor(input eventemitter.EventData) error {
 		n.relayNode.Start()
 		n.mineNode.Start()
 	}
+
+	return nil
+}
+
+func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
+	// stop extractor
+	n.extractorService.Stop()
+
+	// emit fork event,waiting for ordermanager and accountmanager finished procedure of process chain fork
+	forkEvent := input.(*types.ForkedEvent)
+	eventemitter.Emit(eventemitter.ChainForkProcess, forkEvent)
+
+	// reset new block number and start extractor
+	nextBlockNumber := new(big.Int).Add(forkEvent.ForkBlock, big.NewInt(1))
+	n.extractorService.Fork(nextBlockNumber)
+	n.extractorService.Start()
 
 	return nil
 }
@@ -193,7 +218,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Accessor, n.globalConfig.Common, n.accessor, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Common, n.accessor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
@@ -229,7 +254,7 @@ func (n *Node) registerGateway() {
 }
 
 func (n *Node) registerUserManager() {
-	n.userManager = usermanager.NewUserManager(n.rdsService)
+	n.userManager = usermanager.NewUserManager(&n.globalConfig.UserManager, n.rdsService)
 }
 
 func (n *Node) registerMarketCap() {

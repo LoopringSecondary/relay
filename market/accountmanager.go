@@ -253,7 +253,7 @@ func (a *AccountManager) updateBalanceAndAllowance(tokenAlias, address string) e
 			log.Error("get allowance failed from accessor")
 			return err
 		}
-		allowance := Allowance{token: tokenAlias, allowance:allowanceAmount}
+		allowance := Allowance{token: tokenAlias, allowance: allowanceAmount}
 		account.Allowances[tokenAlias] = allowance
 		a.c.Set(address, account, cache.NoExpiration)
 	}

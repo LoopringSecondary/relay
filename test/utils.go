@@ -184,9 +184,14 @@ func GenerateExtractor() *extractor.ExtractorServiceImpl {
 	return l
 }
 
+func GenerateUserManager() *usermanager.UserManagerImpl {
+	um := usermanager.NewUserManager(&cfg.UserManager, rds)
+	return um
+}
+
 func GenerateOrderManager() *ordermanager.OrderManagerImpl {
 	mc := GenerateMarketCap()
-	um := usermanager.NewUserManager(rds)
+	um := usermanager.NewUserManager(&cfg.UserManager, rds)
 	accessor, err := GenerateAccessor()
 	if err != nil {
 		panic(err)

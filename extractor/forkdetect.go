@@ -19,78 +19,85 @@
 package extractor
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"math/big"
 )
 
 type forkDetector struct {
-	db       dao.RdsService
-	accessor *ethaccessor.EthNodeAccessor
+	db          dao.RdsService
+	accessor    *ethaccessor.EthNodeAccessor
+	latestBlock *types.Block
 }
 
 func newForkDetector(db dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *forkDetector {
 	detector := &forkDetector{}
 	detector.accessor = accessor
 	detector.db = db
+	detector.latestBlock = nil
 
 	return detector
 }
 
-func (detector *forkDetector) detect(block *types.Block) error {
+func (detector *forkDetector) Detect(currentBlock *types.Block) bool {
 	var (
-		latestBlock   types.Block
-		newBlockModel dao.Block
-		forkEvent     types.ForkedEvent
+		forkEvent types.ForkedEvent
 	)
 
-	latestBlockModel, err := detector.db.FindLatestBlock()
-	if err != nil {
-		return err
-	}
-	if err := latestBlockModel.ConvertUp(&latestBlock); err != nil {
-		return err
+	// filter invalid block
+	if types.IsZeroHash(currentBlock.ParentHash) || types.IsZeroHash(currentBlock.BlockHash) {
+		log.Debugf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
+		return false
 	}
 
-	// 重启时第一个块
-	if block.BlockHash == latestBlock.BlockHash {
-		return nil
-	}
-
-	// 没有分叉
-	if block.ParentHash == latestBlock.BlockHash || types.IsZeroHash(latestBlock.ParentHash) {
-		if err := newBlockModel.ConvertUp(block); err != nil {
-			return err
-		}
-		if err := detector.db.Add(newBlockModel); err != nil {
-			return err
+	// initialize latest block
+	if detector.latestBlock == nil {
+		entity, err := detector.db.FindLatestBlock()
+		if err != nil {
+			detector.latestBlock = currentBlock
+			log.Debugf("extractor,fork detector started at first time")
+			return false
+		} else {
+			detector.latestBlock = new(types.Block)
+			entity.ConvertUp(detector.latestBlock)
 		}
 	}
 
-	// 已经分叉,寻找分叉块,出错则在下一个块继续检查
-	forkBlock, err := detector.getForkedBlock(block)
-	if err != nil {
-		return err
+	// no fork
+	if detector.latestBlock.BlockHash == currentBlock.BlockHash || detector.latestBlock.BlockHash == currentBlock.ParentHash {
+		detector.latestBlock = currentBlock
+		return false
 	}
 
-	// 更新block分叉标记
+	// find forked root block
+	forkBlock, err := detector.getForkedBlock(currentBlock)
+	if err != nil {
+		log.Fatalf("extractor,get forked block failed :%s,node should be shut down...", err.Error())
+	}
+	detector.latestBlock = forkBlock
+
+	// mark fork block in database
 	model := dao.Block{}
 	if err := model.ConvertDown(forkBlock); err == nil {
-		detector.db.SetForkBlock(forkBlock.BlockHash)
+		if err := detector.db.SetForkBlock(forkBlock.BlockHash); err != nil {
+			log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+		}
 	}
 
-	// 发送分叉事件
+	// emit fork event
 	forkEvent.ForkHash = forkBlock.BlockHash
 	forkEvent.ForkBlock = forkBlock.BlockNumber
-	forkEvent.DetectedHash = block.BlockHash
-	forkEvent.DetectedBlock = block.BlockNumber
+	forkEvent.DetectedHash = currentBlock.BlockHash
+	forkEvent.DetectedBlock = currentBlock.BlockNumber
 
-	eventemitter.Emit(eventemitter.ExtractorFork, &forkEvent)
-	eventemitter.Emit(eventemitter.OrderManagerFork, &forkEvent)
+	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
+	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
 
-	return nil
+	return true
 }
 
 func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, error) {
@@ -99,15 +106,17 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 		parentBlock types.Block
 	)
 
-	// 如果数据库已存在,则该block即为分叉根节点
+	// find parent block in database
 	if parentBlockModel, err := detector.db.FindBlockByParentHash(block.ParentHash); err == nil {
 		parentBlockModel.ConvertUp(&parentBlock)
 		return &parentBlock, nil
 	}
 
+	// find parent block on chain
+	// todo if jsonrpc failed
 	// 如果不存在,则查询以太坊
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	if err := detector.accessor.RetryCall(2, &ethBlock, "eth_getBlockByNumber", parentBlockNumber, false); err != nil {
+	if err := detector.accessor.RetryCall(2, &ethBlock, "eth_getBlockByNumber", fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
 		return nil, err
 	}
 

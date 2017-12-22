@@ -16,14 +16,17 @@
 
 */
 
-package types
+package usermanager_test
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/Loopring/relay/test"
+	"testing"
+)
 
-// 白名单用户允许广播，但是订单不允许提供给miner
-
-//go:generate gencodec -type WhiteListUser -out gen_white_list_user_json.go
-type WhiteListUser struct {
-	Owner      common.Address `json:"owner"`
-	CreateTime int64          `json:"create_time"`
+func TestUserManagerImpl_InWhiteList(t *testing.T) {
+	um := test.GenerateUserManager()
+	entity := test.Entity()
+	owner := entity.Accounts[0].Address
+	ok := um.InWhiteList(owner)
+	t.Logf("user %s exist? %t", owner.Hex(), ok)
 }

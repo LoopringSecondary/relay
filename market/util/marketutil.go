@@ -261,6 +261,16 @@ func AddressToAlias(t string) string {
 	return ""
 }
 
+func AddressToToken(t common.Address) (*types.Token, error) {
+	for _, v := range AllTokens {
+		if v.Protocol == t {
+			return &v, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unsupported token:%s", t.Hex())
+}
+
 func CalculatePrice(amountS, amountB string, s, b string) float64 {
 
 	as := StringToFloat(amountS)

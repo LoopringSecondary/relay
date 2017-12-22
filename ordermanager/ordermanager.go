@@ -30,7 +30,6 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"sync"
 )
 
 type OrderManager interface {
@@ -52,7 +51,6 @@ type OrderManager interface {
 type OrderManagerImpl struct {
 	options            *config.OrderManagerOptions
 	rds                dao.RdsService
-	lock               sync.RWMutex
 	processor          *forkProcessor
 	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
@@ -64,6 +62,7 @@ type OrderManagerImpl struct {
 	cancelOrderWatcher *eventemitter.Watcher
 	cutoffOrderWatcher *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
+	forkComplete       bool
 }
 
 func NewOrderManager(
@@ -82,6 +81,7 @@ func NewOrderManager(
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds, options.CutoffCacheExpireTime, options.CutoffCacheCleanTime)
 	om.accessor = accessor
+	om.forkComplete = true
 
 	dustOrderValue = om.options.DustOrderValue
 
@@ -102,38 +102,30 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerFork, om.forkWatcher)
+	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
-	om.lock.Lock()
-	defer om.lock.Unlock()
-
 	eventemitter.Un(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerFork, om.forkWatcher)
+	eventemitter.Un(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
-	om.Stop()
-
+	om.forkComplete = false
 	if err := om.processor.fork(input.(*types.ForkedEvent)); err != nil {
 		log.Errorf("order manager,handle fork error:%s", err.Error())
 	}
 
-	om.Start()
-
+	om.forkComplete = true
 	return nil
 }
 
 // 所有来自gateway的订单都是新订单
 func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
-	om.lock.Lock()
-	defer om.lock.Unlock()
-
 	state := input.(*types.OrderState)
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
@@ -148,13 +140,21 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
-	model := &dao.RingMinedEvent{}
-	if err := model.ConvertDown(event); err != nil {
+	var (
+		model = &dao.RingMinedEvent{}
+		err   error
+	)
+
+	model, err = om.rds.FindRingMinedByRingHash(event.Ringhash.Hex())
+	if err == nil {
+		log.Debugf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
+	}
+	if err = model.ConvertDown(event); err != nil {
 		return err
 	}
-	if err := om.rds.Add(model); err != nil {
-		log.Debugf("order manager,handle ringmined event,event %s has already exist", event.RingIndex.String())
-		return err
+
+	if err = om.rds.Add(model); err != nil {
+		return fmt.Errorf("order manager,handle ringmined event,insert ring error:%s", err.Error())
 	}
 
 	return nil
@@ -226,7 +226,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	// save event
 	_, err := om.rds.FindCancelEvent(event.OrderHash, event.TxHash)
 	if err == nil {
-		log.Debugf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash)
+		log.Debugf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash.Hex())
 		return nil
 	}
 	newCancelEventModel := &dao.CancelEvent{}
@@ -310,6 +310,11 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		currentBlockNumber int64
 		filterStatus       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
+
+	// 如果正在分叉，则不提供任何订单
+	if om.forkComplete == false {
+		return list
+	}
 
 	for _, orderDelay := range filterOrderHashLists {
 		orderHashes := []string{}

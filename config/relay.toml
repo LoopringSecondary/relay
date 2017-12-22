@@ -93,3 +93,6 @@ name = "Loopring corporation"
 [keystore]
     keydir = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/ks_dir"
 
+[user_manager]
+    cutoff_cache_expire_time = 8640000
+    cutoff_cache_clean_time = 0

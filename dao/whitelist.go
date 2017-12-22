@@ -42,6 +42,17 @@ func (s *RdsServiceImpl) GetWhiteList() ([]WhiteList, error) {
 	return list, err
 }
 
+func (s *RdsServiceImpl) FindWhiteListUserByAddress(address common.Address) (*WhiteList, error) {
+	var (
+		user WhiteList
+		err  error
+	)
+
+	err = s.db.Where("owner = ? and is_deleted = ?", address.Hex(), false).First(&user).Error
+
+	return &user, err
+}
+
 func (w *WhiteList) ConvertDown(src *types.WhiteListUser) error {
 	w.Owner = src.Owner.Hex()
 	w.CreateTime = src.CreateTime
