@@ -19,7 +19,7 @@
 package timing_matcher
 
 import (
-	"errors"
+	"fmt"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/miner"
@@ -143,6 +143,8 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
 			if amountS.Cmp(availableAmountS) > 0 {
 				remainedAmountS = availableAmountS
+			} else {
+				remainedAmountS = amountS
 			}
 			rate := new(big.Rat)
 			rate.Quo(remainedAmountS, amountS)
@@ -256,7 +258,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 			return nil, err
 		}
 		if tokenSBalance.Sign() <= 0 {
-			return nil, errors.New(order.RawOrder.Owner.Hex() + "'s balance or allowance is zero. ")
+			return nil, fmt.Errorf("%s token %s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
 		}
 		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
 	}
