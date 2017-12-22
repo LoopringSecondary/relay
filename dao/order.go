@@ -118,7 +118,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.CancelledAmountB, _ = new(big.Int).SetString(o.CancelledAmountB, 0)
 	state.RawOrder.LrcFee, _ = new(big.Int).SetString(o.LrcFee, 0)
 
-	state.RawOrder.GeneratePrice()
+	state.RawOrder.Price = new(big.Rat).SetFloat64(o.Price)
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
 	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
 	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
