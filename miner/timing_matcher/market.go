@@ -65,6 +65,7 @@ func (market *Market) match() {
 					//if ringForSubmit.Received.Sign() > 0 {
 					candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 					for _, filledOrder := range ringForSubmit.RawRing.Orders {
+						log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
 						candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
 					}
 					candidateRingList = append(candidateRingList, candidateRing)
