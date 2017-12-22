@@ -366,7 +366,23 @@ func TestMatcher_Case2(t *testing.T) {
 
 //test account balance insufficient
 func TestMatcher_Case3(t *testing.T) {
+	amountS, _ := new(big.Int).SetString("10000000000", 0)
+	amountB, _ := new(big.Int).SetString("70000000000000008", 0)
 
+	//price := 1428.5714285714284
+
+	tokenSAddress := common.HexToAddress("0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b")
+	tokenBAddress := common.HexToAddress("0x2956356cD2a2bf3202F771F50D3D14A367b48070")
+
+	tokenS, _ := util.AddressToToken(tokenSAddress)
+	tokenB, _ := util.AddressToToken(tokenBAddress)
+
+	price := new(big.Rat).Mul(
+		new(big.Rat).SetFrac(amountS, amountB),
+		new(big.Rat).SetFrac(tokenB.Decimals, tokenS.Decimals),
+	)
+
+	t.Logf(price.FloatString(6))
 }
 
 //test multi orders
