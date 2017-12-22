@@ -139,27 +139,29 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			if isFullFilled {
 				continue
 			}
-			var remainedAmountS *big.Rat
 			availableAmountS := new(big.Rat)
 			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
-			if amountS.Cmp(availableAmountS) >= 0 {
-				remainedAmountS = availableAmountS
-			} else {
-				remainedAmountS = amountS
+			if availableAmountS.Sign() > 0 {
+				var remainedAmountS *big.Rat
+				if amountS.Cmp(availableAmountS) >= 0 {
+					remainedAmountS = availableAmountS
+				} else {
+					remainedAmountS = amountS
+				}
+				log.Debugf("reduceReceivedOfCandidateRing, filledOrder.availableAmountS:%s, filledOrder.FillAmountS:%s, amountS:%s", filledOrder.AvailableAmountS.FloatString(3), filledOrder.FillAmountS.FloatString(3), amountS.FloatString(3))
+				rate := new(big.Rat)
+				rate.Quo(remainedAmountS, amountS)
+				remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
+				remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
+				//todo:for test, release this limit
+				//if remainedReceived.Sign() <= 0 {
+				//	continue
+				//}
+				for hash, amount := range ring.filledOrders {
+					ring.filledOrders[hash] = amount.Mul(amount, rate)
+				}
+				resList = append(resList, ring)
 			}
-			log.Debugf("reduceReceivedOfCandidateRing, filledOrder.availableAmountS:%s, filledOrder.FillAmountS:%s, amountS:%s", filledOrder.AvailableAmountS.FloatString(3), filledOrder.FillAmountS.FloatString(3), amountS.FloatString(3))
-			rate := new(big.Rat)
-			rate.Quo(remainedAmountS, amountS)
-			remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
-			remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
-			//todo:for test, release this limit
-			//if remainedReceived.Sign() <= 0 {
-			//	continue
-			//}
-			for hash, amount := range ring.filledOrders {
-				ring.filledOrders[hash] = amount.Mul(amount, rate)
-			}
-			resList = append(resList, ring)
 		} else {
 			resList = append(resList, ring)
 		}
