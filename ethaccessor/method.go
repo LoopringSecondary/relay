@@ -44,6 +44,18 @@ func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.
 	}
 }
 
+func (accessor *EthNodeAccessor) RetryCall(retry int, result interface{}, method string, args ...interface{}) error {
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = accessor.Call(result, method, args...); nil != err {
+			continue
+		} else {
+			return nil
+		}
+	}
+	return err
+}
+
 func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var allowance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
@@ -118,14 +130,14 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if err = accessor.Call(&gasPriceBig, "eth_gasPrice"); nil != err {
+	if err = accessor.RetryCall(2, &gasPriceBig, "eth_gasPrice"); nil != err {
 		return
 	}
 	callArg := &CallArg{}
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)
 	callArg.GasPrice = gasPriceBig
-	if err = accessor.Call(&gasBig, "eth_estimateGas", callArg); nil != err {
+	if err = accessor.RetryCall(2, &gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
 	gasPrice = gasPriceBig.BigInt()
@@ -142,7 +154,7 @@ func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 			arg.From = contractAddress
 			arg.To = contractAddress
 			arg.Data = common.ToHex(callData)
-			return accessor.Call(result, "eth_call", arg, blockParameter)
+			return accessor.RetryCall(2, result, "eth_call", arg, blockParameter)
 		}
 	}
 }
@@ -156,7 +168,7 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 		return err
 	} else {
 		log.Debugf("txhash:%s, nonce:%d, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Nonce(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
-		err = ethAccessor.Call(result, "eth_sendRawTransaction", common.ToHex(txData))
+		err = ethAccessor.RetryCall(2, result, "eth_sendRawTransaction", common.ToHex(txData))
 		if err != nil {
 			log.Errorf("accessor, Sign and send transaction error:%s", err.Error())
 		}
@@ -168,13 +180,12 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
-
 	if nil == gas || gas.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
 	var nonce types.Big
-	if err := accessor.Call(&nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+	if err := accessor.RetryCall(2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
 		return "", err
 	}
 	if value == nil {
@@ -223,7 +234,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 	}
 
 	var blockNumber types.Big
-	if err := iterator.ethClient.Call(&blockNumber, "eth_blockNumber"); nil != err {
+	if err := iterator.ethClient.RetryCall(2, &blockNumber, "eth_blockNumber"); nil != err {
 		return nil, err
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
@@ -233,7 +244,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 				select {
 				// todo(fk):modify this duration
 				case <-time.After(time.Duration(5 * time.Second)):
-					if err1 := iterator.ethClient.Call(&blockNumber, "eth_blockNumber"); nil == err1 && blockNumber.Uint64() >= confirmNumber {
+					if err1 := iterator.ethClient.RetryCall(2, &blockNumber, "eth_blockNumber"); nil == err1 && blockNumber.Uint64() >= confirmNumber {
 						break hasNext
 					}
 				}
@@ -241,7 +252,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		}
 	}
 
-	if err := iterator.ethClient.Call(&block, "eth_getBlockByNumber", fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+	if err := iterator.ethClient.RetryCall(2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
@@ -260,7 +271,7 @@ func (iterator *BlockIterator) Prev() (interface{}, error) {
 		return nil, errors.New("finished")
 	}
 	prevNumber := new(big.Int).Sub(iterator.currentNumber, big.NewInt(1))
-	if err := iterator.ethClient.Call(&block, "eth_getBlockByNumber", fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
+	if err := iterator.ethClient.RetryCall(2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		if nil == block {

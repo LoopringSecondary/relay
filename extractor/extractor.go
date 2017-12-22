@@ -108,7 +108,7 @@ func (l *ExtractorServiceImpl) Fork(start *big.Int) {
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	var syncBlock types.Big
-	if err := l.accessor.Call(&syncBlock, "eth_blockNumber"); err != nil {
+	if err := l.accessor.RetryCall(2, &syncBlock, "eth_blockNumber"); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
@@ -183,7 +183,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
 	var tx ethaccessor.Transaction
-	if err := l.accessor.Call(&tx, "eth_getTransactionByHash", txhash); err != nil {
+	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
@@ -214,7 +214,7 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *big.Int) (int, error) {
 	var receipt ethaccessor.TransactionReceipt
 
-	if err := l.accessor.Call(&receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
+	if err := l.accessor.RetryCall(2, &receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
 		return 0, fmt.Errorf("extractor,get transaction receipt error:%s", err.Error())
 	}
 

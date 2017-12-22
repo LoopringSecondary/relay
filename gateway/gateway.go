@@ -102,6 +102,7 @@ func HandleOrder(input eventemitter.EventData) error {
 
 	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
 		//broadcast
+		log.Infof(">>>>>>> broad to ipfs order : " + state.RawOrder.Hash.Hex())
 		pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
 		if pubErr != nil {
 			log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.String())

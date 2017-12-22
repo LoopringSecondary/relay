@@ -340,6 +340,15 @@ func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Addr
 	return list, err
 }
 
+func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+	err = s.db.Model(&Order{}).Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).Find(&list).Error
+	return list, err
+}
+
 func buildStatusInSet(statusSet []types.OrderStatus) string {
 	if len(statusSet) == 0 {
 		return ""

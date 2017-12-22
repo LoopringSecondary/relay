@@ -45,6 +45,7 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
+	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
 
 type OrderManagerImpl struct {
@@ -315,24 +316,23 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		return list
 	}
 
+	for _, orderDelay := range filterOrderHashLists {
+		orderHashes := []string{}
+		for _, hash := range orderDelay.OrderHash {
+			orderHashes = append(orderHashes, hash.Hex())
+		}
+		if len(orderHashes) > 0 && orderDelay.DelayedCount != 0 {
+			if err = om.rds.MarkMinerOrders(orderHashes, orderDelay.DelayedCount); err != nil {
+				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
+			}
+		}
+	}
+
 	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
 	if currentBlock, err := om.rds.FindLatestBlock(); err == nil {
 		currentBlockNumber = currentBlock.BlockNumber
 	} else {
 		currentBlockNumber = 0
-	}
-
-	for _, orderDelay := range filterOrderHashLists {
-		delayNumber := currentBlockNumber + orderDelay.DelayedCount
-		orderHashes := []string{}
-		for _, hash := range orderDelay.OrderHash {
-			orderHashes = append(orderHashes, hash.Hex())
-		}
-		if len(orderHashes) > 0 && delayNumber != 0 {
-			if err = om.rds.MarkMinerOrders(orderHashes, delayNumber); err != nil {
-				log.Debugf("order manager,provide orders for miner error:%s", err.Error())
-			}
-		}
 	}
 
 	// 从数据库获取订单
@@ -443,6 +443,26 @@ func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.A
 		}
 		rs, _ := state.RemainedAmount()
 		totalAmount.Add(totalAmount, rs.Num())
+	}
+
+	return totalAmount, nil
+}
+
+func (om *OrderManagerImpl) GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error) {
+	orderList, err := om.rds.GetFrozenLrcFee(owner, statusSet)
+	if err != nil {
+		return nil, err
+	}
+
+	totalAmount := big.NewInt(0)
+
+	if len(orderList) == 0 {
+		return totalAmount, nil
+	}
+
+	for _, v := range orderList {
+		lrcFee, _ := new(big.Int).SetString(v.LrcFee, 0)
+		totalAmount.Add(totalAmount, lrcFee)
 	}
 
 	return totalAmount, nil

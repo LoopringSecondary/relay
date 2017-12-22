@@ -293,6 +293,9 @@ func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Tic
 
 func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err error) {
 	res, err = j.trendManager.GetTrends(market)
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].Start < res[j].Start
+	})
 	return
 }
 
@@ -306,7 +309,12 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	b, bErr := j.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)
-		account.Balances["ETH"] = ethBalance
+		newBalances := make(map[string]market.Balance)
+		for k, v := range account.Balances {
+			newBalances[k] = v
+		}
+		newBalances["ETH"] = ethBalance
+		account.Balances = newBalances
 	}
 	res = account.ToJsonObject(balanceQuery.ContractVersion)
 	return
@@ -332,7 +340,7 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 	return rst, nil
 }
 
-func (j *JsonrpcServiceImpl) GetFrozenAmount(owner, token string) (frozenAmount string, err error) {
+func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string) (frozenAmount string, err error) {
 	statusSet := make([]types.OrderStatus, 0)
 	statusSet = append(statusSet, types.ORDER_NEW)
 	statusSet = append(statusSet, types.ORDER_PARTIAL)
@@ -345,6 +353,15 @@ func (j *JsonrpcServiceImpl) GetFrozenAmount(owner, token string) (frozenAmount 
 	if err != nil {
 		return "", err
 	}
+
+	if token == "LRC" {
+		allLrcFee, err := j.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
+		if err != nil {
+			return "", err
+		}
+		amount.Add(amount, allLrcFee)
+	}
+
 	return types.BigintToHex(amount), err
 }
 

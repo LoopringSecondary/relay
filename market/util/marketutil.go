@@ -46,13 +46,11 @@ const (
 )
 
 func StringToFloat(amount string) float64 {
-	rst, _ := new(big.Int).SetString(amount, 0)
-	return float64(rst.Int64()) / WeiToEther
-}
-
-func FloatToByte(amount float64) []byte {
-	rst, _ := big.NewInt(int64(amount * WeiToEther)).MarshalText()
-	return rst
+	rst, _ := new(big.Rat).SetString(amount)
+	weiRat := new(big.Rat).SetInt64(WeiToEther)
+	rst.Quo(rst, weiRat)
+	result, _ := rst.Float64()
+	return result
 }
 
 var (

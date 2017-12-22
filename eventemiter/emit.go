@@ -127,8 +127,30 @@ func Emit(topic string, eventData EventData) {
 }
 
 //todo: impl it
-func NewWatcher() {
+func NewSerialWatcher(topic string, handle func(e EventData) error) (stopFunc func(), err error) {
+	dataChan := make(chan EventData)
+	go func() {
+		for {
+			select {
+			case event := <-dataChan:
+				handle(event)
+			}
+		}
+	}()
 
+	watcher := &Watcher{
+		Concurrent: false,
+		Handle: func(eventData EventData) error {
+			dataChan <- eventData
+			return nil
+		},
+	}
+	On(topic, watcher)
+
+	return func() {
+		close(dataChan)
+		Un(topic, watcher)
+	}, nil
 }
 
 func init() {
