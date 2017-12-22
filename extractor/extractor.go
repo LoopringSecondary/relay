@@ -214,8 +214,8 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *big.Int) (int, error) {
 	var receipt ethaccessor.TransactionReceipt
 
-	if err := l.accessor.RetryCall(2, &receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
-		return 0, fmt.Errorf("extractor,get transaction receipt error:%s", err.Error())
+	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
+		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", tx.Hash, err.Error())
 	}
 
 	if len(receipt.Logs) == 0 {
