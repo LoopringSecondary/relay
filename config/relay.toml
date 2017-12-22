@@ -79,6 +79,7 @@ name = "Loopring corporation"
     		duration = 3
     		delayed_number = 10
     		flush_round_count = 100
+    		cacheTtl = 200
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"

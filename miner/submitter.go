@@ -200,7 +200,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 
 func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
-		submitter.submitFailed([]common.Hash{ringSate.Ringhash},err)
+		submitter.submitFailed([]common.Hash{ringSate.Ringhash}, err)
 		return err
 	} else {
 		ringSate.SubmitTxHash = common.HexToHash(txHash)
