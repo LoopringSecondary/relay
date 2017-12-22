@@ -73,7 +73,7 @@ func (s *RdsServiceImpl) FindBlockByParentHash(parenthash common.Hash) (*Block, 
 		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
 	}
 
-	err := s.db.Where("parent_hash = ?", parenthash.Hex()).First(&block).Error
+	err := s.db.Where("block_hash = ?", parenthash.Hex()).First(&block).Error
 
 	return &block, err
 }

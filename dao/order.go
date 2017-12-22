@@ -210,7 +210,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		err  error
 	)
 
-	if from < to {
+	if from >= to {
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
