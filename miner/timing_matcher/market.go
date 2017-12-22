@@ -141,7 +141,7 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			var remainedAmountS *big.Rat
 			availableAmountS := new(big.Rat)
 			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
-			if amountS.Cmp(availableAmountS) > 0 {
+			if amountS.Cmp(availableAmountS) >= 0 {
 				remainedAmountS = availableAmountS
 			} else {
 				remainedAmountS = amountS
@@ -202,7 +202,6 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 		}
 		log.Debugf("order status in this new round, orderhash:%s, DealtAmountS:%s", order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
-
 }
 
 //sub the matched amount in new round.
@@ -215,8 +214,10 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 		//	delete(market.BtoAOrders, orderHash)
 		//} else {
 		for _, matchedRound := range matchedOrder.rounds {
-			orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
-			orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
+			if market.matcher.lastBlockNumber.Cmp(matchedRound.clearRound) <= 0 {
+				orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
+				orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
+			}
 		}
 		//}
 	}
