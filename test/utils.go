@@ -180,13 +180,18 @@ func GenerateExtractor() *extractor.ExtractorServiceImpl {
 	if err != nil {
 		panic(err)
 	}
-	l := extractor.NewExtractorService(cfg.Accessor, cfg.Common, accessor, rds)
+	l := extractor.NewExtractorService(cfg.Common, accessor, rds)
 	return l
+}
+
+func GenerateUserManager() *usermanager.UserManagerImpl {
+	um := usermanager.NewUserManager(&cfg.UserManager, rds)
+	return um
 }
 
 func GenerateOrderManager() *ordermanager.OrderManagerImpl {
 	mc := GenerateMarketCap()
-	um := usermanager.NewUserManager(rds)
+	um := usermanager.NewUserManager(&cfg.UserManager, rds)
 	accessor, err := GenerateAccessor()
 	if err != nil {
 		panic(err)

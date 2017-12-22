@@ -79,6 +79,7 @@ name = "Loopring corporation"
     		duration = 3
     		delayed_number = 10
     		flush_round_count = 100
+    		cacheTtl = 200
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
@@ -93,3 +94,6 @@ name = "Loopring corporation"
 [keystore]
     keydir = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/ks_dir"
 
+[user_manager]
+    white_list_cache_expire_time = 8640000
+    white_list_cache_clean_time = 0

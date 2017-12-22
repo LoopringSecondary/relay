@@ -46,6 +46,7 @@ type TimingMatcher struct {
 	submitter       *miner.RingSubmitter
 	evaluator       *miner.Evaluator
 	lastBlockNumber *big.Int
+	cacheTtl        *big.Int
 	duration        *big.Int
 	roundOrderCount int
 	flushRoundCount *big.Int
@@ -70,6 +71,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	matcher.flushRoundCount = big.NewInt(matcherOptions.FlushRoundCount)
 
 	matcher.lastBlockNumber = big.NewInt(0)
+	matcher.cacheTtl = big.NewInt(matcherOptions.CacheTtl)
 	matcher.mtx = sync.RWMutex{}
 	matcher.roundMtx = sync.RWMutex{}
 	matcher.stopFuncs = []func(){}
@@ -156,9 +158,11 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 	} else {
 		matchState = matchState1
 	}
-
+	clearRound := new(big.Int)
+	clearRound.Add(matcher.lastBlockNumber, matcher.cacheTtl)
 	roundState := &RoundState{
 		round:          matcher.lastBlockNumber,
+		clearRound:     clearRound,
 		ringHash:       ringHash,
 		tokenS:         filledOrder.OrderState.RawOrder.TokenS,
 		matchedAmountB: filledOrder.FillAmountB,

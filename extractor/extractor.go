@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"sync"
-	"time"
 )
 
 /**
@@ -42,24 +41,28 @@ import (
 type ExtractorService interface {
 	Start()
 	Stop()
-	Restart()
+	Fork(start *big.Int)
 }
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options      config.AccessorOptions
-	commOpts     config.CommonOptions
-	accessor     *ethaccessor.EthNodeAccessor
-	detector     *forkDetector
-	processor    *AbiProcessor
-	dao          dao.RdsService
-	stop         chan struct{}
-	lock         sync.RWMutex
-	syncComplete bool
+	options          config.AccessorOptions
+	commOpts         config.CommonOptions
+	accessor         *ethaccessor.EthNodeAccessor
+	detector         *forkDetector
+	processor        *AbiProcessor
+	dao              dao.RdsService
+	stop             chan bool
+	lock             sync.RWMutex
+	startBlockNumber *big.Int
+	endBlockNumber   *big.Int
+	iterator         *ethaccessor.BlockIterator
+	syncComplete     bool
+	forkComplete     bool
+	forktest         bool
 }
 
-func NewExtractorService(options config.AccessorOptions,
-	commonOpts config.CommonOptions,
+func NewExtractorService(commonOpts config.CommonOptions,
 	accessor *ethaccessor.EthNodeAccessor,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
@@ -67,108 +70,45 @@ func NewExtractorService(options config.AccessorOptions,
 	l.commOpts = commonOpts
 	l.accessor = accessor
 	l.dao = rds
-	l.syncComplete = false
-
 	l.processor = newAbiProcessor(accessor, rds)
 	l.detector = newForkDetector(rds, accessor)
+	l.stop = make(chan bool, 1)
+
+	start, end := l.getBlockNumberRange()
+	l.setBlockNumberRange(start, end)
 
 	return &l
 }
 
 func (l *ExtractorServiceImpl) Start() {
-	l.stop = make(chan struct{})
-
 	log.Info("extractor start...")
-	start, end := l.getBlockNumberRange()
-	iterator := l.accessor.BlockIterator(start, end, true, uint64(0))
+	l.syncComplete = false
 
+	l.iterator = l.accessor.BlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(0))
 	go func() {
 		for {
-			inter, err := iterator.Next()
-			if err != nil {
-				log.Fatalf("extractor,iterator next error:%s", err.Error())
-			}
-
-			// get current block
-			block := inter.(*ethaccessor.BlockWithTxObject)
-			log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
-
-			currentBlock := &types.Block{}
-			currentBlock.BlockNumber = block.Number.BigInt()
-			currentBlock.ParentHash = block.ParentHash
-			currentBlock.BlockHash = block.Hash
-			currentBlock.CreateTime = block.Timestamp.Int64()
-
-			// sync blocks on chain
-			if l.syncComplete == false {
-				l.sync(currentBlock.BlockNumber)
-			}
-
-			// emit new block
-			blockEvent := &types.BlockEvent{}
-			blockEvent.BlockNumber = block.Number.BigInt()
-			blockEvent.BlockHash = block.Hash
-			eventemitter.Emit(eventemitter.Block_New, blockEvent)
-
-			// convert block to dao entity
-			var entity dao.Block
-			if err := entity.ConvertDown(currentBlock); err != nil {
-				log.Debugf("extractor,convert block to dao/entity error:%s", err.Error())
-			} else {
-				l.dao.Add(&entity)
-			}
-
-			// base filter
-			txcnt := len(block.Transactions)
-			if txcnt < 1 {
-				log.Debugf("extractor,get none block transaction")
-				continue
-			} else {
-				log.Debugf("extractor,get block transaction list length %d", txcnt)
-			}
-
-			// detect chain fork
-			//if err := l.detector.detect(currentBlock); err != nil {
-			//	log.Debugf("extractor,detect fork error:%s", err.Error())
-			//	continue
-			//}
-
-			// process block
-			for _, tx := range block.Transactions {
-				log.Debugf("extractor,get transaction hash:%s", tx.Hash)
-
-				logAmount, err := l.processEvent(&tx, block.Timestamp.BigInt())
-				if err != nil {
-					log.Errorf(err.Error())
-				}
-
-				// 解析method，获得ring内等orders并发送到orderbook保存
-				if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
-					log.Errorf(err.Error())
-				}
+			select {
+			case <-l.stop:
+				return
+			default:
+				l.processBlock()
 			}
 		}
 	}()
 }
 
 func (l *ExtractorServiceImpl) Stop() {
-	l.lock.Lock()
-	defer l.lock.Unlock()
-
-	l.syncComplete = false
-	close(l.stop)
+	l.stop <- true
 }
 
 // 重启(分叉)时先关停subscribeEvents，然后关
-func (l *ExtractorServiceImpl) Restart() {
-	l.Stop()
-	time.Sleep(1 * time.Second)
-	l.Start()
+func (l *ExtractorServiceImpl) Fork(start *big.Int) {
+	l.setBlockNumberRange(start, nil)
 }
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	var syncBlock types.Big
-	if err := l.accessor.Call(&syncBlock, "eth_blockNumber"); err != nil {
+	if err := l.accessor.RetryCall(2, &syncBlock, "eth_blockNumber"); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
@@ -180,9 +120,70 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	}
 }
 
+func (l *ExtractorServiceImpl) processBlock() {
+	inter, err := l.iterator.Next()
+	if err != nil {
+		log.Fatalf("extractor,iterator next error:%s", err.Error())
+	}
+
+	// get current block
+	block := inter.(*ethaccessor.BlockWithTxObject)
+	log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+
+	currentBlock := &types.Block{}
+	currentBlock.BlockNumber = block.Number.BigInt()
+	currentBlock.ParentHash = block.ParentHash
+	currentBlock.BlockHash = block.Hash
+	currentBlock.CreateTime = block.Timestamp.Int64()
+
+	// sync blocks on chain
+	if l.syncComplete == false {
+		l.sync(currentBlock.BlockNumber)
+	}
+
+	// detect chain fork
+	// todo free fork detector
+	// l.detector.Detect(currentBlock)
+
+	// convert block to dao entity
+	var entity dao.Block
+	if err := entity.ConvertDown(currentBlock); err != nil {
+		log.Debugf("extractor,convert block to dao/entity error:%s", err.Error())
+	} else {
+		l.dao.Add(&entity)
+	}
+
+	// emit new block
+	blockEvent := &types.BlockEvent{}
+	blockEvent.BlockNumber = block.Number.BigInt()
+	blockEvent.BlockHash = block.Hash
+	eventemitter.Emit(eventemitter.Block_New, blockEvent)
+
+	// base filter
+	txcnt := len(block.Transactions)
+	if txcnt < 1 {
+		return
+	}
+
+	// process block
+	for _, tx := range block.Transactions {
+		log.Debugf("extractor,get transaction hash:%s", tx.Hash)
+
+		logAmount, err := l.processEvent(&tx, block.Timestamp.BigInt())
+		if err != nil {
+			log.Errorf(err.Error())
+		}
+
+		// 解析method，获得ring内等orders并发送到orderbook保存
+		if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
+			log.Errorf(err.Error())
+		}
+	}
+}
+
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
 	var tx ethaccessor.Transaction
-	if err := l.accessor.Call(&tx, "eth_getTransactionByHash", txhash); err != nil {
+	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
@@ -213,8 +214,8 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *big.Int) (int, error) {
 	var receipt ethaccessor.TransactionReceipt
 
-	if err := l.accessor.Call(&receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
-		return 0, fmt.Errorf("extractor,get transaction receipt error:%s", err.Error())
+	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
+		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", tx.Hash, err.Error())
 	}
 
 	if len(receipt.Logs) == 0 {
@@ -274,7 +275,13 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 	return len(receipt.Logs), nil
 }
 
-// todo: modify
+func (l *ExtractorServiceImpl) setBlockNumberRange(start, end *big.Int) {
+	l.startBlockNumber = start
+	if end != nil {
+		l.endBlockNumber = end
+	}
+}
+
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	var ret types.Block
 

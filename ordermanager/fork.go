@@ -43,6 +43,8 @@ func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, m
 }
 
 func (p *forkProcessor) fork(event *types.ForkedEvent) error {
+	log.Debugf("order manager processing chain fork......")
+
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 

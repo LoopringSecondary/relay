@@ -19,23 +19,29 @@
 package usermanager
 
 import (
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"sync"
+	gocache "github.com/patrickmn/go-cache"
+	"time"
 )
 
 type WhiteListCache struct {
-	users map[common.Address]types.WhiteListUser
-	rds   dao.RdsService
-	mtx   sync.Mutex
+	cache  *gocache.Cache
+	rds    dao.RdsService
+	expire time.Duration
 }
 
-func newWhiteListCache(rds dao.RdsService) *WhiteListCache {
+func newWhiteListCache(options *config.UserManagerOptions, rds dao.RdsService) *WhiteListCache {
 	c := &WhiteListCache{}
 	c.rds = rds
-	c.users = make(map[common.Address]types.WhiteListUser)
+
+	expire := time.Duration(options.WhiteListCacheExpireTime) * time.Second
+	cleanUp := time.Duration(options.WhiteListCacheCleanTime) * time.Second
+	c.cache = gocache.New(expire, cleanUp)
+	c.expire = expire
 
 	if list, err := c.rds.GetWhiteList(); err == nil || len(list) == 0 {
 		for _, v := range list {
@@ -44,7 +50,7 @@ func newWhiteListCache(rds dao.RdsService) *WhiteListCache {
 				log.Errorf("new white list cache error:%s", err.Error())
 				continue
 			}
-			c.users[user.Owner] = user
+			c.set(&user)
 		}
 	}
 
@@ -52,15 +58,12 @@ func newWhiteListCache(rds dao.RdsService) *WhiteListCache {
 }
 
 func (c *WhiteListCache) AddWhiteListUser(user types.WhiteListUser) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
 	if c.InWhiteList(user.Owner) {
 		log.Debugf("white list user:%s already exist in cache", user.Owner.Hex())
 		return nil
 	}
 
-	c.users[user.Owner] = user
+	c.set(&user)
 	model := dao.WhiteList{}
 	if err := model.ConvertDown(&user); err != nil {
 		return err
@@ -70,15 +73,12 @@ func (c *WhiteListCache) AddWhiteListUser(user types.WhiteListUser) error {
 }
 
 func (c *WhiteListCache) DelWhiteListUser(user types.WhiteListUser) error {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-
 	if !c.InWhiteList(user.Owner) {
 		log.Debugf("white list user:%s already deleted in cache", user.Owner.Hex())
 		return nil
 	}
 
-	delete(c.users, user.Owner)
+	c.del(user.Owner)
 	model := dao.WhiteList{}
 	if err := model.ConvertDown(&user); err != nil {
 		return err
@@ -87,10 +87,30 @@ func (c *WhiteListCache) DelWhiteListUser(user types.WhiteListUser) error {
 	return c.rds.Del(model)
 }
 
-func (c *WhiteListCache) InWhiteList(user common.Address) bool {
-	if _, ok := c.users[user]; !ok {
-		return false
+func (c *WhiteListCache) InWhiteList(address common.Address) bool {
+	_, ok := c.get(address)
+	return ok
+}
+
+// get get value from gocache
+func (c *WhiteListCache) get(address common.Address) (*types.WhiteListUser, bool) {
+	data, ok := c.cache.Get(address.Hex())
+	if !ok {
+		return nil, false
 	}
 
-	return true
+	user := data.(*types.WhiteListUser)
+
+	return user, true
+}
+
+// set set key-value in gocache
+func (c *WhiteListCache) set(user *types.WhiteListUser) {
+	address := user.Owner.Hex()
+	c.cache.Set(address, user, c.expire)
+}
+
+// del delete key from gocache
+func (c *WhiteListCache) del(address common.Address) {
+	c.cache.Delete(address.Hex())
 }

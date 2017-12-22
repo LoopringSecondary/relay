@@ -210,7 +210,7 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 		err  error
 	)
 
-	if from < to {
+	if from >= to {
 		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
 	}
 
@@ -340,12 +340,12 @@ func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Addr
 	return list, err
 }
 
-func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([] Order, error) {
+func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types.OrderStatus) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
-	err = s.db.Model(&Order{}).Where("lrc_fee > 0 and owner = ? and status in " + buildStatusInSet(statusSet), owner.Hex()).Find(&list).Error
+	err = s.db.Model(&Order{}).Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).Find(&list).Error
 	return list, err
 }
 

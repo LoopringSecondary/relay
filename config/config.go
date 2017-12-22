@@ -81,6 +81,7 @@ type GlobalConfig struct {
 	Keystore       KeyStoreOptions
 	Contract       ContractOptions
 	MarketCap      MarketCapOptions
+	UserManager    UserManagerOptions
 }
 
 type JsonrpcOptions struct {
@@ -156,6 +157,7 @@ type TimingMatcher struct {
 	Duration         int64
 	DelayedNumber    int64
 	FlushRoundCount  int64
+	CacheTtl         int64
 }
 type MinerOptions struct {
 	RingMaxLength           int    `required:"true"` //recommended value:4
@@ -195,6 +197,11 @@ type MysqlOptions struct {
 	DbName      string
 	TablePrefix string
 	Debug       bool
+}
+
+type UserManagerOptions struct {
+	WhiteListCacheExpireTime int64
+	WhiteListCacheCleanTime  int64
 }
 
 func Validator(cv reflect.Value) (bool, error) {
