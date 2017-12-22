@@ -141,7 +141,7 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			var remainedAmountS *big.Rat
 			availableAmountS := new(big.Rat)
 			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
-			if amountS.Cmp(availableAmountS) > 0 {
+			if amountS.Cmp(availableAmountS) >= 0 {
 				remainedAmountS = availableAmountS
 			} else {
 				remainedAmountS = amountS
