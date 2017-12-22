@@ -276,9 +276,9 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	}
 
 	if IsBuy(s) {
-		result.SetFrac(ab.Div(ab, tokenB.Decimals), as.Div(as, tokenS.Decimals))
+		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
 	} else {
-		result.SetFrac(as.Div(ab, tokenS.Decimals), ab.Div(ab, tokenB.Decimals))
+		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
 	}
 
 	price, _ := result.Float64()
