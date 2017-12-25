@@ -336,7 +336,11 @@ func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Addr
 		list []Order
 		err  error
 	)
-	err = s.db.Model(&Order{}).Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).Find(&list).Error
+	now := time.Now().Unix()
+	err = s.db.Model(&Order{}).
+		Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).
+		Where("valid_time < ?", now).
+		Find(&list).Error
 	return list, err
 }
 
@@ -345,7 +349,12 @@ func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types
 		list []Order
 		err  error
 	)
-	err = s.db.Model(&Order{}).Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).Find(&list).Error
+
+	now := time.Now().Unix()
+	err = s.db.Model(&Order{}).
+		Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).
+		Where("valid_time < ?", now).
+		Find(&list).Error
 	return list, err
 }
 
