@@ -66,7 +66,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 
 	tokenAddress := wethTokenAddress
-	amount, _ := new(big.Int).SetString("10000000000000000000", 0) // 100weth
+	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
 	spender := delegateAddress
 
 	accessor, _ := test.GenerateAccessor()
@@ -142,7 +142,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 	c := test.Cfg()
 	accessor, _ := test.GenerateAccessor()
-	orderhash := common.HexToHash("0x568a3daf0705899f32816ea8ff356d3ec65fd47d679e824cac3c893efbb201c2")
+	orderhash := common.HexToHash("0x77aecf96a71d260074ab6ad9352365f0e83cd87d4d3a424071e76cafc393f549")
 
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
 	if amount, err := accessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {

@@ -140,6 +140,7 @@ type AbiProcessor struct {
 	events    map[common.Hash]EventData
 	methods   map[string]MethodData
 	protocols map[common.Address]string
+	delegates map[common.Address]string
 	db        dao.RdsService
 }
 
@@ -150,6 +151,7 @@ func newAbiProcessor(accessor *ethaccessor.EthNodeAccessor, db dao.RdsService) *
 	processor.events = make(map[common.Hash]EventData)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
+	processor.delegates = make(map[common.Address]string)
 	processor.accessor = accessor
 	processor.db = db
 
@@ -190,6 +192,12 @@ func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
 	return ok
 }
 
+// HasSpender check approve spender address have ever been load
+func (processor *AbiProcessor) HasSpender(spender common.Address) bool {
+	_, ok := processor.delegates[spender]
+	return ok
+}
+
 func (processor *AbiProcessor) loadProtocolAddress() {
 	for _, v := range util.AllTokens {
 		processor.protocols[v.Protocol] = v.Symbol
@@ -206,6 +214,8 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
 		processor.protocols[v.RinghashRegistryAddress] = ringhashRegisterSymbol
 		processor.protocols[v.DelegateAddress] = delegateSymbol
+
+		processor.delegates[v.DelegateAddress] = delegateSymbol
 
 		log.Debugf("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
 		log.Debugf("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
@@ -541,7 +551,10 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 
 	log.Debugf("extractor,approve method, owner:%s, spender:%s, value:%s", approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
 
-	eventemitter.Emit(eventemitter.ApproveMethod, approve)
+	if processor.HasSpender(approve.Spender) {
+		eventemitter.Emit(eventemitter.ApproveMethod, approve)
+	}
+
 	return nil
 }
 
@@ -743,7 +756,9 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 
 	log.Debugf("extractor,approval event,owner:%s, spender:%s, value:%s", evt.Owner.Hex(), evt.Spender.Hex(), evt.Value.String())
 
-	eventemitter.Emit(eventemitter.AccountApproval, evt)
+	if processor.HasSpender(evt.Spender) {
+		eventemitter.Emit(eventemitter.AccountApproval, evt)
+	}
 
 	return nil
 }
