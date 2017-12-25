@@ -65,6 +65,7 @@ func (market *Market) match() {
 					//if ringForSubmit.Received.Sign() > 0 {
 					candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 					for _, filledOrder := range ringForSubmit.RawRing.Orders {
+						log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
 						candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
 					}
 					candidateRingList = append(candidateRingList, candidateRing)
@@ -138,26 +139,29 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 			if isFullFilled {
 				continue
 			}
-			var remainedAmountS *big.Rat
 			availableAmountS := new(big.Rat)
 			availableAmountS.Sub(filledOrder.AvailableAmountS, filledOrder.FillAmountS)
-			if amountS.Cmp(availableAmountS) > 0 {
-				remainedAmountS = availableAmountS
-			} else {
-				remainedAmountS = amountS
+			if availableAmountS.Sign() > 0 {
+				var remainedAmountS *big.Rat
+				if amountS.Cmp(availableAmountS) >= 0 {
+					remainedAmountS = availableAmountS
+				} else {
+					remainedAmountS = amountS
+				}
+				log.Debugf("reduceReceivedOfCandidateRing, filledOrder.availableAmountS:%s, filledOrder.FillAmountS:%s, amountS:%s", filledOrder.AvailableAmountS.FloatString(3), filledOrder.FillAmountS.FloatString(3), amountS.FloatString(3))
+				rate := new(big.Rat)
+				rate.Quo(remainedAmountS, amountS)
+				remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
+				remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
+				//todo:for test, release this limit
+				//if remainedReceived.Sign() <= 0 {
+				//	continue
+				//}
+				for hash, amount := range ring.filledOrders {
+					ring.filledOrders[hash] = amount.Mul(amount, rate)
+				}
+				resList = append(resList, ring)
 			}
-			rate := new(big.Rat)
-			rate.Quo(remainedAmountS, amountS)
-			remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
-			remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
-			//todo:for test, release this limit
-			//if remainedReceived.Sign() <= 0 {
-			//	continue
-			//}
-			for hash, amount := range ring.filledOrders {
-				ring.filledOrders[hash] = amount.Mul(amount, rate)
-			}
-			resList = append(resList, ring)
 		} else {
 			resList = append(resList, ring)
 		}
@@ -202,7 +206,6 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 		}
 		log.Debugf("order status in this new round, orderhash:%s, DealtAmountS:%s", order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
-
 }
 
 //sub the matched amount in new round.
@@ -215,8 +218,10 @@ func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderSta
 		//	delete(market.BtoAOrders, orderHash)
 		//} else {
 		for _, matchedRound := range matchedOrder.rounds {
-			orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
-			orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
+			if market.matcher.lastBlockNumber.Cmp(matchedRound.clearRound) <= 0 {
+				orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
+				orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
+			}
 		}
 		//}
 	}

@@ -125,10 +125,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 						}
 					} else {
 						for _, ringState := range ringInfos {
-							if err := submitter.submitRing(ringState); nil != err {
-								//todo:index
-								submitter.dbService.UpdateRingSubmitInfoFailed([]common.Hash{ringState.Ringhash}, err.Error())
-							}
+							submitter.submitRing(ringState)
 						}
 					}
 				}
@@ -203,6 +200,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringState *types.RingSubmitInfo
 
 func (submitter *RingSubmitter) submitRing(ringSate *types.RingSubmitInfo) error {
 	if txHash, err := submitter.Accessor.ContractSendTransactionByData(submitter.Miner, ringSate.ProtocolAddress, ringSate.ProtocolGas, ringSate.ProtocolGasPrice, nil, ringSate.ProtocolData); nil != err {
+		submitter.submitFailed([]common.Hash{ringSate.Ringhash}, err)
 		return err
 	} else {
 		ringSate.SubmitTxHash = common.HexToHash(txHash)
@@ -362,10 +360,7 @@ func (submitter *RingSubmitter) listenRegistryEvent() {
 					}
 
 					if nil == err {
-						if err = submitter.submitRing(info); nil != err {
-							log.Errorf("error:%s", err.Error())
-							submitter.dbService.UpdateRingSubmitInfoFailed([]common.Hash{info.Ringhash}, err.Error())
-						}
+						submitter.submitRing(info)
 					}
 				}
 			}
