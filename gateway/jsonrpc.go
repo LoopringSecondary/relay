@@ -60,6 +60,12 @@ type AskBid struct {
 	Sell [][]string `json:"sell"`
 }
 
+type DepthElement struct {
+	Price string
+	Size *big.Rat
+	Amount *big.Rat
+}
+
 type CommonTokenRequest struct {
 	ContractVersion string `json:"contractVersion"`
 	Owner           string `json:"owner"`
@@ -246,7 +252,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		return
 	}
 
-	depth.Depth.Sell = calculateDepth(asks, length, true)
+	depth.Depth.Sell = calculateDepth(asks, length, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
 
 	bids, bidErr := j.orderManager.GetOrderBook(
 		common.HexToAddress(util.ContractVersionConfig[protocol]),
@@ -258,7 +264,7 @@ func (j *JsonrpcServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		return
 	}
 
-	depth.Depth.Buy = calculateDepth(bids, length, false)
+	depth.Depth.Buy = calculateDepth(bids, length, false, util.AllTokens[b].Decimals, util.AllTokens[a].Decimals)
 
 	return depth, err
 }
@@ -422,7 +428,7 @@ func getStringStatus(s types.OrderStatus) string {
 	return "ORDER_UNKNOWN"
 }
 
-func calculateDepth(states []types.OrderState, length int, isAsk bool) [][]string {
+func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDecimal, tokenBDecimal *big.Int) [][]string {
 
 	if len(states) == 0 {
 		return [][]string{}
@@ -433,34 +439,55 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool) [][]strin
 		depth[i] = make([]string, 0)
 	}
 
-	depthMap := make(map[string]big.Rat)
+	depthMap := make(map[string]DepthElement)
 
 	for _, s := range states {
 
 		price := *s.RawOrder.Price
 		amountS, amountB := s.RemainedAmount()
+		amountS = amountS.Quo(amountS, new(big.Rat).SetFrac(tokenSDecimal, big.NewInt(1)))
+		amountB = amountB.Quo(amountB, new(big.Rat).SetFrac(tokenBDecimal, big.NewInt(1)))
+
+		if amountS.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
+			log.Debug("amount s is zero, skipped")
+			continue
+		}
+
+		if amountB.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
+			log.Debug("amount b is zero, skipped")
+			continue
+		}
 
 		if isAsk {
 			price = *price.Inv(&price)
 			priceFloatStr := price.FloatString(10)
 			if v, ok := depthMap[priceFloatStr]; ok {
-				depthMap[priceFloatStr] = *v.Add(&v, amountS)
+				amount := v.Amount
+				size := v.Size
+				amount = amount.Add(amount, amountS)
+				size = size.Add(size, amountB)
+				depthMap[priceFloatStr] = DepthElement{Price:v.Price, Amount:amount, Size:size}
 			} else {
-				depthMap[priceFloatStr] = *amountS
+				depthMap[priceFloatStr] = DepthElement{Price:priceFloatStr, Amount:amountS, Size:amountB}
 			}
 		} else {
 			priceFloatStr := price.FloatString(10)
 			if v, ok := depthMap[priceFloatStr]; ok {
-				depthMap[priceFloatStr] = *v.Add(&v, amountB)
+				amount := v.Amount
+				size := v.Size
+				amount = amount.Add(amount, amountB)
+				size = size.Add(size, amountS)
+				depthMap[priceFloatStr] = DepthElement{Price:v.Price, Amount:amount, Size:size}
 			} else {
-				depthMap[priceFloatStr] = *amountB
+				depthMap[priceFloatStr] = DepthElement{Price:priceFloatStr, Amount:amountB, Size:amountS}
 			}
 		}
 	}
 
 	for k, v := range depthMap {
-		amount, _ := v.Float64()
-		depth = append(depth, []string{k, strconv.FormatFloat(amount/util.WeiToEther, 'f', 10, 64)})
+		amount, _ := v.Amount.Float64()
+		size, _ := v.Size.Float64()
+		depth = append(depth, []string{k, strconv.FormatFloat(amount, 'f', 10, 64), strconv.FormatFloat(size, 'f', 10, 64)})
 	}
 
 	sort.Slice(depth, func(i, j int) bool {
