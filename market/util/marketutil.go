@@ -273,19 +273,26 @@ func AddressToToken(t common.Address) (*types.Token, error) {
 
 func CalculatePrice(amountS, amountB string, s, b string) float64 {
 
-	as := StringToFloat(amountS)
-	ab := StringToFloat(amountB)
+	as, _ := new(big.Int).SetString(amountS, 0)
+	ab, _ := new(big.Int).SetString(amountB, 0)
 
-	if as == 0 || ab == 0 {
+	result := new(big.Rat).SetInt64(0)
+
+	tokenS := AllTokens[AddressToAlias(s)]
+	tokenB := AllTokens[AddressToAlias(b)]
+
+	if as.Cmp(big.NewInt(0)) == 0 || ab.Cmp(big.NewInt(0)) == 0 {
 		return 0
 	}
 
 	if IsBuy(s) {
-		return ab / as
+		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
+	} else {
+		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
 	}
 
-	return as / ab
-
+	price, _ := result.Float64()
+	return price
 }
 
 func IsBuy(s string) bool {
