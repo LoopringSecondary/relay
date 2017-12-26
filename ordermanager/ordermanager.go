@@ -145,9 +145,9 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 		err   error
 	)
 
-	model, err = om.rds.FindRingMinedByRingHash(event.Ringhash.Hex())
+	model, err = om.rds.FindRingMinedByRingIndex(event.RingIndex.String())
 	if err == nil {
-		log.Debugf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
+		return fmt.Errorf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
 	}
 	if err = model.ConvertDown(event); err != nil {
 		return err
