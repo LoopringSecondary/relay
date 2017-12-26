@@ -37,7 +37,7 @@ type RdsService interface {
 	FindAll(item interface{}) error
 
 	// ring mined table
-	FindRingMinedByRingHash(ringhash string) (*RingMinedEvent, error)
+	FindRingMinedByRingIndex(index string) (*RingMinedEvent, error)
 	RollBackRingMined(from, to int64) error
 
 	// order table
