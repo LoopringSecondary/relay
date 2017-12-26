@@ -35,7 +35,7 @@ import (
 type OrderManager interface {
 	Start()
 	Stop()
-	MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState
+	MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
 	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
@@ -145,9 +145,9 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 		err   error
 	)
 
-	model, err = om.rds.FindRingMinedByRingHash(event.Ringhash.Hex())
+	model, err = om.rds.FindRingMinedByRingIndex(event.RingIndex.String())
 	if err == nil {
-		log.Debugf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
+		return fmt.Errorf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
 	}
 	if err = model.ConvertDown(event); err != nil {
 		return err
@@ -302,13 +302,12 @@ func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return isOrderFullFinished(state, om.mc)
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
 	var (
-		list               []*types.OrderState
-		modelList          []*dao.Order
-		err                error
-		currentBlockNumber int64
-		filterStatus       = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
+		list         []*types.OrderState
+		modelList    []*dao.Order
+		err          error
+		filterStatus = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
 
 	// 如果正在分叉，则不提供任何订单
@@ -328,15 +327,8 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		}
 	}
 
-	// 从数据库中获取最近处理的block，数据库为空表示程序从未运行过，这个时候所有的order.markBlockNumber都为0
-	if currentBlock, err := om.rds.FindLatestBlock(); err == nil {
-		currentBlockNumber = currentBlock.BlockNumber
-	} else {
-		currentBlockNumber = 0
-	}
-
 	// 从数据库获取订单
-	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, currentBlockNumber); err != nil {
+	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, startBlockNumber, endBlockNumber); err != nil {
 		return list
 	}
 

@@ -148,7 +148,7 @@ func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
 func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err error) {
 	event := input.(*types.TransferEvent)
 
-	log.Info("received transfer event...")
+	//log.Info("received transfer event...")
 
 	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")

@@ -84,7 +84,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = l.accessor.BlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(0))
+	l.iterator = l.accessor.BlockIterator(l.startBlockNumber, l.endBlockNumber, false, uint64(0))
 	go func() {
 		for {
 			select {
@@ -114,9 +114,9 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
 		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
 		l.syncComplete = true
-		log.Debugf("extractor,sync chain block complete!")
+		l.debug("extractor,sync chain block complete!")
 	} else {
-		log.Debugf("extractor,chain block syncing... ")
+		l.debug("extractor,chain block syncing... ")
 	}
 }
 
@@ -127,8 +127,8 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	// get current block
-	block := inter.(*ethaccessor.BlockWithTxObject)
-	log.Debugf("extractor,get block:%s->%s", block.Number.BigInt().String(), block.Hash.Hex())
+	block := inter.(*ethaccessor.BlockWithTxHash)
+	log.Infof("extractor,get block:%s->%s, transactions:%d", block.Number.BigInt().String(), block.Hash.Hex(), len(block.Transactions))
 
 	currentBlock := &types.Block{}
 	currentBlock.BlockNumber = block.Number.BigInt()
@@ -148,7 +148,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	// convert block to dao entity
 	var entity dao.Block
 	if err := entity.ConvertDown(currentBlock); err != nil {
-		log.Debugf("extractor,convert block to dao/entity error:%s", err.Error())
+		l.debug("extractor,convert block to dao/entity error:%s", err.Error())
 	} else {
 		l.dao.Add(&entity)
 	}
@@ -159,23 +159,15 @@ func (l *ExtractorServiceImpl) processBlock() {
 	blockEvent.BlockHash = block.Hash
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
-	// base filter
-	txcnt := len(block.Transactions)
-	if txcnt < 1 {
-		return
-	}
-
 	// process block
 	for _, tx := range block.Transactions {
-		log.Debugf("extractor,get transaction hash:%s", tx.Hash)
-
-		logAmount, err := l.processEvent(&tx, block.Timestamp.BigInt())
+		logAmount, err := l.processEvent(tx, block.Timestamp.BigInt())
 		if err != nil {
 			log.Errorf(err.Error())
 		}
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
-		if err := l.processMethod(tx.Hash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
+		if err := l.processMethod(tx, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
 			log.Errorf(err.Error())
 		}
 	}
@@ -187,6 +179,11 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
+	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
+		l.debug("extractor,unspported protocol %s", tx.To)
+		return nil
+	}
+
 	input := common.FromHex(tx.Input)
 	var (
 		method MethodData
@@ -195,13 +192,13 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
-		log.Debugf("extractor,contract method id %s length invalid", common.ToHex(input))
+		l.debug("extractor,contract method id %s length invalid", common.ToHex(input))
 		return nil
 	}
 
 	id := common.ToHex(input[0:4])
 	if method, ok = l.processor.GetMethod(id); !ok {
-		log.Debugf("extractor,contract method id error:%s", id)
+		l.debug("extractor,contract method id error:%s", id)
 		return nil
 	}
 
@@ -211,15 +208,20 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	return nil
 }
 
-func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *big.Int) (int, error) {
+func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, error) {
 	var receipt ethaccessor.TransactionReceipt
 
-	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", tx.Hash); err != nil {
-		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", tx.Hash, err.Error())
+	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", txhash); err != nil {
+		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", txhash, err.Error())
+	}
+
+	if !l.processor.HasContract(common.HexToAddress(receipt.To)) {
+		l.debug("extractor,unspported protocol %s", receipt.To)
+		return 0, nil
 	}
 
 	if len(receipt.Logs) == 0 {
-		log.Debugf("extractor,transaction %s recipient do not have any logs", tx.Hash)
+		l.debug("extractor,transaction %s recipient do not have any logs", txhash)
 		return 0, nil
 	}
 
@@ -232,7 +234,7 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 		// 过滤合约
 		protocolAddr := common.HexToAddress(evtLog.Address)
 		if ok := l.processor.HasContract(protocolAddr); !ok {
-			log.Debugf("extractor, unsupported protocol %s", protocolAddr.Hex())
+			l.debug("extractor, unsupported protocol %s", protocolAddr.Hex())
 			continue
 		}
 
@@ -240,18 +242,18 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 		data := hexutil.MustDecode(evtLog.Data)
 		id := common.HexToHash(evtLog.Topics[0])
 		if event, ok = l.processor.GetEvent(id); !ok {
-			log.Debugf("extractor,contract event id error:%s", id.Hex())
+			l.debug("extractor,contract event id error:%s", id.Hex())
 			continue
 		}
 
 		// 记录event log
 		if l.commOpts.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
-				log.Debugf("extractor,json unmarshal evtlog error:%s", err.Error())
+				l.debug("extractor,json unmarshal evtlog error:%s", err.Error())
 			} else {
 				el := &dao.EventLog{}
 				el.Protocol = evtLog.Address
-				el.TxHash = tx.Hash
+				el.TxHash = txhash
 				el.BlockNumber = evtLog.BlockNumber.Int64()
 				el.CreateTime = time.Int64()
 				el.Data = bs
@@ -268,7 +270,7 @@ func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, time *b
 		}
 
 		// full filled event and emit to abi processor
-		event.FullFilled(&evtLog, time, tx.Hash)
+		event.FullFilled(&evtLog, time, txhash)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 
@@ -299,7 +301,7 @@ func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	// 寻找最新块
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
-		log.Debugf("extractor,get latest block number error:%s", err.Error())
+		l.debug("extractor,get latest block number error:%s", err.Error())
 		return start, end
 	}
 	if err := latestBlock.ConvertUp(&ret); err != nil {
@@ -307,4 +309,10 @@ func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	}
 
 	return ret.BlockNumber, end
+}
+
+func (l *ExtractorServiceImpl) debug(template string, args ...interface{}) {
+	if l.commOpts.Develop {
+		log.Debugf(template, args...)
+	}
 }
