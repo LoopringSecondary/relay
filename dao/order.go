@@ -162,7 +162,7 @@ func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber 
 	return err
 }
 
-func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, currentBlockNumber int64) ([]*Order, error) {
+func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, startBlockNumber, endBlockNumber int64) ([]*Order, error) {
 	var (
 		list []*Order
 		err  error
@@ -177,7 +177,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 		Where("valid_time < ?", nowtime).
 		Where("valid_time + ttl > ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
-		Where("miner_block_mark = ? or miner_block_mark <= ?", 0, currentBlockNumber).
+		Where("miner_block_mark = ? or miner_block_mark between ? and ?", 0, startBlockNumber, endBlockNumber).
 		Order("price desc").
 		Limit(length).
 		Find(&list).
