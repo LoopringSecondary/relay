@@ -48,7 +48,6 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
-	c.Keystore.Keydir = c.Keystore.Keydir
 	for idx, path := range c.Log.ZapOpts.OutputPaths {
 		if !strings.HasPrefix(path, "std") {
 			c.Log.ZapOpts.OutputPaths[idx] = path
