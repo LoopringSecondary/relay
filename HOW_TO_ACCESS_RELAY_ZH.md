@@ -14,11 +14,11 @@ HTTP-JSON-RPC2.0是目前Relay最直接的接入方式，我们完全符合JSONR
 ## 建议的接入步骤
 Loopring相关的所有文档，代码都是开源的，所以您可以自由的阅读和使用。如果您是第一次接触Loopring，我们建议您按照如下顺序接入Relay：
 
-    1. 了解Loopring，请参考我们的[文档中心](#https://docs.loopring.org)
-    2. 了解Loopring协议，阅读我们的[白皮书](#https://github.com/Loopring/whitepaper)
-    3. 了解我们的[智能合约实现](#https://github.com/Loopring/protocol)，很多关键的概念都在合约里定义，所以这一步对接入Relay很重要
+    1. 了解Loopring，请参考我们的文档中心: https://docs.loopring.org
+    2. 了解Loopring协议，阅读我们的白皮书: https://github.com/Loopring/whitepaper
+    3. 了解我们的智能合约实现: https://github.com/Loopring/protocol，很多关键的概念都在合约里定义，所以这一步对接入Relay很重要
     4. 阅读本文档, 了解接入需要知道的一些信息
-    5. 更进一步，如果您希望自己实现Relay或者Miner，请参考我们的[Relay源代码](#https://github.com/Loopring/relay)
+    5. 更进一步，如果您希望自己实现Relay或者Miner，请参考我们的Relay源代码: https://github.com/Loopring/relay
 
 ## 版本号
 目前Relay最新版本1.0.0-BETA
@@ -44,8 +44,8 @@ MarginSplitPercentage | 分润比例
 Owner | 用户钱包地址
 Market | 市场，我们目前只支持WETH市场
 OrderHash | 订单的签名
-TokenS | Token To Sell 要出售的Token, [支持的Token列表](#支持的token列表)
-TokenB | Token To Buy 要买入的Token，[支持的Token列表](#支持的token列表)
+TokenS | Token To Sell 要出售的Token, [支持的Token列表](#https://github.com/Loopring/protocol/blob/master/doc/tokens.md)
+TokenB | Token To Buy 要买入的Token，[支持的Token列表](#https://github.com/Loopring/protocol/blob/master/doc/tokens.md)
 contractVersion | 合约版本号，目前我们release版本只有v1.0
 timestamp | 这里特指提交订单时的timestamp，为订单生效时间，一般情况下，是当前时间
 ttl | 订单有效期，失效日期=(timestamp + ttl)
