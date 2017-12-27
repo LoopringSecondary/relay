@@ -43,18 +43,29 @@ func newWhiteListCache(options *config.UserManagerOptions, rds dao.RdsService) *
 	c.cache = gocache.New(expire, cleanUp)
 	c.expire = expire
 
-	if list, err := c.rds.GetWhiteList(); err == nil || len(list) == 0 {
-		for _, v := range list {
-			var user types.WhiteListUser
-			if err := v.ConvertUp(&user); err != nil {
-				log.Errorf("new white list cache error:%s", err.Error())
-				continue
-			}
-			c.set(&user)
-		}
-	}
+	c.refreshWhiteList()
 
 	return c
+}
+
+func (c WhiteListCache) refreshWhiteList() {
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 60):
+				if list, err := c.rds.GetWhiteList(); err == nil || len(list) == 0 {
+					for _, v := range list {
+						var user types.WhiteListUser
+						if err := v.ConvertUp(&user); err != nil {
+							log.Errorf("new white list cache error:%s", err.Error())
+							continue
+						}
+						c.set(&user)
+					}
+				}
+			}
+		}
+	}()
 }
 
 func (c *WhiteListCache) AddWhiteListUser(user types.WhiteListUser) error {
