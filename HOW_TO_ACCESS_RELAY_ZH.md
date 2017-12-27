@@ -14,7 +14,7 @@ HTTP-JSON-RPC2.0是目前Relay最直接的接入方式，我们完全符合JSONR
 ## 建议的接入步骤
 Loopring相关的所有文档，代码都是开源的，所以您可以自由的阅读和使用。如果您是第一次接触Loopring，我们建议您按照如下顺序接入Relay：
 
-    1. 了解Loopring，请参考我们的[文档中心](https://docs.loopring.org)
+    1. 了解Loopring，请参考我们的文档中心: https://docs.loopring.org
     2. 了解Loopring协议，阅读我们的白皮书: https://github.com/Loopring/whitepaper
     3. 了解我们的智能合约实现: https://github.com/Loopring/protocol，很多关键的概念都在合约里定义，所以这一步对接入Relay很重要
     4. 阅读本文档, 了解接入需要知道的一些信息
