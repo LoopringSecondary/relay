@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"math/rand"
 	"sort"
 )
 
@@ -183,15 +182,15 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, currentBlockNumber, currentBlockNumber, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 	if len(atoBOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(atoBOrders)
-		orders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, orderCount , currentBlockNumber+1, currentBlockNumber + market.matcher.delayedNumber)
-		atoBOrders = append(atoBOrders, orders)
+		orders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, orderCount, currentBlockNumber+1, currentBlockNumber+market.matcher.delayedNumber)
+		atoBOrders = append(atoBOrders, orders...)
 	}
 
 	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, currentBlockNumber, currentBlockNumber, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 	if len(btoAOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(btoAOrders)
-		orders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, orderCount , currentBlockNumber+1, currentBlockNumber + market.matcher.delayedNumber)
-		atoBOrders = append(atoBOrders, orders)
+		orders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, orderCount, currentBlockNumber+1, currentBlockNumber+market.matcher.delayedNumber)
+		atoBOrders = append(atoBOrders, orders...)
 	}
 
 	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
