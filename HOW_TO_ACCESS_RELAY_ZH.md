@@ -44,8 +44,8 @@ MarginSplitPercentage | 分润比例
 Owner | 用户钱包地址
 Market | 市场，我们目前只支持WETH市场
 OrderHash | 订单的签名
-TokenS | Token To Sell 要出售的Token, [支持的Token列表](#https://github.com/Loopring/protocol/blob/master/doc/tokens.md)
-TokenB | Token To Buy 要买入的Token，[支持的Token列表](#https://github.com/Loopring/protocol/blob/master/doc/tokens.md)
+TokenS | Token To Sell 要出售的Token, 请参考支持的Token列表
+TokenB | Token To Buy 要买入的Token，请参考支持的Token列表
 contractVersion | 合约版本号，目前我们release版本只有v1.0
 timestamp | 这里特指提交订单时的timestamp，为订单生效时间，一般情况下，是当前时间
 ttl | 订单有效期，失效日期=(timestamp + ttl)
