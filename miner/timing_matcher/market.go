@@ -105,7 +105,7 @@ func (market *Market) match() {
 				orderState := market.reduceAmountAfterFilled(filledOrder)
 				isFullFilled := market.om.IsOrderFullFinished(orderState)
 				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = isFullFilled
-				market.matcher.addMatchedOrder(filledOrder, ringForSubmit.RawRing.Hash)
+				market.matcher.rounds.appendFilledOrderToCurrent(filledOrder, ringForSubmit.RawRing.Hash)
 
 				list = market.reduceReceivedOfCandidateRing(list, filledOrder, isFullFilled)
 			}
@@ -127,7 +127,9 @@ func (market *Market) match() {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, orderHash)
 		}
 	}
-	eventemitter.Emit(eventemitter.Miner_NewRing, ringSubmitInfos)
+	if len(ringSubmitInfos) > 0 {
+		eventemitter.Emit(eventemitter.Miner_NewRing, ringSubmitInfos)
+	}
 }
 
 func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, filledOrder *types.FilledOrder, isFullFilled bool) CandidateRingList {
@@ -222,19 +224,11 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 
-	if matchedOrder, ok := market.matcher.MatchedOrders[orderHash]; ok {
-		//if len(matchedOrder.rounds) <= 0 {
-		//	delete(market.AtoBOrders, orderHash)
-		//	delete(market.BtoAOrders, orderHash)
-		//} else {
-		for _, matchedRound := range matchedOrder.rounds {
-			if market.matcher.lastBlockNumber.Cmp(matchedRound.clearRound) <= 0 {
-				orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(matchedRound.matchedAmountB))
-				orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(matchedRound.matchedAmountS))
-			}
-		}
-		//}
-	}
+	amountS, amountB := market.matcher.rounds.dealtAmount(orderHash)
+
+	log.Debugf("reduceRemainedAmountBeforeMatch:%s, %s, %s", orderState.RawOrder.Owner.Hex(), amountS.String(), amountB.String())
+	orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(amountB))
+	orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(amountS))
 
 }
 

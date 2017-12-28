@@ -30,8 +30,6 @@ import (
 func (matcher *TimingMatcher) listenNewBlock() {
 	newBlockChan := make(chan *types.BlockEvent)
 
-	go matcher.flushRoundStates()
-
 	go func() {
 		for {
 			select {
@@ -41,6 +39,7 @@ func (matcher *TimingMatcher) listenNewBlock() {
 					if nextBlockNumber.Cmp(blockEvent.BlockNumber) <= 0 {
 						log.Debugf("miner starts a new match round")
 						matcher.lastBlockNumber = blockEvent.BlockNumber
+						matcher.rounds.appendNewRoundState(matcher.lastBlockNumber)
 						var wg sync.WaitGroup
 						for _, market := range matcher.markets {
 							wg.Add(1)
@@ -81,7 +80,7 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 			select {
 			case ringhash := <-submitEventChan:
 				log.Debugf("received mined event, this round will be removed, ringhash:%s", ringhash.Hex())
-				matcher.deleteRoundStateAfterSubmit(ringhash)
+				matcher.rounds.removeMinedRing(ringhash)
 			}
 		}
 	}()
