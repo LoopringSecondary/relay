@@ -179,18 +179,19 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	currentBlockNumber := market.matcher.lastBlockNumber.Int64()
 	deleyedNumber := market.matcher.delayedNumber + currentBlockNumber
 
-	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, currentBlockNumber, currentBlockNumber, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
+	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, int64(0), currentBlockNumber, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
+
 	if len(atoBOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(atoBOrders)
 		orders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, orderCount, currentBlockNumber+1, currentBlockNumber+market.matcher.delayedNumber)
 		atoBOrders = append(atoBOrders, orders...)
 	}
 
-	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, currentBlockNumber, currentBlockNumber, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
+	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, int64(0), currentBlockNumber, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 	if len(btoAOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(btoAOrders)
 		orders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, orderCount, currentBlockNumber+1, currentBlockNumber+market.matcher.delayedNumber)
-		atoBOrders = append(atoBOrders, orders...)
+		btoAOrders = append(btoAOrders, orders...)
 	}
 
 	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
@@ -260,24 +261,23 @@ func (market *Market) reduceAmountAfterFilled(filledOrder *types.FilledOrder) *t
 func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*types.RingSubmitInfo, error) {
 	filledOrders := []*types.FilledOrder{}
 	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
-	minerLrcBalance, _ := market.matcher.getAccountAvailableAmount(market.matcher.submitter.Miner.Address, market.lrcAddress)
 	for _, order := range orders {
-		lrcTokenBalance, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
+		lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
 		if nil != err {
 			return nil, err
 		}
-		tokenSBalance, err := market.matcher.getAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
+		tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
 		if nil != err {
 			return nil, err
 		}
 		if tokenSBalance.Sign() <= 0 {
-			return nil, fmt.Errorf("%s token %s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
+			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
 		}
 		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)
-	if err := market.matcher.evaluator.ComputeRing(ringTmp, minerLrcBalance); nil != err {
+	if err := market.matcher.evaluator.ComputeRing(ringTmp); nil != err {
 		return nil, err
 	} else {
 		return market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)

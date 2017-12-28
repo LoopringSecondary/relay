@@ -46,7 +46,6 @@ type TimingMatcher struct {
 	submitter       *miner.RingSubmitter
 	evaluator       *miner.Evaluator
 	lastBlockNumber *big.Int
-	cacheTtl        *big.Int
 	duration        *big.Int
 	roundOrderCount int
 	flushRoundCount *big.Int
@@ -71,7 +70,6 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	matcher.flushRoundCount = big.NewInt(matcherOptions.FlushRoundCount)
 
 	matcher.lastBlockNumber = big.NewInt(0)
-	matcher.cacheTtl = big.NewInt(matcherOptions.CacheTtl)
 	matcher.mtx = sync.RWMutex{}
 	matcher.roundMtx = sync.RWMutex{}
 	matcher.stopFuncs = []func(){}
@@ -159,7 +157,7 @@ func (matcher *TimingMatcher) addMatchedOrder(filledOrder *types.FilledOrder, ri
 		matchState = matchState1
 	}
 	clearRound := new(big.Int)
-	clearRound.Add(matcher.lastBlockNumber, matcher.cacheTtl)
+	clearRound.Add(matcher.lastBlockNumber, matcher.flushRoundCount)
 	roundState := &RoundState{
 		round:          matcher.lastBlockNumber,
 		clearRound:     clearRound,
@@ -183,7 +181,7 @@ func (matcher *TimingMatcher) flushRoundStates() {
 
 }
 
-func (matcher *TimingMatcher) getAccountAvailableAmount(address common.Address, tokenAddress common.Address) (*big.Rat, error) {
+func (matcher *TimingMatcher) GetAccountAvailableAmount(address common.Address, tokenAddress common.Address) (*big.Rat, error) {
 	if balance, allowance, err := matcher.accountManager.GetBalanceByTokenAddress(address, tokenAddress); nil != err {
 		return nil, err
 	} else {

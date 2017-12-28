@@ -36,8 +36,7 @@ type Evaluator struct {
 	accessor              *ethaccessor.EthNodeAccessor
 }
 
-func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat) error {
-	ringState.LegalFee = new(big.Rat)
+func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
 	productAmountS := big.NewRat(int64(1), int64(1))
 	productAmountB := big.NewRat(int64(1), int64(1))
@@ -148,7 +147,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 	}
 
 	//compute the fee of this ring and orders, and set the feeSelection
-	e.computeFeeOfRingAndOrder(ringState, minerLrcBalance)
+	e.computeFeeOfRingAndOrder(ringState)
 
 	//cvs
 	cvs, err := PriceRateCVSquare(ringState)
@@ -163,7 +162,7 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring, minerLrcBalance *big.Rat)
 	}
 }
 
-func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring, minerLrcBalance *big.Rat) {
+func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
@@ -202,23 +201,11 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring, minerLrcBala
 
 		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
 		log.Debugf("raw.lrc:%s, AvailableLrcBalance:%s, legalAmountOfLrc:%s saving:%s", filledOrder.OrderState.RawOrder.LrcFee.String(), filledOrder.AvailableLrcBalance.FloatString(0), legalAmountOfLrc.String(), legalAmountOfSaving.String())
-		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
-		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
-		if legalAmountOfLrc.Cmp(legalAmountOfSaving) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
-			filledOrder.FeeSelection = 1
-			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
-			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
-			filledOrder.LrcReward = legalAmountOfLrc
-			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
-			filledOrder.LegalFee = legalAmountOfSaving
+		filledOrder.LegalLrcFee = legalAmountOfLrc
 
-			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
-			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-		} else {
-			filledOrder.FeeSelection = 0
-			filledOrder.LegalFee = legalAmountOfLrc
-		}
-		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
+		splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
+		legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
+		filledOrder.LegalFeeS = legalAmountOfSaving
 	}
 
 }
@@ -267,7 +254,7 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 		subSquare := new(big.Int).Mul(sub, sub)
 		cvs.Add(cvs, subSquare)
 	}
-
+	//todo:avg may be zero??
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
