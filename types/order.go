@@ -201,7 +201,9 @@ type FilledOrder struct {
 	FillAmountB      *big.Rat   `json:"fillAmountB"` //计算需要
 	LrcReward        *big.Rat   `json:"lrcReward"`
 	LrcFee           *big.Rat   `json:"lrcFee"`
+	LegalLrcFee      *big.Rat   `json:"legalLrcFee"`
 	FeeS             *big.Rat   `json:"feeS"`
+	LegalFeeS        *big.Rat   `json:"legalFeeS"`
 	//FeeB             *EnlargedInt
 	LegalFee *big.Rat `json:"legalFee"` //法币计算的fee
 

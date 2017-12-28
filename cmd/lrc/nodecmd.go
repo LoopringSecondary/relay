@@ -78,24 +78,40 @@ func startNode(ctx *cli.Context) error {
 
 func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 	if "full" == globalConfig.Mode || "miner" == globalConfig.Mode {
-		minerUnlocked := false
 		unlockAccs := []accounts.Account{}
+		minerAccs := []string{}
 		if ctx.IsSet(utils.UnlockFlag.Name) {
 			unlocks := strings.Split(ctx.String(utils.UnlockFlag.Name), ",")
 			for _, acc := range unlocks {
 				if common.IsHexAddress(acc) {
-					if strings.ToLower(globalConfig.Miner.Miner) == strings.ToLower(acc) {
-						minerUnlocked = true
-					}
 					unlockAccs = append(unlockAccs, accounts.Account{Address: common.HexToAddress(acc)})
 				} else {
 					utils.ExitWithErr(ctx.App.Writer, errors.New(acc+" is not a HexAddress"))
 				}
 			}
 		}
-		if !minerUnlocked {
-			utils.ExitWithErr(ctx.App.Writer, errors.New("the address used to mine ring must be unlocked "))
+		for _, addr := range globalConfig.Miner.NormalMiners {
+			minerAccs = append(minerAccs, addr.Address)
 		}
+		for _, addr := range globalConfig.Miner.PercentMiners {
+			minerAccs = append(minerAccs, addr.Address)
+		}
+		//todo:it should not appear here, move it.
+		if len(minerAccs) <= 0 {
+			utils.ExitWithErr(ctx.App.Writer, fmt.Errorf("require a address as miner to sign and submit ring when running as miner"))
+		}
+		for _, addr := range minerAccs {
+			unlocked := false
+			for _, unlockAcc := range unlockAccs {
+				if strings.ToLower(unlockAcc.Address.Hex()) == strings.ToLower(addr) {
+					unlocked = true
+				}
+			}
+			if !unlocked {
+				utils.ExitWithErr(ctx.App.Writer, fmt.Errorf("the address:%s used to mine ring must be unlocked ", addr))
+			}
+		}
+
 		var passwords []string
 		if ctx.IsSet(utils.PasswordsFlag.Name) {
 			passwords = strings.Split(ctx.String(utils.PasswordsFlag.Name), ",")

@@ -18,7 +18,13 @@
 
 package miner
 
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+)
+
 type Matcher interface {
 	Start()
 	Stop()
+	GetAccountAvailableAmount(address common.Address, tokenAddress common.Address) (*big.Rat, error)
 }
