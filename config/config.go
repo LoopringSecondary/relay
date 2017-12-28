@@ -48,16 +48,22 @@ func LoadConfig(file string) *GlobalConfig {
 		panic(err)
 	}
 
-	if c.Common.Develop {
-		basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/"
-		c.Keystore.Keydir = basedir + c.Keystore.Keydir
-
-		for idx, path := range c.Log.ZapOpts.OutputPaths {
-			if !strings.HasPrefix(path, "std") {
-				c.Log.ZapOpts.OutputPaths[idx] = basedir + path
-			}
+	for idx, path := range c.Log.ZapOpts.OutputPaths {
+		if !strings.HasPrefix(path, "std") {
+			c.Log.ZapOpts.OutputPaths[idx] = path
 		}
 	}
+
+	//if c.Common.Develop {
+	//	basedir := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/"
+	//	c.Keystore.Keydir = basedir + c.Keystore.Keydir
+	//
+	//	for idx, path := range c.Log.ZapOpts.OutputPaths {
+	//		if !strings.HasPrefix(path, "std") {
+	//			c.Log.ZapOpts.OutputPaths[idx] = basedir + path
+	//		}
+	//	}
+	//}
 
 	return c
 }
