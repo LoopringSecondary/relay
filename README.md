@@ -1,8 +1,8 @@
 # Loopring Relay
 Loopring relay contains two partments:Relay and Miner. Relay is the service for wallet and broadcast orders to ipfs network ,Miner found ring from the unmatched orders. It can act as one or both of them:<br>
 
-mention:
-This program is under development.
+
+**This program is still under development and heavy refactory. We do NOT recommend people to start their own relay as its infrastrcture will go through a major upgrade in the first 2 quarters of 2018.**
 
 ## Set up
 ##### etherenum node
