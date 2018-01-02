@@ -126,6 +126,14 @@ func generatePrice(order *types.Order) error {
 		return err
 	}
 
+	if order.AmountS == nil || order.AmountS.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's amountS invalid")
+	}
+
+	if order.AmountB == nil || order.AmountB.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's amountB invalid")
+	}
+
 	order.Price = new(big.Rat).Mul(
 		new(big.Rat).SetFrac(order.AmountS, order.AmountB),
 		new(big.Rat).SetFrac(tokenB.Decimals, tokenS.Decimals),
