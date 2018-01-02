@@ -33,10 +33,6 @@ name = "Loopring corporation"
     cutoff_cache_clean_time = 0
     dust_order_value = 1
 
-[contract]
-    versions = ["v1.0", "v1.0-test"]
-    addresses = ["0xc01172a87f6cc20e1e3b9ad13a9e715fbc2d5aa9", "0x4c44d51CF0d35172fCe9d69e2beAC728de980E9D"]
-
 [ipfs]
     server = "127.0.0.1"
     port = 5001
@@ -51,7 +47,6 @@ name = "Loopring corporation"
     raw_url = "http://127.0.0.1:8545"
 
 [common]
-    filter_topics = ["order_filled", "order_cancelled", "ring_mined", "cut_off_timestamp_changed"]
     default_block_number = 33287
     develop = false
     save_event_log = true
@@ -68,18 +63,18 @@ name = "Loopring corporation"
 [miner]
     ringMaxLength = 4
     feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
-    miner = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
     ifRegistryRingHash = false
-    throwIfLrcIsInsuffcient = false
     rate_ratio_cvs_threshold = 1000000000000000
-    gas_limit = 150000000
-    gas_price_limit = 10000000000
+    [[miner.normal_miners]]
+        address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
+        maxPendingTtl = 40
+        maxPendingCount = 20
+        gasPriceLimit = 10000000000
     [miner.TimingMatcher]
     		round_orders_count=50
     		duration = 3
     		delayed_number = 10
-    		flush_round_count = 100
-    		cacheTtl = 200
+    		max_cache_rounds_length = 100
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"

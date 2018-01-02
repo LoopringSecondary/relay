@@ -70,10 +70,6 @@ func MinerFlags() []cli.Flag {
 			Name:  "ifRegistryRingHash,reg",
 			Usage: "the submitter will registry ringhash first if it set ture",
 		},
-		cli.BoolFlag{
-			Name:  "throwIfLrcIsInsuffcient,t",
-			Usage: "the contract will revert when the lrc is insuffcient if it set ture ",
-		},
 	}
 }
 
@@ -85,13 +81,10 @@ func mergeMinerConfig(ctx *cli.Context, minerOpts *config.MinerOptions) {
 		minerOpts.Miner = ctx.String("miner")
 	}
 	if ctx.IsSet("feeRecepient") {
-		minerOpts.FeeRecepient = ctx.String("feeRecepient")
+		minerOpts.FeeReceipt = ctx.String("feeRecepient")
 	}
 	if ctx.IsSet("ifRegistryRingHash") {
 		minerOpts.IfRegistryRingHash = ctx.Bool("ifRegistryRingHash")
-	}
-	if ctx.IsSet("throwIfLrcIsInsuffcient") {
-		minerOpts.ThrowIfLrcIsInsuffcient = ctx.Bool("throwIfLrcIsInsuffcient")
 	}
 }
 

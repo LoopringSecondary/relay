@@ -85,18 +85,12 @@ type GlobalConfig struct {
 	Miner          MinerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
-	Contract       ContractOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
 }
 
 type JsonrpcOptions struct {
 	Port int
-}
-
-type ContractOptions struct {
-	Versions  []string
-	Addresses []string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -146,7 +140,6 @@ type CommonOptions struct {
 	Erc20Abi           string
 	WethAbi            string
 	ProtocolImpl       ProtocolOptions `required:"true"`
-	FilterTopics       []string        `required:"true"`
 	DefaultBlockNumber *big.Int        `required:"true"`
 	EndBlockNumber     *big.Int        `required:"true"`
 	Develop            bool            `required:"true"`
@@ -159,22 +152,37 @@ type LogOptions struct {
 }
 
 type TimingMatcher struct {
-	RoundOrdersCount int
-	Duration         int64
-	DelayedNumber    int64
-	FlushRoundCount  int64
-	CacheTtl         int64
+	RoundOrdersCount     int
+	Duration             int64
+	DelayedNumber        int64
+	MaxCacheRoundsLength int
 }
+
+type PercentMinerAddress struct {
+	Address    string
+	FeePercent float64 //the gasprice will be calculated by (FeePercent/100)*(legalFee/eth-price)/gaslimit
+	StartFee   float64 //If received reaches StartReceived, it will use feepercent to ensure eth confirm this tx quickly.
+}
+
+type NormalMinerAddress struct {
+	Address         string
+	MaxPendingTtl   int   //if a tx is still pending after MaxPendingTtl blocks, the nonce used by it will be used again.
+	MaxPendingCount int64 //this addr will be used to send tx again until the count of pending txs belows MaxPendingCount.
+	GasPriceLimit   int64 //the max gas price
+}
+
 type MinerOptions struct {
-	RingMaxLength           int    `required:"true"` //recommended value:4
-	Miner                   string `required:"true"` //private key, used to sign the ring
-	FeeRecepient            string //address the recepient of fee
-	IfRegistryRingHash      bool
-	ThrowIfLrcIsInsuffcient bool
-	GasLimit                int64
-	GasPriceLimit           int64
-	TimingMatcher           *TimingMatcher
-	RateRatioCVSThreshold   int64
+	RingMaxLength         int `required:"true"` //recommended value:4
+	FeeRecepient          string
+	Miner                 string
+	FeeReceipt            string //address the receipt of fee
+	IfRegistryRingHash    bool
+	NormalMiners          []NormalMinerAddress  //
+	PercentMiners         []PercentMinerAddress //
+	TimingMatcher         *TimingMatcher
+	RateRatioCVSThreshold int64
+	MinGasLimit           int64
+	MaxGasLimit           int64
 }
 
 type MarketCapOptions struct {

@@ -36,7 +36,6 @@ import (
 
 type Ring struct {
 	Orders      []*FilledOrder `json:"orderes"`
-	Miner       common.Address `json:"miner"`
 	V           uint8          `json:"v"`
 	R           Bytes32        `json:"r"`
 	S           Bytes32        `json:"s"`

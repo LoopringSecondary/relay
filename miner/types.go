@@ -20,7 +20,26 @@ package miner
 
 import (
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
+
+type NormalMinerAddress struct {
+	Address         common.Address
+	GasPriceLimit   *big.Int
+	MaxPendingTtl   int
+	MaxPendingCount int64
+
+	Nonce *big.Int
+}
+
+type SplitMinerAddress struct {
+	Address    common.Address
+	FeePercent float64
+	StartFee   float64
+
+	Nonce *big.Int
+}
 
 func NewRing(filledOrders []*types.FilledOrder) *types.Ring {
 	ring := &types.Ring{}
