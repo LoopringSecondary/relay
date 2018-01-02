@@ -1,0 +1,42 @@
+version: '3'
+services:
+  mysql:
+    environment:
+      - MYSQL_ROOT_PASSWORD=111111
+    ports:
+      - 3306:3306
+    volumes:
+      - $HOME/projects/docker/test/mysql:/var/lib/mysql
+    image: dylenfu/mysql:0.1-beta
+
+  ipfs:
+    ports:
+      - 4001:4001
+      - 8080:8080
+      - 5001:5001
+    volumes:
+      - $HOME/projects/docker/test/ipfs/staging:/export
+      - $HOME/projects/docker/test/ipfs/data:/data/ipfs
+    command: --enable-pubsub-experiment
+    image: dylenfu/ipfs:0.1-beta
+
+  eth:
+    ports:
+      - 8545:8545
+      - 30303:30303
+    volumes:
+      - $HOME/projects/docker/test/eth:/root
+    command: --datadir /root/.ethereum --networkid 151 --rpc console
+    image: dylenfu/ethnode:0.1-beta
+
+  relay:
+    depends_on:
+      - eth
+      - mysql
+      - ipfs
+    ports:
+      - 8083:8083
+    volumes:
+      - $HOME/projects/docker/test/relay:/data
+    command: --unlocks=0x4bad3053d574cd54513babe21db3f09bea1d387d --passwords=101 --config=/data/docker.toml --mode=miner
+    image: dylenfu/relay:0.1.1-beta

@@ -7,10 +7,8 @@ ENV WORKSPACE=$GOPATH/src/github.com/Loopring/relay
 ADD . $WORKSPACE
 
 RUN cd $WORKSPACE && make relay
-RUN mv $WORKSPACE/build/bin/relay /data
+RUN mv $WORKSPACE/build/bin/relay /$GOPATH/bin
 
-RUN ls -al /data
+EXPOSE 8083
 
-EXPOSE 8083 8545 3306 5001
-
-ENTRYPOINT ["/data/relay"]
+ENTRYPOINT ["relay"]
