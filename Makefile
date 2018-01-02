@@ -7,7 +7,7 @@ GOBUILD=$(GOCMD) build -ldflags -s -v
 BINARY_NAME=relay
 
 prepare:
-	bash build/prepare.sh
+	/bin/sh build/prepare.sh
 
 relay:prepare
 	$(GOBUILD) -o build/bin/$(BINARY_NAME) cmd/lrc/*
