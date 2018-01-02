@@ -61,8 +61,8 @@ type AskBid struct {
 }
 
 type DepthElement struct {
-	Price string
-	Size *big.Rat
+	Price  string
+	Size   *big.Rat
 	Amount *big.Rat
 }
 
@@ -466,9 +466,9 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDec
 				size := v.Size
 				amount = amount.Add(amount, amountS)
 				size = size.Add(size, amountB)
-				depthMap[priceFloatStr] = DepthElement{Price:v.Price, Amount:amount, Size:size}
+				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price:priceFloatStr, Amount:amountS, Size:amountB}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountS, Size: amountB}
 			}
 		} else {
 			priceFloatStr := price.FloatString(10)
@@ -477,9 +477,9 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDec
 				size := v.Size
 				amount = amount.Add(amount, amountB)
 				size = size.Add(size, amountS)
-				depthMap[priceFloatStr] = DepthElement{Price:v.Price, Amount:amount, Size:size}
+				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price:priceFloatStr, Amount:amountB, Size:amountS}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountB, Size: amountS}
 			}
 		}
 	}

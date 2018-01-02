@@ -90,7 +90,7 @@ func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIn
 	ringMined := make([]RingMinedEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 
-	err = s.db.Where(query).Order("time desc").Offset((pageIndex - 1)*pageSize).Limit(pageSize).Find(&ringMined).Error
+	err = s.db.Where(query).Order("time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&ringMined).Error
 
 	if err != nil {
 		return res, err
