@@ -74,7 +74,7 @@ func TestSingleOrder(t *testing.T) {
 	bs, _ := order.MarshalJSON()
 
 	// get ipfs shell and sub order
-	sh := shell.NewLocalShell()
+	sh := shell.NewShell(c.Ipfs.Url())
 	pubMessage(sh, string(bs))
 }
 
@@ -122,7 +122,7 @@ func TestRing(t *testing.T) {
 	bs2, _ := order2.MarshalJSON()
 
 	// get ipfs shell and sub order
-	sh := shell.NewLocalShell()
+	sh := shell.NewShell(c.Ipfs.Url())
 	pubMessage(sh, string(bs1))
 	pubMessage(sh, string(bs2))
 }
@@ -186,7 +186,7 @@ func TestBatchRing(t *testing.T) {
 	bs2, _ := order2.MarshalJSON()
 
 	// get ipfs shell and sub order
-	sh := shell.NewLocalShell()
+	sh := shell.NewShell(c.Ipfs.Url())
 	pubMessage(sh, string(bs1))
 	pubMessage(sh, string(bs3))
 	pubMessage(sh, string(bs2))
@@ -284,7 +284,7 @@ func TestMatcher_Case1(t *testing.T) {
 	bs2, _ := order2.MarshalJSON()
 
 	// get ipfs shell and sub order
-	sh := shell.NewLocalShell()
+	sh := shell.NewShell(c.Ipfs.Url())
 	pubMessage(sh, string(bs1))
 	pubMessage(sh, string(bs2))
 
@@ -350,7 +350,7 @@ func TestMatcher_Case2(t *testing.T) {
 	//bs3, _ := order2.MarshalJSON()
 
 	// get ipfs shell and sub order
-	sh := shell.NewLocalShell()
+	sh := shell.NewShell(c.Ipfs.Url())
 	//pubMessage(sh, string(bs1))
 	pubMessage(sh, string(bs2))
 

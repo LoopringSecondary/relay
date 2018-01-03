@@ -123,10 +123,16 @@ func generatePrice(order *types.Order) error {
 	if err != nil {
 		return err
 	}
+	if tokenS.Decimals == nil || tokenS.Decimals.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's tokenS decimals invalid")
+	}
 
 	tokenB, err := util.AddressToToken(order.TokenB)
 	if err != nil {
 		return err
+	}
+	if tokenB.Decimals == nil || tokenB.Decimals.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's tokenS decimals invalid")
 	}
 
 	if order.AmountS == nil || order.AmountS.Cmp(big.NewInt(0)) < 1 {

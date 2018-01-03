@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "remote.toml"
+	DebugFile = "docker.toml"
 )
 
 var (
@@ -74,7 +74,7 @@ func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
 	util.Initialize(rds, cfg.Common.ProtocolImpl.Address)
-	loadTestData()
+	entity = loadTestData()
 	unlockAccounts()
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
@@ -88,6 +88,7 @@ func loadConfig() *config.GlobalConfig {
 
 	return c
 }
+
 func LoadConfig() *config.GlobalConfig {
 	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
 	c := config.LoadConfig(path)
@@ -96,8 +97,12 @@ func LoadConfig() *config.GlobalConfig {
 	return c
 }
 
-func loadTestData() {
-	entity = new(TestEntity)
+func LoadTestData() *TestEntity {
+	return loadTestData()
+}
+
+func loadTestData() *TestEntity {
+	e := new(TestEntity)
 
 	type Account struct {
 		Address    string
@@ -123,22 +128,24 @@ func loadTestData() {
 		log.Fatalf(err.Error())
 	}
 
-	entity.Accounts = make([]AccountEntity, 0)
+	e.Accounts = make([]AccountEntity, 0)
 	for _, v := range testData.Accounts {
 		var acc AccountEntity
 		acc.Address = common.HexToAddress(v.Address)
 		acc.Passphrase = v.Passphrase
-		entity.Accounts = append(entity.Accounts, acc)
+		e.Accounts = append(e.Accounts, acc)
 	}
 
-	entity.Tokens = make(map[string]common.Address)
+	e.Tokens = make(map[string]common.Address)
 	for symbol, token := range util.AllTokens {
-		entity.Tokens[symbol] = token.Protocol
+		e.Tokens[symbol] = token.Protocol
 	}
 
-	entity.Creator = AccountEntity{Address: common.HexToAddress(testData.Creator.Address), Passphrase: testData.Creator.Passphrase}
-	entity.KeystoreDir = cfg.Keystore.Keydir
-	entity.AllowanceAmount = testData.AllowanceAmount
+	e.Creator = AccountEntity{Address: common.HexToAddress(testData.Creator.Address), Passphrase: testData.Creator.Passphrase}
+	e.KeystoreDir = cfg.Keystore.Keydir
+	e.AllowanceAmount = testData.AllowanceAmount
+
+	return e
 }
 
 func unlockAccounts() {
