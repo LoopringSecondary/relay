@@ -19,25 +19,25 @@
 package util_test
 
 import (
-	"testing"
+	"fmt"
+	log2 "github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
-	"fmt"
 	"github.com/go-ethereum/log"
-	log2 "github.com/Loopring/relay/log"
+	"math/big"
+	"testing"
 )
 
 func TestCalculatePrice(t *testing.T) {
 	util.SupportTokens = make(map[string]types.Token)
 	util.AllTokens = make(map[string]types.Token)
-	funToken := types.Token{Protocol:common.HexToAddress("0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b"), Decimals:big.NewInt(1e8)}
-	wethToken := types.Token{Protocol:common.HexToAddress("0x2956356cD2a2bf3202F771F50D3D14A367b48070"), Decimals:big.NewInt(1e18)}
+	funToken := types.Token{Protocol: common.HexToAddress("0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b"), Decimals: big.NewInt(1e8)}
+	wethToken := types.Token{Protocol: common.HexToAddress("0x2956356cD2a2bf3202F771F50D3D14A367b48070"), Decimals: big.NewInt(1e18)}
 	util.SupportTokens["FUN"] = funToken
 	util.AllTokens["FUN"] = funToken
 	util.AllTokens["WETH"] = wethToken
-	price := util.CalculatePrice("10000000000", "7000000000000000", "0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b" ,"0x2956356cD2a2bf3202F771F50D3D14A367b48070")
+	price := util.CalculatePrice("10000000000", "7000000000000000", "0x419D0d8BdD9aF5e606Ae2232ed285Aff190E711b", "0x2956356cD2a2bf3202F771F50D3D14A367b48070")
 	fmt.Println(price)
 	fmt.Println(price == 0.00007)
 	if price != 0.00007 {
@@ -47,4 +47,3 @@ func TestCalculatePrice(t *testing.T) {
 	}
 	log2.Fatal("ksfjlsdjfklj")
 }
-

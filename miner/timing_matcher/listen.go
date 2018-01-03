@@ -37,7 +37,8 @@ func (matcher *TimingMatcher) listenNewBlock() {
 				if nil != blockEvent {
 					nextBlockNumber := new(big.Int).Add(matcher.duration, matcher.lastBlockNumber)
 					if nextBlockNumber.Cmp(blockEvent.BlockNumber) <= 0 {
-						log.Debugf("miner starts a new match round")
+						// debug use only
+						// log.Debugf("miner starts a new match round")
 						matcher.lastBlockNumber = blockEvent.BlockNumber
 						matcher.rounds.appendNewRoundState(matcher.lastBlockNumber)
 						var wg sync.WaitGroup

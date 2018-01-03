@@ -83,7 +83,10 @@ func HandleOrder(input eventemitter.EventData) error {
 
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil && err.Error() == "record not found" {
-		generatePrice(order)
+		if err = generatePrice(order); err != nil {
+			return err
+		}
+
 		for _, v := range gateway.filters {
 			valid, err := v.filter(order)
 			if !valid {
@@ -120,10 +123,24 @@ func generatePrice(order *types.Order) error {
 	if err != nil {
 		return err
 	}
+	if tokenS.Decimals == nil || tokenS.Decimals.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's tokenS decimals invalid")
+	}
 
 	tokenB, err := util.AddressToToken(order.TokenB)
 	if err != nil {
 		return err
+	}
+	if tokenB.Decimals == nil || tokenB.Decimals.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's tokenS decimals invalid")
+	}
+
+	if order.AmountS == nil || order.AmountS.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's amountS invalid")
+	}
+
+	if order.AmountB == nil || order.AmountB.Cmp(big.NewInt(0)) < 1 {
+		return fmt.Errorf("order's amountB invalid")
 	}
 
 	order.Price = new(big.Rat).Mul(
