@@ -1,0 +1,43 @@
+version: '3'
+services:
+  mysql:
+    environment:
+      - MYSQL_ROOT_PASSWORD=example
+    ports:
+      - 3306:3306
+    volumes:
+      - /YOUR_MYSQL_DATA_DIR:/var/lib/mysql
+    image: mysql:5.7
+
+  ipfs:
+    ports:
+      - 4001:4001
+      - 8080:8080
+      - 5001:5001
+    volumes:
+      - /YOUR_IPFS_DIR/staging:/export
+      - /YOUR_IPFS_DIR/data:/data/ipfs
+    command: --enable-pubsub-experiment
+    image: ipfs/go-ipfs:v0.4.11
+
+  eth:
+    ports:
+      - 8545:8545
+      - 30303:30303
+    volumes:
+      - /YOUR_ETH_DATA_DIR:/root
+    command: --datadir /root/.ethereum --networkid 151 --rpc --rpcaddr 0.0.0.0
+    image: ethereum/client-go:v1.7.3
+
+  relay:
+    depends_on:
+      - eth
+      - mysql
+      - ipfs
+    ports:
+      - 8083:8083
+    volumes:
+      - /YOUR_RELAY_KEYSTORE_DIR:/keystore
+      - /YOUR_RELAY_DATA_DIR:/data
+    command: --unlocks=YOUR_MINER_ACCOUNT --passwords=MINER_ACCOUNT_PASSWORD --config=/data/docker.toml --mode=miner
+    image: loopring/relay:0.1-beta

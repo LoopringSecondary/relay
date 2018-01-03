@@ -26,7 +26,7 @@ services:
       - 30303:30303
     volumes:
       - $HOME/projects/docker/test/eth:/root
-    command: --datadir /root/.ethereum --networkid 151 --rpc console
+    command: --datadir /root/.ethereum --networkid 151 --rpc --rpcaddr 0.0.0.0 --rpccorsdomain * --rpcapi "admin,debug,eth,miner,net,personal,shh,txpool,web3"
     image: dylenfu/ethnode:0.1-beta
 
   relay:

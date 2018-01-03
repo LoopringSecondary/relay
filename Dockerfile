@@ -2,6 +2,7 @@ FROM golang:1.9-alpine as builder
 
 RUN apk add --no-cache make gcc musl-dev linux-headers
 RUN mkdir /data
+RUN mkdir /keystore
 
 ENV WORKSPACE=$GOPATH/src/github.com/Loopring/relay
 ADD . $WORKSPACE
