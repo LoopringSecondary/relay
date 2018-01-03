@@ -50,3 +50,6 @@ Then, you can run as follow.
 > build/bin/relay  --mode=miner --unlocks $mineraddress --passwords $passwords
 
 ```
+## docker
+reference<br> 
+https://hub.docker.com/r/loopring/relay
