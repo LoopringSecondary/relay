@@ -40,4 +40,4 @@ services:
       - /YOUR_RELAY_KEYSTORE_DIR:/keystore
       - /YOUR_RELAY_DATA_DIR:/data
     command: --unlocks=YOUR_MINER_ACCOUNT --passwords=MINER_ACCOUNT_PASSWORD --config=/data/docker.toml --mode=miner
-    image: loopring/relay:0.1-beta
+    image: loopring/relay:v0.1-pre1
