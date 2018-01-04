@@ -15,6 +15,7 @@ This document contains the following sections:
 ## Endport
 ```
 JSON-RPC  : http://{hostname}:{port}/rpc
+JSON-RPC(mainnet)  : https://relay1.loopring.io/rpc
 ```
 
 ## JSON-RPC Methods 

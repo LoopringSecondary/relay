@@ -264,6 +264,7 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
 		Where("status in (?)", filterStatus).
 		Where("valid_time < ?", nowtime).
+		Where("valid_time + ttl > ? ", nowtime).
 		Order("price desc").
 		Limit(length).
 		Find(&list).Error
@@ -287,7 +288,7 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("valid_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 		return pageResult, err
 	}
 
@@ -340,6 +341,7 @@ func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Addr
 	err = s.db.Model(&Order{}).
 		Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).
 		Where("valid_time < ?", now).
+		Where("valid_time + ttl > ? ", now).
 		Find(&list).Error
 	return list, err
 }
@@ -354,6 +356,7 @@ func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types
 	err = s.db.Model(&Order{}).
 		Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).
 		Where("valid_time < ?", now).
+		Where("valid_time + ttl > ? ", now).
 		Find(&list).Error
 	return list, err
 }
