@@ -65,11 +65,11 @@ var (
 	ContractVersionConfig = map[string]string{}
 )
 
-func StartRefreshCron(tokenfile string) {
+func StartRefreshCron(option config.MarketOptions) {
 	mktCron := cron.New()
 	mktCron.AddFunc("1 0/10 * * * *", func() {
 		log.Info("start market util refresh.....")
-		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(tokenfile)
+		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(option.TokenFile)
 	})
 	mktCron.Start()
 }
