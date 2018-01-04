@@ -1,0 +1,18 @@
+[
+  {
+    "Protocol":"0x667b8a1021C324b4F42e77d46f5a7a2A2A3cDFC6",
+    "Symbol":"LRC",
+    "Source":"loopring",
+    "Deny":false,
+    "Decimals":18,
+    "IsMarket":false
+  },
+  {
+    "Protocol":"0x529540ee6862158f47d647ae023098f6705210a9",
+    "Symbol":"WETH",
+    "Source":"ethereum",
+    "Deny":false,
+    "Decimals":18,
+    "IsMarket":true
+  }
+]
