@@ -73,7 +73,7 @@ var (
 func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
-	util.Initialize(cfg.MarketCap.TokenFile, cfg.Common.ProtocolImpl.Address)
+	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
 	entity = loadTestData()
 	unlockAccounts()
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())

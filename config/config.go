@@ -79,6 +79,7 @@ type GlobalConfig struct {
 	Miner          MinerOptions
 	Log            LogOptions
 	Keystore       KeyStoreOptions
+	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
 }
@@ -179,11 +180,14 @@ type MinerOptions struct {
 	MaxGasLimit           int64
 }
 
-type MarketCapOptions struct {
+type MarketOptions struct {
 	TokenFile string
-	BaseUrl   string
-	Currency  string
-	Duration  int
+}
+
+type MarketCapOptions struct {
+	BaseUrl  string
+	Currency string
+	Duration int
 }
 
 type GatewayFiltersOptions struct {

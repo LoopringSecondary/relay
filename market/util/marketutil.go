@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -166,13 +167,13 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	return
 }
 
-func Initialize(tokenfile string, contracts map[string]string) {
+func Initialize(options config.MarketOptions, contracts map[string]string) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
 	AllTokens = make(map[string]types.Token)
 
-	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(tokenfile)
+	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(options.TokenFile)
 
 	ContractVersionConfig = contracts
 
