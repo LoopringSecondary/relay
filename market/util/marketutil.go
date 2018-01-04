@@ -19,15 +19,17 @@
 package util
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/robfig/cron"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"strings"
 )
 
@@ -62,16 +64,39 @@ var (
 	ContractVersionConfig = map[string]string{}
 )
 
-func StartRefreshCron(rds dao.RdsService) {
+func StartRefreshCron(tokenfile string) {
 	mktCron := cron.New()
 	mktCron.AddFunc("1 0/10 * * * *", func() {
 		log.Info("start market util refresh.....")
-		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
+		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(tokenfile)
 	})
 	mktCron.Start()
 }
 
-func getTokenAndMarketFromDB(rds dao.RdsService) (
+type token struct {
+	Protocol string `json:"Protocol"`
+	Symbol   string `json:"Symbol"`
+	Source   string `json:"Source"`
+	Deny     bool   `json:"Deny"`
+	Decimals int    `json:"Decimals"`
+	IsMarket bool   `json:"IsMarket"`
+}
+
+func (t *token) convert() types.Token {
+	var dst types.Token
+
+	dst.Protocol = common.HexToAddress(t.Protocol)
+	dst.Symbol = strings.ToUpper(t.Symbol)
+	dst.Source = t.Source
+	dst.Deny = t.Deny
+	dst.Decimals = new(big.Int)
+	dst.Decimals.SetString("1"+strings.Repeat("0", t.Decimals), 0)
+	dst.IsMarket = t.IsMarket
+
+	return dst
+}
+
+func getTokenAndMarketFromDB(tokenfile string) (
 	supportTokens map[string]types.Token,
 	supportMarkets map[string]types.Token,
 	allTokens map[string]types.Token,
@@ -84,28 +109,29 @@ func getTokenAndMarketFromDB(rds dao.RdsService) (
 	allMarkets = make([]string, 0)
 	allTokenPairs = make([]TokenPair, 0)
 
-	tokens, err := rds.FindUnDeniedTokens()
+	var list []token
+	fn, err := os.Open(tokenfile)
 	if err != nil {
-		log.Fatalf("market util cann't find any token!")
+		log.Fatalf("market util load tokens failed:%s", err.Error())
 	}
-	markets, err := rds.FindUnDeniedMarkets()
+	bs, err := ioutil.ReadAll(fn)
 	if err != nil {
-		log.Fatalf("market util cann't find any base market!")
+		log.Fatalf("market util read tokens json file failed:%s", err.Error())
+	}
+	if err := json.Unmarshal(bs, &list); err != nil {
+		log.Fatalf("market util unmarshal tokens failed:%s", err.Error())
 	}
 
-	// set support tokens
-	for _, v := range tokens {
-		var token types.Token
-		v.ConvertUp(&token)
-		supportTokens[token.Symbol] = token
-		log.Infof("market util,supported token %s->%s", token.Symbol, token.Protocol.Hex())
-	}
-
-	// set support markets
-	for _, v := range markets {
-		var token types.Token
-		v.ConvertUp(&token)
-		supportMarkets[token.Symbol] = token
+	for _, v := range list {
+		if v.Deny == false {
+			t := v.convert()
+			if t.IsMarket == true {
+				supportMarkets[t.Symbol] = t
+			} else {
+				supportTokens[t.Symbol] = t
+				log.Infof("market util,supported token:%s", t.Symbol)
+			}
+		}
 	}
 
 	// set all tokens
@@ -140,13 +166,13 @@ func getTokenAndMarketFromDB(rds dao.RdsService) (
 	return
 }
 
-func Initialize(rds dao.RdsService, contracts map[string]string) {
+func Initialize(tokenfile string, contracts map[string]string) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
 	AllTokens = make(map[string]types.Token)
 
-	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(rds)
+	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(tokenfile)
 
 	ContractVersionConfig = contracts
 

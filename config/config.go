@@ -180,9 +180,10 @@ type MinerOptions struct {
 }
 
 type MarketCapOptions struct {
-	BaseUrl  string
-	Currency string
-	Duration int
+	TokenFile string
+	BaseUrl   string
+	Currency  string
+	Duration  int
 }
 
 type GatewayFiltersOptions struct {
