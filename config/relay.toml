@@ -76,6 +76,9 @@ name = "Loopring corporation"
     		delayed_number = 10
     		max_cache_rounds_length = 100
 
+[market]
+    token_file = "/Users/fukun/projects/gohome/src/github.com/Loopring/relay/config/tokens.json"
+
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
         currency = "USD"

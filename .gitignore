@@ -6,4 +6,7 @@ lrcleveldb
 dao/err.log
 ks_dir
 config/*.toml
+config/debug_tokens.json
+config/mainchain.toml
+config/docker.toml
 test/*.toml

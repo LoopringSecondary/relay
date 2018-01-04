@@ -309,16 +309,17 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_LrcTokenAddress(t *testing.T) {
+func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	c := test.Cfg()
 
+	symbol := "WETH"
 	accessor, _ := test.GenerateAccessor()
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, protocol)
+	callMethod := accessor.ContractCallMethod(accessor.TokenRegistryAbi, protocol)
 	var result string
-	if err := callMethod(&result, "lrcTokenAddress", "latest"); nil != err {
-		t.Fatalf("call method lrcTokenAddress error:%s", err.Error())
+	if err := callMethod(&result, "getAddressBySymbol", "latest", symbol); nil != err {
+		t.Fatalf("call method tokenAddress error:%s", err.Error())
 	} else {
-		t.Logf("lrcTokenAddress:%s", common.HexToAddress(result).Hex())
+		t.Logf("symbol:%s-> address:%s", symbol, result)
 	}
 }

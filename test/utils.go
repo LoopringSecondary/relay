@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "docker.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -73,7 +73,7 @@ var (
 func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
-	util.Initialize(rds, cfg.Common.ProtocolImpl.Address)
+	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
 	entity = loadTestData()
 	unlockAccounts()
 	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
