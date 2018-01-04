@@ -124,4 +124,4 @@ if your are using private chain for test, just set lpr_tokens.protocol as your o
 
 **ethereum node**
 We suggest user sync blocks from mainnet for relay ethereum client.
-Mount your ethereum data to /root in container.
+While sync finished, before relay start, make sure default_block_number in relay.toml  is bigger than 4717454.
