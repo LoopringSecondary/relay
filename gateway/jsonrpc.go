@@ -371,6 +371,10 @@ func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string)
 	return types.BigintToHex(amount), err
 }
 
+func (j *JsonrpcServiceImpl) GetSupportedMarket() (markets []string, err error) {
+	return util.AllMarkets, err
+}
+
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
