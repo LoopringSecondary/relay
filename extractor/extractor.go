@@ -160,8 +160,18 @@ func (l *ExtractorServiceImpl) processBlock() {
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 	// process block
-	for _, tx := range block.Transactions {
-		logAmount, err := l.processEvent(tx, block.Timestamp.BigInt())
+	for _, txhash := range block.Transactions {
+		var tx ethaccessor.Transaction
+		if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
+			log.Errorf("extractor,get transaction error:%s", err.Error())
+		}
+
+		if !l.processor.HasContract(common.HexToAddress(tx.To)) {
+			l.debug("extractor,unsupported protocol %s", tx.To)
+			continue
+		}
+
+		logAmount, err := l.processEvent(txhash, block.Timestamp.BigInt())
 		if err != nil {
 			log.Errorf(err.Error())
 		}
@@ -173,17 +183,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 }
 
-func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
-	var tx ethaccessor.Transaction
-	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
-		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
-	}
-
-	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,unspported protocol %s", tx.To)
-		return nil
-	}
-
+func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, logAmount int) error {
 	input := common.FromHex(tx.Input)
 	var (
 		method MethodData
@@ -213,11 +213,6 @@ func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, 
 
 	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", txhash); err != nil {
 		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", txhash, err.Error())
-	}
-
-	if !l.processor.HasContract(common.HexToAddress(receipt.To)) {
-		l.debug("extractor,unspported protocol %s", receipt.To)
-		return 0, nil
 	}
 
 	if len(receipt.Logs) == 0 {
