@@ -31,6 +31,8 @@ JSON-RPC(mainnet)  : https://relay1.loopring.io/rpc
 * [loopring_getRingMined](#loopring_getringmined)
 * [loopring_getCutoff](#loopring_getcutoff)
 * [loopring_getPriceQuote](#loopring_getpricequote)
+* [loopring_getEstimatedAllocatedAllowance](#loopring_getestimatedallocatedallowance)
+* [loopring_getSupportedMarket](#loopring_getsupportedmarket)
 
 ## JSON RPC API Reference
 
@@ -621,5 +623,61 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCutoff","params":{see
 ```
 ***
 
+#### loopring_getEstimatedAllocatedAllowance
 
+Get the total frozen amount of all unfinished orders
+
+##### Parameters
+
+1. `owner` - The address, if is null, will query all orders.
+2. `token` - The specify token which you want to get.
+
+```js
+params: ["0x8888f1f195afa192cfee860698584c030f4c9db1", "WETH"]
+```
+
+##### Returns
+- `string` - The frozen amount in hex format.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getEstimatedAllocatedAllowance","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": {"0x2347ad6c"}
+}
+```
+***
+
+#### loopring_getSupportedMarket
+
+Get relay supported all market pairs
+
+##### Parameters
+no input params.
+
+```js
+params: []
+```
+
+##### Returns
+- `array of string` - The array of all supported markets.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedMarket","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": ["SAN-WETH","GNO-WETH","RLC-WETH","AST-WETH"]
+}
+```
+***
 
