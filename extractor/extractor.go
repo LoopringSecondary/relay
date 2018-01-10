@@ -176,11 +176,13 @@ func (l *ExtractorServiceImpl) processBlock() {
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
 	var tx ethaccessor.Transaction
 	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
-		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
+		l.debug("extractor,get transaction error:%s", err.Error())
+		return nil
 	}
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		return fmt.Errorf("extractor,unsupported protocol %s", tx.To)
+		l.debug("extractor,unsupported protocol %s", tx.To)
+		return nil
 	}
 
 	input := common.FromHex(tx.Input)
