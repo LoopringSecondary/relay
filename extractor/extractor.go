@@ -20,7 +20,6 @@ package extractor
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -175,12 +174,13 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
 	var tx ethaccessor.Transaction
-	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
-		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
+	if err := l.accessor.RetryCall(5, &tx, "eth_getTransactionByHash", txhash); err != nil {
+		log.Fatalf("extractor,get transaction %s failed", txhash)
+		return nil
 	}
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,unsupported protocol %s", tx.To)
+		l.debug("extractor,tx:%s unsupported protocol %s", txhash, tx.To)
 		return nil
 	}
 
@@ -192,13 +192,13 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
-		l.debug("extractor,contract method id %s length invalid", common.ToHex(input))
+		l.debug("extractor,tx:%s contract method id %s length invalid", txhash, common.ToHex(input))
 		return nil
 	}
 
 	id := common.ToHex(input[0:4])
 	if method, ok = l.processor.GetMethod(id); !ok {
-		l.debug("extractor,contract method id error:%s", id)
+		l.debug("extractor,tx:%s contract method id error:%s", txhash, id)
 		return nil
 	}
 
@@ -212,7 +212,8 @@ func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, 
 	var receipt ethaccessor.TransactionReceipt
 
 	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", txhash); err != nil {
-		return 0, fmt.Errorf("extractor,get transaction %s receipt error:%s", txhash, err.Error())
+		log.Fatalf("extractor,get transaction %s receipt failed", txhash)
+		return 0, nil
 	}
 
 	if len(receipt.Logs) == 0 {
@@ -229,7 +230,7 @@ func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, 
 		// 过滤合约
 		protocolAddr := common.HexToAddress(evtLog.Address)
 		if ok := l.processor.HasContract(protocolAddr); !ok {
-			l.debug("extractor, unsupported protocol %s", protocolAddr.Hex())
+			l.debug("extractor,tx:%s unsupported protocol %s", txhash, protocolAddr.Hex())
 			continue
 		}
 
@@ -237,14 +238,14 @@ func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, 
 		data := hexutil.MustDecode(evtLog.Data)
 		id := common.HexToHash(evtLog.Topics[0])
 		if event, ok = l.processor.GetEvent(id); !ok {
-			l.debug("extractor,contract event id error:%s", id.Hex())
+			l.debug("extractor,tx:%s contract event id error:%s", txhash, id.Hex())
 			continue
 		}
 
 		// 记录event log
 		if l.commOpts.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
-				l.debug("extractor,json unmarshal evtlog error:%s", err.Error())
+				l.debug("extractor,tx:%s json unmarshal evtlog error:%s", txhash, err.Error())
 			} else {
 				el := &dao.EventLog{}
 				el.Protocol = evtLog.Address
@@ -259,7 +260,7 @@ func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, 
 		if nil != data && len(data) > 0 {
 			// 解析事件
 			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
-				log.Errorf("extractor,unpack event error:%s", err.Error())
+				log.Errorf("extractor,tx:%s unpack event error:%s", txhash, err.Error())
 				continue
 			}
 		}
