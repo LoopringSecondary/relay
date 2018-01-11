@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "debug.toml"
+	DebugFile = "mainchain.toml"
 )
 
 var (

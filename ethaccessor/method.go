@@ -128,6 +128,23 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	return nil
 }
 
+func (accessor *EthNodeAccessor) BatchTransactions(reqs []*BatchTransactionReq) error {
+	if len(reqs) < 1 {
+		return nil
+	}
+
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	for idx, req := range reqs {
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_getTransactionByHash",
+			Args:   []interface{}{req.TxHash},
+			Result: &req.TxContent,
+		}
+	}
+
+	return accessor.Client.BatchCall(reqElems)
+}
+
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
 	if err = accessor.RetryCall(2, &gasPriceBig, "eth_gasPrice"); nil != err {
