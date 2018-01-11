@@ -39,3 +39,9 @@ type BatchTransactionReq struct {
 	TxContent Transaction
 	Err       error
 }
+
+type BatchTransactionRecipientReq struct {
+	TxHash    string
+	TxContent TransactionReceipt
+	Err       error
+}
