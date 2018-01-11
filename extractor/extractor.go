@@ -176,8 +176,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
 	var tx ethaccessor.Transaction
 	if err := l.accessor.RetryCall(2, &tx, "eth_getTransactionByHash", txhash); err != nil {
-		l.debug("extractor,get transaction error:%s", err.Error())
-		return nil
+		return fmt.Errorf("extractor,get transaction error:%s", err.Error())
 	}
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
