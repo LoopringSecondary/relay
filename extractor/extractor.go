@@ -37,6 +37,8 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
+const RetryTimes = 5
+
 type ExtractorService interface {
 	Start()
 	Stop()
@@ -107,7 +109,7 @@ func (l *ExtractorServiceImpl) Fork(start *big.Int) {
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	var syncBlock types.Big
-	if err := l.accessor.RetryCall(2, &syncBlock, "eth_blockNumber"); err != nil {
+	if err := l.accessor.RetryCall(RetryTimes, &syncBlock, "eth_blockNumber"); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
@@ -127,7 +129,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// get current block
 	block := inter.(*ethaccessor.BlockWithTxHash)
-	log.Infof("extractor,get block:%s->%s, transactions:%d", block.Number.BigInt().String(), block.Hash.Hex(), len(block.Transactions))
+	log.Infof("extractor,get block:%s->%s, transaction number:%d", block.Number.BigInt().String(), block.Hash.Hex(), len(block.Transactions))
 
 	currentBlock := &types.Block{}
 	currentBlock.BlockNumber = block.Number.BigInt()
@@ -159,25 +161,55 @@ func (l *ExtractorServiceImpl) processBlock() {
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 	// process block
-	for _, txhash := range block.Transactions {
-		logAmount, err := l.processEvent(txhash, block.Timestamp.BigInt())
+	var (
+		txReqs = make([]*ethaccessor.BatchTransactionReq, len(block.Transactions))
+		rcReqs = make([]*ethaccessor.BatchTransactionRecipientReq, len(block.Transactions))
+	)
+	for idx, txstr := range block.Transactions {
+		var (
+			txreq        ethaccessor.BatchTransactionReq
+			rcreq        ethaccessor.BatchTransactionRecipientReq
+			tx           ethaccessor.Transaction
+			rc           ethaccessor.TransactionReceipt
+			txerr, rcerr error
+		)
+		txreq.TxHash = txstr
+		txreq.TxContent = tx
+		txreq.Err = txerr
+
+		rcreq.TxHash = txstr
+		rcreq.TxContent = rc
+		rcreq.Err = rcerr
+
+		txReqs[idx] = &txreq
+		rcReqs[idx] = &rcreq
+	}
+
+	if err := l.accessor.BatchTransactions(RetryTimes, txReqs); err != nil {
+		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%d, err:%s", block.Number.BigInt().String(), err.Error())
+	}
+	if err := l.accessor.BatchTransactionRecipients(RetryTimes, rcReqs); err != nil {
+		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%d, err:%s", block.Number.BigInt().String(), err.Error())
+	}
+
+	for idx, _ := range txReqs {
+		recipient := rcReqs[idx].TxContent
+		transaction := txReqs[idx].TxContent
+
+		logAmount, err := l.processEvent(recipient, block.Timestamp.BigInt())
 		if err != nil {
 			log.Errorf(err.Error())
 		}
 
 		// 解析method，获得ring内等orders并发送到orderbook保存
-		if err := l.processMethod(txhash, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
+		if err := l.processMethod(transaction, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
 			log.Errorf(err.Error())
 		}
 	}
 }
 
-func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *big.Int, logAmount int) error {
-	var tx ethaccessor.Transaction
-	if err := l.accessor.RetryCall(5, &tx, "eth_getTransactionByHash", txhash); err != nil {
-		log.Fatalf("extractor,get transaction %s failed", txhash)
-		return nil
-	}
+func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, logAmount int) error {
+	txhash := tx.Hash
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
 		l.debug("extractor,tx:%s unsupported protocol %s", txhash, tx.To)
@@ -208,16 +240,11 @@ func (l *ExtractorServiceImpl) processMethod(txhash string, time, blockNumber *b
 	return nil
 }
 
-func (l *ExtractorServiceImpl) processEvent(txhash string, time *big.Int) (int, error) {
-	var receipt ethaccessor.TransactionReceipt
-
-	if err := l.accessor.RetryCall(5, &receipt, "eth_getTransactionReceipt", txhash); err != nil {
-		log.Fatalf("extractor,get transaction %s receipt failed", txhash)
-		return 0, nil
-	}
+func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) (int, error) {
+	txhash := receipt.TransactionHash
 
 	if len(receipt.Logs) == 0 {
-		l.debug("extractor,transaction %s recipient do not have any logs", txhash)
+		l.debug("extractor,tx %s recipient do not have any logs", txhash)
 		return 0, nil
 	}
 
