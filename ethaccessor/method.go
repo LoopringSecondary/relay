@@ -148,8 +148,31 @@ func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTrans
 			break
 		}
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	for idx, v := range reqElems {
+		var (
+			tx     Transaction
+			txhash string = reqs[idx].TxHash
+		)
+
+		if v.Error == nil {
+			continue
+		}
+
+		for i := 0; i < retry; i++ {
+			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionByHash", txhash); v.Error == nil {
+				break
+			}
+		}
+		if v.Error != nil {
+			return v.Error
+		}
+	}
+
+	return nil
 }
 
 func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*BatchTransactionRecipientReq) error {
@@ -172,8 +195,31 @@ func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*B
 			break
 		}
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	for idx, v := range reqElems {
+		var (
+			tx     TransactionReceipt
+			txhash string = reqs[idx].TxHash
+		)
+
+		if v.Error == nil {
+			continue
+		}
+
+		for i := 0; i < retry; i++ {
+			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
+				break
+			}
+		}
+		if v.Error != nil {
+			return v.Error
+		}
+	}
+
+	return nil
 }
 
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
