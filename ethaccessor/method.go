@@ -128,9 +128,9 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	return nil
 }
 
-func (accessor *EthNodeAccessor) BatchTransactions(reqs []*BatchTransactionReq) error {
-	if len(reqs) < 1 {
-		return nil
+func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTransactionReq) error {
+	if len(reqs) < 1 || retry < 1 {
+		return fmt.Errorf("ethaccessor:batchTransactions retry or reqs invalid")
 	}
 
 	reqElems := make([]rpc.BatchElem, len(reqs))
@@ -142,12 +142,19 @@ func (accessor *EthNodeAccessor) BatchTransactions(reqs []*BatchTransactionReq) 
 		}
 	}
 
-	return accessor.Client.BatchCall(reqElems)
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = accessor.Client.BatchCall(reqElems); err == nil {
+			break
+		}
+	}
+
+	return err
 }
 
-func (accessor *EthNodeAccessor) BatchTransactionRecipients(reqs []*BatchTransactionRecipientReq) error {
-	if len(reqs) < 1 {
-		return nil
+func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*BatchTransactionRecipientReq) error {
+	if len(reqs) < 1 || retry < 1 {
+		return fmt.Errorf("ethaccessor:batchTransactionRecipients retry or reqs invalid")
 	}
 
 	reqElems := make([]rpc.BatchElem, len(reqs))
@@ -159,7 +166,14 @@ func (accessor *EthNodeAccessor) BatchTransactionRecipients(reqs []*BatchTransac
 		}
 	}
 
-	return accessor.Client.BatchCall(reqElems)
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = accessor.Client.BatchCall(reqElems); err == nil {
+			break
+		}
+	}
+
+	return err
 }
 
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {

@@ -332,10 +332,10 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 func TestEthNodeAccessor_BatchTransactions(t *testing.T) {
 	accessor, _ := test.GenerateAccessor()
 	start := 4884729
-	end := start + 10
+	end := start + 2
 	iterator := accessor.BlockIterator(big.NewInt(int64(start)), big.NewInt(int64(end)), false, uint64(0))
 
-	testcase := "single"
+	testcase := "batch"
 
 	for blocknumber := start; blocknumber < end; blocknumber++ {
 		inter, err := iterator.Next()
@@ -361,13 +361,13 @@ func TestEthNodeAccessor_BatchTransactions(t *testing.T) {
 				reqs = append(reqs, &req)
 			}
 
-			if err := accessor.BatchTransactions(reqs); err != nil {
+			if err := accessor.BatchTransactions(1, reqs); err != nil {
 				t.Fatalf(err.Error())
 			}
 
 			for _, v := range reqs {
 				if v.Err != nil {
-					fmt.Printf("tx hash:%s, blocknumber:%d, err:%s \r\n", v.TxContent.Hash, v.TxContent.BlockNumber.Int(), err.Error())
+					t.Fatalf(err.Error())
 				} else {
 					fmt.Printf("tx hash:%s, blocknumber:%d \r\n", v.TxContent.Hash, v.TxContent.BlockNumber.Int())
 					i++
@@ -390,6 +390,52 @@ func TestEthNodeAccessor_BatchTransactions(t *testing.T) {
 			fmt.Printf("block %d has %d transations and successed %d \r\n", blocknumber, len(block.Transactions), i)
 			break
 		}
+
+	}
+
+}
+
+func TestEthNodeAccessor_BatchTransactionRecipients(t *testing.T) {
+	accessor, _ := test.GenerateAccessor()
+	start := 4884729
+	end := start + 2
+	iterator := accessor.BlockIterator(big.NewInt(int64(start)), big.NewInt(int64(end)), false, uint64(0))
+
+	for blocknumber := start; blocknumber < end; blocknumber++ {
+		inter, err := iterator.Next()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		block := inter.(*ethaccessor.BlockWithTxHash)
+		i := 0
+
+		var reqs []*ethaccessor.BatchTransactionRecipientReq
+		for _, txstr := range block.Transactions {
+			var (
+				req ethaccessor.BatchTransactionRecipientReq
+				tx  ethaccessor.TransactionReceipt
+				err error
+			)
+			req.TxHash = txstr
+			req.TxContent = tx
+			req.Err = err
+			reqs = append(reqs, &req)
+		}
+
+		if err := accessor.BatchTransactionRecipients(1, reqs); err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		for _, v := range reqs {
+			if v.Err != nil {
+				t.Fatalf(err.Error())
+			} else {
+				fmt.Printf("tx hash:%s, blocknumber:%d \r\n", v.TxContent.TransactionHash, v.TxContent.BlockNumber.Int())
+				i++
+			}
+		}
+		fmt.Printf("block %d has %d transations and successed %d \r\n", blocknumber, len(reqs), i)
 
 	}
 
