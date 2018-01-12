@@ -285,7 +285,9 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	if value == nil {
 		value = big.NewInt(0)
 	}
+
 	// todo: modify gas
+	gas.SetString("1000000",0)
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		value,
