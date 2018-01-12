@@ -160,6 +160,10 @@ func (l *ExtractorServiceImpl) processBlock() {
 	blockEvent.BlockHash = block.Hash
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
+	if len(block.Transactions) < 1 {
+		return
+	}
+
 	// process block
 	var (
 		txReqs = make([]*ethaccessor.BatchTransactionReq, len(block.Transactions))
@@ -186,10 +190,10 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	if err := l.accessor.BatchTransactions(RetryTimes, txReqs); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%d, err:%s", block.Number.BigInt().String(), err.Error())
+		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
 	if err := l.accessor.BatchTransactionRecipients(RetryTimes, rcReqs); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%d, err:%s", block.Number.BigInt().String(), err.Error())
+		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
 
 	for idx, _ := range txReqs {
