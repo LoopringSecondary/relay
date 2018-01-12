@@ -128,6 +128,100 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	return nil
 }
 
+func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTransactionReq) error {
+	if len(reqs) < 1 || retry < 1 {
+		return fmt.Errorf("ethaccessor:batchTransactions retry or reqs invalid")
+	}
+
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	for idx, req := range reqs {
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_getTransactionByHash",
+			Args:   []interface{}{req.TxHash},
+			Result: &req.TxContent,
+		}
+	}
+
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = accessor.Client.BatchCall(reqElems); err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	for idx, v := range reqElems {
+		var (
+			tx     Transaction
+			txhash string = reqs[idx].TxHash
+		)
+
+		if v.Error == nil {
+			continue
+		}
+
+		for i := 0; i < retry; i++ {
+			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionByHash", txhash); v.Error == nil {
+				break
+			}
+		}
+		if v.Error != nil {
+			return v.Error
+		}
+	}
+
+	return nil
+}
+
+func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*BatchTransactionRecipientReq) error {
+	if len(reqs) < 1 || retry < 1 {
+		return fmt.Errorf("ethaccessor:batchTransactionRecipients retry or reqs invalid")
+	}
+
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	for idx, req := range reqs {
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_getTransactionReceipt",
+			Args:   []interface{}{req.TxHash},
+			Result: &req.TxContent,
+		}
+	}
+
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = accessor.Client.BatchCall(reqElems); err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	for idx, v := range reqElems {
+		var (
+			tx     TransactionReceipt
+			txhash string = reqs[idx].TxHash
+		)
+
+		if v.Error == nil {
+			continue
+		}
+
+		for i := 0; i < retry; i++ {
+			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
+				break
+			}
+		}
+		if v.Error != nil {
+			return v.Error
+		}
+	}
+
+	return nil
+}
+
 func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
 	if err = accessor.RetryCall(2, &gasPriceBig, "eth_gasPrice"); nil != err {

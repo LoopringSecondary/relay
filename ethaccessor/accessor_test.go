@@ -19,7 +19,9 @@
 package ethaccessor_test
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
@@ -322,4 +324,119 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	} else {
 		t.Logf("symbol:%s-> address:%s", symbol, result)
 	}
+}
+
+// 10个块性能测试:
+// batch   15~33秒之间
+// single  240秒以上
+func TestEthNodeAccessor_BatchTransactions(t *testing.T) {
+	accessor, _ := test.GenerateAccessor()
+	start := 4884729
+	end := start + 2
+	iterator := accessor.BlockIterator(big.NewInt(int64(start)), big.NewInt(int64(end)), false, uint64(0))
+
+	testcase := "batch"
+
+	for blocknumber := start; blocknumber < end; blocknumber++ {
+		inter, err := iterator.Next()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		block := inter.(*ethaccessor.BlockWithTxHash)
+		i := 0
+
+		switch testcase {
+		case "batch":
+			var reqs []*ethaccessor.BatchTransactionReq
+			for _, txstr := range block.Transactions {
+				var (
+					req ethaccessor.BatchTransactionReq
+					tx  ethaccessor.Transaction
+					err error
+				)
+				req.TxHash = txstr
+				req.TxContent = tx
+				req.Err = err
+				reqs = append(reqs, &req)
+			}
+
+			if err := accessor.BatchTransactions(1, reqs); err != nil {
+				t.Fatalf(err.Error())
+			}
+
+			for _, v := range reqs {
+				if v.Err != nil {
+					t.Fatalf(err.Error())
+				} else {
+					fmt.Printf("tx hash:%s, blocknumber:%d \r\n", v.TxContent.Hash, v.TxContent.BlockNumber.Int())
+					i++
+				}
+			}
+			fmt.Printf("block %d has %d transations and successed %d \r\n", blocknumber, len(reqs), i)
+			break
+
+		case "single":
+			for _, txstr := range block.Transactions {
+				var tx ethaccessor.Transaction
+				if err := accessor.Call(&tx, "eth_getTransactionByHash", txstr); err != nil {
+					fmt.Errorf(err.Error())
+				} else {
+					fmt.Printf("tx hash:%s, blocknumber:%d \r\n", tx.Hash, tx.BlockNumber.Int())
+					i++
+				}
+			}
+
+			fmt.Printf("block %d has %d transations and successed %d \r\n", blocknumber, len(block.Transactions), i)
+			break
+		}
+
+	}
+
+}
+
+func TestEthNodeAccessor_BatchTransactionRecipients(t *testing.T) {
+	accessor, _ := test.GenerateAccessor()
+	start := 4884729
+	end := start + 2
+	iterator := accessor.BlockIterator(big.NewInt(int64(start)), big.NewInt(int64(end)), false, uint64(0))
+
+	for blocknumber := start; blocknumber < end; blocknumber++ {
+		inter, err := iterator.Next()
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		block := inter.(*ethaccessor.BlockWithTxHash)
+		i := 0
+
+		var reqs []*ethaccessor.BatchTransactionRecipientReq
+		for _, txstr := range block.Transactions {
+			var (
+				req ethaccessor.BatchTransactionRecipientReq
+				tx  ethaccessor.TransactionReceipt
+				err error
+			)
+			req.TxHash = txstr
+			req.TxContent = tx
+			req.Err = err
+			reqs = append(reqs, &req)
+		}
+
+		if err := accessor.BatchTransactionRecipients(1, reqs); err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		for _, v := range reqs {
+			if v.Err != nil {
+				t.Fatalf(err.Error())
+			} else {
+				fmt.Printf("tx hash:%s, blocknumber:%d \r\n", v.TxContent.TransactionHash, v.TxContent.BlockNumber.Int())
+				i++
+			}
+		}
+		fmt.Printf("block %d has %d transations and successed %d \r\n", blocknumber, len(reqs), i)
+
+	}
+
 }

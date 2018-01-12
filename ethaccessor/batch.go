@@ -33,3 +33,15 @@ type BatchErc20Req struct {
 	BalanceErr     error
 	AllowanceErr   error
 }
+
+type BatchTransactionReq struct {
+	TxHash    string
+	TxContent Transaction
+	Err       error
+}
+
+type BatchTransactionRecipientReq struct {
+	TxHash    string
+	TxContent TransactionReceipt
+	Err       error
+}
