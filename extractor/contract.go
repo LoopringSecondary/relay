@@ -434,7 +434,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	log.Debugf("extractor,submitRing method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	log.Debugf("extractor,submitRing method,tx:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
 
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
@@ -443,11 +443,13 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,submitRing method,unpack error:%s", err.Error())
+		log.Errorf("extractor,submitRing method,tx:%s, unpack error:%s", evt.TxHash.Hex(), err.Error())
+		return nil
 	}
 	orderList, err := ring.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,submitRing method,convert order data error:%s", err.Error())
+		log.Errorf("extractor,submitRing method,tx:%s convert order data error:%s", evt.TxHash.Hex(), err.Error())
+		return nil
 	}
 
 	for _, v := range orderList {
@@ -465,11 +467,13 @@ func (processor *AbiProcessor) handleSubmitRingHashMethod(input eventemitter.Eve
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,submitRingHash method,unpack error:%s", err.Error())
+		log.Errorf("extractor,submitRingHash method,tx:%s unpack error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 	evt, err := method.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,submitRingHash method,convert order data error:%s", err.Error())
+		log.Errorf("extractor,submitRingHash method,tx:%s convert order data error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 
 	evt.TxHash = common.HexToHash(contract.TxHash)
@@ -477,7 +481,7 @@ func (processor *AbiProcessor) handleSubmitRingHashMethod(input eventemitter.Eve
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	log.Debugf("extractor,submitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	log.Debugf("extractor,submitRingHash method,tx:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
 
 	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
 
@@ -490,11 +494,13 @@ func (processor *AbiProcessor) handleBatchSubmitRingHashMethod(input eventemitte
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,batchSubmitRingHash method,unpack error:%s", err.Error())
+		log.Errorf("extractor,batchSubmitRingHash method,tx:%s unpack error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 	evt, err := method.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,batchSubmitRingHash method,convert order data error:%s", err.Error())
+		log.Errorf("extractor,batchSubmitRingHash method,tx:%s convert order data error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 
 	evt.TxHash = common.HexToHash(contract.TxHash)
@@ -502,7 +508,7 @@ func (processor *AbiProcessor) handleBatchSubmitRingHashMethod(input eventemitte
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	log.Debugf("extractor,batchSubmitRingHash method,txhash:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	log.Debugf("extractor,batchSubmitRingHash method,tx:%s, gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
 
 	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
 
@@ -515,12 +521,14 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
-		return fmt.Errorf("extractor,cancelOrder method,unpack error:%s", err.Error())
+		log.Errorf("extractor,cancelOrder method,tx:%s unpack error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 
 	order, err := cancel.ConvertDown()
 	if err != nil {
-		return fmt.Errorf("extractor,cancelOrder method,convert order data error:%s", err.Error())
+		log.Errorf("extractor,cancelOrder method,tx:%s convert order data error:%s", contract.TxHash, err.Error())
+		return nil
 	}
 
 	log.Debugf("extractor,cancelOrder method,tx:%s, order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
@@ -537,7 +545,8 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 
 	data := hexutil.MustDecode("0x" + contractData.Input[10:])
 	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
-		return fmt.Errorf("extractor,approve method,unpack error:%s", err.Error())
+		log.Errorf("extractor,approve method,tx:%s unpack error:%s", contractData.TxHash, err.Error())
+		return nil
 	}
 
 	approve := contractMethod.ConvertDown()
@@ -582,7 +591,8 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 
 	data := hexutil.MustDecode("0x" + contractData.Input[10:])
 	if err := contractData.CAbi.UnpackMethodInput(&contractMethod.Value, contractData.Name, data); err != nil {
-		return fmt.Errorf("extractor,wethWithdrawal method,unpack error:%s", err.Error())
+		log.Errorf("extractor,wethWithdrawal method,tx:%s unpack error:%s", contractData.TxHash, err.Error())
+		return nil
 	}
 
 	withdrawal := contractMethod.ConvertDown()
@@ -602,7 +612,8 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,ring mined event indexed fields number error")
+		log.Errorf("extractor,ringmined event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
@@ -610,7 +621,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 
 	ringmined, fills, err := contractEvent.ConvertDown()
 	if err != nil {
-		return err
+		log.Errorf("extractor,ringmined event,tx:%s convert down error:%s", contractData.TxHash, err.Error())
+		return nil
 	}
 	ringmined.ContractAddress = common.HexToAddress(contractData.ContractAddress)
 	ringmined.TxHash = common.HexToHash(contractData.TxHash)
@@ -654,7 +666,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 
 	ordermap, err := processor.db.GetOrdersByHash(orderhashList)
 	if err != nil {
-		return err
+		log.Errorf("extractor,ringmined event,tx:%s getOrdersByHash error:%s", contractData.TxHash, err.Error())
+		return nil
 	}
 
 	for _, v := range fillList {
@@ -675,7 +688,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,order cancelled event indexed fields number error")
+		log.Errorf("extractor,order cancelled event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.OrderCancelledEvent)
@@ -697,7 +711,8 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,cutoff timestamp changed event indexed fields number error")
+		log.Errorf("extractor,cutoffTimestampChanged event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.CutoffTimestampChangedEvent)
@@ -720,7 +735,8 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	contractData := input.(EventData)
 
 	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,token transfer event indexed fields number error")
+		log.Errorf("extractor,tokenTransfer event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
@@ -732,7 +748,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	evt.Time = contractData.Time
 	evt.Blocknumber = contractData.BlockNumber
 
-	// log.Debugf("extractor,transfer event,from:%s, to:%s, value:%s", evt.From.Hex(), evt.To.Hex(), evt.Value.String())
+	log.Debugf("extractor,transfer event,tx:%s, from:%s, to:%s, value:%s", contractData.TxHash, evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.AccountTransfer, evt)
 
@@ -742,7 +758,8 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,token approval event indexed fields number error")
+		log.Errorf("extractor,approval event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
@@ -798,7 +815,8 @@ func (processor *AbiProcessor) handleTokenUnRegisteredEvent(input eventemitter.E
 func (processor *AbiProcessor) handleRinghashSubmitEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 3 {
-		return fmt.Errorf("extractor,ringhash registered event indexed fields number error")
+		log.Errorf("extractor,ringhash registered event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.RingHashSubmittedEvent)
@@ -821,7 +839,8 @@ func (processor *AbiProcessor) handleRinghashSubmitEvent(input eventemitter.Even
 func (processor *AbiProcessor) handleAddressAuthorizedEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,address authorized event indexed fields number error")
+		log.Errorf("extractor,address authorized event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.AddressAuthorizedEvent)
@@ -842,7 +861,8 @@ func (processor *AbiProcessor) handleAddressAuthorizedEvent(input eventemitter.E
 func (processor *AbiProcessor) handleAddressDeAuthorizedEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
-		return fmt.Errorf("extractor,address deauthorized event indexed fields number error")
+		log.Errorf("extractor,address deauthorized event,tx:%s indexed fields number error", contractData.TxHash)
+		return nil
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.AddressDeAuthorizedEvent)
