@@ -678,7 +678,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 			v.Market, _ = util.WrapMarketByAddress(v.TokenB.Hex(), v.TokenS.Hex())
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {
-			log.Debugf("extractor,order filled event cann't match order %s", ord.OrderHash)
+			log.Debugf("extractor,orderFilled event,tx:%s cann't match order %s", contractData.TxHash, ord.OrderHash)
 		}
 	}
 
