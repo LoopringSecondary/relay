@@ -454,7 +454,8 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	for _, v := range orderList {
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
-		log.Debugf("extractor,submitRing method,order,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+		v.Hash = v.GenerateHash()
+		log.Debugf("extractor,submitRing method,tx:%s orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", evt.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
 		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
