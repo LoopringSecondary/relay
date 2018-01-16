@@ -454,7 +454,8 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	for _, v := range orderList {
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
-		log.Debugf("extractor,submitRing method,order,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+		v.Hash = v.GenerateHash()
+		log.Debugf("extractor,submitRing method,tx:%s orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", evt.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
 		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
@@ -678,7 +679,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 			v.Market, _ = util.WrapMarketByAddress(v.TokenB.Hex(), v.TokenS.Hex())
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
 		} else {
-			log.Debugf("extractor,order filled event cann't match order %s", ord.OrderHash)
+			log.Debugf("extractor,orderFilled event,tx:%s cann't match order %s", contractData.TxHash, ord.OrderHash)
 		}
 	}
 
