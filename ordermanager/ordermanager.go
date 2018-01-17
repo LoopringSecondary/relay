@@ -337,6 +337,8 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		v.ConvertUp(state)
 		if om.um.InWhiteList(state.RawOrder.Owner) {
 			list = append(list, state)
+		} else {
+			log.Debugf("order manager,owner:%s not in white list", state.RawOrder.Owner.Hex())
 		}
 	}
 
