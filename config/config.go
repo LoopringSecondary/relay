@@ -213,6 +213,7 @@ type MysqlOptions struct {
 }
 
 type UserManagerOptions struct {
+	WhiteListOpen            bool
 	WhiteListCacheExpireTime int64
 	WhiteListCacheCleanTime  int64
 }

@@ -29,6 +29,7 @@ type UserManager interface {
 	AddWhiteListUser(user types.WhiteListUser) error
 	DelWhiteListUser(user types.WhiteListUser) error
 	InWhiteList(owner common.Address) bool
+	IsWhiteListOpen() bool
 }
 
 type UserManagerImpl struct {
@@ -54,4 +55,7 @@ func (m *UserManagerImpl) AddWhiteListUser(user types.WhiteListUser) error {
 }
 func (m *UserManagerImpl) DelWhiteListUser(user types.WhiteListUser) error {
 	return m.whiteList.DelWhiteListUser(user)
+}
+func (m *UserManagerImpl) IsWhiteListOpen() bool {
+	return m.options.WhiteListOpen
 }

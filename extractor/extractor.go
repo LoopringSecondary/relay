@@ -78,6 +78,8 @@ func NewExtractorService(commonOpts config.CommonOptions,
 	start, end := l.getBlockNumberRange()
 	l.setBlockNumberRange(start, end)
 
+	//l.startBlockNumber = big.NewInt(	4868187)
+	//l.endBlockNumber = l.startBlockNumber
 	return &l
 }
 
