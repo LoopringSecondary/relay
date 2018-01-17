@@ -58,10 +58,10 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 	return impl
 }
 
-// create tables if not exists
 func (s *RdsServiceImpl) Prepare() {
 	var tables []interface{}
 
+	// create tables if not exists
 	tables = append(tables, &Order{})
 	tables = append(tables, &Block{})
 	tables = append(tables, &RingMinedEvent{})
@@ -82,4 +82,9 @@ func (s *RdsServiceImpl) Prepare() {
 			}
 		}
 	}
+
+	// auto migrate to keep schema update to date
+	// AutoMigrate will ONLY create tables, missing columns and missing indexes,
+	// and WON'T change existing column's type or delete unused columns to protect your data
+	s.db.AutoMigrate(tables...)
 }
