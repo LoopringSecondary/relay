@@ -335,10 +335,9 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	for _, v := range modelList {
 		state := &types.OrderState{}
 		v.ConvertUp(state)
-		if om.um.IsWhiteListOpen() && !om.um.InWhiteList(state.RawOrder.Owner) {
-			continue
+		if om.um.InWhiteList(state.RawOrder.Owner) {
+			list = append(list, state)
 		}
-		list = append(list, state)
 	}
 
 	return list
