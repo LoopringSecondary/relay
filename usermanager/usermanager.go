@@ -19,6 +19,7 @@
 package usermanager
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
@@ -29,6 +30,7 @@ type UserManager interface {
 	AddWhiteListUser(user types.WhiteListUser) error
 	DelWhiteListUser(user types.WhiteListUser) error
 	InWhiteList(owner common.Address) bool
+	IsWhiteListOpen() bool
 }
 
 type UserManagerImpl struct {
@@ -41,17 +43,34 @@ func NewUserManager(options *config.UserManagerOptions, rds dao.RdsService) *Use
 	impl := &UserManagerImpl{}
 	impl.rds = rds
 	impl.options = options
-	impl.whiteList = newWhiteListCache(impl.options, impl.rds)
+
+	if options.WhiteListOpen {
+		impl.whiteList = newWhiteListCache(impl.options, impl.rds)
+	}
 
 	return impl
 }
 
 func (m *UserManagerImpl) InWhiteList(owner common.Address) bool {
+	if !m.options.WhiteListOpen {
+		return true
+	}
+
 	return m.whiteList.InWhiteList(owner)
 }
+
 func (m *UserManagerImpl) AddWhiteListUser(user types.WhiteListUser) error {
+	if !m.options.WhiteListOpen {
+		return fmt.Errorf("wihte list is closed")
+	}
 	return m.whiteList.AddWhiteListUser(user)
 }
 func (m *UserManagerImpl) DelWhiteListUser(user types.WhiteListUser) error {
+	if !m.options.WhiteListOpen {
+		return fmt.Errorf("wihte list is closed")
+	}
 	return m.whiteList.DelWhiteListUser(user)
+}
+func (m *UserManagerImpl) IsWhiteListOpen() bool {
+	return m.options.WhiteListOpen
 }
