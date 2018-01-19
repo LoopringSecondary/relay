@@ -78,7 +78,8 @@ func NewExtractorService(commonOpts config.CommonOptions,
 	start, end := l.getBlockNumberRange()
 	l.setBlockNumberRange(start, end)
 
-	//l.startBlockNumber = big.NewInt(	4928923)
+	// todo: comment online
+	//l.startBlockNumber = big.NewInt(4928923)
 	//l.endBlockNumber = l.startBlockNumber
 	return &l
 }
@@ -220,7 +221,7 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 	txhash := tx.Hash
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,tx:%s unsupported protocol %s", txhash, tx.To)
+		l.debug("extractor,tx:%s contract method unsupported protocol %s", txhash, tx.To)
 		return nil
 	}
 
@@ -265,7 +266,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		// 过滤合约
 		protocolAddr := common.HexToAddress(evtLog.Address)
 		if ok := l.processor.HasContract(protocolAddr); !ok {
-			l.debug("extractor,tx:%s unsupported protocol %s", txhash, protocolAddr.Hex())
+			l.debug("extractor,tx:%s contract event unsupported protocol %s", txhash, protocolAddr.Hex())
 			continue
 		}
 
