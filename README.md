@@ -1,5 +1,5 @@
 # Loopring Relay
-The Loopring relay contains two part: The Relay and Miner. The Relay is the service for wallet to broadcast orders to the ipfs network.  The Miner found ring from the unmatched order. It can act as one or both of them:<br>
+The Loopring relay contains two parts: The Relay and Miner. The Relay is the service for wallet to broadcast orders to the ipfs network.  The Miner found ring from the unmatched order. It can act as one or both of them:<br>
 
 
 **This program is still under development and heavy refactoring. We DO NOT RECOMMEND starting your own relay as major upgrades are expected through the first half of 2018.**
