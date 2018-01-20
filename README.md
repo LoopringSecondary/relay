@@ -1,29 +1,30 @@
 # Loopring Relay
-Loopring relay contains two partments:Relay and Miner. Relay is the service for wallet and broadcast orders to ipfs network ,Miner found ring from the unmatched orders. It can act as one or both of them:<br>
+The Loopring relay contains two part: The Relay and Miner. The Relay is the service for wallet to broadcast orders to the ipfs network.  The Miner found ring from the unmatched order. It can act as one or both of them:<br>
 
 
-**This program is still under development and heavy refactory. We do NOT recommend people to start their own relay as its infrastrcture will go through a major upgrade in the first 2 quarters of 2018.**
+**This program is still under development and heavy refactoring. We DO NOT RECOMMEND starting your own relay as major upgrades are expected through the first half of 2018.**
 
 ## Set up
 ##### etherenum node
-First,relay need a ethereum node,refer:<br>
+The relay needs a full ethereum node in order to run. See ethererum documentation for details:<br>
 https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum
 
 ##### mysql
-make sure mysql server have been installed,and database configured in relay/config/relay.toml
+Mysql is the backing datastore. It needs to be installed, and the database needs to be configured as in relay/config/relay.toml
 
 ##### ipfs
-relay need ipfs network to collect and broadcast orders,refer:<br>
+Orders are collected and broadcast through the ipfs network. See ipfs documentation for details:<br>
 https://ipfs.io/docs/install/
 
 ##### govendor
-install govendor to manager external golang packages
+Install govendor to manage external golang packages
 ```
 go get -u github.com/kardianos/govendor
 ```
 
-## install
-install from source:
+## install the relay
+
+build from source:
 The environment variables: $GOROOT and $GOPATH must be set. 
 ```
 > go get -u github.com/Loopring/relay
@@ -38,13 +39,11 @@ The environment variables: $GOROOT and $GOPATH must be set.
 
 
 ##run as miner
-
-
-- step 1: You must have a eth account to sign and submit ring. Run `account ` to create or import it.
+- step 1: You must have an eth account to sign and submit ring. Run `account ` to create or import it.
 ```
 > build/bin/relay account --help
 ```
-- step 2: You must modify config file. Set `miner.miner` to eth account which can be found in `keystore-dir`.
+- step 2: You must modify the config file. Set `miner.miner` to the eth account which can be found in `keystore-dir`.
 Then, you can run as follow.
 ```
 > build/bin/relay  --mode=miner --unlocks $mineraddress --passwords $passwords
