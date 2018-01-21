@@ -78,6 +78,8 @@ func NewExtractorService(commonOpts config.CommonOptions,
 	start, end := l.getBlockNumberRange()
 	l.setBlockNumberRange(start, end)
 
+	//l.startBlockNumber = big.NewInt(	4928923)
+	//l.endBlockNumber = l.startBlockNumber
 	return &l
 }
 
@@ -199,6 +201,8 @@ func (l *ExtractorServiceImpl) processBlock() {
 	for idx, _ := range txReqs {
 		recipient := rcReqs[idx].TxContent
 		transaction := txReqs[idx].TxContent
+
+		l.debug("extractor,tx:%s", transaction.Hash)
 
 		logAmount, err := l.processEvent(recipient, block.Timestamp.BigInt())
 		if err != nil {
