@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	"math/big"
 	"math/rand"
 	"sort"
 	"strings"
@@ -92,7 +91,7 @@ func (mc *MutilClient) syncStatus() {
 func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 	var idx int
 	//latest,pending
-	if "latest" == routeParam {
+	if "latest" == routeParam || "" == routeParam {
 		idx = 0
 	} else if strings.Contains(routeParam, ":") {
 		//specific node
@@ -102,7 +101,7 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			}
 		}
 	} else {
-		blockNumberForRouteBig, _ := new(big.Int).SetString(routeParam, 0)
+		blockNumberForRouteBig := types.HexToBigint(routeParam)
 		lastIdx := 0
 		for curIdx, c := range mc.clients {
 			if blockNumberForRouteBig.Cmp(c.syncingResult.CurrentBlock.BigInt()) <= 0 {
@@ -213,7 +212,7 @@ func NewAccessor(accessorOptions config.AccessorOptions, commonOptions config.Co
 
 	for version, address := range commonOptions.ProtocolImpl.Address {
 		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
-		callMethod := accessor.ContractCallMethod("latest", accessor.ProtocolImplAbi, impl.ContractAddress)
+		callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, impl.ContractAddress)
 		var addr string
 		if err := callMethod(&addr, "lrcTokenAddress", "latest"); nil != err {
 			return nil, err

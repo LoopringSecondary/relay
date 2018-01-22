@@ -33,7 +33,6 @@ import (
 type Evaluator struct {
 	marketCapProvider     marketcap.MarketCapProvider
 	rateRatioCVSThreshold int64
-	accessor              *ethaccessor.EthNodeAccessor
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -166,7 +165,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
-		if implAddress, exists := e.accessor.ProtocolAddresses[filledOrder.OrderState.RawOrder.Protocol]; exists {
+		if implAddress, exists := ethaccessor.ProtocolAddresses()[filledOrder.OrderState.RawOrder.Protocol]; exists {
 			lrcAddress = implAddress.LrcTokenAddress
 		}
 
@@ -263,6 +262,6 @@ func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Ra
 	return c
 }
 
-func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64, accessor *ethaccessor.EthNodeAccessor) *Evaluator {
-	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, accessor: accessor}
+func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
+	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold}
 }

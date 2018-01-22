@@ -30,13 +30,11 @@ import (
 
 type forkDetector struct {
 	db          dao.RdsService
-	accessor    *ethaccessor.EthNodeAccessor
 	latestBlock *types.Block
 }
 
-func newForkDetector(db dao.RdsService, accessor *ethaccessor.EthNodeAccessor) *forkDetector {
+func newForkDetector(db dao.RdsService) *forkDetector {
 	detector := &forkDetector{}
-	detector.accessor = accessor
 	detector.db = db
 	detector.latestBlock = nil
 
@@ -116,7 +114,7 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 	// todo if jsonrpc failed
 	// 如果不存在,则查询以太坊
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	if err := detector.accessor.RetryCall(parentBlockNumber.String(), 2, &ethBlock, "eth_getBlockByNumber", fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
+	if err := ethaccessor.GetBlockByNumber(&ethBlock, fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
 		return nil, err
 	}
 

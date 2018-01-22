@@ -50,7 +50,6 @@ type Allowance struct {
 
 type AccountManager struct {
 	c                 *cache.Cache
-	accessor          *ethaccessor.EthNodeAccessor
 	newestBlockNumber types.Big
 }
 
@@ -66,11 +65,11 @@ type AccountJson struct {
 	Tokens          []Token `json:"tokens"`
 }
 
-func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
+func NewAccountManager() AccountManager {
 
-	accountManager := AccountManager{accessor: accessor}
+	accountManager := AccountManager{}
 	var blockNumber types.Big
-	err := accessor.RetryCall("latest", 2, &blockNumber, "eth_blockNumber")
+	err := ethaccessor.BlockNumber(&blockNumber)
 	if err != nil {
 		log.Fatal("init account manager failed, can't get newest block number")
 		return accountManager
@@ -141,7 +140,9 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 }
 
 func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
-	cutoffTime, err := a.accessor.GetCutoff("latest", common.StringToAddress(contract), common.StringToAddress(address), "latest")
+	//todo:stringtoaddress???
+	//cutoffTime, err := ethaccessor.GetCutoff("latest", common.StringToAddress(contract), common.StringToAddress(address), "latest")
+	cutoffTime, err := ethaccessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
 	return int(cutoffTime.Int64()), err
 }
 
@@ -213,15 +214,15 @@ func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance("latest", util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	return ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
-	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig[spender]))
+	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[spender]))
 	if err != nil {
 		return big.NewInt(0), errors.New("invalid spender address")
 	}
-	return a.accessor.Erc20Allowance("latest", util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	return ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
 }
 
 func buildAllowanceKey(version, token string) string {
@@ -293,7 +294,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
-	spenderAddress, err := a.accessor.GetSenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
+	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
 	if err != nil {
 		return errors.New("invalid spender address")
 	}

@@ -25,6 +25,7 @@ import (
 	"math/big"
 
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/ethaccessor"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
 )
@@ -74,7 +75,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 			}
 		}
 		if !inited {
-			for _, protocolAddress := range matcher.submitter.Accessor.ProtocolAddresses {
+			for _, protocolAddress := range ethaccessor.ProtocolAddresses() {
 				m := &Market{}
 				m.protocolAddress = protocolAddress.ContractAddress
 				m.lrcAddress = protocolAddress.LrcTokenAddress

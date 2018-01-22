@@ -49,7 +49,6 @@ type ExtractorService interface {
 type ExtractorServiceImpl struct {
 	options          config.AccessorOptions
 	commOpts         config.CommonOptions
-	accessor         *ethaccessor.EthNodeAccessor
 	detector         *forkDetector
 	processor        *AbiProcessor
 	dao              dao.RdsService
@@ -64,15 +63,13 @@ type ExtractorServiceImpl struct {
 }
 
 func NewExtractorService(commonOpts config.CommonOptions,
-	accessor *ethaccessor.EthNodeAccessor,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.commOpts = commonOpts
-	l.accessor = accessor
 	l.dao = rds
-	l.processor = newAbiProcessor(accessor, rds)
-	l.detector = newForkDetector(rds, accessor)
+	l.processor = newAbiProcessor(rds)
+	l.detector = newForkDetector(rds)
 	l.stop = make(chan bool, 1)
 
 	start, end := l.getBlockNumberRange()
@@ -87,7 +84,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = l.accessor.BlockIterator(l.startBlockNumber, l.endBlockNumber, false, uint64(0))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, false, uint64(0))
 	go func() {
 		for {
 			select {
@@ -111,7 +108,7 @@ func (l *ExtractorServiceImpl) Fork(start *big.Int) {
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	var syncBlock types.Big
-	if err := l.accessor.RetryCall("latest", RetryTimes, &syncBlock, "eth_blockNumber"); err != nil {
+	if err := ethaccessor.BlockNumber(&syncBlock); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
@@ -191,10 +188,10 @@ func (l *ExtractorServiceImpl) processBlock() {
 		rcReqs[idx] = &rcreq
 	}
 
-	if err := l.accessor.BatchTransactions(block.Number.BigInt().String(), RetryTimes, txReqs); err != nil {
+	if err := ethaccessor.BatchTransactions(txReqs, block.Number.BigInt().String()); err != nil {
 		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
-	if err := l.accessor.BatchTransactionRecipients(block.Number.BigInt().String(), RetryTimes, rcReqs); err != nil {
+	if err := ethaccessor.BatchTransactionRecipients(rcReqs, block.Number.BigInt().String()); err != nil {
 		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
 

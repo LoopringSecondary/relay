@@ -34,9 +34,9 @@ import (
 	"time"
 )
 
-func (accessor *EthNodeAccessor) Erc20Balance(routeParam string, tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
-	callMethod := accessor.ContractCallMethod(routeParam, accessor.Erc20Abi, tokenAddress)
+	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
 	if err := callMethod(&balance, "balanceOf", blockParameter, ownerAddress); nil != err {
 		return nil, err
 	} else {
@@ -56,9 +56,9 @@ func (accessor *EthNodeAccessor) RetryCall(routeParam string, retry int, result 
 	return err
 }
 
-func (accessor *EthNodeAccessor) Erc20Allowance(routeParam string, tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var allowance types.Big
-	callMethod := accessor.ContractCallMethod(routeParam, accessor.Erc20Abi, tokenAddress)
+	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
 	if err := callMethod(&allowance, "allowance", blockParameter, ownerAddress, spenderAddress); nil != err {
 		return nil, err
 	} else {
@@ -66,12 +66,12 @@ func (accessor *EthNodeAccessor) Erc20Allowance(routeParam string, tokenAddress,
 	}
 }
 
-func (accessor *EthNodeAccessor) GetCancelledOrFilled(routeParam string, contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(routeParam, accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
 	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
 		return nil, err
 	}
@@ -79,16 +79,15 @@ func (accessor *EthNodeAccessor) GetCancelledOrFilled(routeParam string, contrac
 	return amount.BigInt(), nil
 }
 
-func (accessor *EthNodeAccessor) GetCutoff(routeParam string, contractAddress, owner common.Address, blockNumStr string) (*big.Int, error) {
-	var cutoff types.Big
+func (accessor *EthNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
-		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(routeParam, accessor.ProtocolImplAbi, contractAddress)
-	if err := callMethod(&cutoff, "cutoffs", blockNumStr, owner); err != nil {
-		return nil, err
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	if err := callMethod(result, "cutoffs", blockNumStr, owner); err != nil {
+		return err
 	}
-	return cutoff.BigInt(), nil
+	return nil
 }
 
 func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) error {
@@ -239,7 +238,7 @@ func (accessor *EthNodeAccessor) EstimateGas(routeParam string, callData []byte,
 	return
 }
 
-func (accessor *EthNodeAccessor) ContractCallMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
 	return func(result interface{}, methodName string, blockParameter string, args ...interface{}) error {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return err
@@ -248,7 +247,7 @@ func (accessor *EthNodeAccessor) ContractCallMethod(routeParam string, a *abi.AB
 			arg.From = contractAddress
 			arg.To = contractAddress
 			arg.Data = common.ToHex(callData)
-			return accessor.RetryCall(routeParam, 2, result, "eth_call", arg, blockParameter)
+			return accessor.RetryCall(blockParameter, 2, result, "eth_call", arg, blockParameter)
 		}
 	}
 }
