@@ -267,6 +267,10 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 		if tokenSBalance.Sign() <= 0 {
 			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
 		}
+		//todo:
+		if market.om.IsValueDusted(order.RawOrder.TokenS, tokenSBalance) {
+			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is not enough", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
+		}
 		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
 	}
 
