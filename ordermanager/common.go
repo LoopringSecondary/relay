@@ -93,9 +93,13 @@ func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider
 		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
 	}
 
-	// todo: if valueOfRemainAmount is nil procedure of this may have problem
+	return isValueDusted(valueOfRemainAmount)
+}
+
+// todo: if valueOfRemainAmount is nil procedure of this may have problem
+func isValueDusted(value *big.Rat) bool {
 	minValue := big.NewInt(dustOrderValue)
-	if valueOfRemainAmount == nil || valueOfRemainAmount.Cmp(new(big.Rat).SetInt(minValue)) > 0 {
+	if value == nil || value.Cmp(new(big.Rat).SetInt(minValue)) > 0 {
 		return false
 	}
 
