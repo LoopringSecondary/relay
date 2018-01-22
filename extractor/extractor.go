@@ -111,7 +111,7 @@ func (l *ExtractorServiceImpl) Fork(start *big.Int) {
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	var syncBlock types.Big
-	if err := l.accessor.RetryCall(RetryTimes, &syncBlock, "eth_blockNumber"); err != nil {
+	if err := l.accessor.RetryCall("latest", RetryTimes, &syncBlock, "eth_blockNumber"); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
@@ -191,10 +191,10 @@ func (l *ExtractorServiceImpl) processBlock() {
 		rcReqs[idx] = &rcreq
 	}
 
-	if err := l.accessor.BatchTransactions(RetryTimes, txReqs); err != nil {
+	if err := l.accessor.BatchTransactions(block.Number.BigInt().String(), RetryTimes, txReqs); err != nil {
 		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
-	if err := l.accessor.BatchTransactionRecipients(RetryTimes, rcReqs); err != nil {
+	if err := l.accessor.BatchTransactionRecipients(block.Number.BigInt().String(), RetryTimes, rcReqs); err != nil {
 		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
 	}
 

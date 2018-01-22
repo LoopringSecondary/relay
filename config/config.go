@@ -114,7 +114,7 @@ func (opts IpfsOptions) Url() string {
 }
 
 type AccessorOptions struct {
-	RawUrl string `required:"true"`
+	RawUrls []string `required:"true"`
 }
 
 type KeyStoreOptions struct {

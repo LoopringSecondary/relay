@@ -116,7 +116,7 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 	// todo if jsonrpc failed
 	// 如果不存在,则查询以太坊
 	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	if err := detector.accessor.RetryCall(2, &ethBlock, "eth_getBlockByNumber", fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
+	if err := detector.accessor.RetryCall(parentBlockNumber.String(), 2, &ethBlock, "eth_getBlockByNumber", fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
 		return nil, err
 	}
 

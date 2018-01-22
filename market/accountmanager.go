@@ -70,7 +70,7 @@ func NewAccountManager(accessor *ethaccessor.EthNodeAccessor) AccountManager {
 
 	accountManager := AccountManager{accessor: accessor}
 	var blockNumber types.Big
-	err := accessor.RetryCall(2, &blockNumber, "eth_blockNumber")
+	err := accessor.RetryCall("latest", 2, &blockNumber, "eth_blockNumber")
 	if err != nil {
 		log.Fatal("init account manager failed, can't get newest block number")
 		return accountManager
@@ -141,7 +141,7 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 }
 
 func (a *AccountManager) GetCutoff(contract, address string) (int, error) {
-	cutoffTime, err := a.accessor.GetCutoff(common.StringToAddress(contract), common.StringToAddress(address), "latest")
+	cutoffTime, err := a.accessor.GetCutoff("latest", common.StringToAddress(contract), common.StringToAddress(address), "latest")
 	return int(cutoffTime.Int64()), err
 }
 
@@ -213,7 +213,7 @@ func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return a.accessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	return a.accessor.Erc20Balance("latest", util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
@@ -221,7 +221,7 @@ func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) 
 	if err != nil {
 		return big.NewInt(0), errors.New("invalid spender address")
 	}
-	return a.accessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	return a.accessor.Erc20Allowance("latest", util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
 }
 
 func buildAllowanceKey(version, token string) string {

@@ -200,10 +200,10 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 		ringhashes); nil != err {
 		return err
 	} else {
-		if gas, gasPrice, err := submitter.Accessor.EstimateGas(registryData, ringhashRegistryAddress); nil != err {
+		if gas, gasPrice, err := submitter.Accessor.EstimateGas("latest", registryData, ringhashRegistryAddress); nil != err {
 			return err
 		} else {
-			if txHash, err := submitter.Accessor.ContractSendTransactionByData(accounts.Account{Address: miners[0]}, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
+			if txHash, err := submitter.Accessor.ContractSendTransactionByData("latest", accounts.Account{Address: miners[0]}, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
 				return err
 			} else {
 				submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash)
@@ -222,7 +222,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringSubmitInfo *types.RingSubmi
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
 
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(accounts.Account{Address: ringSubmitInfo.Miner}, ringhashRegistryAddress, ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, nil, ringSubmitInfo.RegistryData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData("latest", accounts.Account{Address: ringSubmitInfo.Miner}, ringhashRegistryAddress, ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, nil, ringSubmitInfo.RegistryData); nil != err {
 		return err
 	} else {
 		ringSubmitInfo.RegistryTxHash = common.HexToHash(txHash)
@@ -232,7 +232,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringSubmitInfo *types.RingSubmi
 }
 
 func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) error {
-	if txHash, err := submitter.Accessor.ContractSendTransactionByData(accounts.Account{Address: ringSubmitInfo.Miner}, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
+	if txHash, err := submitter.Accessor.ContractSendTransactionByData("latest", accounts.Account{Address: ringSubmitInfo.Miner}, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
 		submitter.submitFailed([]common.Hash{ringSubmitInfo.Ringhash}, err)
 		return err
 	} else {
@@ -381,7 +381,7 @@ func (submitter *RingSubmitter) listenRegistryEvent() {
 						if implAddress, exists = submitter.Accessor.ProtocolAddresses[info.ProtocolAddress]; !exists {
 							err = errors.New("doesn't contain this version of protocol:" + info.ProtocolAddress.Hex())
 						}
-						callMethod := submitter.Accessor.ContractCallMethod(submitter.Accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
+						callMethod := submitter.Accessor.ContractCallMethod("latest", submitter.Accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
 						var canSubmit types.Big
 						if err = callMethod(&canSubmit, "canSubmit", "latest", info.Ringhash, info.Miner); nil != err {
 							log.Errorf("err:%s", err.Error())
@@ -447,7 +447,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		}
 
 		log.Debugf("ringhashRegistryAddress", ringhashRegistryAddress.Hex())
-		ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, err = submitter.Accessor.EstimateGas(ringSubmitInfo.RegistryData, ringhashRegistryAddress)
+		ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, err = submitter.Accessor.EstimateGas("latest", ringSubmitInfo.RegistryData, ringhashRegistryAddress)
 		if nil != err {
 			return nil, err
 		}
@@ -476,7 +476,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	if nil != err {
 		return nil, err
 	}
-	ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = submitter.Accessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress)
+	ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = submitter.Accessor.EstimateGas("latest", ringSubmitInfo.ProtocolData, protocolAddress)
 	if nil != err {
 		return nil, err
 	}
@@ -517,8 +517,8 @@ func (submitter *RingSubmitter) availabeMinerAddress() []*NormalMinerAddress {
 	minerAddresses := []*NormalMinerAddress{}
 	for _, minerAddress := range submitter.normalMinerAddresses {
 		var blockedTxCount, txCount types.Big
-		submitter.Accessor.Call(&blockedTxCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "latest")
-		submitter.Accessor.Call(&txCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "pending")
+		submitter.Accessor.Call("latest", &blockedTxCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "latest")
+		submitter.Accessor.Call("latest", &txCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "pending")
 
 		pendingCount := big.NewInt(int64(0))
 		pendingCount.Sub(txCount.BigInt(), blockedTxCount.BigInt())
