@@ -44,6 +44,7 @@ type OrderManager interface {
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
+	IsFiatValueDusted(value *big.Rat) bool
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
@@ -300,6 +301,10 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {
 	return isOrderFullFinished(state, om.mc)
+}
+
+func (om *OrderManagerImpl) IsFiatValueDusted(value *big.Rat) bool {
+	return isValueDusted(value)
 }
 
 func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
