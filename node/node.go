@@ -39,6 +39,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"math/big"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 )
 
 type Node struct {
@@ -207,10 +209,10 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerAccessor() {
-	//accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, util.WethTokenAddress())
-	//if nil != err {
-	//	log.Fatalf("err:%s", err.Error())
-	//}
+	err := ethaccessor.Initialize(n.globalConfig.Accessor, n.globalConfig.Common, util.WethTokenAddress())
+	if nil != err {
+		log.Fatalf("err:%s", err.Error())
+	}
 }
 
 func (n *Node) registerExtractor() {

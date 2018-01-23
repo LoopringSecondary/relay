@@ -26,9 +26,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/Loopring/relay/config"
 )
 
-var accessor *EthNodeAccessor
+var accessor *ethNodeAccessor
 
 func BlockNumber(result interface{}) error {
 	return accessor.RetryCall("latest", 2, result, "eth_blockNumber")
@@ -151,18 +152,93 @@ func ProtocolAddresses() map[common.Address]*ProtocolAddress {
 func ProtocolImplAbi() *abi.ABI {
 	return accessor.ProtocolImplAbi
 }
+
 func Erc20Abi() *abi.ABI {
 	return accessor.Erc20Abi
 }
+
 func WethAbi() *abi.ABI {
 	return accessor.WethAbi
 }
+
 func TokenRegistryAbi() *abi.ABI {
 	return accessor.TokenRegistryAbi
 }
+
 func RinghashRegistryAbi() *abi.ABI {
 	return accessor.RinghashRegistryAbi
 }
+
 func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
+}
+
+func Initialize(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) error {
+	var err error
+	accessor = &ethNodeAccessor{}
+	accessor.MutilClient = &MutilClient{}
+	accessor.MutilClient.Dail(accessorOptions.RawUrls)
+	if nil != err {
+		return err
+	}
+
+	if accessor.Erc20Abi, err = NewAbi(commonOptions.Erc20Abi); nil != err {
+		return err
+	}
+
+	if accessor.WethAbi, err = NewAbi(commonOptions.WethAbi); nil != err {
+		return err
+	}
+	accessor.WethAddress = wethAddress
+
+	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
+
+	if protocolImplAbi, err := NewAbi(commonOptions.ProtocolImpl.ImplAbi); nil != err {
+		return err
+	} else {
+		accessor.ProtocolImplAbi = protocolImplAbi
+	}
+	if registryAbi, err := NewAbi(commonOptions.ProtocolImpl.RegistryAbi); nil != err {
+		return err
+	} else {
+		accessor.RinghashRegistryAbi = registryAbi
+	}
+	if transferDelegateAbi, err := NewAbi(commonOptions.ProtocolImpl.DelegateAbi); nil != err {
+		return err
+	} else {
+		accessor.DelegateAbi = transferDelegateAbi
+	}
+	if tokenRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.TokenRegistryAbi); nil != err {
+		return err
+	} else {
+		accessor.TokenRegistryAbi = tokenRegistryAbi
+	}
+
+	for version, address := range commonOptions.ProtocolImpl.Address {
+		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
+		callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, impl.ContractAddress)
+		var addr string
+		if err := callMethod(&addr, "lrcTokenAddress", "latest"); nil != err {
+			return err
+		} else {
+			impl.LrcTokenAddress = common.HexToAddress(addr)
+		}
+		if err := callMethod(&addr, "ringhashRegistryAddress", "latest"); nil != err {
+			return err
+		} else {
+			impl.RinghashRegistryAddress = common.HexToAddress(addr)
+		}
+		if err := callMethod(&addr, "tokenRegistryAddress", "latest"); nil != err {
+			return err
+		} else {
+			impl.TokenRegistryAddress = common.HexToAddress(addr)
+		}
+		if err := callMethod(&addr, "delegateAddress", "latest"); nil != err {
+			return err
+		} else {
+			impl.DelegateAddress = common.HexToAddress(addr)
+		}
+		accessor.ProtocolAddresses[impl.ContractAddress] = impl
+	}
+	return nil
 }
