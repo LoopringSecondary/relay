@@ -124,7 +124,13 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			}
 		}
 	} else {
-		blockNumberForRouteBig := types.HexToBigint(routeParam)
+		var blockNumberForRouteBig *big.Int
+		if strings.HasPrefix(routeParam, "0x") {
+			blockNumberForRouteBig = types.HexToBigint(routeParam)
+		} else {
+			blockNumberForRouteBig = new(big.Int)
+			blockNumberForRouteBig.SetString(routeParam, 0)
+		}
 		lastIdx := 0
 		for curIdx, c := range mc.clients {
 			//todo:request from synced client
