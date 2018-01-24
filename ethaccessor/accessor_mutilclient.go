@@ -63,11 +63,6 @@ type SyncingResult struct {
 	syncing bool
 }
 
-func (sr *SyncingResult) UnmarshalText(input []byte) error {
-	println("$$$$$", string(input))
-	return nil
-}
-
 func (sr *SyncingResult) isSynced() bool {
 	//todo:
 	return true
@@ -77,7 +72,7 @@ func (mc *MutilClient) startSyncStatus() {
 	go func() {
 		for {
 			select {
-			case <-time.After(time.Duration(30 * time.Second)):
+			case <-time.After(time.Duration(10 * time.Second)):
 				mc.syncStatus()
 			}
 		}
@@ -93,7 +88,6 @@ func (mc *MutilClient) syncStatus() {
 		var blockNumber types.Big
 		if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
 			//todo:
-			println("####",err.Error())
 		}
 		if highest.Cmp(blockNumber.BigInt()) < 0 {
 			highest.Set(blockNumber.BigInt())

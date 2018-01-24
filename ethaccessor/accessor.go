@@ -244,5 +244,6 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 	}
+	accessor.MutilClient.startSyncStatus()
 	return nil
 }
