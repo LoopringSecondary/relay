@@ -60,7 +60,11 @@ func GetBlockByHash(result interface{}, blockHash string, withObject bool) error
 }
 
 func GetTransactionReceipt(result interface{}, txHash string, blockParameter string) error {
-	return accessor.RetryCall(blockParameter, 2, result, "eth_getBlockByHash", txHash)
+	return accessor.RetryCall(blockParameter, 2, result, "eth_getTransactionReceipt", txHash)
+}
+
+func GetTransactionByHash(result interface{}, txHash string, blockParameter string) error {
+	return accessor.RetryCall(blockParameter, 2, result, "eth_getTransactionByHash", txHash)
 }
 
 //todo:

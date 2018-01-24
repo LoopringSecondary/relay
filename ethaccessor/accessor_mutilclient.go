@@ -25,10 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/rand"
+	"math/big"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	//"encoding/json"
 )
 
 type MutilClient struct {
@@ -58,6 +60,12 @@ type SyncingResult struct {
 	StartingBlock types.Big
 	CurrentBlock  types.Big
 	HighestBlock  types.Big
+	syncing bool
+}
+
+func (sr *SyncingResult) UnmarshalText(input []byte) error {
+	println("$$$$$", string(input))
+	return nil
 }
 
 func (sr *SyncingResult) isSynced() bool {
@@ -65,26 +73,49 @@ func (sr *SyncingResult) isSynced() bool {
 	return true
 }
 
-func (mc *MutilClient) syncStatus() {
+func (mc *MutilClient) startSyncStatus() {
 	go func() {
 		for {
 			select {
 			case <-time.After(time.Duration(30 * time.Second)):
-				mc.mtx.Lock()
-				defer mc.mtx.Unlock()
-
-				for _, client := range mc.clients {
-					sr := &SyncingResult{}
-					if err := client.client.Call(sr, "eth_syncing"); nil != err {
-						//todo:
-					} else {
-						client.syncingResult = sr
-					}
-				}
-				sort.Sort(mc.clients)
+				mc.syncStatus()
 			}
 		}
 	}()
+}
+
+func (mc *MutilClient) syncStatus() {
+	mc.mtx.Lock()
+	defer mc.mtx.Unlock()
+
+	highest := big.NewInt(int64(0))
+	for _, client := range mc.clients {
+		var blockNumber types.Big
+		if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
+			//todo:
+			println("####",err.Error())
+		}
+		if highest.Cmp(blockNumber.BigInt()) < 0 {
+			highest.Set(blockNumber.BigInt())
+		}
+		var status bool
+
+		sr := &SyncingResult{}
+		sr.CurrentBlock = blockNumber
+
+		if err := client.client.Call(&status, "eth_syncing"); nil != err {
+			//todo:
+			if err := client.client.Call(&sr, "eth_syncing"); nil != err {
+				//todo:
+			}
+		}
+		client.syncingResult = sr
+	}
+
+	for _,c := range mc.clients {
+		c.syncingResult.HighestBlock = new(types.Big).SetInt(highest)
+	}
+	sort.Sort(mc.clients)
 }
 
 func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
@@ -122,15 +153,10 @@ func (mc *MutilClient) Dail(urls []string) {
 			rpcClient := &RpcClient{}
 			rpcClient.client = client
 			rpcClient.url = url
-			sr := &SyncingResult{}
-			if err := client.Call(sr, "eth_syncing"); nil != err {
-				//todo:
-			} else {
-				rpcClient.syncingResult = sr
-				mc.clients = append(mc.clients, rpcClient)
-			}
+			mc.clients = append(mc.clients, rpcClient)
 		}
 	}
+	mc.syncStatus()
 }
 
 func (mc *MutilClient) Call(routeParam string, result interface{}, method string, args ...interface{}) (node string, err error) {
@@ -166,4 +192,3 @@ type ethNodeAccessor struct {
 	ProtocolAddresses   map[common.Address]*ProtocolAddress
 	*MutilClient
 }
-
