@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *ethNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
 	var balance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
 	if err := callMethod(&balance, "balanceOf", blockParameter, ownerAddress); nil != err {
@@ -44,10 +44,10 @@ func (accessor *EthNodeAccessor) Erc20Balance(tokenAddress, ownerAddress common.
 	}
 }
 
-func (accessor *EthNodeAccessor) RetryCall(retry int, result interface{}, method string, args ...interface{}) error {
+func (accessor *ethNodeAccessor) RetryCall(routeParam string, retry int, result interface{}, method string, args ...interface{}) error {
 	var err error
 	for i := 0; i < retry; i++ {
-		if err = accessor.Call(result, method, args...); nil != err {
+		if _, err = accessor.Call(routeParam, result, method, args...); nil != err {
 			continue
 		} else {
 			return nil
@@ -56,7 +56,7 @@ func (accessor *EthNodeAccessor) RetryCall(retry int, result interface{}, method
 	return err
 }
 
-func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
+func (accessor *ethNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spenderAddress common.Address, blockParameter string) (*big.Int, error) {
 	var allowance types.Big
 	callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
 	if err := callMethod(&allowance, "allowance", blockParameter, ownerAddress, spenderAddress); nil != err {
@@ -66,7 +66,7 @@ func (accessor *EthNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spen
 	}
 }
 
-func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
@@ -79,19 +79,18 @@ func (accessor *EthNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
-func (accessor *EthNodeAccessor) GetCutoff(contractAddress, owner common.Address, blockNumStr string) (*big.Int, error) {
-	var cutoff types.Big
+func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
-		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
 	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
-	if err := callMethod(&cutoff, "cutoffs", blockNumStr, owner); err != nil {
-		return nil, err
+	if err := callMethod(result, "cutoffs", blockNumStr, owner); err != nil {
+		return err
 	}
-	return cutoff.BigInt(), nil
+	return nil
 }
 
-func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc20Req) error {
+func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) error {
 	reqElems := make([]rpc.BatchElem, 2*len(reqs))
 	erc20Abi := accessor.Erc20Abi
 
@@ -117,7 +116,7 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 		}
 	}
 
-	if err := accessor.Client.BatchCall(reqElems); err != nil {
+	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
 		return err
 	}
 
@@ -128,7 +127,7 @@ func (accessor *EthNodeAccessor) BatchErc20BalanceAndAllowance(reqs []*BatchErc2
 	return nil
 }
 
-func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTransactionReq) error {
+func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int, reqs []*BatchTransactionReq) error {
 	if len(reqs) < 1 || retry < 1 {
 		return fmt.Errorf("ethaccessor:batchTransactions retry or reqs invalid")
 	}
@@ -144,7 +143,7 @@ func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTrans
 
 	var err error
 	for i := 0; i < retry; i++ {
-		if err = accessor.Client.BatchCall(reqElems); err == nil {
+		if _, err = accessor.MutilClient.BatchCall(routeParam, reqElems); err == nil {
 			break
 		}
 	}
@@ -163,7 +162,7 @@ func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTrans
 		}
 
 		for i := 0; i < retry; i++ {
-			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionByHash", txhash); v.Error == nil {
+			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionByHash", txhash); v.Error == nil {
 				break
 			}
 		}
@@ -175,7 +174,7 @@ func (accessor *EthNodeAccessor) BatchTransactions(retry int, reqs []*BatchTrans
 	return nil
 }
 
-func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*BatchTransactionRecipientReq) error {
+func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, retry int, reqs []*BatchTransactionRecipientReq) error {
 	if len(reqs) < 1 || retry < 1 {
 		return fmt.Errorf("ethaccessor:batchTransactionRecipients retry or reqs invalid")
 	}
@@ -191,7 +190,7 @@ func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*B
 
 	var err error
 	for i := 0; i < retry; i++ {
-		if err = accessor.Client.BatchCall(reqElems); err == nil {
+		if _, err = accessor.BatchCall(routeParam, reqElems); err == nil {
 			break
 		}
 	}
@@ -210,7 +209,7 @@ func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*B
 		}
 
 		for i := 0; i < retry; i++ {
-			if v.Error = accessor.Client.Call(&tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
+			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
 				break
 			}
 		}
@@ -222,16 +221,16 @@ func (accessor *EthNodeAccessor) BatchTransactionRecipients(retry int, reqs []*B
 	return nil
 }
 
-func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
+func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if err = accessor.RetryCall(2, &gasPriceBig, "eth_gasPrice"); nil != err {
+	if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
 		return
 	}
 	callArg := &CallArg{}
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)
 	callArg.GasPrice = gasPriceBig
-	if err = accessor.RetryCall(2, &gasBig, "eth_estimateGas", callArg); nil != err {
+	if err = accessor.RetryCall(routeParam, 2, &gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
 	gasPrice = gasPriceBig.BigInt()
@@ -239,7 +238,7 @@ func (accessor *EthNodeAccessor) EstimateGas(callData []byte, to common.Address)
 	return
 }
 
-func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+func (accessor *ethNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
 	return func(result interface{}, methodName string, blockParameter string, args ...interface{}) error {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return err
@@ -248,12 +247,12 @@ func (accessor *EthNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 			arg.From = contractAddress
 			arg.To = contractAddress
 			arg.Data = common.ToHex(callData)
-			return accessor.RetryCall(2, result, "eth_call", arg, blockParameter)
+			return accessor.RetryCall(blockParameter, 2, result, "eth_call", arg, blockParameter)
 		}
 	}
 }
 
-func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
+func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
 	var err error
 	if tx, err = crypto.SignTx(sender, tx, nil); nil != err {
 		return err
@@ -262,7 +261,7 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 		return err
 	} else {
 		log.Debugf("txhash:%s, nonce:%d, value:%s, gas:%s, gasPrice:%s", tx.Hash().Hex(), tx.Nonce(), tx.Value().String(), tx.Gas().String(), tx.GasPrice().String())
-		err = ethAccessor.RetryCall(2, result, "eth_sendRawTransaction", common.ToHex(txData))
+		err = ethAccessor.RetryCall("latest", 2, result, "eth_sendRawTransaction", common.ToHex(txData))
 		if err != nil {
 			log.Errorf("accessor, Sign and send transaction error:%s", err.Error())
 		}
@@ -270,7 +269,7 @@ func (ethAccessor *EthNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -279,7 +278,7 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 	}
 	var txHash string
 	var nonce types.Big
-	if err := accessor.RetryCall(2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
 		return "", err
 	}
 	if value == nil {
@@ -301,18 +300,18 @@ func (accessor *EthNodeAccessor) ContractSendTransactionByData(sender accounts.A
 }
 
 //gas, gasPrice can be set to nil
-func (accessor *EthNodeAccessor) ContractSendTransactionMethod(a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 	return func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
 			if nil == gas || nil == gasPrice {
-				if gas, gasPrice, err = accessor.EstimateGas(callData, contractAddress); nil != err {
+				if gas, gasPrice, err = accessor.EstimateGas(routeParam, callData, contractAddress); nil != err {
 					return "", err
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
-			return accessor.ContractSendTransactionByData(sender, contractAddress, gas, gasPrice, value, callData)
+			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
 		}
 	}
 }
@@ -329,7 +328,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 	}
 
 	var blockNumber types.Big
-	if err := iterator.ethClient.RetryCall(2, &blockNumber, "eth_blockNumber"); nil != err {
+	if err := iterator.ethClient.RetryCall("latest", 2, &blockNumber, "eth_blockNumber"); nil != err {
 		return nil, err
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
@@ -339,7 +338,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 				select {
 				// todo(fk):modify this duration
 				case <-time.After(time.Duration(5 * time.Second)):
-					if err1 := iterator.ethClient.RetryCall(2, &blockNumber, "eth_blockNumber"); nil == err1 && blockNumber.Uint64() >= confirmNumber {
+					if err1 := iterator.ethClient.RetryCall("latest", 2, &blockNumber, "eth_blockNumber"); nil == err1 && blockNumber.Uint64() >= confirmNumber {
 						break hasNext
 					}
 				}
@@ -347,7 +346,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		}
 	}
 
-	if err := iterator.ethClient.RetryCall(2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+	if err := iterator.ethClient.RetryCall(iterator.currentNumber.String(), 2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
@@ -366,7 +365,7 @@ func (iterator *BlockIterator) Prev() (interface{}, error) {
 		return nil, errors.New("finished")
 	}
 	prevNumber := new(big.Int).Sub(iterator.currentNumber, big.NewInt(1))
-	if err := iterator.ethClient.RetryCall(2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
+	if err := iterator.ethClient.RetryCall(prevNumber.String(), 2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", prevNumber), iterator.withTxData); nil != err {
 		return nil, err
 	} else {
 		if nil == block {
@@ -377,7 +376,7 @@ func (iterator *BlockIterator) Prev() (interface{}, error) {
 	}
 }
 
-func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) *BlockIterator {
+func (ethAccessor *ethNodeAccessor) BlockIterator(startNumber, endNumber *big.Int, withTxData bool, confirms uint64) *BlockIterator {
 	iterator := &BlockIterator{
 		startNumber:   new(big.Int).Set(startNumber),
 		endNumber:     endNumber,
@@ -389,7 +388,7 @@ func (ethAccessor *EthNodeAccessor) BlockIterator(startNumber, endNumber *big.In
 	return iterator
 }
 
-func (ethAccessor *EthNodeAccessor) GetSenderAddress(protocol common.Address) (common.Address, error) {
+func (ethAccessor *ethNodeAccessor) GetSenderAddress(protocol common.Address) (common.Address, error) {
 	impl, ok := ethAccessor.ProtocolAddresses[protocol]
 	if !ok {
 		return common.Address{}, errors.New("accessor method:invalid protocol address")

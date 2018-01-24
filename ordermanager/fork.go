@@ -20,7 +20,6 @@ package ordermanager
 
 import (
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
@@ -28,16 +27,14 @@ import (
 )
 
 type forkProcessor struct {
-	dao      dao.RdsService
-	accessor *ethaccessor.EthNodeAccessor
-	mc       marketcap.MarketCapProvider
+	dao dao.RdsService
+	mc  marketcap.MarketCapProvider
 }
 
-func newForkProcess(rds dao.RdsService, accessor *ethaccessor.EthNodeAccessor, mc marketcap.MarketCapProvider) *forkProcessor {
+func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkProcessor {
 	processor := &forkProcessor{}
 	processor.dao = rds
 	processor.mc = mc
-	processor.accessor = accessor
 
 	return processor
 }
@@ -74,7 +71,7 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 			continue
 		}
 
-		model, err := newOrderEntity(state, p.accessor, p.mc, forkBlockNumber)
+		model, err := newOrderEntity(state, p.mc, forkBlockNumber)
 		if err != nil {
 			log.Errorf("order manager fork error:%s", err.Error())
 			continue

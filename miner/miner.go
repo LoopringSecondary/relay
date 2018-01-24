@@ -19,12 +19,10 @@
 package miner
 
 import (
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 )
 
 type Miner struct {
-	accessor          *ethaccessor.EthNodeAccessor
 	matcher           Matcher
 	submitter         *RingSubmitter
 	marketCapProvider marketcap.MarketCapProvider
@@ -41,12 +39,11 @@ func (minerInstance *Miner) Stop() {
 	minerInstance.submitter.stop()
 }
 
-func NewMiner(submitter *RingSubmitter, matcher Matcher, evaluator *Evaluator, accessor *ethaccessor.EthNodeAccessor, marketCapProvider marketcap.MarketCapProvider) *Miner {
+func NewMiner(submitter *RingSubmitter, matcher Matcher, evaluator *Evaluator, marketCapProvider marketcap.MarketCapProvider) *Miner {
 	return &Miner{
 		marketCapProvider: marketCapProvider,
 		submitter:         submitter,
 		matcher:           matcher,
-		accessor:          accessor,
 		evaluator:         evaluator,
 	}
 }

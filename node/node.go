@@ -25,11 +25,9 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
@@ -41,13 +39,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"math/big"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 )
 
 type Node struct {
 	globalConfig      *config.GlobalConfig
 	rdsService        dao.RdsService
 	ipfsSubService    gateway.IPFSSubService
-	accessor          *ethaccessor.EthNodeAccessor
 	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
@@ -210,15 +209,14 @@ func (n *Node) registerMysql() {
 }
 
 func (n *Node) registerAccessor() {
-	accessor, err := ethaccessor.NewAccessor(n.globalConfig.Accessor, n.globalConfig.Common, util.WethTokenAddress())
+	err := ethaccessor.Initialize(n.globalConfig.Accessor, n.globalConfig.Common, util.WethTokenAddress())
 	if nil != err {
 		log.Fatalf("err:%s", err.Error())
 	}
-	n.accessor = accessor
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Common, n.accessor, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Common, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
@@ -226,7 +224,7 @@ func (n *Node) registerIPFSSubService() {
 }
 
 func (n *Node) registerOrderManager() {
-	n.orderManager = ordermanager.NewOrderManager(&n.globalConfig.OrderManager, n.rdsService, n.userManager, n.accessor, n.marketCapProvider)
+	n.orderManager = ordermanager.NewOrderManager(&n.globalConfig.OrderManager, n.rdsService, n.userManager, n.marketCapProvider)
 }
 
 func (n *Node) registerTrendManager() {
@@ -234,20 +232,20 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager(n.accessor)
+	n.accountManager = market.NewAccountManager()
 }
 
 func (n *Node) registerJsonRpcService() {
-	ethForwarder := gateway.EthForwarder{Accessor: *n.accessor}
+	ethForwarder := gateway.EthForwarder{}
 	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.accountManager, &ethForwarder, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.accessor, n.rdsService, n.marketCapProvider)
-	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, n.accessor)
+	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
+	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
 	submitter.SetMatcher(matcher)
-	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.accessor, n.marketCapProvider)
+	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.marketCapProvider)
 }
 
 func (n *Node) registerGateway() {

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
@@ -53,7 +52,6 @@ type OrderManagerImpl struct {
 	options            *config.OrderManagerOptions
 	rds                dao.RdsService
 	processor          *forkProcessor
-	accessor           *ethaccessor.EthNodeAccessor
 	um                 usermanager.UserManager
 	mc                 marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
@@ -70,18 +68,15 @@ func NewOrderManager(
 	options *config.OrderManagerOptions,
 	rds dao.RdsService,
 	userManager usermanager.UserManager,
-	accessor *ethaccessor.EthNodeAccessor,
 	market marketcap.MarketCapProvider) *OrderManagerImpl {
 
 	om := &OrderManagerImpl{}
 	om.options = options
 	om.rds = rds
-	om.processor = newForkProcess(om.rds, accessor, market)
-	om.accessor = accessor
+	om.processor = newForkProcess(om.rds, market)
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds, options.CutoffCacheExpireTime, options.CutoffCacheCleanTime)
-	om.accessor = accessor
 	om.forkComplete = true
 
 	dustOrderValue = om.options.DustOrderValue
@@ -130,7 +125,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 	state := input.(*types.OrderState)
 	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
-	model, err := newOrderEntity(state, om.accessor, om.mc, nil)
+	model, err := newOrderEntity(state, om.mc, nil)
 	if err != nil {
 		return err
 	}

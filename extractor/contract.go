@@ -136,7 +136,6 @@ const (
 )
 
 type AbiProcessor struct {
-	accessor  *ethaccessor.EthNodeAccessor
 	events    map[common.Hash]EventData
 	methods   map[string]MethodData
 	protocols map[common.Address]string
@@ -145,14 +144,13 @@ type AbiProcessor struct {
 }
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
-func newAbiProcessor(accessor *ethaccessor.EthNodeAccessor, db dao.RdsService) *AbiProcessor {
+func newAbiProcessor(db dao.RdsService) *AbiProcessor {
 	processor := &AbiProcessor{}
 
 	processor.events = make(map[common.Hash]EventData)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
-	processor.accessor = accessor
 	processor.db = db
 
 	processor.loadProtocolAddress()
@@ -204,7 +202,7 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 		log.Infof("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
 	}
 
-	for _, v := range processor.accessor.ProtocolAddresses {
+	for _, v := range ethaccessor.ProtocolAddresses() {
 		protocolSymbol := "loopring"
 		delegateSymbol := "transfer_delegate"
 		ringhashRegisterSymbol := "ringhash_register"
@@ -225,13 +223,13 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 }
 
 func (processor *AbiProcessor) loadProtocolContract() {
-	for name, event := range processor.accessor.ProtocolImplAbi.Events {
+	for name, event := range ethaccessor.ProtocolImplAbi().Events {
 		if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME {
 			continue
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newEventData(&event, processor.accessor.ProtocolImplAbi)
+		contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
 
 		switch contract.Name {
 		case RINGMINED_EVT_NAME:
@@ -250,12 +248,12 @@ func (processor *AbiProcessor) loadProtocolContract() {
 		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 
-	for name, method := range processor.accessor.ProtocolImplAbi.Methods {
+	for name, method := range ethaccessor.ProtocolImplAbi().Methods {
 		if name != SUBMITRING_METHOD_NAME && name != CANCELORDER_METHOD_NAME {
 			continue
 		}
 
-		contract := newMethodData(&method, processor.accessor.ProtocolImplAbi)
+		contract := newMethodData(&method, ethaccessor.ProtocolImplAbi())
 		watcher := &eventemitter.Watcher{}
 
 		switch contract.Name {
@@ -274,13 +272,13 @@ func (processor *AbiProcessor) loadProtocolContract() {
 }
 
 func (processor *AbiProcessor) loadErc20Contract() {
-	for name, event := range processor.accessor.Erc20Abi.Events {
+	for name, event := range ethaccessor.Erc20Abi().Events {
 		if name != TRANSFER_EVT_NAME && name != APPROVAL_EVT_NAME {
 			continue
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newEventData(&event, processor.accessor.Erc20Abi)
+		contract := newEventData(&event, ethaccessor.Erc20Abi())
 
 		switch contract.Name {
 		case TRANSFER_EVT_NAME:
@@ -296,12 +294,12 @@ func (processor *AbiProcessor) loadErc20Contract() {
 		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 
-	for name, method := range processor.accessor.Erc20Abi.Methods {
+	for name, method := range ethaccessor.Erc20Abi().Methods {
 		if name != APPROVAL_METHOD_NAME {
 			continue
 		}
 
-		contract := newMethodData(&method, processor.accessor.Erc20Abi)
+		contract := newMethodData(&method, ethaccessor.Erc20Abi())
 		contract.Method = &ethaccessor.ApproveMethod{}
 		watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApproveMethod}
 		eventemitter.On(contract.Id, watcher)
@@ -313,13 +311,13 @@ func (processor *AbiProcessor) loadErc20Contract() {
 }
 
 func (processor *AbiProcessor) loadWethContract() {
-	for name, method := range processor.accessor.WethAbi.Methods {
+	for name, method := range ethaccessor.WethAbi().Methods {
 		if name != WETH_DEPOSIT_METHOD_NAME && name != WETH_WITHDRAWAL_METHOD_NAME {
 			continue
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newMethodData(&method, processor.accessor.WethAbi)
+		contract := newMethodData(&method, ethaccessor.WethAbi())
 
 		switch contract.Name {
 		case WETH_DEPOSIT_METHOD_NAME:
@@ -337,13 +335,13 @@ func (processor *AbiProcessor) loadWethContract() {
 }
 
 func (processor *AbiProcessor) loadTokenRegisterContract() {
-	for name, event := range processor.accessor.TokenRegistryAbi.Events {
+	for name, event := range ethaccessor.TokenRegistryAbi().Events {
 		if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
 			continue
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newEventData(&event, processor.accessor.TokenRegistryAbi)
+		contract := newEventData(&event, ethaccessor.TokenRegistryAbi())
 
 		switch contract.Name {
 		case TOKENREGISTERED_EVT_NAME:
@@ -361,12 +359,12 @@ func (processor *AbiProcessor) loadTokenRegisterContract() {
 }
 
 func (processor *AbiProcessor) loadRingHashRegisteredContract() {
-	for name, event := range processor.accessor.RinghashRegistryAbi.Events {
+	for name, event := range ethaccessor.RinghashRegistryAbi().Events {
 		if name != RINGHASHREGISTERED_EVT_NAME {
 			continue
 		}
 
-		contract := newEventData(&event, processor.accessor.RinghashRegistryAbi)
+		contract := newEventData(&event, ethaccessor.RinghashRegistryAbi())
 		contract.Event = &ethaccessor.RingHashSubmittedEvent{}
 
 		watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRinghashSubmitEvent}
@@ -376,12 +374,12 @@ func (processor *AbiProcessor) loadRingHashRegisteredContract() {
 		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 
-	for name, method := range processor.accessor.RinghashRegistryAbi.Methods {
+	for name, method := range ethaccessor.RinghashRegistryAbi().Methods {
 		if name != BATCHSUBMITRINGHASH_METHOD_NAME && name != SUBMITRINGHASH_METHOD_NAME {
 			continue
 		}
 
-		contract := newMethodData(&method, processor.accessor.RinghashRegistryAbi)
+		contract := newMethodData(&method, ethaccessor.RinghashRegistryAbi())
 		watcher := &eventemitter.Watcher{}
 
 		switch contract.Name {
@@ -400,13 +398,13 @@ func (processor *AbiProcessor) loadRingHashRegisteredContract() {
 }
 
 func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
-	for name, event := range processor.accessor.DelegateAbi.Events {
+	for name, event := range ethaccessor.DelegateAbi().Events {
 		if name != ADDRESSAUTHORIZED_EVT_NAME && name != ADDRESSDEAUTHORIZED_EVT_NAME {
 			continue
 		}
 
 		watcher := &eventemitter.Watcher{}
-		contract := newEventData(&event, processor.accessor.DelegateAbi)
+		contract := newEventData(&event, ethaccessor.DelegateAbi())
 
 		switch contract.Name {
 		case ADDRESSAUTHORIZED_EVT_NAME:

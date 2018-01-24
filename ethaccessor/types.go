@@ -113,7 +113,7 @@ type BlockIterator struct {
 	startNumber   *big.Int
 	endNumber     *big.Int
 	currentNumber *big.Int
-	ethClient     *EthNodeAccessor
+	ethClient     *ethNodeAccessor
 	withTxData    bool
 	confirms      uint64
 }
