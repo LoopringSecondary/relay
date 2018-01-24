@@ -60,7 +60,6 @@ type SyncingResult struct {
 	StartingBlock types.Big
 	CurrentBlock  types.Big
 	HighestBlock  types.Big
-	syncing bool
 }
 
 func (sr *SyncingResult) isSynced() bool {
@@ -128,6 +127,7 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 		blockNumberForRouteBig := types.HexToBigint(routeParam)
 		lastIdx := 0
 		for curIdx, c := range mc.clients {
+			//todo:request from synced client
 			if blockNumberForRouteBig.Cmp(c.syncingResult.CurrentBlock.BigInt()) <= 0 {
 				lastIdx = curIdx
 			} else {
