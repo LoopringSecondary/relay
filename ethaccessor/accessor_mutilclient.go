@@ -140,7 +140,9 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 				break
 			}
 		}
-		idx = rand.Intn(lastIdx)
+		if lastIdx > 0 {
+			idx = rand.Intn(lastIdx)
+		}
 	}
 	return mc.clients[idx]
 }
