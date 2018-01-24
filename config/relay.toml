@@ -44,7 +44,7 @@ name = "Loopring corporation"
     max_broadcast_time = 3
 
 [accessor]
-    raw_url = "http://127.0.0.1:8545"
+    raw_urls = ["http://127.0.0.1:8545"]
 
 [common]
     default_block_number = 33287

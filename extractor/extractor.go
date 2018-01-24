@@ -161,7 +161,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 	var txcnt types.Big
-	if err := l.accessor.Call(&txcnt, "eth_getBlockTransactionCountByHash", block.Hash.Hex()); err != nil {
+	if err := ethaccessor.GetBlockTransactionCountByHash(&txcnt, block.Hash.Hex(), "latest"); err != nil {
 		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
 	}
 	txcntinblock := len(block.Transactions)
