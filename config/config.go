@@ -69,6 +69,7 @@ type GlobalConfig struct {
 		Name string
 	}
 	Mysql          MysqlOptions
+	Redis          RedisOptions
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
 	GatewayFilters GatewayFiltersOptions
@@ -210,6 +211,16 @@ type MysqlOptions struct {
 	DbName      string
 	TablePrefix string
 	Debug       bool
+}
+
+type RedisOptions struct {
+	Host        string
+	Port        string
+	Password    string
+	IdleTimeout int
+	MaxIdle     int
+	MaxActive   int
+	Ttl         int
 }
 
 type UserManagerOptions struct {
