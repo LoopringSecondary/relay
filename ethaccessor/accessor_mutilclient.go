@@ -24,8 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	"math/rand"
 	"math/big"
+	"math/rand"
 	"sort"
 	"strings"
 	"sync"
@@ -105,7 +105,7 @@ func (mc *MutilClient) syncStatus() {
 		client.syncingResult = sr
 	}
 
-	for _,c := range mc.clients {
+	for _, c := range mc.clients {
 		c.syncingResult.HighestBlock = new(types.Big).SetInt(highest)
 	}
 	sort.Sort(mc.clients)
