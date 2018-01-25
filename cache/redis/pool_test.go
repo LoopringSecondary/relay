@@ -21,17 +21,14 @@ package redis_test
 import (
 	"encoding/json"
 	"github.com/Loopring/relay/cache"
-	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/test"
 	"testing"
 	"time"
 )
 
-func cfg() *config.RedisOptions {
-	return &config.RedisOptions{}
-}
-
 func TestRedisCacheImpl_SetExpire(t *testing.T) {
-	// test expire time
+	cache.NewCache(test.Cfg().Redis)
+
 	if err := cache.Set("test_expire", []byte("hahhah"), 20); err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -52,6 +49,8 @@ func TestRedisCacheImpl_SetExpire(t *testing.T) {
 }
 
 func TestRedisCacheImpl_SetStruct(t *testing.T) {
+	cache.NewCache(test.Cfg().Redis)
+
 	type user struct {
 		Name   string `json:name`
 		Height int    `json:height`
@@ -67,13 +66,15 @@ func TestRedisCacheImpl_SetStruct(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 
-	if data, err := cache.Get("test_struct"); err != nil {
-		t.Fatalf(err.Error())
-	} else {
-		var u1 user
-		if err := json.Unmarshal(data, &u1); err != nil {
+	for i := 0; i < 1000; i++ {
+		if data, err := cache.Get("test_struct"); err != nil {
 			t.Fatalf(err.Error())
+		} else {
+			var u1 user
+			if err := json.Unmarshal(data, &u1); err != nil {
+				t.Fatalf(err.Error())
+			}
+			t.Logf("name:%s, height:%d", u1.Name, u1.Height)
 		}
-		t.Logf("name:%s, height:%d", u1.Name, u1.Height)
 	}
 }

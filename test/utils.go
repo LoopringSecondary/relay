@@ -20,7 +20,6 @@ package test
 
 import (
 	"fmt"
-	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
