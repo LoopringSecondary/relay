@@ -21,12 +21,12 @@ package ethaccessor
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/config"
 )
 
 var accessor *ethNodeAccessor
@@ -95,6 +95,14 @@ func EstimateGas(callData []byte, to common.Address, blockNumber string) (gas, g
 
 func SignAndSendTransaction(sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	return accessor.ContractSendTransactionByData("latest", sender, to, gas, gasPrice, value, callData)
+}
+
+func ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return accessor.ContractSendTransactionMethod(routeParam, a, contractAddress)
+}
+
+func ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+	return accessor.ContractCallMethod(a, contractAddress)
 }
 
 func ProtocolCanSubmit(implAddress *ProtocolAddress, ringhash common.Hash, miner common.Address) (bool, error) {
