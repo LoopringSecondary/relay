@@ -213,11 +213,9 @@ func pubMessage(sh *shell.Shell, data string) {
 	}
 }
 
-func MatchTestPrepare() (*config.GlobalConfig, *test.TestEntity, *ethaccessor.EthNodeAccessor) {
+func MatchTestPrepare() (*config.GlobalConfig, *test.TestEntity) {
 	c := test.Cfg()
 	entity := test.Entity()
-	accessor, _ := test.GenerateAccessor()
-
 	testAcc1 := entity.Accounts[0]
 	testAcc2 := entity.Accounts[1]
 	password1 := entity.Accounts[0].Passphrase
@@ -233,18 +231,18 @@ func MatchTestPrepare() (*config.GlobalConfig, *test.TestEntity, *ethaccessor.Et
 
 	cyp := crypto.NewCrypto(true, ks)
 	crypto.Initialize(cyp)
-	return c, entity, accessor
+	return c, entity
 }
 
 //test the amount and discount
 func TestMatcher_Case1(t *testing.T) {
-	c, entity, accessor := MatchTestPrepare()
+	c, entity := MatchTestPrepare()
 
 	tokenAddressA := util.SupportTokens["LRC"].Protocol
 	tokenAddressB := util.SupportMarkets["WETH"].Protocol
 
-	tokenCallMethodA := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddressA)
-	tokenCallMethodB := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddressB)
+	tokenCallMethodA := ethaccessor.ContractCallMethod(ethaccessor.Erc20Abi(), tokenAddressA)
+	tokenCallMethodB := ethaccessor.ContractCallMethod(ethaccessor.Erc20Abi(), tokenAddressB)
 	var tokenAmountA types.Big
 	var tokenAmountB types.Big
 	tokenCallMethodA(&tokenAmountA, "balanceOf", "latest", entity.Accounts[0].Address)
@@ -302,13 +300,13 @@ func TestMatcher_Case1(t *testing.T) {
 
 //test account lrcFee insufficient
 func TestMatcher_Case2(t *testing.T) {
-	c, entity, accessor := MatchTestPrepare()
+	c, entity := MatchTestPrepare()
 
 	tokenAddressA := util.SupportTokens["EOS"].Protocol
 	tokenAddressB := util.SupportMarkets["WETH"].Protocol
 
-	tokenCallMethodA := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddressA)
-	tokenCallMethodB := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddressB)
+	tokenCallMethodA := ethaccessor.ContractCallMethod(ethaccessor.Erc20Abi(), tokenAddressA)
+	tokenCallMethodB := ethaccessor.ContractCallMethod(ethaccessor.Erc20Abi(), tokenAddressB)
 	var tokenAmountA types.Big
 	var tokenAmountB types.Big
 	tokenCallMethodA(&tokenAmountA, "balanceOf", "latest", entity.Accounts[0].Address)
