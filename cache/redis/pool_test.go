@@ -20,8 +20,8 @@ package redis_test
 
 import (
 	"encoding/json"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/test"
 	"testing"
 	"time"
 )
@@ -31,14 +31,12 @@ func cfg() *config.RedisOptions {
 }
 
 func TestRedisCacheImpl_SetExpire(t *testing.T) {
-	redis := test.Redis()
-
 	// test expire time
-	if err := redis.Set("test_expire", []byte("hahhah")); err != nil {
+	if err := cache.Set("test_expire", []byte("hahhah"), 20); err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	if data, err := redis.Get("test_expire"); err != nil {
+	if data, err := cache.Get("test_expire"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		t.Log(string(data))
@@ -46,7 +44,7 @@ func TestRedisCacheImpl_SetExpire(t *testing.T) {
 
 	time.Sleep(22 * time.Second)
 
-	if data, err := redis.Get("test_expire"); err != nil {
+	if data, err := cache.Get("test_expire"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		t.Log(data)
@@ -54,9 +52,6 @@ func TestRedisCacheImpl_SetExpire(t *testing.T) {
 }
 
 func TestRedisCacheImpl_SetStruct(t *testing.T) {
-	redis := test.Redis()
-
-	// test struct
 	type user struct {
 		Name   string `json:name`
 		Height int    `json:height`
@@ -68,11 +63,11 @@ func TestRedisCacheImpl_SetStruct(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	if err := redis.Set("test_struct", bs); err != nil {
+	if err := cache.Set("test_struct", bs, 20); err != nil {
 		t.Fatalf(err.Error())
 	}
 
-	if data, err := redis.Get("test_struct"); err != nil {
+	if data, err := cache.Get("test_struct"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		var u1 user

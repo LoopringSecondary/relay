@@ -220,7 +220,6 @@ type RedisOptions struct {
 	IdleTimeout int
 	MaxIdle     int
 	MaxActive   int
-	Ttl         int
 }
 
 type UserManagerOptions struct {

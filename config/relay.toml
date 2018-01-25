@@ -35,7 +35,6 @@ name = "Loopring corporation"
     idle_timeout = 20
     max_idle = 2
     max_active = 5
-    ttl = 60
 
 [order_manager]
     cutoff_cache_expire_time = 864000

@@ -63,14 +63,14 @@ func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
 	return reply.([]byte), err
 }
 
-func (impl *RedisCacheImpl) Set(key string, value []byte) error {
+func (impl *RedisCacheImpl) Set(key string, value []byte, expire int64) error {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
 	if _, err := conn.Do("set", key, value); err != nil {
 		return err
 	}
-	if _, err := conn.Do("expire", key, impl.options.Ttl); err != nil {
+	if _, err := conn.Do("expire", key, expire); err != nil {
 		return err
 	}
 	return nil

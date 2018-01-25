@@ -63,7 +63,6 @@ const (
 
 var (
 	cfg           *config.GlobalConfig
-	redis         cache.Cache
 	rds           dao.RdsService
 	entity        *TestEntity
 	orderAccounts = []accounts.Account{}
@@ -79,7 +78,6 @@ func init() {
 	unlockAccounts()
 
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
-	redis = cache.NewCache(cfg.Redis)
 }
 
 func loadConfig() *config.GlobalConfig {
@@ -169,7 +167,6 @@ func unlockAccounts() {
 }
 
 func Rds() dao.RdsService       { return rds }
-func Redis() cache.Cache        { return redis }
 func Cfg() *config.GlobalConfig { return cfg }
 func Entity() *TestEntity       { return entity }
 func Protocol() common.Address  { return common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version]) }

@@ -18,18 +18,26 @@
 
 package cache
 
-import myredis "github.com/Loopring/relay/cache/redis"
+import (
+	myredis "github.com/Loopring/relay/cache/redis"
+)
+
+var cache Cache
 
 type Cache interface {
-	Set(key string, value []byte) error
+	Set(key string, value []byte, expire int64) error
 
 	Get(key string) ([]byte, error)
 
 	Del(key string) error
 }
 
-func NewCache(cfg interface{}) Cache {
+func NewCache(cfg interface{}) {
 	redis := &myredis.RedisCacheImpl{}
 	redis.Initialize(cfg)
-	return redis
+	cache = redis
 }
+
+func Set(key string, value []byte, expire int64) error { return cache.Set(key, value, expire) }
+func Get(key string) ([]byte, error)                   { return cache.Get(key) }
+func Del(key string) error                             { return cache.Del(key) }
