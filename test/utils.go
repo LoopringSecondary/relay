@@ -74,6 +74,7 @@ func init() {
 	rds = GenerateDaoService()
 	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
 	entity = loadTestData()
+	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()
 
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
@@ -172,7 +173,7 @@ func Protocol() common.Address  { return common.HexToAddress(cfg.Common.Protocol
 func Delegate() common.Address  { return ethaccessor.ProtocolAddresses()[protocol].DelegateAddress }
 
 func GenerateExtractor() *extractor.ExtractorServiceImpl {
-	l := extractor.NewExtractorService(cfg.Common, rds)
+	l := extractor.NewExtractorService(cfg.Extractor, cfg.Common, rds)
 	return l
 }
 
@@ -297,16 +298,17 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 		}
 	}
 	if nil == orderAccounts1 {
-		orderAccounts1 = orderAccounts
+		for _, v := range orderAccounts {
+			orderAccounts1 = append(orderAccounts1, v)
+		}
 	}
 
 	for _, tokenAddr := range tokens1 {
 		for _, account := range orderAccounts1 {
-			var balance types.Big
-			if err := ethaccessor.GetBalance(&balance, tokenAddr, "latest"); err != nil {
+			if balance, err := ethaccessor.Erc20Balance(tokenAddr, account.Address,"latest"); err != nil {
 				log.Errorf("err:%s", err.Error())
 			} else {
-				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), humanNumber(balance.BigInt()))
+				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), humanNumber(balance))
 			}
 
 			for _, impl := range ethaccessor.ProtocolAddresses() {
@@ -329,20 +331,20 @@ func SetTokenBalances() {
 
 	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
 	amount, _ := new(big.Int).SetString("10000000000000000000000", 0)
-	wethAmount, _ := new(big.Int).SetString("179992767978000000000", 0)
+	//wethAmount, _ := new(big.Int).SetString("79992767978000000000", 0)
 
 	// deposit weth
-	wethToken := entity.Tokens["WETH"]
-	for _, v := range entity.Accounts {
-		owner := accounts.Account{Address: v.Address}
-		sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethToken)
-		hash, err := sendTransactionMethod(owner, "deposit", nil, nil, wethAmount)
-		if nil != err {
-			log.Fatalf("call method weth-deposit error:%s", err.Error())
-		} else {
-			log.Debugf("weth-deposit txhash:%s", hash)
-		}
-	}
+	//wethToken := entity.Tokens["WETH"]
+	//for _, v := range entity.Accounts {
+	//	owner := accounts.Account{Address: v.Address}
+	//	sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethToken)
+	//	hash, err := sendTransactionMethod(owner, "deposit", nil, nil, wethAmount)
+	//	if nil != err {
+	//		log.Fatalf("call method weth-deposit error:%s", err.Error())
+	//	} else {
+	//		log.Debugf("weth-deposit txhash:%s", hash)
+	//	}
+	//}
 
 	// other token set balance
 	for symbol, tokenAddress := range entity.Tokens {
@@ -351,20 +353,18 @@ func SetTokenBalances() {
 		}
 		sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", dummyTokenAbi, tokenAddress)
 		for _, acc := range orderAccounts {
-			var res types.Big
-			if err := ethaccessor.GetBalance(&res, acc.Address, "latest"); nil != err {
+			if balance, err := ethaccessor.Erc20Balance(tokenAddress, acc.Address, "latest"); nil != err {
 				fmt.Errorf(err.Error())
-			}
-			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
+			} else if balance.Cmp(big.NewInt(int64(0))) <= 0 {
 				hash, err := sendTransactionMethod(sender, "setBalance", nil, nil, nil, acc.Address, amount)
 				if nil != err {
 					fmt.Errorf(err.Error())
 				}
 				fmt.Printf("sendhash:%s", hash)
+			} else {
+				fmt.Printf("tokenAddress:%s, useraddress:%s, balance:%s", tokenAddress.Hex(), acc.Address.Hex(), balance.String())
 			}
-			fmt.Printf("tokenAddress:%s, useraddress:%s, balance:%s", tokenAddress.Hex(), acc.Address.Hex(), res.BigInt().String())
 		}
-		fmt.Printf(":", tokenAddress.Hex())
 	}
 }
 
