@@ -380,9 +380,16 @@ func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject
 				blockWithTxAndReceipt.Block = blockWithTxHash.Block
 				blockWithTxAndReceipt.Transactions = []Transaction{}
 				blockWithTxAndReceipt.Receipts = []TransactionReceipt{}
+
+				txno := len(blockWithTxHash.Transactions)
+				if txno == 0 {
+					log.Debugf("block %s has none blocks", blockNumber.String())
+					return nil, nil
+				}
+
 				var (
-					txReqs = make([]*BatchTransactionReq, len(blockWithTxHash.Transactions))
-					rcReqs = make([]*BatchTransactionRecipientReq, len(blockWithTxHash.Transactions))
+					txReqs = make([]*BatchTransactionReq, txno)
+					rcReqs = make([]*BatchTransactionRecipientReq, txno)
 				)
 				for idx, txstr := range blockWithTxHash.Transactions {
 					var (

@@ -120,6 +120,9 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 
 func (l *ExtractorServiceImpl) processBlock() {
 	inter, err := l.iterator.Next()
+	if inter == nil {
+		return
+	}
 	if err != nil {
 		log.Fatalf("extractor,iterator next error:%s", err.Error())
 	}
