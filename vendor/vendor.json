@@ -40,6 +40,12 @@
 			"revisionTime": "2017-06-13T09:22:38Z"
 		},
 		{
+			"checksumSHA1": "ritEgiBoGIZx+M6JQ/XcsAXVwMQ=",
+			"path": "github.com/ethereum/bak/go-ethereum/common",
+			"revision": "a92d8a26547c138953665387c57168e68bacdd13",
+			"revisionTime": "2017-09-18T21:07:19Z"
+		},
+		{
 			"checksumSHA1": "QuDIDOLqZKyLfz7vkSAvRWxcjtQ=",
 			"path": "github.com/ethereum/go-ethereum",
 			"revision": "bb57f1f1e579a353d4e21368c2217f0462352783",
@@ -52,7 +58,7 @@
 			"revisionTime": "2017-11-15T12:34:53Z"
 		},
 		{
-			"checksumSHA1": "2Ar6kTjsQjvzo50Q2w7AFG1Mg/Q=",
+			"checksumSHA1": "jBJC0135C5j2L9gZngqnGnChvtU=",
 			"path": "github.com/ethereum/go-ethereum/accounts/abi",
 			"revision": "bb57f1f1e579a353d4e21368c2217f0462352783",
 			"revisionTime": "2017-11-15T12:34:53Z"
@@ -152,6 +158,18 @@
 			"path": "github.com/ethereum/go-ethereum/trie",
 			"revision": "bb57f1f1e579a353d4e21368c2217f0462352783",
 			"revisionTime": "2017-11-15T12:34:53Z"
+		},
+		{
+			"checksumSHA1": "2UmMbNHc8FBr98mJFN1k8ISOIHk=",
+			"path": "github.com/garyburd/redigo/internal",
+			"revision": "d1ed5c67e5794de818ea85e6b522fda02623a484",
+			"revisionTime": "2017-12-29T01:14:44Z"
+		},
+		{
+			"checksumSHA1": "sc/XC7agvewnB1AGXMGZRkVzM8c=",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "d1ed5c67e5794de818ea85e6b522fda02623a484",
+			"revisionTime": "2017-12-29T01:14:44Z"
 		},
 		{
 			"checksumSHA1": "os4jdoOUjr86qvOwri8Ut1rXDrg=",

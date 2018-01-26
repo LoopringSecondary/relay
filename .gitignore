@@ -10,3 +10,4 @@ config/debug_tokens.json
 config/mainchain.toml
 config/docker.toml
 test/*.toml
+startup.sh
