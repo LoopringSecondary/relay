@@ -232,7 +232,3 @@ type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
 }
-
-type BlockGasPrices struct {
-
-}
