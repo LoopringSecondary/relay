@@ -37,7 +37,7 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-const RetryTimes = 5
+const defaultEndBlockNumber = 1000000000
 
 type ExtractorService interface {
 	Start()
@@ -47,7 +47,7 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options          config.AccessorOptions
+	options          config.ExtractorOptions
 	commOpts         config.CommonOptions
 	detector         *forkDetector
 	processor        *AbiProcessor
@@ -62,10 +62,12 @@ type ExtractorServiceImpl struct {
 	forktest         bool
 }
 
-func NewExtractorService(commonOpts config.CommonOptions,
+func NewExtractorService(options config.ExtractorOptions,
+	commonOpts config.CommonOptions,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
+	l.options = options
 	l.commOpts = commonOpts
 	l.dao = rds
 	l.processor = newAbiProcessor(rds)
@@ -85,7 +87,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(0))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
 		for {
 			select {
@@ -144,7 +146,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// detect chain fork
 	// todo free fork detector
-	// l.detector.Detect(currentBlock)
+	l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
@@ -251,7 +253,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		}
 
 		// 记录event log
-		if l.commOpts.SaveEventLog {
+		if l.options.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
 				l.debug("extractor,tx:%s json unmarshal evtlog error:%s", txhash, err.Error())
 			} else {
@@ -291,8 +293,11 @@ func (l *ExtractorServiceImpl) setBlockNumberRange(start, end *big.Int) {
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	var ret types.Block
 
-	start := l.commOpts.DefaultBlockNumber
-	end := l.commOpts.EndBlockNumber
+	start := l.options.StartBlockNumber
+	end := l.options.EndBlockNumber
+	if end.Cmp(big.NewInt(0)) == 0 {
+		end = big.NewInt(defaultEndBlockNumber)
+	}
 
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()
