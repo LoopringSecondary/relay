@@ -80,3 +80,7 @@ func BigintToHex(b *big.Int) string {
 func HexToBigint(h string) *big.Int {
 	return new(big.Int).SetBytes(common.FromHex(h))
 }
+
+type CheckNull interface {
+	IsNull() bool
+}
