@@ -78,8 +78,8 @@ func NewExtractorService(options config.ExtractorOptions,
 	l.setBlockNumberRange(start, end)
 
 	// todo: comment online
-	l.startBlockNumber = big.NewInt(4967595)
-	l.endBlockNumber = l.startBlockNumber
+	//l.startBlockNumber = big.NewInt(4967595)
+	//l.endBlockNumber = l.startBlockNumber
 	return &l
 }
 
