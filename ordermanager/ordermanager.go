@@ -61,7 +61,6 @@ type OrderManagerImpl struct {
 	cancelOrderWatcher *eventemitter.Watcher
 	cutoffOrderWatcher *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
-	forkComplete       bool
 }
 
 func NewOrderManager(
@@ -77,7 +76,6 @@ func NewOrderManager(
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(rds, options.CutoffCacheExpireTime, options.CutoffCacheCleanTime)
-	om.forkComplete = true
 
 	dustOrderValue = om.options.DustOrderValue
 
@@ -111,12 +109,9 @@ func (om *OrderManagerImpl) Stop() {
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
-	om.forkComplete = false
 	if err := om.processor.fork(input.(*types.ForkedEvent)); err != nil {
 		log.Errorf("order manager,handle fork error:%s", err.Error())
 	}
-
-	om.forkComplete = true
 	return nil
 }
 
@@ -313,11 +308,6 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 		err          error
 		filterStatus = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}
 	)
-
-	// 如果正在分叉，则不提供任何订单
-	if om.forkComplete == false {
-		return list
-	}
 
 	for _, orderDelay := range filterOrderHashLists {
 		orderHashes := []string{}

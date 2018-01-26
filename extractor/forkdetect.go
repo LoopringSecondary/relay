@@ -19,13 +19,11 @@
 package extractor
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"math/big"
 )
 
 type forkDetector struct {
@@ -110,11 +108,7 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 		return &parentBlock, nil
 	}
 
-	// find parent block on chain
-	// todo if jsonrpc failed
-	// 如果不存在,则查询以太坊
-	parentBlockNumber := block.BlockNumber.Sub(block.BlockNumber, big.NewInt(1))
-	if err := ethaccessor.GetBlockByNumber(&ethBlock, fmt.Sprintf("%#x", parentBlockNumber), false); err != nil {
+	if err := ethaccessor.GetBlockByHash(&ethBlock, block.ParentHash.Hex(), false); err != nil {
 		return nil, err
 	}
 

@@ -56,7 +56,7 @@ func GetBlockByNumber(result interface{}, blockNumber string, withObject bool) e
 }
 
 func GetBlockByHash(result types.CheckNull, blockHash string, withObject bool) error {
-	for _,c := range accessor.clients {
+	for _, c := range accessor.clients {
 		//todo:is it need retrycall
 		if err := c.client.Call(result, "eth_getBlockByHash", blockHash, withObject); nil == err {
 			if !result.IsNull() {
@@ -74,7 +74,7 @@ func GetTransactionReceipt(result interface{}, txHash string, blockParameter str
 }
 
 func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter string) error {
-	for _,c := range accessor.clients {
+	for _, c := range accessor.clients {
 		if err := c.client.Call(result, "eth_getTransactionByHash", txHash); nil == err {
 			if !result.IsNull() {
 				return nil
