@@ -121,7 +121,7 @@ type AccessorOptions struct {
 
 type ExtractorOptions struct {
 	SaveEventLog       bool
-	ConfirmBlocks      int64
+	ConfirmBlockNumber uint64
 	DefaultBlockNumber *big.Int
 	EndBlockNumber     *big.Int
 }

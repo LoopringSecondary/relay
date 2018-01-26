@@ -87,7 +87,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(l.options.ConfirmBlocks))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
 		for {
 			select {

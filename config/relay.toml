@@ -56,8 +56,8 @@ name = "Loopring corporation"
 
 [extractor]
     default_block_number = 33287
+    confirm_block_number = 5
     save_event_log = true
-    confirm_blocks = 5
 
 [common]
     develop = false
