@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
@@ -103,6 +104,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerGateway()
 	n.registerCrypto(nil)
 	n.registerAccountManager()
+	cache.NewCache(n.globalConfig.Redis)
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()

@@ -39,5 +39,5 @@ func NewCache(cfg interface{}) {
 }
 
 func Set(key string, value []byte, ttl int64) error { return cache.Set(key, value, ttl) }
-func Get(key string) ([]byte, error)                   { return cache.Get(key) }
-func Del(key string) error                             { return cache.Del(key) }
+func Get(key string) ([]byte, error)                { return cache.Get(key) }
+func Del(key string) error                          { return cache.Del(key) }
