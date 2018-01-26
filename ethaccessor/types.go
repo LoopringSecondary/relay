@@ -142,7 +142,3 @@ type CallArg struct {
 	Nonce    types.Big      `json:"nonce"`
 }
 
-
-type BlockGasPrice struct {
-
-}

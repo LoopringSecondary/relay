@@ -225,9 +225,14 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 
 func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
-		return
+	if nil == accessor.gasPriceEvaluator.gasPrice {
+		if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
+			return
+		}
+	} else {
+		gasPriceBig = new(types.Big).SetInt(accessor.gasPriceEvaluator.gasPrice)
 	}
+
 	callArg := &CallArg{}
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)

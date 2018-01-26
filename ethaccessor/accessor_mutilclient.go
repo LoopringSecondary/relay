@@ -193,4 +193,5 @@ type ethNodeAccessor struct {
 	WethAddress         common.Address
 	ProtocolAddresses   map[common.Address]*ProtocolAddress
 	*MutilClient
+	gasPriceEvaluator *GasPriceEvaluator
 }
