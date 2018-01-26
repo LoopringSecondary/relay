@@ -85,7 +85,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, false, uint64(0))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(0))
 	go func() {
 		for {
 			select {
@@ -128,7 +128,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	// get current block
-	block := inter.(*ethaccessor.BlockWithTxHash)
+	block := inter.(*ethaccessor.BlockWithTxAndReceipt)
 	log.Infof("extractor,get block:%s->%s, transaction number:%d", block.Number.BigInt().String(), block.Hash.Hex(), len(block.Transactions))
 
 	currentBlock := &types.Block{}
@@ -172,41 +172,8 @@ func (l *ExtractorServiceImpl) processBlock() {
 		return
 	}
 
-	// process block
-	var (
-		txReqs = make([]*ethaccessor.BatchTransactionReq, len(block.Transactions))
-		rcReqs = make([]*ethaccessor.BatchTransactionRecipientReq, len(block.Transactions))
-	)
-	for idx, txstr := range block.Transactions {
-		var (
-			txreq        ethaccessor.BatchTransactionReq
-			rcreq        ethaccessor.BatchTransactionRecipientReq
-			tx           ethaccessor.Transaction
-			rc           ethaccessor.TransactionReceipt
-			txerr, rcerr error
-		)
-		txreq.TxHash = txstr
-		txreq.TxContent = tx
-		txreq.Err = txerr
-
-		rcreq.TxHash = txstr
-		rcreq.TxContent = rc
-		rcreq.Err = rcerr
-
-		txReqs[idx] = &txreq
-		rcReqs[idx] = &rcreq
-	}
-
-	if err := ethaccessor.BatchTransactions(txReqs, block.Number.BigInt().String()); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
-	}
-	if err := ethaccessor.BatchTransactionRecipients(rcReqs, block.Number.BigInt().String()); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
-	}
-
-	for idx, _ := range txReqs {
-		recipient := rcReqs[idx].TxContent
-		transaction := txReqs[idx].TxContent
+	for idx, transaction := range block.Transactions {
+		recipient := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
 
