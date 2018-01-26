@@ -55,7 +55,8 @@ name = "Loopring corporation"
     raw_urls = ["http://127.0.0.1:8545"]
 
 [extractor]
-    default_block_number = 33287
+    start_block_number = 33287
+    end_block_number = 0
     confirm_block_number = 5
     save_event_log = true
 

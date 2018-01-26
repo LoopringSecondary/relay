@@ -122,7 +122,7 @@ type AccessorOptions struct {
 type ExtractorOptions struct {
 	SaveEventLog       bool
 	ConfirmBlockNumber uint64
-	DefaultBlockNumber *big.Int
+	StartBlockNumber   *big.Int
 	EndBlockNumber     *big.Int
 }
 

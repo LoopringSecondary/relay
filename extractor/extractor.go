@@ -37,7 +37,7 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-const RetryTimes = 5
+const defaultEndBlockNumber = 1000000000
 
 type ExtractorService interface {
 	Start()
@@ -293,8 +293,11 @@ func (l *ExtractorServiceImpl) setBlockNumberRange(start, end *big.Int) {
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	var ret types.Block
 
-	start := l.options.DefaultBlockNumber
+	start := l.options.StartBlockNumber
 	end := l.options.EndBlockNumber
+	if end.Cmp(big.NewInt(0)) == 0 {
+		end = big.NewInt(defaultEndBlockNumber)
+	}
 
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()
