@@ -25,7 +25,7 @@ import (
 var cache Cache
 
 type Cache interface {
-	Set(key string, value []byte, expire int64) error
+	Set(key string, value []byte, ttl int64) error
 
 	Get(key string) ([]byte, error)
 
@@ -38,6 +38,6 @@ func NewCache(cfg interface{}) {
 	cache = redis
 }
 
-func Set(key string, value []byte, expire int64) error { return cache.Set(key, value, expire) }
+func Set(key string, value []byte, ttl int64) error { return cache.Set(key, value, ttl) }
 func Get(key string) ([]byte, error)                   { return cache.Get(key) }
 func Del(key string) error                             { return cache.Del(key) }
