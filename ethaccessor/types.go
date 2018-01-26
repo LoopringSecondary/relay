@@ -51,7 +51,7 @@ type BlockWithTxObject struct {
 
 type BlockWithTxAndReceipt struct {
 	Block
-	Transactions []Transaction `json:"transactions"`
+	Transactions []Transaction        `json:"transactions"`
 	Receipts     []TransactionReceipt `json:"receipts"`
 }
 

@@ -76,6 +76,7 @@ type GlobalConfig struct {
 	OrderManager   OrderManagerOptions
 	Gateway        GateWayOptions
 	Accessor       AccessorOptions
+	Extractor      ExtractorOptions
 	Common         CommonOptions
 	Miner          MinerOptions
 	Log            LogOptions
@@ -118,6 +119,13 @@ type AccessorOptions struct {
 	RawUrls []string `required:"true"`
 }
 
+type ExtractorOptions struct {
+	SaveEventLog       bool
+	ConfirmBlocks      int64
+	DefaultBlockNumber *big.Int
+	EndBlockNumber     *big.Int
+}
+
 type KeyStoreOptions struct {
 	Keydir  string
 	ScryptN int
@@ -133,14 +141,11 @@ type ProtocolOptions struct {
 }
 
 type CommonOptions struct {
-	Erc20Abi           string
-	WethAbi            string
-	ProtocolImpl       ProtocolOptions `required:"true"`
-	DefaultBlockNumber *big.Int        `required:"true"`
-	EndBlockNumber     *big.Int        `required:"true"`
-	Develop            bool            `required:"true"`
-	SaveEventLog       bool
-	OrderMinAmounts    map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
+	Erc20Abi        string
+	WethAbi         string
+	ProtocolImpl    ProtocolOptions  `required:"true"`
+	OrderMinAmounts map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
+	Develop         bool
 }
 
 type LogOptions struct {
