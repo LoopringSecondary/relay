@@ -87,7 +87,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(0))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, uint64(l.options.ConfirmBlocks))
 	go func() {
 		for {
 			select {
@@ -146,7 +146,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// detect chain fork
 	// todo free fork detector
-	// l.detector.Detect(currentBlock)
+	l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
