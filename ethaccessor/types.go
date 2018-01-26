@@ -49,6 +49,10 @@ type BlockWithTxObject struct {
 	Transactions []Transaction
 }
 
+func (block Block) IsNull() bool {
+	return types.IsZeroHash(block.Hash)
+}
+
 type BlockWithTxAndReceipt struct {
 	Block
 	Transactions []Transaction        `json:"transactions"`
@@ -75,6 +79,10 @@ type Transaction struct {
 	R                string    `json:"r"`
 	S                string    `json:"s"`
 	V                string    `json:"v"`
+}
+
+func (tx *Transaction) IsNull() bool {
+	return types.IsZeroHash(common.HexToHash(tx.Hash))
 }
 
 type Log struct {
