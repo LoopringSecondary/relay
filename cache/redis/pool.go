@@ -60,7 +60,14 @@ func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
 
 	reply, err := conn.Do("get", key)
 
-	return reply.([]byte), err
+	if nil == reply {
+		if nil == err {
+			err = fmt.Errorf("no this key:%s", key)
+		}
+		return []byte{}, err
+	} else {
+		return reply.([]byte), err
+	}
 }
 
 func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {

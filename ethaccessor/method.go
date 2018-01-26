@@ -19,8 +19,10 @@
 package ethaccessor
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -317,12 +319,6 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 }
 
 func (iterator *BlockIterator) Next() (interface{}, error) {
-	var block interface{}
-	if iterator.withTxData {
-		block = &BlockWithTxObject{}
-	} else {
-		block = &BlockWithTxHash{}
-	}
 	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
 		return nil, errors.New("finished")
 	}
@@ -346,11 +342,87 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		}
 	}
 
-	if err := iterator.ethClient.RetryCall(iterator.currentNumber.String(), 2, &block, "eth_getBlockByNumber", fmt.Sprintf("%#x", iterator.currentNumber), iterator.withTxData); nil != err {
+	block, err := iterator.ethClient.getFullBlock(iterator.currentNumber, iterator.withTxData)
+	if nil == err {
+		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
+	}
+	return block, err
+}
+
+func (accessor *ethNodeAccessor) getFullBlockFromCacheByHash(hash string) (*BlockWithTxAndReceipt, error) {
+	blockWithTxAndReceipt := &BlockWithTxAndReceipt{}
+
+	if blockData, err := cache.Get(hash); nil == err {
+		if err = json.Unmarshal(blockData, blockWithTxAndReceipt); nil == err {
+			return blockWithTxAndReceipt, nil
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
+}
+
+func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject bool) (interface{}, error) {
+	blockWithTxHash := &BlockWithTxHash{}
+
+	if err := accessor.RetryCall(blockNumber.String(), 2, &blockWithTxHash, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), false); nil != err {
 		return nil, err
 	} else {
-		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
-		return block, nil
+		if !withTxObject {
+			return blockWithTxHash, nil
+		} else {
+
+			if blockWithTxAndReceipt, err := accessor.getFullBlockFromCacheByHash(blockWithTxHash.Hash.Hex()); nil == err && nil != blockWithTxAndReceipt {
+				return blockWithTxAndReceipt, nil
+			} else {
+				blockWithTxAndReceipt := &BlockWithTxAndReceipt{}
+				blockWithTxAndReceipt.Block = blockWithTxHash.Block
+				blockWithTxAndReceipt.Transactions = []Transaction{}
+				blockWithTxAndReceipt.Receipts = []TransactionReceipt{}
+				var (
+					txReqs = make([]*BatchTransactionReq, len(blockWithTxHash.Transactions))
+					rcReqs = make([]*BatchTransactionRecipientReq, len(blockWithTxHash.Transactions))
+				)
+				for idx, txstr := range blockWithTxHash.Transactions {
+					var (
+						txreq        BatchTransactionReq
+						rcreq        BatchTransactionRecipientReq
+						tx           Transaction
+						rc           TransactionReceipt
+						txerr, rcerr error
+					)
+					txreq.TxHash = txstr
+					txreq.TxContent = tx
+					txreq.Err = txerr
+
+					rcreq.TxHash = txstr
+					rcreq.TxContent = rc
+					rcreq.Err = rcerr
+
+					txReqs[idx] = &txreq
+					rcReqs[idx] = &rcreq
+				}
+
+				if err := BatchTransactions(txReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					return nil, err
+				}
+				if err := BatchTransactionRecipients(rcReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					return nil, err
+				}
+
+				for idx, _ := range txReqs {
+					blockWithTxAndReceipt.Transactions = append(blockWithTxAndReceipt.Transactions, txReqs[idx].TxContent)
+					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
+				}
+
+				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
+					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400*30))
+				}
+				return blockWithTxAndReceipt, nil
+			}
+
+		}
 	}
 }
 
