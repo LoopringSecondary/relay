@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
 
 type OrderStatus uint8
@@ -33,6 +34,7 @@ const (
 	ORDER_PARTIAL
 	ORDER_FINISHED
 	ORDER_CANCEL
+	ORDER_EXPIRE
 	ORDER_CUTOFF
 )
 
@@ -47,13 +49,13 @@ const (
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
-	TokenS                common.Address `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
-	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
-	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
-	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
-	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"`
-	Ttl                   *big.Int       `json:"ttl" gencodec:"required"` // 订单过期时间
+	Protocol              common.Address `json:"protocol" gencodec:"required"`  // 智能合约地址
+	TokenS                common.Address `json:"tokenS" gencodec:"required"`    // 卖出erc20代币智能合约地址
+	TokenB                common.Address `json:"tokenB" gencodec:"required"`    // 买入erc20代币智能合约地址
+	AmountS               *big.Int       `json:"amountS" gencodec:"required"`   // 卖出erc20代币数量上限
+	AmountB               *big.Int       `json:"amountB" gencodec:"required"`   // 买入erc20代币数量上限
+	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"` //
+	Ttl                   *big.Int       `json:"ttl" gencodec:"required"`       // 订单过期时间
 	Salt                  *big.Int       `json:"salt" gencodec:"required"`
 	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
@@ -263,6 +265,16 @@ func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
 	} else {
 		ord.Status = ORDER_PARTIAL
 	}
+}
+
+func (ord *OrderState) IsOrderExpired() bool {
+	nowtime := time.Now().Unix()
+	validTime := ord.RawOrder.Timestamp.Int64()
+	ttl := ord.RawOrder.Ttl.Int64()
+	if validTime+ttl < nowtime {
+		return true
+	}
+	return false
 }
 
 func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {

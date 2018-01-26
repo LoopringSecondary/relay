@@ -37,7 +37,7 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-const RetryTimes = 5
+const defaultEndBlockNumber = 1000000000
 
 type ExtractorService interface {
 	Start()
@@ -47,7 +47,7 @@ type ExtractorService interface {
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
-	options          config.AccessorOptions
+	options          config.ExtractorOptions
 	commOpts         config.CommonOptions
 	detector         *forkDetector
 	processor        *AbiProcessor
@@ -62,10 +62,12 @@ type ExtractorServiceImpl struct {
 	forktest         bool
 }
 
-func NewExtractorService(commonOpts config.CommonOptions,
+func NewExtractorService(options config.ExtractorOptions,
+	commonOpts config.CommonOptions,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
+	l.options = options
 	l.commOpts = commonOpts
 	l.dao = rds
 	l.processor = newAbiProcessor(rds)
@@ -76,7 +78,7 @@ func NewExtractorService(commonOpts config.CommonOptions,
 	l.setBlockNumberRange(start, end)
 
 	// todo: comment online
-	//l.startBlockNumber = big.NewInt(4928923)
+	//l.startBlockNumber = big.NewInt(4967595)
 	//l.endBlockNumber = l.startBlockNumber
 	return &l
 }
@@ -85,7 +87,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, false, uint64(0))
+	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
 		for {
 			select {
@@ -128,7 +130,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	// get current block
-	block := inter.(*ethaccessor.BlockWithTxHash)
+	block := inter.(*ethaccessor.BlockWithTxAndReceipt)
 	log.Infof("extractor,get block:%s->%s, transaction number:%d", block.Number.BigInt().String(), block.Hash.Hex(), len(block.Transactions))
 
 	currentBlock := &types.Block{}
@@ -144,7 +146,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// detect chain fork
 	// todo free fork detector
-	// l.detector.Detect(currentBlock)
+	l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
@@ -161,7 +163,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 	var txcnt types.Big
-	if err := l.accessor.Call(&txcnt, "eth_getBlockTransactionCountByHash", block.Hash.Hex()); err != nil {
+	if err := ethaccessor.GetBlockTransactionCountByHash(&txcnt, block.Hash.Hex(), block.Number.BigInt().String()); err != nil {
 		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
 	}
 	txcntinblock := len(block.Transactions)
@@ -172,41 +174,8 @@ func (l *ExtractorServiceImpl) processBlock() {
 		return
 	}
 
-	// process block
-	var (
-		txReqs = make([]*ethaccessor.BatchTransactionReq, len(block.Transactions))
-		rcReqs = make([]*ethaccessor.BatchTransactionRecipientReq, len(block.Transactions))
-	)
-	for idx, txstr := range block.Transactions {
-		var (
-			txreq        ethaccessor.BatchTransactionReq
-			rcreq        ethaccessor.BatchTransactionRecipientReq
-			tx           ethaccessor.Transaction
-			rc           ethaccessor.TransactionReceipt
-			txerr, rcerr error
-		)
-		txreq.TxHash = txstr
-		txreq.TxContent = tx
-		txreq.Err = txerr
-
-		rcreq.TxHash = txstr
-		rcreq.TxContent = rc
-		rcreq.Err = rcerr
-
-		txReqs[idx] = &txreq
-		rcReqs[idx] = &rcreq
-	}
-
-	if err := ethaccessor.BatchTransactions(txReqs, block.Number.BigInt().String()); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
-	}
-	if err := ethaccessor.BatchTransactionRecipients(rcReqs, block.Number.BigInt().String()); err != nil {
-		log.Fatalf("extractor,accessor get batch transaction recipient failed, blocknumber:%s, err:%s", block.Number.BigInt().String(), err.Error())
-	}
-
-	for idx, _ := range txReqs {
-		recipient := rcReqs[idx].TxContent
-		transaction := txReqs[idx].TxContent
+	for idx, transaction := range block.Transactions {
+		recipient := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
 
@@ -284,7 +253,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		}
 
 		// 记录event log
-		if l.commOpts.SaveEventLog {
+		if l.options.SaveEventLog {
 			if bs, err := json.Marshal(evtLog); err != nil {
 				l.debug("extractor,tx:%s json unmarshal evtlog error:%s", txhash, err.Error())
 			} else {
@@ -324,8 +293,11 @@ func (l *ExtractorServiceImpl) setBlockNumberRange(start, end *big.Int) {
 func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
 	var ret types.Block
 
-	start := l.commOpts.DefaultBlockNumber
-	end := l.commOpts.EndBlockNumber
+	start := l.options.StartBlockNumber
+	end := l.options.EndBlockNumber
+	if end.Cmp(big.NewInt(0)) == 0 {
+		end = big.NewInt(defaultEndBlockNumber)
+	}
 
 	// 寻找分叉块，并归零分叉标记
 	forkBlock, err := l.dao.FindForkBlock()

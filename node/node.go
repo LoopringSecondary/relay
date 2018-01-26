@@ -22,12 +22,15 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
@@ -39,8 +42,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"math/big"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/log"
 )
 
 type Node struct {
@@ -103,6 +104,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerGateway()
 	n.registerCrypto(nil)
 	n.registerAccountManager()
+	cache.NewCache(n.globalConfig.Redis)
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
@@ -216,7 +218,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Common, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.globalConfig.Common, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

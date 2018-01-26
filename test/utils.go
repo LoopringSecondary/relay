@@ -66,7 +66,6 @@ var (
 	entity        *TestEntity
 	orderAccounts = []accounts.Account{}
 	creator       accounts.Account
-	accessor      *ethaccessor.EthNodeAccessor
 	protocol      common.Address
 )
 
@@ -76,7 +75,6 @@ func init() {
 	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
 	entity = loadTestData()
 	unlockAccounts()
-	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
 }
@@ -152,7 +150,6 @@ func unlockAccounts() {
 	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	c := crypto.NewCrypto(false, ks)
 	crypto.Initialize(c)
-	accessor, _ = ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 
 	creator = accounts.Account{Address: entity.Creator.Address}
 	ks.Unlock(creator, entity.Creator.Passphrase)
@@ -172,22 +169,10 @@ func Rds() dao.RdsService       { return rds }
 func Cfg() *config.GlobalConfig { return cfg }
 func Entity() *TestEntity       { return entity }
 func Protocol() common.Address  { return common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version]) }
-func Delegate() common.Address  { return accessor.ProtocolAddresses[protocol].DelegateAddress }
-
-func GenerateAccessor() (*ethaccessor.EthNodeAccessor, error) {
-	accessor, err := ethaccessor.NewAccessor(cfg.Accessor, cfg.Common, util.WethTokenAddress())
-	if nil != err {
-		return nil, err
-	}
-	return accessor, nil
-}
+func Delegate() common.Address  { return ethaccessor.ProtocolAddresses()[protocol].DelegateAddress }
 
 func GenerateExtractor() *extractor.ExtractorServiceImpl {
-	accessor, err := GenerateAccessor()
-	if err != nil {
-		panic(err)
-	}
-	l := extractor.NewExtractorService(cfg.Common, accessor, rds)
+	l := extractor.NewExtractorService(cfg.Common, rds)
 	return l
 }
 
@@ -199,11 +184,7 @@ func GenerateUserManager() *usermanager.UserManagerImpl {
 func GenerateOrderManager() *ordermanager.OrderManagerImpl {
 	mc := GenerateMarketCap()
 	um := usermanager.NewUserManager(&cfg.UserManager, rds)
-	accessor, err := GenerateAccessor()
-	if err != nil {
-		panic(err)
-	}
-	ob := ordermanager.NewOrderManager(&cfg.OrderManager, rds, um, accessor, mc)
+	ob := ordermanager.NewOrderManager(&cfg.OrderManager, rds, um, mc)
 	return ob
 }
 
@@ -236,17 +217,28 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	return order
 }
 
+func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...interface{}) ethaccessor.CallArg {
+	if callData, err := a.Pack(methodName, args...); nil != err {
+		panic(err)
+	} else {
+		arg := ethaccessor.CallArg{}
+		arg.From = protocol
+		arg.To = protocol
+		arg.Data = common.ToHex(callData)
+		return arg
+	}
+}
+
 func PrepareTestData() {
 	//delegate registry
-	delegateAbi := accessor.DelegateAbi
-	delegateAddress := accessor.ProtocolAddresses[protocol].DelegateAddress
-	callMethod := accessor.ContractCallMethod(delegateAbi, delegateAddress)
+	delegateAbi := ethaccessor.DelegateAbi()
+	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
 	var res types.Big
-	if err := callMethod(&res, "isAddressAuthorized", "latest", protocol); nil != err {
+	if err := ethaccessor.Call(&res, getCallArg(delegateAbi, delegateAddress, "isAddressAuthorized", protocol), "latest"); nil != err {
 		log.Errorf("err:%s", err.Error())
 	} else {
 		if res.Int() <= 0 {
-			delegateCallMethod := accessor.ContractSendTransactionMethod(delegateAbi, delegateAddress)
+			delegateCallMethod := ethaccessor.ContractSendTransactionMethod("latest", delegateAbi, delegateAddress)
 			if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, nil, protocol); nil != err {
 				log.Errorf("delegate add version error:%s", err.Error())
 			} else {
@@ -258,16 +250,16 @@ func PrepareTestData() {
 	}
 
 	//tokenregistry
-	tokenRegisterAbi := accessor.TokenRegistryAbi
-	tokenRegisterAddress := accessor.ProtocolAddresses[protocol].TokenRegistryAddress
+	tokenRegisterAbi := ethaccessor.TokenRegistryAbi()
+	tokenRegisterAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
 	for symbol, tokenAddr := range entity.Tokens {
-		callMethod := accessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
+		callMethod := ethaccessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
 		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
 			log.Errorf("err:%s", err.Error())
 		} else {
 			if res.Int() <= 0 {
-				registryMethod := accessor.ContractSendTransactionMethod(tokenRegisterAbi, tokenRegisterAddress)
+				registryMethod := ethaccessor.ContractSendTransactionMethod("latest", tokenRegisterAbi, tokenRegisterAddress)
 				if hash, err := registryMethod(creator, "registerToken", nil, nil, nil, tokenAddr, symbol); nil != err {
 					log.Errorf("token registry error:%s", err.Error())
 				} else {
@@ -281,7 +273,7 @@ func PrepareTestData() {
 
 	//approve
 	for _, tokenAddr := range entity.Tokens {
-		erc20SendMethod := accessor.ContractSendTransactionMethod(accessor.Erc20Abi, tokenAddr)
+		erc20SendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddr)
 		for _, acc := range orderAccounts {
 			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(1000000000000000000))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
@@ -309,21 +301,19 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 	}
 
 	for _, tokenAddr := range tokens1 {
-		callMethod := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddr)
 		for _, account := range orderAccounts1 {
 			var balance types.Big
-			if err := callMethod(&balance, "balanceOf", "latest", account.Address); nil != err {
+			if err := ethaccessor.GetBalance(&balance, tokenAddr, "latest"); err != nil {
 				log.Errorf("err:%s", err.Error())
 			} else {
 				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), humanNumber(balance.BigInt()))
 			}
 
-			var allowance types.Big
-			for _, impl := range accessor.ProtocolAddresses {
-				if err := callMethod(&allowance, "allowance", "latest", account.Address, impl.DelegateAddress); nil != err {
+			for _, impl := range ethaccessor.ProtocolAddresses() {
+				if allowance, err := ethaccessor.Erc20Allowance(tokenAddr, account.Address, impl.DelegateAddress, "latest"); nil != err {
 					log.Error(err.Error())
 				} else {
-					log.Infof("token:%s, owner:%s, spender:%s, allowance:%s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), humanNumber(allowance.BigInt()))
+					log.Infof("token:%s, owner:%s, spender:%s, allowance:%s", tokenAddr.Hex(), account.Address.Hex(), impl.DelegateAddress.Hex(), humanNumber(allowance))
 				}
 			}
 		}
@@ -345,7 +335,7 @@ func SetTokenBalances() {
 	wethToken := entity.Tokens["WETH"]
 	for _, v := range entity.Accounts {
 		owner := accounts.Account{Address: v.Address}
-		sendTransactionMethod := accessor.ContractSendTransactionMethod(accessor.WethAbi, wethToken)
+		sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethToken)
 		hash, err := sendTransactionMethod(owner, "deposit", nil, nil, wethAmount)
 		if nil != err {
 			log.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -359,12 +349,10 @@ func SetTokenBalances() {
 		if symbol == "WETH" {
 			continue
 		}
-		sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
-		erc20Method := accessor.ContractCallMethod(accessor.Erc20Abi, tokenAddress)
-
+		sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", dummyTokenAbi, tokenAddress)
 		for _, acc := range orderAccounts {
 			var res types.Big
-			if err := erc20Method(&res, "balanceOf", "latest", acc.Address); nil != err {
+			if err := ethaccessor.GetBalance(&res, acc.Address, "latest"); nil != err {
 				fmt.Errorf(err.Error())
 			}
 			if res.BigInt().Cmp(big.NewInt(int64(0))) <= 0 {
@@ -388,7 +376,7 @@ func SetTokenBalance(symbol string, account common.Address, amount *big.Int) {
 
 	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
 	tokenAddress := util.AllTokens[symbol].Protocol
-	sendTransactionMethod := accessor.ContractSendTransactionMethod(dummyTokenAbi, tokenAddress)
+	sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", dummyTokenAbi, tokenAddress)
 
 	hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, account, amount)
 	if nil != err {

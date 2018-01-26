@@ -24,8 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
-	"math/rand"
 	"math/big"
+	"math/rand"
 	"sort"
 	"strings"
 	"sync"
@@ -105,7 +105,7 @@ func (mc *MutilClient) syncStatus() {
 		client.syncingResult = sr
 	}
 
-	for _,c := range mc.clients {
+	for _, c := range mc.clients {
 		c.syncingResult.HighestBlock = new(types.Big).SetInt(highest)
 	}
 	sort.Sort(mc.clients)
@@ -124,7 +124,13 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			}
 		}
 	} else {
-		blockNumberForRouteBig := types.HexToBigint(routeParam)
+		var blockNumberForRouteBig *big.Int
+		if strings.HasPrefix(routeParam, "0x") {
+			blockNumberForRouteBig = types.HexToBigint(routeParam)
+		} else {
+			blockNumberForRouteBig = new(big.Int)
+			blockNumberForRouteBig.SetString(routeParam, 0)
+		}
 		lastIdx := 0
 		for curIdx, c := range mc.clients {
 			//todo:request from synced client
@@ -134,7 +140,9 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 				break
 			}
 		}
-		idx = rand.Intn(lastIdx)
+		if lastIdx > 0 {
+			idx = rand.Intn(lastIdx)
+		}
 	}
 	return mc.clients[idx]
 }

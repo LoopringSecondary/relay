@@ -21,12 +21,12 @@ package ethaccessor
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/config"
 )
 
 var accessor *ethNodeAccessor
@@ -55,16 +55,33 @@ func GetBlockByNumber(result interface{}, blockNumber string, withObject bool) e
 	return accessor.RetryCall(blockNumber, 2, result, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), withObject)
 }
 
-func GetBlockByHash(result interface{}, blockHash string, withObject bool) error {
-	return accessor.RetryCall("latest", 2, result, "eth_getBlockByHash", blockHash, withObject)
+func GetBlockByHash(result types.CheckNull, blockHash string, withObject bool) error {
+	for _,c := range accessor.clients {
+		//todo:is it need retrycall
+		if err := c.client.Call(result, "eth_getBlockByHash", blockHash, withObject); nil == err {
+			if !result.IsNull() {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no block with blockhash:%s", blockHash)
+
+	//return accessor.RetryCall("latest", 2, result, "eth_getBlockByHash", blockHash, withObject)
 }
 
 func GetTransactionReceipt(result interface{}, txHash string, blockParameter string) error {
 	return accessor.RetryCall(blockParameter, 2, result, "eth_getTransactionReceipt", txHash)
 }
 
-func GetTransactionByHash(result interface{}, txHash string, blockParameter string) error {
-	return accessor.RetryCall(blockParameter, 2, result, "eth_getTransactionByHash", txHash)
+func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter string) error {
+	for _,c := range accessor.clients {
+		if err := c.client.Call(result, "eth_getTransactionByHash", txHash); nil == err {
+			if !result.IsNull() {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no transaction with hash:%s", txHash)
 }
 
 //todo:
@@ -95,6 +112,14 @@ func EstimateGas(callData []byte, to common.Address, blockNumber string) (gas, g
 
 func SignAndSendTransaction(sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	return accessor.ContractSendTransactionByData("latest", sender, to, gas, gasPrice, value, callData)
+}
+
+func ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return accessor.ContractSendTransactionMethod(routeParam, a, contractAddress)
+}
+
+func ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result interface{}, methodName, blockParameter string, args ...interface{}) error {
+	return accessor.ContractCallMethod(a, contractAddress)
 }
 
 func ProtocolCanSubmit(implAddress *ProtocolAddress, ringhash common.Hash, miner common.Address) (bool, error) {
