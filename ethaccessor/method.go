@@ -383,8 +383,7 @@ func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject
 
 				txno := len(blockWithTxHash.Transactions)
 				if txno == 0 {
-					log.Debugf("block %s has none blocks", blockNumber.String())
-					return nil, nil
+					return blockWithTxAndReceipt, nil
 				}
 
 				var (

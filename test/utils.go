@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "mainchain.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -173,7 +173,7 @@ func Protocol() common.Address  { return common.HexToAddress(cfg.Common.Protocol
 func Delegate() common.Address  { return ethaccessor.ProtocolAddresses()[protocol].DelegateAddress }
 
 func GenerateExtractor() *extractor.ExtractorServiceImpl {
-	l := extractor.NewExtractorService(cfg.Extractor, cfg.Common, rds)
+	l := extractor.NewExtractorService(cfg.Extractor, rds)
 	return l
 }
 

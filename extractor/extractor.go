@@ -109,9 +109,9 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
 		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
 		l.syncComplete = true
-		l.debug("extractor,sync chain block complete!")
+		log.Info("extractor,sync chain block complete!")
 	} else {
-		l.debug("extractor,chain block syncing... ")
+		log.Debugf("extractor,chain block syncing... ")
 	}
 }
 
@@ -119,9 +119,6 @@ func (l *ExtractorServiceImpl) processBlock() {
 	inter, err := l.iterator.Next()
 	if err != nil {
 		log.Fatalf("extractor,iterator next error:%s", err.Error())
-	}
-	if inter == nil {
-		return
 	}
 
 	// get current block
@@ -136,7 +133,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// sync blocks on chain
 	if l.syncComplete == false {
-		l.sync(currentBlock.BlockNumber)
+		l.sync(block.Number.BigInt())
 	}
 
 	// detect chain fork
@@ -162,11 +159,11 @@ func (l *ExtractorServiceImpl) processBlock() {
 		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
 	}
 	txcntinblock := len(block.Transactions)
-	if txcnt.Int() != txcntinblock {
-		log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
-	}
 	if txcntinblock < 1 {
 		return
+	}
+	if txcnt.Int() != txcntinblock {
+		log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
 	}
 
 	for idx, transaction := range block.Transactions {
