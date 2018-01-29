@@ -48,7 +48,6 @@ type ExtractorService interface {
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
 	options          config.ExtractorOptions
-	commOpts         config.CommonOptions
 	detector         *forkDetector
 	processor        *AbiProcessor
 	dao              dao.RdsService
@@ -63,12 +62,10 @@ type ExtractorServiceImpl struct {
 }
 
 func NewExtractorService(options config.ExtractorOptions,
-	commonOpts config.CommonOptions,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.options = options
-	l.commOpts = commonOpts
 	l.dao = rds
 	l.processor = newAbiProcessor(rds)
 	l.detector = newForkDetector(rds)
@@ -282,27 +279,29 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 }
 
 func (l *ExtractorServiceImpl) setBlockNumberRange() {
-	var ret types.Block
-
 	l.startBlockNumber = l.options.StartBlockNumber
 	l.endBlockNumber = l.options.EndBlockNumber
 	if l.endBlockNumber.Cmp(big.NewInt(0)) == 0 {
 		l.endBlockNumber = big.NewInt(defaultEndBlockNumber)
 	}
 
+	if l.options.Debug {
+		return
+	}
+
 	// 寻找最新块
+	var ret types.Block
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
 		l.debug("extractor,get latest block number error:%s", err.Error())
 		return
 	}
 	latestBlock.ConvertUp(&ret)
-
 	l.startBlockNumber = ret.BlockNumber
 }
 
 func (l *ExtractorServiceImpl) debug(template string, args ...interface{}) {
-	if l.commOpts.Develop {
+	if l.options.Debug {
 		log.Debugf(template, args...)
 	}
 }

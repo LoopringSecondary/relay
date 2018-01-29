@@ -120,6 +120,7 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
+	Debug              bool
 	SaveEventLog       bool
 	ConfirmBlockNumber uint64
 	StartBlockNumber   *big.Int
@@ -145,7 +146,6 @@ type CommonOptions struct {
 	WethAbi         string
 	ProtocolImpl    ProtocolOptions  `required:"true"`
 	OrderMinAmounts map[string]int64 //最小的订单金额，低于该数，则终止匹配订单，每个token的值不同
-	Develop         bool
 }
 
 type LogOptions struct {
