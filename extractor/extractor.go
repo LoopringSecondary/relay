@@ -117,11 +117,11 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 
 func (l *ExtractorServiceImpl) processBlock() {
 	inter, err := l.iterator.Next()
-	if inter == nil {
-		return
-	}
 	if err != nil {
 		log.Fatalf("extractor,iterator next error:%s", err.Error())
+	}
+	if inter == nil {
+		return
 	}
 
 	// get current block
@@ -141,7 +141,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// detect chain fork
 	// todo free fork detector
-	l.detector.Detect(currentBlock)
+	// l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
@@ -283,10 +283,6 @@ func (l *ExtractorServiceImpl) setBlockNumberRange() {
 	l.endBlockNumber = l.options.EndBlockNumber
 	if l.endBlockNumber.Cmp(big.NewInt(0)) == 0 {
 		l.endBlockNumber = big.NewInt(defaultEndBlockNumber)
-	}
-
-	if l.options.Debug {
-		return
 	}
 
 	// 寻找最新块
