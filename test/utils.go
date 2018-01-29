@@ -57,7 +57,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "debug.toml"
+	DebugFile = "mainchain.toml"
 )
 
 var (
@@ -305,7 +305,7 @@ func AllowanceToLoopring(tokens1 []common.Address, orderAccounts1 []accounts.Acc
 
 	for _, tokenAddr := range tokens1 {
 		for _, account := range orderAccounts1 {
-			if balance, err := ethaccessor.Erc20Balance(tokenAddr, account.Address,"latest"); err != nil {
+			if balance, err := ethaccessor.Erc20Balance(tokenAddr, account.Address, "latest"); err != nil {
 				log.Errorf("err:%s", err.Error())
 			} else {
 				log.Infof("token:%s, owner:%s, balance:%s", tokenAddr.Hex(), account.Address.Hex(), humanNumber(balance))

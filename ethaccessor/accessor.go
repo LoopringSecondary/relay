@@ -22,12 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/log"
 )
 
 var accessor *ethNodeAccessor
@@ -52,8 +52,8 @@ func Call(result interface{}, ethCall CallArg, blockNumber string) error {
 	return accessor.RetryCall(blockNumber, 2, result, "eth_call", ethCall, blockNumber)
 }
 
-func GetBlockByNumber(result interface{}, blockNumber string, withObject bool) error {
-	return accessor.RetryCall(blockNumber, 2, result, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), withObject)
+func GetBlockByNumber(result interface{}, blockNumber *big.Int, withObject bool) error {
+	return accessor.RetryCall(blockNumber.String(), 2, result, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), withObject)
 }
 
 func GetBlockByHash(result types.CheckNull, blockHash string, withObject bool) error {
