@@ -285,6 +285,10 @@ func (l *ExtractorServiceImpl) setBlockNumberRange() {
 		l.endBlockNumber = big.NewInt(defaultEndBlockNumber)
 	}
 
+	if l.options.UseTestStartBlockNumber {
+		return
+	}
+
 	// 寻找最新块
 	var ret types.Block
 	latestBlock, err := l.dao.FindLatestBlock()

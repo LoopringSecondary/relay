@@ -120,11 +120,12 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
-	Debug              bool
-	SaveEventLog       bool
-	ConfirmBlockNumber uint64
-	StartBlockNumber   *big.Int
-	EndBlockNumber     *big.Int
+	Debug                   bool
+	SaveEventLog            bool
+	UseTestStartBlockNumber bool
+	ConfirmBlockNumber      uint64
+	StartBlockNumber        *big.Int
+	EndBlockNumber          *big.Int
 }
 
 type KeyStoreOptions struct {
