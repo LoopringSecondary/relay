@@ -56,7 +56,7 @@ func GetBlockByNumber(result interface{}, blockNumber string, withObject bool) e
 }
 
 func GetBlockByHash(result types.CheckNull, blockHash string, withObject bool) error {
-	for _,c := range accessor.clients {
+	for _, c := range accessor.clients {
 		//todo:is it need retrycall
 		if err := c.client.Call(result, "eth_getBlockByHash", blockHash, withObject); nil == err {
 			if !result.IsNull() {
@@ -74,7 +74,7 @@ func GetTransactionReceipt(result interface{}, txHash string, blockParameter str
 }
 
 func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter string) error {
-	for _,c := range accessor.clients {
+	for _, c := range accessor.clients {
 		if err := c.client.Call(result, "eth_getTransactionByHash", txHash); nil == err {
 			if !result.IsNull() {
 				return nil
@@ -84,8 +84,9 @@ func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter 
 	return fmt.Errorf("no transaction with hash:%s", txHash)
 }
 
-//todo:
-func GasPrice() {}
+func EstimateGasPrice() *big.Int {
+	return accessor.gasPriceEvaluator.gasPrice
+}
 
 func GetBlockTransactionCountByHash(result interface{}, blockHash string, blockParameter string) error {
 	return accessor.RetryCall("latest", 2, result, "eth_getBlockTransactionCountByHash", blockHash)
@@ -270,5 +271,8 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 	}
 	accessor.MutilClient.startSyncStatus()
+
+	accessor.gasPriceEvaluator = &GasPriceEvaluator{}
+	accessor.gasPriceEvaluator.start()
 	return nil
 }
