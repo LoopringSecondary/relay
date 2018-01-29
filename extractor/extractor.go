@@ -137,8 +137,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	// detect chain fork
-	// todo free fork detector
-	// l.detector.Detect(currentBlock)
+	l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
