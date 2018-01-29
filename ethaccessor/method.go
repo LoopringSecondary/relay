@@ -423,7 +423,7 @@ func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
-					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400*30))
+					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400))
 				}
 				return blockWithTxAndReceipt, nil
 			}
