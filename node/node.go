@@ -44,6 +44,11 @@ import (
 	"math/big"
 )
 
+const (
+	MODEL_RELAY = "relay"
+	MODEL_MINER = "miner"
+)
+
 type Node struct {
 	globalConfig      *config.GlobalConfig
 	rdsService        dao.RdsService
@@ -147,9 +152,9 @@ func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
 	n.marketCapProvider.Start()
 
-	if "relay" == n.globalConfig.Mode {
+	if n.globalConfig.Mode == MODEL_RELAY {
 		n.relayNode.Start()
-	} else if "miner" == n.globalConfig.Mode {
+	} else if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Start()
 	} else {
 		n.relayNode.Start()
@@ -161,6 +166,14 @@ func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
 
 func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	// stop extractor
+	if n.globalConfig.Mode == MODEL_MINER {
+		n.mineNode.Stop()
+	} else if n.globalConfig.Mode == MODEL_RELAY {
+		n.relayNode.Stop()
+	} else {
+		n.relayNode.Stop()
+		n.mineNode.Stop()
+	}
 	n.extractorService.Stop()
 
 	// emit fork event,waiting for ordermanager and accountmanager finished procedure of process chain fork
@@ -171,6 +184,15 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	nextBlockNumber := new(big.Int).Add(forkEvent.ForkBlock, big.NewInt(1))
 	n.extractorService.Fork(nextBlockNumber)
 	n.extractorService.Start()
+
+	if n.globalConfig.Mode == MODEL_MINER {
+		n.mineNode.Start()
+	} else if n.globalConfig.Mode == MODEL_RELAY {
+		n.relayNode.Start()
+	} else {
+		n.relayNode.Start()
+		n.mineNode.Start()
+	}
 
 	return nil
 }
@@ -218,7 +240,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.globalConfig.Common, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {

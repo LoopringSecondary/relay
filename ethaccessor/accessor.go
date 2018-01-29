@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -51,8 +52,8 @@ func Call(result interface{}, ethCall CallArg, blockNumber string) error {
 	return accessor.RetryCall(blockNumber, 2, result, "eth_call", ethCall, blockNumber)
 }
 
-func GetBlockByNumber(result interface{}, blockNumber string, withObject bool) error {
-	return accessor.RetryCall(blockNumber, 2, result, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), withObject)
+func GetBlockByNumber(result interface{}, blockNumber *big.Int, withObject bool) error {
+	return accessor.RetryCall(blockNumber.String(), 2, result, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), withObject)
 }
 
 func GetBlockByHash(result types.CheckNull, blockHash string, withObject bool) error {
@@ -251,21 +252,25 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		if err := callMethod(&addr, "lrcTokenAddress", "latest"); nil != err {
 			return err
 		} else {
+			log.Debugf("version:%s, contract:%s, lrcTokenAddress:%s", version, address, addr)
 			impl.LrcTokenAddress = common.HexToAddress(addr)
 		}
 		if err := callMethod(&addr, "ringhashRegistryAddress", "latest"); nil != err {
 			return err
 		} else {
+			log.Debugf("version:%s, contract:%s, ringhashRegistryAddress:%s", version, address, addr)
 			impl.RinghashRegistryAddress = common.HexToAddress(addr)
 		}
 		if err := callMethod(&addr, "tokenRegistryAddress", "latest"); nil != err {
 			return err
 		} else {
+			log.Debugf("version:%s, contract:%s, tokenRegistryAddress:%s", version, address, addr)
 			impl.TokenRegistryAddress = common.HexToAddress(addr)
 		}
 		if err := callMethod(&addr, "delegateAddress", "latest"); nil != err {
 			return err
 		} else {
+			log.Debugf("version:%s, contract:%s, delegateAddress:%s", version, address, addr)
 			impl.DelegateAddress = common.HexToAddress(addr)
 		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl

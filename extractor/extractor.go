@@ -48,7 +48,6 @@ type ExtractorService interface {
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
 type ExtractorServiceImpl struct {
 	options          config.ExtractorOptions
-	commOpts         config.CommonOptions
 	detector         *forkDetector
 	processor        *AbiProcessor
 	dao              dao.RdsService
@@ -63,23 +62,16 @@ type ExtractorServiceImpl struct {
 }
 
 func NewExtractorService(options config.ExtractorOptions,
-	commonOpts config.CommonOptions,
 	rds dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.options = options
-	l.commOpts = commonOpts
 	l.dao = rds
 	l.processor = newAbiProcessor(rds)
 	l.detector = newForkDetector(rds)
 	l.stop = make(chan bool, 1)
 
-	start, end := l.getBlockNumberRange()
-	l.setBlockNumberRange(start, end)
-
-	// todo: comment online
-	//l.startBlockNumber = big.NewInt(4967595)
-	//l.endBlockNumber = l.startBlockNumber
+	l.setBlockNumberRange()
 	return &l
 }
 
@@ -106,7 +98,7 @@ func (l *ExtractorServiceImpl) Stop() {
 
 // 重启(分叉)时先关停subscribeEvents，然后关
 func (l *ExtractorServiceImpl) Fork(start *big.Int) {
-	l.setBlockNumberRange(start, nil)
+	l.startBlockNumber = start
 }
 
 func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
@@ -117,9 +109,9 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
 		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
 		l.syncComplete = true
-		l.debug("extractor,sync chain block complete!")
+		log.Info("extractor,sync chain block complete!")
 	} else {
-		l.debug("extractor,chain block syncing... ")
+		log.Debugf("extractor,chain block syncing... ")
 	}
 }
 
@@ -141,11 +133,10 @@ func (l *ExtractorServiceImpl) processBlock() {
 
 	// sync blocks on chain
 	if l.syncComplete == false {
-		l.sync(currentBlock.BlockNumber)
+		l.sync(block.Number.BigInt())
 	}
 
 	// detect chain fork
-	// todo free fork detector
 	l.detector.Detect(currentBlock)
 
 	// convert block to dao entity
@@ -167,11 +158,11 @@ func (l *ExtractorServiceImpl) processBlock() {
 		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
 	}
 	txcntinblock := len(block.Transactions)
-	if txcnt.Int() != txcntinblock {
-		log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
-	}
 	if txcntinblock < 1 {
 		return
+	}
+	if txcnt.Int() != txcntinblock {
+		log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
 	}
 
 	for idx, transaction := range block.Transactions {
@@ -283,45 +274,30 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 	return len(receipt.Logs), nil
 }
 
-func (l *ExtractorServiceImpl) setBlockNumberRange(start, end *big.Int) {
-	l.startBlockNumber = start
-	if end != nil {
-		l.endBlockNumber = end
-	}
-}
-
-func (l *ExtractorServiceImpl) getBlockNumberRange() (*big.Int, *big.Int) {
-	var ret types.Block
-
-	start := l.options.StartBlockNumber
-	end := l.options.EndBlockNumber
-	if end.Cmp(big.NewInt(0)) == 0 {
-		end = big.NewInt(defaultEndBlockNumber)
+func (l *ExtractorServiceImpl) setBlockNumberRange() {
+	l.startBlockNumber = l.options.StartBlockNumber
+	l.endBlockNumber = l.options.EndBlockNumber
+	if l.endBlockNumber.Cmp(big.NewInt(0)) == 0 {
+		l.endBlockNumber = big.NewInt(defaultEndBlockNumber)
 	}
 
-	// 寻找分叉块，并归零分叉标记
-	forkBlock, err := l.dao.FindForkBlock()
-	if err == nil {
-		blockHash := common.HexToHash(forkBlock.BlockHash)
-		l.dao.SetForkBlock(blockHash)
-		return ret.BlockNumber, end
+	if l.options.UseTestStartBlockNumber {
+		return
 	}
 
 	// 寻找最新块
+	var ret types.Block
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
 		l.debug("extractor,get latest block number error:%s", err.Error())
-		return start, end
+		return
 	}
-	if err := latestBlock.ConvertUp(&ret); err != nil {
-		log.Fatalf("extractor,get blocknumber range convert up error:%s", err.Error())
-	}
-
-	return ret.BlockNumber, end
+	latestBlock.ConvertUp(&ret)
+	l.startBlockNumber = ret.BlockNumber
 }
 
 func (l *ExtractorServiceImpl) debug(template string, args ...interface{}) {
-	if l.commOpts.Develop {
+	if l.options.Debug {
 		log.Debugf(template, args...)
 	}
 }
