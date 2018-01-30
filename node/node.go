@@ -67,8 +67,8 @@ type Node struct {
 }
 
 type RelayNode struct {
-	trendManager   market.TrendManager
-	jsonRpcService gateway.JsonrpcServiceImpl
+	trendManager     market.TrendManager
+	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
 }
 

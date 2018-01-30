@@ -19,12 +19,12 @@
 package gateway
 
 import (
+	"fmt"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/marketcap"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"github.com/Loopring/relay/log"
 )
 
 type WebsocketService interface {
@@ -37,12 +37,12 @@ type WebsocketServiceImpl struct {
 	trendManager   market.TrendManager
 	accountManager market.AccountManager
 	marketCap      marketcap.MarketCapProvider
-	upgrader	   websocket.Upgrader
+	upgrader       websocket.Upgrader
 }
 
 type WsClient struct {
-	websocket *websocket.Conn
-	clientIP  string
+	websocket   *websocket.Conn
+	clientIP    string
 	connectType string
 }
 
