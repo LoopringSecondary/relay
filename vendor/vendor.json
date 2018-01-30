@@ -197,6 +197,12 @@
 			"revisionTime": "2017-08-15T08:56:58Z"
 		},
 		{
+			"checksumSHA1": "pgR0imj8+6ztCkoQ6EFm/Ifk+Es=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "91f589db023d66e4aba7112d44cc0d2fb091c553",
+			"revisionTime": "2018-01-25T18:51:21Z"
+		},
+		{
 			"checksumSHA1": "1A0qEbe7YBbem+8oK1eqXbzqSXw=",
 			"path": "github.com/ipfs/go-ipfs-api",
 			"revision": "1c4abbe587f0f68fee5fcecf741a45dbe3d7bc12",
