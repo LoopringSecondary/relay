@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"time"
+	"strconv"
 )
 
 const (
@@ -65,7 +66,10 @@ func (c *SocketClient) read() {
 }
 
 func (c *SocketClient) handler(req WebsocketRequest) ([]byte, error) {
-	return nil, nil
+	walletService := WalletServiceImpl{}
+	input := req["ping"]
+	inputInt, _ :=strconv.Atoi(input)
+	return walletService.TestPing(inputInt)
 }
 
 func (c *SocketClient) write() {

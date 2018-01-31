@@ -47,19 +47,19 @@ const (
 	MARKETCAP
 	BALANCE
 	TRANSACTION
+	TEST
 )
 
-var MsgTypeRoute = map[NodeType]string{
-	TICKER:      "ticker",
-	PORTFOLIO:   "portfolio",
-	MARKETCAP:   "marketcap",
-	BALANCE:     "balance",
-	TRANSACTION: "transaction",
+var MsgTypeRoute = map[NodeType]string {
+	TICKER : "ticker",
+	PORTFOLIO : "portfolio",
+	MARKETCAP : "marketcap",
+	BALANCE : "balance",
+	TRANSACTION : "transaction",
+	TEST : "test",
 }
 
-type WebsocketRequest struct {
-	Params interface{}
-}
+type WebsocketRequest map[string]string
 
 func NewWebsocketService(port string, trendManager market.TrendManager, accountManager market.AccountManager, capProvider marketcap.MarketCapProvider) *WebsocketServiceImpl {
 	l := &WebsocketServiceImpl{}
@@ -79,7 +79,7 @@ func (ws *WebsocketServiceImpl) Start() {
 	for k, v := range MsgTypeRoute {
 		node := newSocketNode(k)
 		go node.run()
-		http.HandleFunc("/socket/"+v, func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/ws/" + v, func(w http.ResponseWriter, r *http.Request) {
 			ws.serve(node, w, r)
 		})
 	}
