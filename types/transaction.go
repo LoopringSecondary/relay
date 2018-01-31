@@ -30,8 +30,7 @@ const (
 	TX_STATUS_FAILED  = 2
 
 	TX_TYPE_APPROVE      = 1
-	TX_TYPE_SEND         = 2
-	TX_TYPE_RECEIVE      = 3
+	TX_TYPE_TRANSFER     = 2
 	TX_TYPE_SELL         = 4
 	TX_TYPE_BUY          = 5
 	TX_TYPE_WRAP         = 6 // WETH DEPOSIT
@@ -41,6 +40,7 @@ const (
 )
 
 type Transaction struct {
+	Protocol    common.Address
 	From        common.Address
 	To          common.Address
 	Hash        common.Hash
@@ -72,10 +72,8 @@ func (tx *Transaction) TypeStr() string {
 	switch tx.Type {
 	case TX_TYPE_APPROVE:
 		ret = "approve"
-	case TX_TYPE_SEND:
-		ret = "send"
-	case TX_TYPE_RECEIVE:
-		ret = "receive"
+	case TX_TYPE_TRANSFER:
+		ret = "transfer"
 	case TX_TYPE_SELL:
 		ret = "sell"
 	case TX_TYPE_BUY:
