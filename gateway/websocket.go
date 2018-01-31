@@ -49,12 +49,12 @@ const (
 	TRANSACTION
 )
 
-var MsgTypeRoute = map[NodeType]string {
-	TICKER : "ticker",
-	PORTFOLIO : "portfolio",
-	MARKETCAP : "marketcap",
-	BALANCE : "balance",
-	TRANSACTION : "transaction",
+var MsgTypeRoute = map[NodeType]string{
+	TICKER:      "ticker",
+	PORTFOLIO:   "portfolio",
+	MARKETCAP:   "marketcap",
+	BALANCE:     "balance",
+	TRANSACTION: "transaction",
 }
 
 type WebsocketRequest struct {
@@ -79,14 +79,14 @@ func (ws *WebsocketServiceImpl) Start() {
 	for k, v := range MsgTypeRoute {
 		node := newSocketNode(k)
 		go node.run()
-		http.HandleFunc("/socket/" + v, func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/socket/"+v, func(w http.ResponseWriter, r *http.Request) {
 			ws.serve(node, w, r)
 		})
 	}
 
-	err := http.ListenAndServe(":" + ws.port, nil)
+	err := http.ListenAndServe(":"+ws.port, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe Websocket Error : " +  err.Error())
+		log.Fatal("ListenAndServe Websocket Error : " + err.Error())
 	}
 
 	return
