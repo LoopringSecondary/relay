@@ -72,6 +72,7 @@ type GlobalConfig struct {
 	Redis          RedisOptions
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
+	Websocket      WebsocketOptions
 	GatewayFilters GatewayFiltersOptions
 	OrderManager   OrderManagerOptions
 	Gateway        GateWayOptions
@@ -87,6 +88,10 @@ type GlobalConfig struct {
 }
 
 type JsonrpcOptions struct {
+	Port int
+}
+
+type WebsocketOptions struct {
 	Port int
 }
 

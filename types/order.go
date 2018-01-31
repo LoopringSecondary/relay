@@ -36,6 +36,8 @@ const (
 	ORDER_CANCEL
 	ORDER_EXPIRE
 	ORDER_CUTOFF
+	ORDER_BALANCE_INSUFFICIENT
+	ORDER_ALLOWANCE_INSUFFICIENT
 )
 
 //订单原始信息
@@ -258,23 +260,63 @@ type OrderDelayList struct {
 	DelayedCount int64
 }
 
-// 根据是否完全成交确定订单状态
-func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
-	if isFullFinished {
-		ord.Status = ORDER_FINISHED
-	} else {
-		ord.Status = ORDER_PARTIAL
+func InUnchangeableStatus(status OrderStatus) bool {
+	unchangeableList := []OrderStatus{
+		ORDER_FINISHED, ORDER_UNKNOWN, ORDER_CANCEL, ORDER_CUTOFF}
+
+	for _, v := range unchangeableList {
+		if status == v {
+			return true
+		}
+	}
+
+	return false
+}
+
+// 解释订单最终状态
+func (ord *OrderState) ResolveStatus(allowance, balance *big.Int) {
+	if InUnchangeableStatus(ord.Status) {
+		return
+	}
+
+	if ord.RawOrder.Timestamp.Int64()+ord.RawOrder.Ttl.Int64() < time.Now().Unix() {
+		ord.Status = ORDER_EXPIRE
+		return
+	}
+
+	cancelOrFilled := new(big.Int).Add(ord.CancelledAmountS, ord.DealtAmountS)
+	finished := new(big.Int).Add(cancelOrFilled, ord.SplitAmountS)
+
+	if finished.Cmp(allowance) >= 0 {
+		ord.Status = ORDER_ALLOWANCE_INSUFFICIENT
+		return
+	}
+
+	if finished.Cmp(balance) >= 0 {
+		ord.Status = ORDER_BALANCE_INSUFFICIENT
+		return
 	}
 }
 
-func (ord *OrderState) IsOrderExpired() bool {
-	nowtime := time.Now().Unix()
-	validTime := ord.RawOrder.Timestamp.Int64()
-	ttl := ord.RawOrder.Ttl.Int64()
-	if validTime+ttl < nowtime {
-		return true
+const (
+	SIDE_SELL    = "sell"
+	SIDE_BUY     = "buy"
+	SIDE_INVALID = ""
+)
+
+// 根据市场确定订单方向
+func (ord *OrderState) Side(market common.Address) string {
+	var side string
+	switch market {
+	case ord.RawOrder.TokenS:
+		side = SIDE_SELL
+	case ord.RawOrder.TokenB:
+		side = SIDE_BUY
+	default:
+		side = SIDE_INVALID
 	}
-	return false
+
+	return side
 }
 
 func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {

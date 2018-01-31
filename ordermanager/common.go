@@ -72,16 +72,11 @@ func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) 
 	if new(big.Int).Add(state.CancelledAmountS, state.DealtAmountS).Cmp(big.NewInt(0)) <= 0 {
 		state.Status = types.ORDER_NEW
 	} else {
-		finished := isOrderFullFinished(state, mc)
-		state.SettleFinishedStatus(finished)
-	}
-}
-
-// 读取时根据订单相关参数，解释订单重叠状态
-// TODO other status ex,cancel
-func resolveOrderStatus(state *types.OrderState) {
-	if state.IsOrderExpired() && (state.Status == types.ORDER_NEW || state.Status == types.ORDER_PARTIAL) {
-		state.Status = types.ORDER_EXPIRE
+		if isOrderFullFinished(state, mc) {
+			state.Status = types.ORDER_FINISHED
+		} else {
+			state.Status = types.ORDER_PARTIAL
+		}
 	}
 }
 

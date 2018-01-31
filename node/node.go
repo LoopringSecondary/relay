@@ -67,13 +67,15 @@ type Node struct {
 }
 
 type RelayNode struct {
-	trendManager   market.TrendManager
-	jsonRpcService gateway.JsonrpcServiceImpl
+	trendManager     market.TrendManager
+	jsonRpcService   gateway.JsonrpcServiceImpl
+	websocketService gateway.WebsocketServiceImpl
 }
 
 func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
 	n.jsonRpcService.Start()
+	n.websocketService.Start()
 }
 
 func (n *RelayNode) Stop() {
@@ -128,6 +130,7 @@ func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerTrendManager()
 	n.registerJsonRpcService()
+	n.registerWebsocketService()
 }
 
 func (n *Node) registerMineNode() {
@@ -262,6 +265,10 @@ func (n *Node) registerAccountManager() {
 func (n *Node) registerJsonRpcService() {
 	ethForwarder := gateway.EthForwarder{}
 	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.accountManager, &ethForwarder, n.marketCapProvider)
+}
+
+func (n *Node) registerWebsocketService() {
+	n.relayNode.websocketService = *gateway.NewWebsocketService(strconv.Itoa(n.globalConfig.Websocket.Port), n.relayNode.trendManager, n.accountManager, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {
