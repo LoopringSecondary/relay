@@ -38,8 +38,6 @@ type SocketClient struct {
 	conn *websocket.Conn
 
 	send chan []byte
-
-	messageType MessageType
 }
 
 func (c *SocketClient) read() {

@@ -19,7 +19,6 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/marketcap"
@@ -40,17 +39,23 @@ type WebsocketServiceImpl struct {
 	upgrader       websocket.Upgrader
 }
 
-type MessageType int
+type NodeType int
 
 const (
-	TICKER MessageType = iota
+	TICKER NodeType = iota
 	PORTFOLIO
 	MARKETCAP
 	BALANCE
 )
 
+var MsgTypeRoute = map[NodeType]string {
+	TICKER : "ticker",
+	PORTFOLIO : "portfolio",
+	MARKETCAP : "marketcap",
+	BALANCE : "balance",
+}
+
 type WebsocketRequest struct {
-	MsgT MessageType
 	Params interface{}
 }
 
@@ -69,12 +74,14 @@ func NewWebsocketService(port string, trendManager market.TrendManager, accountM
 
 func (ws *WebsocketServiceImpl) Start() {
 
-	node := newSocketNode()
-	go node.run()
+	for k, v := range MsgTypeRoute {
+		node := newSocketNode(k)
+		go node.run()
+		http.HandleFunc("/socket/" + v, func(w http.ResponseWriter, r *http.Request) {
+			ws.serve(node, w, r)
+		})
+	}
 
-	http.HandleFunc("/socket", func(w http.ResponseWriter, r *http.Request) {
-		ws.serve(node, w, r)
-	})
 	err := http.ListenAndServe(":" + ws.port, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe Websocket Error : " +  err.Error())
