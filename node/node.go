@@ -100,7 +100,8 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	// register
 	n.registerMysql()
-
+	cache.NewCache(n.globalConfig.Redis)
+	
 	util.Initialize(n.globalConfig.Market, n.globalConfig.Common.ProtocolImpl.Address)
 	n.registerMarketCap()
 	n.registerAccessor()
@@ -111,7 +112,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerGateway()
 	n.registerCrypto(nil)
 	n.registerAccountManager()
-	cache.NewCache(n.globalConfig.Redis)
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
