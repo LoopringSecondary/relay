@@ -19,7 +19,6 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/marketcap"
@@ -40,10 +39,26 @@ type WebsocketServiceImpl struct {
 	upgrader       websocket.Upgrader
 }
 
-type WsClient struct {
-	websocket   *websocket.Conn
-	clientIP    string
-	connectType string
+type NodeType int
+
+const (
+	TICKER NodeType = iota
+	PORTFOLIO
+	MARKETCAP
+	BALANCE
+	TRANSACTION
+)
+
+var MsgTypeRoute = map[NodeType]string {
+	TICKER : "ticker",
+	PORTFOLIO : "portfolio",
+	MARKETCAP : "marketcap",
+	BALANCE : "balance",
+	TRANSACTION : "transaction",
+}
+
+type WebsocketRequest struct {
+	Params interface{}
 }
 
 func NewWebsocketService(port string, trendManager market.TrendManager, accountManager market.AccountManager, capProvider marketcap.MarketCapProvider) *WebsocketServiceImpl {
@@ -60,39 +75,31 @@ func NewWebsocketService(port string, trendManager market.TrendManager, accountM
 }
 
 func (ws *WebsocketServiceImpl) Start() {
-	conn, err := upgrader.Upgrade(w, r, nil)
+
+	for k, v := range MsgTypeRoute {
+		node := newSocketNode(k)
+		go node.run()
+		http.HandleFunc("/socket/" + v, func(w http.ResponseWriter, r *http.Request) {
+			ws.serve(node, w, r)
+		})
+	}
+
+	err := http.ListenAndServe(":" + ws.port, nil)
 	if err != nil {
-		log.Println(err)
-		return
+		log.Fatal("ListenAndServe Websocket Error : " +  err.Error())
 	}
-	if err := handler.RegisterName("eth", j.ethForwarder); err != nil {
-		fmt.Println(err)
-		return
-	}
-	var (
-		listener net.Listener
-		err      error
-	)
-	if listener, err = net.Listen("tcp", ":8083"); err != nil {
-		return
-	}
-	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
-	log.Info(fmt.Sprintf("HTTP endpoint opened on 8083"))
 
 	return
 }
 
-func (ws *WebsocketServiceImpl) serve(w http.ResponseWriter, r *http.Request) {
+func (ws *WebsocketServiceImpl) serve(node *SocketNode, w http.ResponseWriter, r *http.Request) {
 	conn, err := ws.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error(err.Error())
+		log.Error("get ws connection error , " + err.Error())
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
-	client.hub.register <- client
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump()
+	client := &SocketClient{node: node, conn: conn, send: make(chan []byte, 256)}
+	client.node.register <- client
+	go client.write()
+	go client.read()
 }
