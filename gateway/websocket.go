@@ -46,6 +46,7 @@ const (
 	PORTFOLIO
 	MARKETCAP
 	BALANCE
+	TRANSACTION
 )
 
 var MsgTypeRoute = map[NodeType]string {
@@ -53,6 +54,7 @@ var MsgTypeRoute = map[NodeType]string {
 	PORTFOLIO : "portfolio",
 	MARKETCAP : "marketcap",
 	BALANCE : "balance",
+	TRANSACTION : "transaction",
 }
 
 type WebsocketRequest struct {
