@@ -26,6 +26,7 @@ import (
 
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
+	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
 	From        string `gorm:"column:from;type:varchar(42)"`
 	To          string `gorm:"column:to;type:varchar(42)"`
 	Hash        string `gorm:"column:hash;type:varchar(82)"`
@@ -39,6 +40,7 @@ type Transaction struct {
 
 // convert types/transaction to dao/transaction
 func (tx *Transaction) ConvertDown(src *types.Transaction) error {
+	tx.Protocol = src.Protocol.Hex()
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
 	tx.Hash = src.Hash.Hex()
@@ -54,6 +56,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 
 // convert dao/transaction to types/transaction
 func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
+	dst.Protocol = common.HexToAddress(tx.Protocol)
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
 	dst.Hash = common.HexToHash(tx.Hash)
