@@ -28,6 +28,9 @@ name = "Loopring corporation"
     table_prefix = "lpr_"
     debug = false
 
+[websocket]
+    port = "8087"
+
 [redis]
     host = "127.0.0.1"
     port = "6379"

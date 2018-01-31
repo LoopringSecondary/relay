@@ -268,7 +268,7 @@ func (n *Node) registerJsonRpcService() {
 }
 
 func (n *Node) registerWebsocketService() {
-	n.relayNode.websocketService = *gateway.NewWebsocketService(strconv.Itoa(n.globalConfig.Websocket.Port), n.relayNode.trendManager, n.accountManager, n.marketCapProvider)
+	n.relayNode.websocketService = *gateway.NewWebsocketService(n.globalConfig.Websocket.Port, n.relayNode.trendManager, n.accountManager, n.marketCapProvider)
 }
 
 func (n *Node) registerMiner() {

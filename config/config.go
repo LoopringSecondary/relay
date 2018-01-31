@@ -92,7 +92,7 @@ type JsonrpcOptions struct {
 }
 
 type WebsocketOptions struct {
-	Port int
+	Port string
 }
 
 func (c *GlobalConfig) defaultConfig() {
