@@ -19,11 +19,11 @@
 package gateway
 
 type SocketNode struct {
-	clients map[*SocketClient]bool
-	broadcast chan []byte
-	register chan *SocketClient
+	clients    map[*SocketClient]bool
+	broadcast  chan []byte
+	register   chan *SocketClient
 	unregister chan *SocketClient
-	nodeType  NodeType
+	nodeType   NodeType
 }
 
 func newSocketNode(nodeType NodeType) *SocketNode {

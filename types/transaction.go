@@ -44,8 +44,8 @@ type Transaction struct {
 	From        common.Address
 	To          common.Address
 	Hash        common.Hash
-	BlockNumber big.Int
-	Value       big.Int
+	BlockNumber *big.Int
+	Value       *big.Int
 	Type        uint8
 	Status      uint8
 	CreateTime  int64

@@ -18,17 +18,16 @@
 
 package gateway
 
-
 import (
+	"github.com/gorilla/websocket"
 	"log"
 	"time"
-	"github.com/gorilla/websocket"
 )
 
 const (
-	writeWait = 10 * time.Second
-	pongWait = 60 * time.Second
-	pingPeriod = (pongWait * 9) / 10
+	writeWait      = 10 * time.Second
+	pongWait       = 60 * time.Second
+	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
 )
 
