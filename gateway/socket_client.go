@@ -23,6 +23,7 @@ import (
 	"log"
 	"time"
 	"strconv"
+	"fmt"
 )
 
 const (
@@ -45,12 +46,18 @@ func (c *SocketClient) read() {
 		c.node.unregister <- c
 		c.conn.Close()
 	}()
+	fmt.Print("read ------->1")
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	fmt.Print("read ------->2")
 	for {
+		fmt.Print("read ------->33")
 		req := &WebsocketRequest{}
 		err := c.conn.ReadJSON(&req)
+		fmt.Print(req)
+		fmt.Print(err)
+		fmt.Print("read ------->3333")
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
@@ -58,6 +65,7 @@ func (c *SocketClient) read() {
 			break
 		}
 
+		fmt.Print("read ------->4")
 		resp, err := c.handler(*req)
 		if err == nil {
 			c.send <- resp
@@ -67,7 +75,9 @@ func (c *SocketClient) read() {
 
 func (c *SocketClient) handler(req WebsocketRequest) ([]byte, error) {
 	walletService := WalletServiceImpl{}
+	fmt.Print("read ------->5")
 	input := req["ping"]
+	fmt.Print("read ------->6")
 	inputInt, _ :=strconv.Atoi(input)
 	return walletService.TestPing(inputInt)
 }
@@ -79,16 +89,22 @@ func (c *SocketClient) write() {
 		c.conn.Close()
 	}()
 	for {
+		fmt.Print("read ------->7")
 		select {
 		case message, ok := <-c.send:
+			fmt.Println("read ------->8")
+			fmt.Println(message)
+			fmt.Println(ok)
+			fmt.Println(string(message))
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-
 			err := c.conn.WriteJSON(&message)
 			if err != nil {
+				fmt.Println("write error occurs")
+				fmt.Println(err)
 				return
 			}
 

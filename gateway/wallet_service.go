@@ -23,7 +23,14 @@ import (
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/marketcap"
 	"time"
+	"qiniupkg.com/x/errors.v7"
 )
+
+
+type Portfolio struct {
+	Token string
+	Amount string
+}
 
 type WalletService interface {
 	GetTicker() (res []market.Ticker, err error)
@@ -47,8 +54,15 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 	} else if input < 0 {
 		res = "input is smaller than zero " + time.Now().String()
 	}
-	resp = []byte(res)
+	resp = []byte("{'abc' : '" + res + "'}")
 	return
 }
 
+func (w *WalletServiceImpl) GetPortfolio(owner string) (res []Portfolio, err error) {
+	if len(owner) == 0 {
+		return nil, errors.New("owner can't be nil")
+	}
+
+	return
+}
 

@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/marketcap"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"fmt"
 )
 
 type WebsocketService interface {
@@ -68,6 +69,7 @@ func NewWebsocketService(port string, trendManager market.TrendManager, accountM
 	l.accountManager = accountManager
 	l.marketCap = capProvider
 	l.upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true },
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
@@ -94,6 +96,7 @@ func (ws *WebsocketServiceImpl) Start() {
 
 func (ws *WebsocketServiceImpl) serve(node *SocketNode, w http.ResponseWriter, r *http.Request) {
 	conn, err := ws.upgrader.Upgrade(w, r, nil)
+	fmt.Print(conn.LocalAddr())
 	if err != nil {
 		log.Error("get ws connection error , " + err.Error())
 		return
