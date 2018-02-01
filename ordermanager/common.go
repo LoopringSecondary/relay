@@ -69,7 +69,13 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 
 // 写入订单状态
 func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) {
-	if new(big.Int).Add(state.CancelledAmountS, state.DealtAmountS).Cmp(big.NewInt(0)) <= 0 {
+	zero := big.NewInt(0)
+	finishAmountS := big.NewInt(0).Add(state.CancelledAmountS, state.DealtAmountS)
+	totalAmountS := big.NewInt(0).Add(finishAmountS, state.SplitAmountS)
+	finishAmountB := big.NewInt(0).Add(state.CancelledAmountB, state.DealtAmountB)
+	totalAmountB := big.NewInt(0).Add(finishAmountB, state.SplitAmountB)
+	totalAmount := big.NewInt(0).Add(totalAmountS, totalAmountB)
+	if totalAmount.Cmp(zero) <= 0 {
 		state.Status = types.ORDER_NEW
 	} else {
 		if isOrderFullFinished(state, mc) {

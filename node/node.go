@@ -101,7 +101,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	// register
 	n.registerMysql()
 	cache.NewCache(n.globalConfig.Redis)
-	
+
 	util.Initialize(n.globalConfig.Market, n.globalConfig.Common.ProtocolImpl.Address)
 	n.registerMarketCap()
 	n.registerAccessor()
