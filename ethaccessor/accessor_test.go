@@ -314,3 +314,21 @@ func TestEthNodeAccessor_BlockTransactions(t *testing.T) {
 		}
 	}
 }
+
+func TestEthNodeAccessor_GetTransaction(t *testing.T) {
+	tx := &ethaccessor.Transaction{}
+	if err := ethaccessor.GetTransactionByHash(tx, "0x71558de8a5aae28eabe2488155c51ce9c7ebeae432eb349f4316e94bcc172c7c", "latest"); err == nil {
+		t.Logf("tx gas:%s", tx.Gas.BigInt().String())
+	} else {
+		t.Fatalf(err.Error())
+	}
+}
+
+func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
+	var tx ethaccessor.TransactionReceipt
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0x71558de8a5aae28eabe2488155c51ce9c7ebeae432eb349f4316e94bcc172c7c", "latest"); err == nil {
+		t.Logf("tx gasUsed:%s", tx.GasUsed.BigInt().String())
+	} else {
+		t.Fatalf(err.Error())
+	}
+}
