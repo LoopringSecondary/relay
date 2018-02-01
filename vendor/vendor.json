@@ -40,12 +40,6 @@
 			"revisionTime": "2017-06-13T09:22:38Z"
 		},
 		{
-			"checksumSHA1": "ritEgiBoGIZx+M6JQ/XcsAXVwMQ=",
-			"path": "github.com/ethereum/bak/go-ethereum/common",
-			"revision": "a92d8a26547c138953665387c57168e68bacdd13",
-			"revisionTime": "2017-09-18T21:07:19Z"
-		},
-		{
 			"checksumSHA1": "QuDIDOLqZKyLfz7vkSAvRWxcjtQ=",
 			"path": "github.com/ethereum/go-ethereum",
 			"revision": "bb57f1f1e579a353d4e21368c2217f0462352783",
