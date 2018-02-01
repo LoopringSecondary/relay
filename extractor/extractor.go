@@ -19,7 +19,6 @@
 package extractor
 
 import (
-	"encoding/json"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -241,21 +240,6 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		if event, ok = l.processor.GetEvent(id); !ok {
 			l.debug("extractor,tx:%s contract event id error:%s", txhash, id.Hex())
 			continue
-		}
-
-		// 记录event log
-		if l.options.SaveEventLog {
-			if bs, err := json.Marshal(evtLog); err != nil {
-				l.debug("extractor,tx:%s json unmarshal evtlog error:%s", txhash, err.Error())
-			} else {
-				el := &dao.EventLog{}
-				el.Protocol = evtLog.Address
-				el.TxHash = txhash
-				el.BlockNumber = evtLog.BlockNumber.Int64()
-				el.CreateTime = time.Int64()
-				el.Data = bs
-				l.dao.Add(el)
-			}
 		}
 
 		if nil != data && len(data) > 0 {

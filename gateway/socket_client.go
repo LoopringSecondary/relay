@@ -19,11 +19,11 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
-	"time"
 	"strconv"
-	"fmt"
+	"time"
 )
 
 const (
@@ -78,7 +78,7 @@ func (c *SocketClient) handler(req WebsocketRequest) ([]byte, error) {
 	fmt.Print("read ------->5")
 	input := req["ping"]
 	fmt.Print("read ------->6")
-	inputInt, _ :=strconv.Atoi(input)
+	inputInt, _ := strconv.Atoi(input)
 	return walletService.TestPing(inputInt)
 }
 

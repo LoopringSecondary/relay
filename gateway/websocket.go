@@ -19,12 +19,12 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"fmt"
 )
 
 type WebsocketService interface {
@@ -51,13 +51,13 @@ const (
 	TEST
 )
 
-var MsgTypeRoute = map[NodeType]string {
-	TICKER : "ticker",
-	PORTFOLIO : "portfolio",
-	MARKETCAP : "marketcap",
-	BALANCE : "balance",
-	TRANSACTION : "transaction",
-	TEST : "test",
+var MsgTypeRoute = map[NodeType]string{
+	TICKER:      "ticker",
+	PORTFOLIO:   "portfolio",
+	MARKETCAP:   "marketcap",
+	BALANCE:     "balance",
+	TRANSACTION: "transaction",
+	TEST:        "test",
 }
 
 type WebsocketRequest map[string]string
@@ -69,7 +69,7 @@ func NewWebsocketService(port string, trendManager market.TrendManager, accountM
 	l.accountManager = accountManager
 	l.marketCap = capProvider
 	l.upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
+		CheckOrigin:     func(r *http.Request) bool { return true },
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
@@ -81,7 +81,7 @@ func (ws *WebsocketServiceImpl) Start() {
 	for k, v := range MsgTypeRoute {
 		node := newSocketNode(k)
 		go node.run()
-		http.HandleFunc("/ws/" + v, func(w http.ResponseWriter, r *http.Request) {
+		http.HandleFunc("/ws/"+v, func(w http.ResponseWriter, r *http.Request) {
 			ws.serve(node, w, r)
 		})
 	}

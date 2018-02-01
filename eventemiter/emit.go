@@ -71,6 +71,9 @@ const (
 	WethDepositMethod    = "WethDepositMethod"
 	WethWithdrawalMethod = "WethWithdrawalMethod"
 	ApproveMethod        = "ApproveMethod"
+
+	// Transaction
+	TransactionEvent = "TransactionEvent"
 )
 
 var watchers map[string][]*Watcher

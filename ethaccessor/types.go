@@ -118,6 +118,7 @@ type TransactionReceipt struct {
 	Logs              []Log     `json:"logs"`
 	LogsBloom         string    `json:"logsBloom"`
 	Root              string    `json:"root"`
+	Status            string    `json:"status"`
 	To                string    `json:"to"`
 	TransactionHash   string    `json:"transactionHash"`
 	TransactionIndex  types.Big `json:"transactionIndex"`
