@@ -90,7 +90,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, logAmount int) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int) {
 	method.BlockNumber = tx.BlockNumber.BigInt()
 	method.Time = blockTime
 	method.ContractAddress = tx.To
@@ -102,7 +102,6 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big
 	method.Input = tx.Input
 	method.Gas = tx.Gas.BigInt()
 	method.GasPrice = tx.GasPrice.BigInt()
-	method.LogAmount = logAmount
 }
 
 func (m *MethodData) IsValid() error {
@@ -113,26 +112,24 @@ func (m *MethodData) IsValid() error {
 }
 
 const (
+	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	RINGMINED_EVT_NAME           = "RingMined"
 	CANCEL_EVT_NAME              = "OrderCancelled"
 	CUTOFF_EVT_NAME              = "CutoffTimestampChanged"
-	TRANSFER_EVT_NAME            = "Transfer"
-	APPROVAL_EVT_NAME            = "Approval"
 	TOKENREGISTERED_EVT_NAME     = "TokenRegistered"
 	TOKENUNREGISTERED_EVT_NAME   = "TokenUnregistered"
-	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
+	TRANSFER_EVT_NAME            = "Transfer"
+	APPROVAL_EVT_NAME            = "Approval"
 
 	SUBMITRING_METHOD_NAME          = "submitRing"
 	CANCELORDER_METHOD_NAME         = "cancelOrder"
 	SUBMITRINGHASH_METHOD_NAME      = "submitRinghash"
 	BATCHSUBMITRINGHASH_METHOD_NAME = "batchSubmitRinghash"
-
-	WETH_DEPOSIT_METHOD_NAME    = "deposit"
-	WETH_WITHDRAWAL_METHOD_NAME = "withdraw"
-
-	APPROVAL_METHOD_NAME = "approve"
+	WETH_DEPOSIT_METHOD_NAME        = "deposit"
+	WETH_WITHDRAWAL_METHOD_NAME     = "withdraw"
+	APPROVAL_METHOD_NAME            = "approve"
 )
 
 type AbiProcessor struct {

@@ -106,7 +106,8 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	if err := ethaccessor.BlockNumber(&syncBlock); err != nil {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
-	if syncBlock.BigInt().Cmp(blockNumber) <= 0 {
+	currentBlockNumber := new(big.Int).Add(blockNumber, big.NewInt(int64(l.options.ConfirmBlockNumber)))
+	if currentBlockNumber.Cmp(blockNumber) <= 0 {
 		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
 		l.syncComplete = true
 		log.Info("extractor,sync chain block complete!")
@@ -166,23 +167,25 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	for idx, transaction := range block.Transactions {
-		recipient := block.Receipts[idx]
+		receipt := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
-
-		logAmount, err := l.processEvent(recipient, block.Timestamp.BigInt())
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-
-		// 解析method，获得ring内等orders并发送到orderbook保存
-		if err := l.processMethod(transaction, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
-			log.Errorf(err.Error())
-		}
+		l.processTransaction(transaction, receipt, block.Timestamp.BigInt(), currentBlock.BlockNumber)
 	}
 }
 
-func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, logAmount int) error {
+func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, receipt ethaccessor.TransactionReceipt, time, blockNumber *big.Int) {
+	if !receipt.IsFailed() {
+		if err := l.processEvent(receipt, time); err != nil {
+			log.Errorf(err.Error())
+		}
+	}
+	if err := l.processMethod(tx, time, blockNumber); err != nil {
+		log.Errorf(err.Error())
+	}
+}
+
+func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int) error {
 	txhash := tx.Hash
 
 	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
@@ -208,18 +211,18 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 		return nil
 	}
 
-	method.FullFilled(&tx, time, logAmount)
+	method.FullFilled(&tx, time)
 
 	eventemitter.Emit(method.Id, method)
 	return nil
 }
 
-func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) (int, error) {
+func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) error {
 	txhash := receipt.TransactionHash
 
 	if len(receipt.Logs) == 0 {
 		l.debug("extractor,tx %s recipient do not have any logs", txhash)
-		return 0, nil
+		return nil
 	}
 
 	for _, evtLog := range receipt.Logs {
@@ -271,7 +274,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 
-	return len(receipt.Logs), nil
+	return nil
 }
 
 func (l *ExtractorServiceImpl) setBlockNumberRange() {
