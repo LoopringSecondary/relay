@@ -169,6 +169,21 @@ type WethDepositMethodEvent struct {
 	Blocknumber     *big.Int
 }
 
+func (evt *WethDepositMethodEvent) ToTransaction() Transaction {
+	var tx Transaction
+	tx.Protocol = evt.ContractAddress
+	tx.From = evt.From
+	tx.To = evt.To
+	tx.BlockNumber = evt.Blocknumber
+	tx.Hash = evt.TxHash
+	tx.Value = evt.Value
+	tx.CreateTime = evt.Time.Int64()
+	tx.UpdateTime = evt.Time.Int64()
+	tx.Type = TX_TYPE_WRAP
+	tx.Status = TX_STATUS_SUCCESS
+	return tx
+}
+
 type WethWithdrawalMethodEvent struct {
 	From            common.Address
 	To              common.Address
@@ -231,4 +246,8 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
+}
+
+type TransactionEvent struct {
+	Tx Transaction
 }

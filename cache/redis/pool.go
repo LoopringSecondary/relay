@@ -41,9 +41,16 @@ func (impl *RedisCacheImpl) Initialize(cfg interface{}) {
 		MaxActive:   options.MaxActive,
 		Dial: func() (redis.Conn, error) {
 			address := fmt.Sprintf("%s:%s", options.Host, options.Port)
-			c, err := redis.Dial("tcp", address,
-				redis.DialPassword(options.Password),
+			var (
+				c   redis.Conn
+				err error
 			)
+			if len(options.Password) > 0 {
+				c, err = redis.Dial("tcp", address, redis.DialPassword(options.Password))
+			} else {
+				c, err = redis.Dial("tcp", address)
+			}
+
 			if err != nil {
 				log.Fatal(err.Error())
 				return nil, err

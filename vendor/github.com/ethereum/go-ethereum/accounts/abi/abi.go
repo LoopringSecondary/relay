@@ -74,8 +74,8 @@ func (abi ABI) Pack(name string, args ...interface{}) ([]byte, error) {
 
 const (
 	SEL_UNPACK_METHOD = 1
-	SEL_UNPACK_EVENT  = 2
-	SEL_UNPACK_INPUT  = 3
+	SEL_UNPACK_EVENT = 2
+	SEL_UNPACK_INPUT = 3
 )
 
 // Unpack output in v according to the abi specification
@@ -91,7 +91,7 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte, methodOrEvent i
 	// since there can't be naming collisions with contracts and events,
 	// we need to decide whether we're calling a method or an event
 	var unpack unpacker
-	switch methodOrEvent {
+	switch methodOrEvent{
 	case SEL_UNPACK_METHOD:
 		if method, ok := abi.Methods[name]; ok {
 			unpack = method

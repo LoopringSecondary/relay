@@ -103,6 +103,7 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big
 	method.Gas = tx.Gas.BigInt()
 	method.GasPrice = tx.GasPrice.BigInt()
 	method.LogAmount = logAmount
+	//method
 }
 
 func (m *MethodData) IsValid() error {
@@ -581,6 +582,9 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash, deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
 
 	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
+
+	txevt := &types.TransactionEvent{Tx: deposit.ToTransaction()}
+	eventemitter.Emit(eventemitter.TransactionEvent, txevt)
 	return nil
 }
 

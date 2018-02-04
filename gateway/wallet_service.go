@@ -20,15 +20,14 @@ package gateway
 
 import (
 	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/marketcap"
-	"time"
+	"github.com/Loopring/relay/ordermanager"
 	"qiniupkg.com/x/errors.v7"
+	"time"
 )
 
-
 type Portfolio struct {
-	Token string
+	Token  string
 	Amount string
 }
 
@@ -65,4 +64,3 @@ func (w *WalletServiceImpl) GetPortfolio(owner string) (res []Portfolio, err err
 
 	return
 }
-

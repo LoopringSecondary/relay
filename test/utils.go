@@ -20,6 +20,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
@@ -57,7 +58,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "debug.toml"
+	DebugFile = "mainchain.toml"
 )
 
 var (
@@ -72,6 +73,7 @@ var (
 func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
+	cache.NewCache(cfg.Redis)
 	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
 	entity = loadTestData()
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
