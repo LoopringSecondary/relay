@@ -118,9 +118,17 @@ type TransactionReceipt struct {
 	Logs              []Log     `json:"logs"`
 	LogsBloom         string    `json:"logsBloom"`
 	Root              string    `json:"root"`
+	Status            types.Big `json:"status"`
 	To                string    `json:"to"`
 	TransactionHash   string    `json:"transactionHash"`
 	TransactionIndex  types.Big `json:"transactionIndex"`
+}
+
+func (tx *TransactionReceipt) IsFailed() bool {
+	if tx.Status.BigInt().Int64() == 0 {
+		return true
+	}
+	return false
 }
 
 type BlockIterator struct {
@@ -141,4 +149,3 @@ type CallArg struct {
 	Data     string         `json:"data"`
 	Nonce    types.Big      `json:"nonce"`
 }
-
