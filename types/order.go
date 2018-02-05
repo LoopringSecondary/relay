@@ -29,13 +29,13 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_UNKNOWN OrderStatus = iota
-	ORDER_NEW
-	ORDER_PARTIAL
-	ORDER_FINISHED
-	ORDER_CANCEL
-	ORDER_EXPIRE
-	ORDER_CUTOFF
+	ORDER_UNKNOWN  OrderStatus = 0
+	ORDER_NEW      OrderStatus = 1
+	ORDER_PARTIAL  OrderStatus = 2
+	ORDER_FINISHED OrderStatus = 3
+	ORDER_CANCEL   OrderStatus = 4
+	ORDER_CUTOFF   OrderStatus = 5
+	ORDER_EXPIRE   OrderStatus = 6
 )
 
 //订单原始信息
