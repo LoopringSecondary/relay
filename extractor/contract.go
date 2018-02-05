@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
+	"time"
 )
 
 type EventData struct {
@@ -450,6 +451,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 		return nil
 	}
 
+	// save order
 	for _, v := range orderList {
 		v.Protocol = common.HexToAddress(contract.ContractAddress)
 		v.Hash = v.GenerateHash()
@@ -457,7 +459,46 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
+	processor.saveOrderListAsTxs(orderList, &contract)
 	return nil
+}
+
+func (processor *AbiProcessor) saveOrderListAsTxs(orderList []*types.Order, contract *MethodData) {
+	length := len(orderList)
+	if length < 2 || !contract.Failed {
+		log.Debugf("extractor,saveOrderListAsTxs:length %d and is status:%t", length, contract.Failed)
+		return
+	}
+
+	nowtime := time.Now().Unix()
+
+	for i := 0; i < length; i++ {
+		var (
+			tx              types.Transaction
+			model1, model2  dao.Transaction
+			sellto, buyfrom common.Address
+		)
+		ord := orderList[i]
+		if i == length-1 {
+			sellto = orderList[0].Owner
+		} else {
+			sellto = orderList[i+1].Owner
+		}
+		if i == 0 {
+			buyfrom = orderList[length-1].Owner
+		} else {
+			buyfrom = orderList[i-1].Owner
+		}
+
+		// todo(fuk):emit as event,saved by wallet/relay but not extractor
+		tx.FromOrder(ord, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+		model1.ConvertDown(&tx)
+		processor.db.SaveTransaction(&model1)
+
+		tx.FromOrder(ord, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+		model2.ConvertDown(&tx)
+		processor.db.SaveTransaction(&model2)
+	}
 }
 
 func (processor *AbiProcessor) handleSubmitRingHashMethod(input eventemitter.EventData) error {

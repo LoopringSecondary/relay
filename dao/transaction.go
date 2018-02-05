@@ -22,16 +22,17 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
 
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
-	From        string `gorm:"column:from;type:varchar(42)"`
-	To          string `gorm:"column:to;type:varchar(42)"`
+	From        string `gorm:"column:owner;type:varchar(42)"`
+	To          string `gorm:"column:other;type:varchar(42)"`
 	Hash        string `gorm:"column:hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
-	Value       string `gorm:"column:value;type:varchar(30)"`
+	Value       string `gorm:"column:amount;type:varchar(30)"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
 	CreateTime  int64  `gorm:"column:create_time"`
@@ -73,17 +74,14 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 // value,status可能会变更
 func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	var current Transaction
-	err := s.db.Model(Transaction{}).Find(&current).
-		Where("hash = ?", latest.Hash).
-		Where("protocol = ?", latest.Protocol).
-		Where("from = ? and to = ?", latest.From, latest.To).
-		Where("tx_type = ?", latest.Type).Error
+	err := s.db.Where("hash=? and owner=? and other=? and tx_type=?", latest.Hash, latest.From, latest.To, latest.Type).Find(&current).Error
 	if err != nil {
-		return err
+		return s.db.Create(latest).Error
 	}
 
 	if latest.Value != current.Value || latest.Status != current.Status {
 		latest.ID = current.ID
+		latest.UpdateTime = time.Now().Unix()
 		if err := s.db.Save(latest).Error; err != nil {
 			return err
 		}
