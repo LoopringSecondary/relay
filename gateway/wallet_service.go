@@ -122,3 +122,10 @@ func (w *WalletServiceImpl) GetPriceQuote(currency string) (result PriceQuote, e
 	return rst, nil
 }
 
+func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
+	if len(owner) == 0 {
+		return errors.New("owner can't be null string")
+	}
+	return w.accountManager.UnlockedWallet(owner)
+}
+

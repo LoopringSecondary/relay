@@ -21,6 +21,7 @@ package market
 import (
 	"errors"
 	"github.com/Loopring/relay/ethaccessor"
+	rcache "github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
@@ -30,6 +31,10 @@ import (
 	"math/big"
 	"strings"
 )
+
+var RedisCachePlaceHolder = make([]byte, 0)
+const DefaultUnlockTtl = 3600 * 24 * 30
+const UnlockCachePreKey = "Unlocked_Address_"
 
 type Account struct {
 	Address    string
@@ -329,4 +334,18 @@ func (account *Account) ToJsonObject(contractVersion string) AccountJson {
 		accountJson.Tokens = append(accountJson.Tokens, Token{v.Token, v.Balance.String(), allowance.allowance.String()})
 	}
 	return accountJson
+}
+
+func (a *AccountManager) UnlockedWallet(owner string) (err error) {
+	if len(owner) == 0 {
+		return errors.New("owner can't be null string")
+	}
+	return rcache.Set(UnlockCachePreKey + owner, RedisCachePlaceHolder, DefaultUnlockTtl)
+}
+
+func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
+	if len(owner) == 0 {
+		return false , errors.New("owner can't be null string")
+	}
+	return rcache.Exists(UnlockCachePreKey + owner)
 }

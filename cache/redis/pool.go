@@ -77,6 +77,24 @@ func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
 	}
 }
 
+func (impl *RedisCacheImpl) Exists(key string) (bool, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("exists", key)
+
+	if err != nil {
+		return false, err
+	} else {
+		exists := reply.(int)
+		if exists == 1 {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+}
+
 func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 	conn := impl.pool.Get()
 	defer conn.Close()
