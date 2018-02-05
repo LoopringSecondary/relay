@@ -107,7 +107,7 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 		log.Fatalf("extractor,sync chain block,get ethereum node current block number error:%s", err.Error())
 	}
 	currentBlockNumber := new(big.Int).Add(blockNumber, big.NewInt(int64(l.options.ConfirmBlockNumber)))
-	if currentBlockNumber.Cmp(blockNumber) <= 0 {
+	if syncBlock.BigInt().Cmp(currentBlockNumber) <= 0 {
 		eventemitter.Emit(eventemitter.SyncChainComplete, syncBlock)
 		l.syncComplete = true
 		log.Info("extractor,sync chain block complete!")
