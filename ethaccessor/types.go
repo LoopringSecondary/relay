@@ -19,6 +19,7 @@
 package ethaccessor
 
 import (
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -126,6 +127,7 @@ type TransactionReceipt struct {
 
 func (tx *TransactionReceipt) IsFailed() bool {
 	if tx.Status.BigInt().Int64() == 0 {
+		log.Debugf("--------tx:%s, status:%s", tx.TransactionHash, tx.Status.BigInt().String())
 		return true
 	}
 	return false

@@ -459,14 +459,14 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
-	processor.saveOrderListAsTxs(orderList, &contract)
+	processor.saveOrderListAsTxs(evt.TxHash.Hex(), orderList, &contract)
 	return nil
 }
 
-func (processor *AbiProcessor) saveOrderListAsTxs(orderList []*types.Order, contract *MethodData) {
+func (processor *AbiProcessor) saveOrderListAsTxs(txhash string, orderList []*types.Order, contract *MethodData) {
 	length := len(orderList)
+	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and is status:%t", txhash, length, contract.Failed)
 	if length < 2 || !contract.Failed {
-		log.Debugf("extractor,saveOrderListAsTxs:length %d and is status:%t", length, contract.Failed)
 		return
 	}
 

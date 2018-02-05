@@ -177,9 +177,8 @@ func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, re
 	txIsFailed := receipt.IsFailed()
 
 	// process method
-	if txIsFailed || len(receipt.Logs) == 0 {
-		log.Debugf("extractor,tx:%s status :%s is failed and logs amount is %d", tx.Hash, receipt.Status.BigInt().String())
-	} else {
+	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
+	if !txIsFailed && len(receipt.Logs) > 0 {
 		if err := l.processEvent(receipt, time); err != nil {
 			log.Errorf(err.Error())
 		}
