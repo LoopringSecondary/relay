@@ -166,35 +166,43 @@ func (l *ExtractorServiceImpl) processBlock() {
 	}
 
 	for idx, transaction := range block.Transactions {
-		recipient := block.Receipts[idx]
+		receipt := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
-
-		logAmount, err := l.processEvent(recipient, block.Timestamp.BigInt())
-		if err != nil {
-			log.Errorf(err.Error())
-		}
-
-		// 解析method，获得ring内等orders并发送到orderbook保存
-		if err := l.processMethod(transaction, block.Timestamp.BigInt(), block.Number.BigInt(), logAmount); err != nil {
-			log.Errorf(err.Error())
-		}
+		l.processTransaction(transaction, receipt, block.Timestamp.BigInt(), currentBlock.BlockNumber)
 	}
 }
 
-func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, logAmount int) error {
-	txhash := tx.Hash
+func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, receipt ethaccessor.TransactionReceipt, time, blockNumber *big.Int) {
+	txIsFailed := receipt.IsFailed()
 
-	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,tx:%s contract method unsupported protocol %s", txhash, tx.To)
-		return nil
+	// process method
+	if txIsFailed || len(receipt.Logs) == 0 {
+		log.Debugf("extractor,tx:%s status :%s is failed and logs amount is %d", tx.Hash, receipt.Status.BigInt().String())
+	} else {
+		if err := l.processEvent(receipt, time); err != nil {
+			log.Errorf(err.Error())
+		}
 	}
 
-	input := common.FromHex(tx.Input)
+	// process contract
+	if l.processor.HasContract(common.HexToAddress(tx.To)) {
+		if err := l.processMethod(tx, time, blockNumber, txIsFailed); err != nil {
+			log.Errorf(err.Error())
+		}
+	} else {
+		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
+	}
+}
+
+func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, txIsFailed bool) error {
 	var (
 		method MethodData
 		ok     bool
 	)
+
+	txhash := tx.Hash
+	input := common.FromHex(tx.Input)
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
@@ -208,19 +216,14 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 		return nil
 	}
 
-	method.FullFilled(&tx, time, logAmount)
+	method.FullFilled(&tx, time, txIsFailed)
 
 	eventemitter.Emit(method.Id, method)
 	return nil
 }
 
-func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) (int, error) {
+func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) error {
 	txhash := receipt.TransactionHash
-
-	if len(receipt.Logs) == 0 {
-		l.debug("extractor,tx %s recipient do not have any logs", txhash)
-		return 0, nil
-	}
 
 	for _, evtLog := range receipt.Logs {
 		var (
@@ -256,7 +259,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 
-	return len(receipt.Logs), nil
+	return nil
 }
 
 func (l *ExtractorServiceImpl) setBlockNumberRange() {

@@ -20,22 +20,22 @@ package gateway
 
 import (
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
-	"qiniupkg.com/x/errors.v7"
-	"time"
-	"github.com/Loopring/relay/market/util"
-	"math/big"
-	"strconv"
 	"github.com/Loopring/relay/types"
+	"math/big"
+	"qiniupkg.com/x/errors.v7"
+	"strconv"
+	"time"
 )
 
 const DefaultContractVersion = "v1.1"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
-	Token  string
-	Amount string
+	Token      string
+	Amount     string
 	Percentage string
 }
 
@@ -95,11 +95,10 @@ func (w *WalletServiceImpl) GetPortfolio(owner string) (res []Portfolio, err err
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
-
 	res = make([]Portfolio, 0)
 
 	for k, v := range balances {
-		portfolio := Portfolio{Token:k, Amount:types.BigintToHex(v.Balance)}
+		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
 		asset := priceQuoteMap[k]
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
@@ -128,4 +127,3 @@ func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
 	}
 	return w.accountManager.UnlockedWallet(owner)
 }
-
