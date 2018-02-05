@@ -108,3 +108,22 @@ func (tx *Transaction) FromOrder(src *Order, to common.Address, txtype, status u
 	tx.UpdateTime = nowtime
 	return nil
 }
+
+func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, txtype, status uint8, nowtime int64) error {
+	tx.Protocol = src.ContractAddress
+	tx.From = src.Owner
+	tx.To = to
+	tx.Type = txtype
+	tx.Status = status
+	if txtype == TX_TYPE_SELL {
+		tx.Value = src.AmountS
+	} else {
+		tx.Value = src.AmountB
+	}
+	tx.Hash = src.TxHash
+	tx.BlockNumber = src.Blocknumber
+	tx.CreateTime = nowtime
+	tx.UpdateTime = nowtime
+
+	return nil
+}

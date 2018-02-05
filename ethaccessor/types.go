@@ -127,7 +127,6 @@ type TransactionReceipt struct {
 
 func (tx *TransactionReceipt) IsFailed() bool {
 	if tx.Status.BigInt().Int64() == 0 {
-		log.Debugf("--------tx:%s, status:%s", tx.TransactionHash, tx.Status.BigInt().String())
 		return true
 	}
 	return false

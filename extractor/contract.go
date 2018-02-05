@@ -725,7 +725,46 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 		}
 	}
 
+	processor.saveFillListAsTxs(fillList, &contractData)
 	return nil
+}
+
+func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEvent, contract *EventData) {
+	length := len(fillList)
+	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and is status:%t", contract.TxHash, length, contract.Failed)
+	if length < 2 || !contract.Failed {
+		return
+	}
+
+	nowtime := time.Now().Unix()
+
+	for i := 0; i < length; i++ {
+		var (
+			tx              types.Transaction
+			model1, model2  dao.Transaction
+			sellto, buyfrom common.Address
+		)
+		fill := fillList[i]
+		if i == length-1 {
+			sellto = fillList[0].Owner
+		} else {
+			sellto = fillList[i+1].Owner
+		}
+		if i == 0 {
+			buyfrom = fillList[length-1].Owner
+		} else {
+			buyfrom = fillList[i-1].Owner
+		}
+
+		// todo(fuk):emit as event,saved by wallet/relay but not extractor
+		tx.FromFillEvent(fill, sellto, types.TX_TYPE_SELL, types.TX_STATUS_SUCCESS, nowtime)
+		model1.ConvertDown(&tx)
+		processor.db.SaveTransaction(&model1)
+
+		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_SUCCESS, nowtime)
+		model2.ConvertDown(&tx)
+		processor.db.SaveTransaction(&model2)
+	}
 }
 
 func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.EventData) error {
