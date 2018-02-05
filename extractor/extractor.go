@@ -175,29 +175,35 @@ func (l *ExtractorServiceImpl) processBlock() {
 }
 
 func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, receipt ethaccessor.TransactionReceipt, time, blockNumber *big.Int) {
-	if !receipt.IsFailed() {
+	txIsFailed := receipt.IsFailed()
+
+	// process method
+	if txIsFailed || len(receipt.Logs) == 0 {
+		log.Debugf("extractor,tx:%s status :%s is failed and logs amount is %d", tx.Hash, receipt.Status.BigInt().String())
+	} else {
 		if err := l.processEvent(receipt, time); err != nil {
 			log.Errorf(err.Error())
 		}
 	}
-	if err := l.processMethod(tx, time, blockNumber); err != nil {
-		log.Errorf(err.Error())
+
+	// process contract
+	if l.processor.HasContract(common.HexToAddress(tx.To)) {
+		if err := l.processMethod(tx, time, blockNumber, txIsFailed); err != nil {
+			log.Errorf(err.Error())
+		}
+	} else {
+		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
 	}
 }
 
-func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int) error {
-	txhash := tx.Hash
-
-	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,tx:%s contract method unsupported protocol %s", txhash, tx.To)
-		return nil
-	}
-
-	input := common.FromHex(tx.Input)
+func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, txIsFailed bool) error {
 	var (
 		method MethodData
 		ok     bool
 	)
+
+	txhash := tx.Hash
+	input := common.FromHex(tx.Input)
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
@@ -211,7 +217,7 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 		return nil
 	}
 
-	method.FullFilled(&tx, time)
+	method.FullFilled(&tx, time, txIsFailed)
 
 	eventemitter.Emit(method.Id, method)
 	return nil
@@ -219,11 +225,6 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 
 func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) error {
 	txhash := receipt.TransactionHash
-
-	if len(receipt.Logs) == 0 {
-		l.debug("extractor,tx %s recipient do not have any logs", txhash)
-		return nil
-	}
 
 	for _, evtLog := range receipt.Logs {
 		var (

@@ -42,6 +42,7 @@ type EventData struct {
 	BlockNumber     *big.Int
 	Time            *big.Int
 	Topics          []string
+	Failed          bool
 }
 
 func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
@@ -60,6 +61,7 @@ func (event *EventData) FullFilled(evtLog *ethaccessor.Log, blockTime *big.Int, 
 	event.Time = blockTime
 	event.ContractAddress = evtLog.Address
 	event.TxHash = txhash
+	event.Failed = false
 }
 
 type MethodData struct {
@@ -75,9 +77,9 @@ type MethodData struct {
 	Time            *big.Int
 	Value           *big.Int
 	Input           string
-	LogAmount       int
 	Gas             *big.Int
 	GasPrice        *big.Int
+	Failed          bool
 }
 
 func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
@@ -90,7 +92,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, failed bool) {
 	method.BlockNumber = tx.BlockNumber.BigInt()
 	method.Time = blockTime
 	method.ContractAddress = tx.To
@@ -102,11 +104,12 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big
 	method.Input = tx.Input
 	method.Gas = tx.Gas.BigInt()
 	method.GasPrice = tx.GasPrice.BigInt()
+	method.Failed = failed
 }
 
 func (m *MethodData) IsValid() error {
-	if m.LogAmount < 1 {
-		return fmt.Errorf("method %s transaction logs == 0", m.Name)
+	if m.Failed == true {
+		return fmt.Errorf("method %s transaction failed", m.Name)
 	}
 	return nil
 }
