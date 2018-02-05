@@ -69,3 +69,25 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 
 	return nil
 }
+
+// value,status可能会变更
+func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
+	var current Transaction
+	err := s.db.Model(Transaction{}).Find(&current).
+		Where("hash = ?", latest.Hash).
+		Where("protocol = ?", latest.Protocol).
+		Where("from = ? and to = ?", latest.From, latest.To).
+		Where("tx_type = ?", latest.Type).Error
+	if err != nil {
+		return err
+	}
+
+	if latest.Value != current.Value || latest.Status != current.Status {
+		latest.ID = current.ID
+		if err := s.db.Save(latest).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
