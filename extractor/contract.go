@@ -731,10 +731,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 
 func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEvent, contract *EventData) {
 	length := len(fillList)
+
 	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and is status:%t", contract.TxHash, length, contract.Failed)
-	if length < 2 || !contract.Failed {
-		return
-	}
 
 	nowtime := time.Now().Unix()
 
