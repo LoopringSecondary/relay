@@ -220,7 +220,7 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	return order
 }
 
-func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...interface{}) ethaccessor.CallArg {
+func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...interface{}) *ethaccessor.CallArg {
 	if callData, err := a.Pack(methodName, args...); nil != err {
 		panic(err)
 	} else {
@@ -228,7 +228,7 @@ func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...
 		arg.From = protocol
 		arg.To = protocol
 		arg.Data = common.ToHex(callData)
-		return arg
+		return &arg
 	}
 }
 

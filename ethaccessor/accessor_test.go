@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"testing"
 )
@@ -333,4 +334,50 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	} else {
 		t.Fatalf(err.Error())
 	}
+}
+
+// 使用rpc.client调用eth call时应该使用 arg参数应该指针 保证unmarshal的正确性
+func TestEthNodeAccessor_Call(t *testing.T) {
+	var (
+		arg1 ethaccessor.CallArg
+		res1 string
+	)
+
+	arg1.To = common.HexToAddress("0x45245bc59219eeaAF6cD3f382e078A461FF9De7B")
+	arg1.Data = "0x95d89b41"
+	if err := ethaccessor.Call(&res1, &arg1, "latest"); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(res1)
+
+	type CallArg struct {
+		From     common.Address `json:"from"`
+		To       common.Address `json:"to"`
+		Gas      string         `json:"gas"`
+		GasPrice string         `json:"gasPrice"`
+		Value    string         `json:"value"`
+		Data     string         `json:"data"`
+		Nonce    string         `json:"nonce"`
+	}
+
+	var (
+		client *rpc.Client
+		err    error
+		arg2   CallArg
+		res2   string
+	)
+
+	url := "http://ec2-13-115-183-194.ap-northeast-1.compute.amazonaws.com:8545"
+	if client, err = rpc.Dial(url); nil != err {
+		t.Fatalf("rpc.Dail err : %s, url:%s", err.Error(), url)
+	}
+
+	arg2.To = common.HexToAddress("0x45245bc59219eeaAF6cD3f382e078A461FF9De7B")
+	arg2.Data = "0x95d89b41"
+	if err := client.Call(&res2, "eth_call", arg2, "latest"); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(res2)
 }
