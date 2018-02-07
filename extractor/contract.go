@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/tendermint/go-crypto/keys/tx"
 	"math/big"
 	"time"
 )
@@ -628,7 +627,21 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 		eventemitter.Emit(eventemitter.ApproveMethod, approve)
 	}
 
+	processor.saveApproveMethodAsTx(approve)
 	return nil
+}
+
+func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	log.Debugf("extractor:tx:%s saveApproveMethodAsTx", evt.TxHash.Hex())
+
+	tx.FromApproveMethod(evt, types.TX_STATUS_SUCCESS)
+	model.ConvertDown(&tx)
+	return processor.db.SaveTransaction(&model)
 }
 
 func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventData) error {
@@ -649,7 +662,22 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 
 	txevt := &types.TransactionEvent{Tx: deposit.ToTransaction()}
 	eventemitter.Emit(eventemitter.TransactionEvent, txevt)
+
+	processor.saveWethDepositMethodAsTx(&deposit)
 	return nil
+}
+
+func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositMethodEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
+
+	tx.FromWethDepositMethod(evt, types.TX_STATUS_SUCCESS)
+	model.ConvertDown(&tx)
+	return processor.db.SaveTransaction(&model)
 }
 
 func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.EventData) error {
@@ -673,7 +701,22 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash, withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)
+
+	processor.saveWethWithdrawalMethodAsTx(withdrawal)
 	return nil
+}
+
+func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithdrawalMethodEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
+
+	tx.FromWethWithdrawalMethod(evt, types.TX_STATUS_SUCCESS)
+	model.ConvertDown(&tx)
+	return processor.db.SaveTransaction(&model)
 }
 
 func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData) error {
@@ -873,6 +916,28 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash, evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.AccountTransfer, evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent, txhash common.Hash) error {
+	var (
+		tx1, tx2       types.Transaction
+		model1, model2 dao.Transaction
+	)
+
+	log.Debugf("extractor:tx:%s saveApproveMethodAsTx", txhash.Hex())
+
+	tx1.FromTransferEvent(evt, txhash, types.TX_TYPE_SEND, types.TX_STATUS_SUCCESS)
+	tx2.FromTransferEvent(evt, txhash, types.TX_TYPE_RECEIVE, types.TX_STATUS_SUCCESS)
+	model1.ConvertDown(&tx1)
+	model2.ConvertDown(&tx2)
+	if err := processor.db.SaveTransaction(&model1); err != nil {
+		return err
+	}
+	if err := processor.db.SaveTransaction(&model2); err != nil {
+		return err
+	}
 
 	return nil
 }

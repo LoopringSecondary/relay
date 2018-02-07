@@ -87,13 +87,25 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	)
 
 	switch latest.Type {
-	case types.TX_TYPE_SELL | types.TX_TYPE_BUY:
+	case types.TX_TYPE_SELL, types.TX_TYPE_BUY:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
 
 	case types.TX_TYPE_CANCEL_ORDER:
 		query = "tx_hash=? and order_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.OrderHash, latest.Type)
+
+	case types.TX_TYPE_WRAP, types.TX_TYPE_UNWRAP:
+		query = "tx_hash=? and owner=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Owner, latest.Type)
+
+	case types.TX_TYPE_APPROVE:
+		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
+
+	case types.TX_TYPE_SEND, types.TX_TYPE_RECEIVE:
+		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
 	}
 
 	err := s.db.Where(query, args...).Find(&current).Error

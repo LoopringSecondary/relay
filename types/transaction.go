@@ -163,3 +163,73 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Ad
 
 	return nil
 }
+
+func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, status uint8) error {
+	tx.Protocol = src.ContractAddress
+	tx.Owner = src.From
+	tx.From = src.From
+	tx.To = src.To
+	tx.Value = src.Value
+	tx.Type = TX_TYPE_WRAP
+	tx.Status = status
+	tx.TxHash = src.TxHash
+	tx.BlockNumber = src.Blocknumber
+	tx.CreateTime = src.Time.Int64()
+	tx.UpdateTime = src.Time.Int64()
+
+	return nil
+}
+
+func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, status uint8) error {
+	tx.Protocol = src.ContractAddress
+	tx.Owner = src.From
+	tx.From = src.From
+	tx.To = src.To
+	tx.Value = src.Value
+	tx.Type = TX_TYPE_UNWRAP
+	tx.Status = status
+	tx.TxHash = src.TxHash
+	tx.BlockNumber = src.Blocknumber
+	tx.CreateTime = src.Time.Int64()
+	tx.UpdateTime = src.Time.Int64()
+
+	return nil
+}
+
+func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent, status uint8) error {
+	tx.Protocol = src.ContractAddress
+	tx.Owner = src.From
+	tx.From = src.From
+	tx.To = src.To
+	tx.Value = src.Value
+	tx.Type = TX_TYPE_APPROVE
+	tx.Status = status
+	tx.TxHash = src.TxHash
+	tx.BlockNumber = src.Blocknumber
+	tx.CreateTime = src.Time.Int64()
+	tx.UpdateTime = src.Time.Int64()
+
+	return nil
+}
+
+func (tx *Transaction) FromTransferEvent(src *TransferEvent, txhash common.Hash, sendOrReceive, status uint8) error {
+	tx.Protocol = src.ContractAddress
+	if sendOrReceive == TX_TYPE_SEND {
+		tx.Owner = src.From
+		tx.From = src.From
+		tx.To = src.To
+	} else {
+		tx.Owner = src.To
+		tx.From = src.From
+		tx.To = src.To
+	}
+	tx.Value = src.Value
+	tx.Type = sendOrReceive
+	tx.Status = status
+	tx.TxHash = txhash
+	tx.BlockNumber = src.Blocknumber
+	tx.CreateTime = src.Time.Int64()
+	tx.UpdateTime = src.Time.Int64()
+
+	return nil
+}
