@@ -27,7 +27,7 @@ func (e *EthForwarder) GetTransactionCount(address, blockNumber string) (result 
 	//return result, nil
 }
 
-func (e *EthForwarder) Call(ethCall ethaccessor.CallArg, blockNumber string) (result string, err error) {
+func (e *EthForwarder) Call(ethCall *ethaccessor.CallArg, blockNumber string) (result string, err error) {
 	err = ethaccessor.Call(&result, ethCall, blockNumber)
 	return
 	//err = e.Accessor.RetryCall("latest", 2, &result, "eth_call", ethCall, blockNumber)

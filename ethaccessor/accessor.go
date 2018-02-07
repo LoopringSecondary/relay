@@ -48,7 +48,7 @@ func GetTransactionCount(result interface{}, address common.Address, blockNumber
 	return accessor.RetryCall(blockNumber, 2, result, "eth_getTransactionCount", address, blockNumber)
 }
 
-func Call(result interface{}, ethCall CallArg, blockNumber string) error {
+func Call(result interface{}, ethCall *CallArg, blockNumber string) error {
 	return accessor.RetryCall(blockNumber, 2, result, "eth_call", ethCall, blockNumber)
 }
 
