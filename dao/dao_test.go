@@ -21,8 +21,8 @@ package dao_test
 import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/test"
-	"testing"
 	"github.com/ethereum/bak/go-ethereum1/common"
+	"testing"
 )
 
 func TestRdsServiceImpl_Prepare(t *testing.T) {

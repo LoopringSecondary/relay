@@ -28,9 +28,11 @@ import (
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
-	From        string `gorm:"column:owner;type:varchar(42)"`
-	To          string `gorm:"column:other;type:varchar(42)"`
-	Hash        string `gorm:"column:hash;type:varchar(82)"`
+	Owner       string `gorm:"column:owner;type:varchar(42)"`
+	From        string `gorm:"column:tx_from;type:varchar(42)"`
+	To          string `gorm:"column:tx_to;type:varchar(42)"`
+	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHash   string `gorm:"column:order_hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Value       string `gorm:"column:amount;type:varchar(30)"`
 	Type        uint8  `gorm:"column:tx_type"`
@@ -40,11 +42,14 @@ type Transaction struct {
 }
 
 // convert types/transaction to dao/transaction
+// todo(fuk): judge nil fields
 func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Protocol = src.Protocol.Hex()
+	tx.Owner = src.Owner.Hex()
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
-	tx.Hash = src.Hash.Hex()
+	tx.TxHash = src.TxHash.Hex()
+	tx.OrderHash = src.OrderHash.Hex()
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
 	tx.Type = src.Type
@@ -58,9 +63,11 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 // convert dao/transaction to types/transaction
 func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Protocol = common.HexToAddress(tx.Protocol)
+	dst.Owner = common.HexToAddress(tx.Owner)
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
-	dst.Hash = common.HexToHash(tx.Hash)
+	dst.TxHash = common.HexToHash(tx.TxHash)
+	dst.OrderHash = common.HexToHash(tx.OrderHash)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
 	dst.Type = tx.Type
@@ -73,8 +80,23 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 
 // value,status可能会变更
 func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
-	var current Transaction
-	err := s.db.Where("hash=? and owner=? and other=? and tx_type=?", latest.Hash, latest.From, latest.To, latest.Type).Find(&current).Error
+	var (
+		current Transaction
+		query   string
+		args    []interface{}
+	)
+
+	switch latest.Type {
+	case types.TX_TYPE_SELL | types.TX_TYPE_BUY:
+		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
+
+	case types.TX_TYPE_CANCEL_ORDER:
+		query = "tx_hash=? and order_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.OrderHash, latest.Type)
+	}
+
+	err := s.db.Where(query, args...).Find(&current).Error
 	if err != nil {
 		return s.db.Create(latest).Error
 	}

@@ -124,11 +124,11 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
-func (tx *TransactionReceipt) IsFailed() bool {
+func (tx *TransactionReceipt) IsSuccess() bool {
 	if tx.Status.BigInt().Int64() == 0 {
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 type BlockIterator struct {

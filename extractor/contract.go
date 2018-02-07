@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/tendermint/go-crypto/keys/tx"
 	"math/big"
 	"time"
 )
@@ -43,7 +44,7 @@ type EventData struct {
 	BlockNumber     *big.Int
 	Time            *big.Int
 	Topics          []string
-	Failed          bool
+	Success         bool
 }
 
 func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
@@ -62,7 +63,7 @@ func (event *EventData) FullFilled(evtLog *ethaccessor.Log, blockTime *big.Int, 
 	event.Time = blockTime
 	event.ContractAddress = evtLog.Address
 	event.TxHash = txhash
-	event.Failed = false
+	event.Success = true
 }
 
 type MethodData struct {
@@ -80,7 +81,7 @@ type MethodData struct {
 	Input           string
 	Gas             *big.Int
 	GasPrice        *big.Int
-	Failed          bool
+	Success         bool
 }
 
 func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
@@ -93,7 +94,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, failed bool) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big.Int, success bool) {
 	method.BlockNumber = tx.BlockNumber.BigInt()
 	method.Time = blockTime
 	method.ContractAddress = tx.To
@@ -105,11 +106,11 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, blockTime *big
 	method.Input = tx.Input
 	method.Gas = tx.Gas.BigInt()
 	method.GasPrice = tx.GasPrice.BigInt()
-	method.Failed = failed
+	method.Success = success
 }
 
 func (m *MethodData) IsValid() error {
-	if m.Failed == true {
+	if m.Success == false {
 		return fmt.Errorf("method %s transaction failed", m.Name)
 	}
 	return nil
@@ -459,16 +460,17 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 		eventemitter.Emit(eventemitter.Gateway, v)
 	}
 
-	processor.saveOrderListAsTxs(evt.TxHash.Hex(), orderList, &contract)
+	if len(orderList) > 1 && !contract.Success {
+		processor.saveOrderListAsTxs(evt.TxHash, orderList, &contract)
+	}
+
 	return nil
 }
 
-func (processor *AbiProcessor) saveOrderListAsTxs(txhash string, orderList []*types.Order, contract *MethodData) {
+func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList []*types.Order, contract *MethodData) {
 	length := len(orderList)
-	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and is status:%t", txhash, length, contract.Failed)
-	if length < 2 || !contract.Failed {
-		return
-	}
+
+	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and tx success:%t", txhash.Hex(), length, contract.Success)
 
 	nowtime := time.Now().Unix()
 
@@ -491,11 +493,11 @@ func (processor *AbiProcessor) saveOrderListAsTxs(txhash string, orderList []*ty
 		}
 
 		// todo(fuk):emit as event,saved by wallet/relay but not extractor
-		tx.FromOrder(ord, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+		tx.FromOrder(ord, txhash, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
 		model1.ConvertDown(&tx)
 		processor.db.SaveTransaction(&model1)
 
-		tx.FromOrder(ord, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+		tx.FromOrder(ord, txhash, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
 		model2.ConvertDown(&tx)
 		processor.db.SaveTransaction(&model2)
 	}
@@ -576,7 +578,29 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	order.Protocol = common.HexToAddress(contract.ContractAddress)
 	eventemitter.Emit(eventemitter.Gateway, order)
 
+	if !contract.Success {
+		processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
+	}
+
 	return nil
+}
+
+func (processor *AbiProcessor) saveCancelOrderMethodAsTx(ord *types.Order, txhash string, amountS, amountB, blocknumber *big.Int) error {
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx:orderhash %s and is status:%t", txhash, ord.Hash.Hex())
+
+	var (
+		tx    types.Transaction
+		value *big.Int
+	)
+
+	if amountS.Cmp(big.NewInt(0)) == 0 {
+		value = amountB
+	} else {
+		value = amountS
+	}
+	nowtime := time.Now().Unix()
+
+	return tx.FromCancelMethod(ord, common.HexToHash(txhash), types.TX_STATUS_FAILED, value, blocknumber, nowtime)
 }
 
 func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData) error {
@@ -732,9 +756,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEvent, contract *EventData) {
 	length := len(fillList)
 
-	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and is status:%t", contract.TxHash, length, contract.Failed)
-
-	nowtime := time.Now().Unix()
+	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and tx success:%t", contract.TxHash, length, contract.Success)
 
 	for i := 0; i < length; i++ {
 		var (
@@ -755,11 +777,11 @@ func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEv
 		}
 
 		// todo(fuk):emit as event,saved by wallet/relay but not extractor
-		tx.FromFillEvent(fill, sellto, types.TX_TYPE_SELL, types.TX_STATUS_SUCCESS, nowtime)
+		tx.FromFillEvent(fill, sellto, types.TX_TYPE_SELL, types.TX_STATUS_SUCCESS)
 		model1.ConvertDown(&tx)
 		processor.db.SaveTransaction(&model1)
 
-		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_SUCCESS, nowtime)
+		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_SUCCESS)
 		model2.ConvertDown(&tx)
 		processor.db.SaveTransaction(&model2)
 	}
@@ -785,7 +807,27 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
 
+	processor.saveCancelOrderEventAsTx(evt)
 	return nil
+}
+
+func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelledEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+		state types.OrderState
+	)
+
+	order, err := processor.db.GetOrderByHash(evt.OrderHash)
+	if err != nil {
+		log.Debugf("extractor,tx:%s saveCancelOrderEventAsTx,orderhash:%s not exist", evt.TxHash, evt.OrderHash)
+	}
+	order.ConvertDown(&state)
+	log.Debugf("extractor,tx:%s saveCancelOrderEventAsTx, orderhash:%s, owner:%s", evt.TxHash, evt.OrderHash, state.RawOrder.Owner)
+	tx.FromCancelEvent(evt, state.RawOrder.Owner, types.TX_STATUS_SUCCESS)
+
+	model.ConvertDown(&tx)
+	return processor.db.SaveTransaction(&model)
 }
 
 func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.EventData) error {

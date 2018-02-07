@@ -175,7 +175,7 @@ func (evt *WethDepositMethodEvent) ToTransaction() Transaction {
 	tx.From = evt.From
 	tx.To = evt.To
 	tx.BlockNumber = evt.Blocknumber
-	tx.Hash = evt.TxHash
+	tx.TxHash = evt.TxHash
 	tx.Value = evt.Value
 	tx.CreateTime = evt.Time.Int64()
 	tx.UpdateTime = evt.Time.Int64()
