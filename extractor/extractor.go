@@ -174,11 +174,11 @@ func (l *ExtractorServiceImpl) processBlock() {
 }
 
 func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, receipt ethaccessor.TransactionReceipt, time, blockNumber *big.Int) {
-	txIsFailed := receipt.IsFailed()
+	txIsSuccess := receipt.IsSuccess()
 
 	// process method
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
-	if !txIsFailed && len(receipt.Logs) > 0 {
+	if txIsSuccess && len(receipt.Logs) > 0 {
 		if err := l.processEvent(receipt, time); err != nil {
 			log.Errorf(err.Error())
 		}
@@ -186,7 +186,7 @@ func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, re
 
 	// process contract
 	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		if err := l.processMethod(tx, time, blockNumber, txIsFailed); err != nil {
+		if err := l.processMethod(tx, time, blockNumber, txIsSuccess); err != nil {
 			log.Errorf(err.Error())
 		}
 	} else {
