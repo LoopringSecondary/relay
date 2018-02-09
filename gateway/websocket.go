@@ -101,7 +101,7 @@ func (ws *WebsocketServiceImpl) serve(node *SocketNode, w http.ResponseWriter, r
 		log.Error("get ws connection error , " + err.Error())
 		return
 	}
-	client := &SocketClient{node: node, conn: conn, send: make(chan []byte, 256)}
+	client := &SocketClient{node: node, conn: conn}
 	client.node.register <- client
 	go client.write()
 	go client.read()

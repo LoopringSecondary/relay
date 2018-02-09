@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
-	"strconv"
 	"time"
+	"encoding/json"
 )
 
 const (
@@ -38,7 +38,7 @@ type SocketClient struct {
 
 	conn *websocket.Conn
 
-	send chan []byte
+	send chan interface{}
 }
 
 func (c *SocketClient) read() {
@@ -73,13 +73,21 @@ func (c *SocketClient) read() {
 	}
 }
 
-func (c *SocketClient) handler(req WebsocketRequest) ([]byte, error) {
+func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 	walletService := WalletServiceImpl{}
 	fmt.Print("read ------->5")
-	input := req["ping"]
+	fmt.Println(req)
 	fmt.Print("read ------->6")
-	inputInt, _ := strconv.Atoi(input)
-	return walletService.TestPing(inputInt)
+
+	if v, ok := req["market"]; ok {
+		return walletService.GetTickers(v)
+	}
+
+	if v, ok := req["owner"]; ok {
+		return walletService.GetPortfolio(v)
+	}
+
+	return walletService.TestPing(123)
 }
 
 func (c *SocketClient) write() {
@@ -95,7 +103,7 @@ func (c *SocketClient) write() {
 			fmt.Println("read ------->8")
 			fmt.Println(message)
 			fmt.Println(ok)
-			fmt.Println(string(message))
+			fmt.Println(json.Marshal(message))
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})

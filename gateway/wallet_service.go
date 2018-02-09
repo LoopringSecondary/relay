@@ -121,6 +121,16 @@ func (w *WalletServiceImpl) GetPriceQuote(currency string) (result PriceQuote, e
 	return rst, nil
 }
 
+func (w *WalletServiceImpl) GetTickers(mkt string) (result map[string]market.Ticker, err error) {
+	result = make(map[string]market.Ticker)
+	ticker1 := market.Ticker{}
+	ticker1.Exchange = "huobi"
+	ticker1.Market = mkt
+	ticker1.Change = "-23.42%"
+	result["huobi"] = ticker1
+	return result ,nil
+}
+
 func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
 	if len(owner) == 0 {
 		return errors.New("owner can't be null string")

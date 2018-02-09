@@ -68,14 +68,17 @@ type Node struct {
 
 type RelayNode struct {
 	trendManager     market.TrendManager
+	tickerCollector  market.Collector
 	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
 }
 
 func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
+	n.tickerCollector.Start()
 	n.jsonRpcService.Start()
 	n.websocketService.Start()
+
 }
 
 func (n *RelayNode) Stop() {
@@ -129,6 +132,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerTrendManager()
+	n.registerTickerCollector()
 	n.registerJsonRpcService()
 	n.registerWebsocketService()
 }
@@ -260,6 +264,10 @@ func (n *Node) registerTrendManager() {
 
 func (n *Node) registerAccountManager() {
 	n.accountManager = market.NewAccountManager()
+}
+
+func (n *Node) registerTickerCollector() {
+	n.relayNode.tickerCollector = market.NewCollector()
 }
 
 func (n *Node) registerJsonRpcService() {
