@@ -23,16 +23,14 @@ type SocketNode struct {
 	broadcast  chan []byte
 	register   chan *SocketClient
 	unregister chan *SocketClient
-	nodeType   NodeType
 }
 
-func newSocketNode(nodeType NodeType) *SocketNode {
+func newSocketNode() *SocketNode {
 	return &SocketNode{
 		broadcast:  make(chan []byte),
 		register:   make(chan *SocketClient),
 		unregister: make(chan *SocketClient),
 		clients:    make(map[*SocketClient]bool),
-		nodeType:   nodeType,
 	}
 }
 

@@ -34,9 +34,6 @@ type WebsocketService interface {
 
 type WebsocketServiceImpl struct {
 	port           string
-	trendManager   market.TrendManager
-	accountManager market.AccountManager
-	marketCap      marketcap.MarketCapProvider
 	upgrader       websocket.Upgrader
 }
 
@@ -65,9 +62,6 @@ type WebsocketRequest map[string]string
 func NewWebsocketService(port string, trendManager market.TrendManager, accountManager market.AccountManager, capProvider marketcap.MarketCapProvider) *WebsocketServiceImpl {
 	l := &WebsocketServiceImpl{}
 	l.port = port
-	l.trendManager = trendManager
-	l.accountManager = accountManager
-	l.marketCap = capProvider
 	l.upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },
 		ReadBufferSize:  1024,
@@ -78,13 +72,11 @@ func NewWebsocketService(port string, trendManager market.TrendManager, accountM
 
 func (ws *WebsocketServiceImpl) Start() {
 
-	for k, v := range MsgTypeRoute {
-		node := newSocketNode(k)
-		go node.run()
-		http.HandleFunc("/ws/"+v, func(w http.ResponseWriter, r *http.Request) {
-			ws.serve(node, w, r)
-		})
-	}
+	node := newSocketNode()
+	go node.run()
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		ws.serve(node, w, r)
+	})
 
 	err := http.ListenAndServe(":"+ws.port, nil)
 	if err != nil {

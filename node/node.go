@@ -71,6 +71,7 @@ type RelayNode struct {
 	tickerCollector  market.Collector
 	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
+	walletService    gateway.WalletServiceImpl
 }
 
 func (n *RelayNode) Start() {
@@ -135,6 +136,7 @@ func (n *Node) registerRelayNode() {
 	n.registerTickerCollector()
 	n.registerJsonRpcService()
 	n.registerWebsocketService()
+	n.registerWalletService()
 }
 
 func (n *Node) registerMineNode() {
@@ -270,9 +272,13 @@ func (n *Node) registerTickerCollector() {
 	n.relayNode.tickerCollector = market.NewCollector()
 }
 
-func (n *Node) registerJsonRpcService() {
+func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.accountManager, &ethForwarder, n.marketCapProvider)
+	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder)
+}
+
+func (n *Node) registerJsonRpcService() {
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.walletService)
 }
 
 func (n *Node) registerWebsocketService() {

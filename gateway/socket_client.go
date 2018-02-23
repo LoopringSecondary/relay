@@ -24,6 +24,8 @@ import (
 	"log"
 	"time"
 	"encoding/json"
+	"qiniupkg.com/x/errors.v7"
+	"strconv"
 )
 
 const (
@@ -78,16 +80,40 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 	fmt.Print("read ------->5")
 	fmt.Println(req)
 	fmt.Print("read ------->6")
+	
+	if method, ok := req["method"]; ok {
+		switch method {
+		case "portfolio":
+			if v, ok := req["owner"]; ok {
+				return walletService.GetPortfolio(v)
+			} else {
+				return nil, errors.New("owner must be applied")
+			}
+		case "balance":
+			balanceQuery := CommonTokenRequest{ContractVersion:req["contractVersion"], Owner:req["owner"]}
+			return walletService.GetBalance(balanceQuery)
+		case "tickers":
+			return walletService.GetTickers(req["market"])
+		case "transactions":
+			pageIndex, _ := strconv.Atoi(req["pageIndex"])
+			pageSize, _ := strconv.Atoi(req["pageSize"])
+			txnQuery := TransactionQuery{ThxHash:req["thxHash"], Owner:req["owner"], PageIndex:pageIndex, PageSize:pageSize}
+			return walletService.GetTransactions(txnQuery)
+		case "marketcap" :
+			return walletService.GetPriceQuote(req["currency"])
+		case "depth" :
+			length,_ := strconv.Atoi(req["length"])
+			depthQuery := DepthQuery{Length:length, Market: req["market"], ContractVersion:req["contractVersion"]}
+			return walletService.GetDepth(depthQuery)
+		case "trends" :
+			query := SingleMarket{Market:req["market"]}
+			return walletService.GetTrend(query)
+		}
 
-	if v, ok := req["market"]; ok {
-		return walletService.GetTickers(v)
+
 	}
 
-	if v, ok := req["owner"]; ok {
-		return walletService.GetPortfolio(v)
-	}
-
-	return walletService.TestPing(123)
+	return nil, errors.New("method must be applied")
 }
 
 func (c *SocketClient) write() {
