@@ -77,9 +77,9 @@ type OrderJsonRequest struct {
 	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
 	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
 	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
-	Timestamp             int64          `json:"timestamp" gencodec:"required"`
-	Ttl                   int64          `json:"ttl" gencodec:"required"` // 订单过期时间
-	Salt                  int64          `json:"salt" gencodec:"required"`
+	Timestamp             int64          `json:"validSince" gencodec:"required"`
+	Ttl                   int64          `json:"validUntil" gencodec:"required"` // 订单过期时间
+	// Salt                  int64          `json:"salt" gencodec:"required"`
 	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
@@ -352,7 +352,7 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.AmountB = request.AmountB
 	order.Timestamp = big.NewInt(request.Timestamp)
 	order.Ttl = big.NewInt(request.Ttl)
-	order.Salt = big.NewInt(request.Salt)
+	// order.Salt = big.NewInt(request.Salt)
 	order.LrcFee = request.LrcFee
 	order.BuyNoMoreThanAmountB = request.BuyNoMoreThanAmountB
 	order.MarginSplitPercentage = request.MarginSplitPercentage

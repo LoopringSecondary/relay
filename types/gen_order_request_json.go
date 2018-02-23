@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -19,9 +18,8 @@ func (o OrderJsonRequest) MarshalJSON() ([]byte, error) {
 		TokenB                common.Address `json:"tokenB" gencodec:"required"`
 		AmountS               *Big           `json:"amountS" gencodec:"required"`
 		AmountB               *Big           `json:"amountB" gencodec:"required"`
-		Timestamp             int64          `json:"timestamp" gencodec:"required"`
-		Ttl                   int64          `json:"ttl" gencodec:"required"`
-		Salt                  int64          `json:"salt" gencodec:"required"`
+		Timestamp             int64          `json:"validSince" gencodec:"required"`
+		Ttl                   int64          `json:"validUntil" gencodec:"required"`
 		LrcFee                *Big           `json:"lrcFee" `
 		BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"`
@@ -40,7 +38,6 @@ func (o OrderJsonRequest) MarshalJSON() ([]byte, error) {
 	enc.AmountB = (*Big)(o.AmountB)
 	enc.Timestamp = o.Timestamp
 	enc.Ttl = o.Ttl
-	enc.Salt = o.Salt
 	enc.LrcFee = (*Big)(o.LrcFee)
 	enc.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	enc.MarginSplitPercentage = o.MarginSplitPercentage
@@ -60,9 +57,8 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 		TokenB                *common.Address `json:"tokenB" gencodec:"required"`
 		AmountS               *Big            `json:"amountS" gencodec:"required"`
 		AmountB               *Big            `json:"amountB" gencodec:"required"`
-		Timestamp             *int64          `json:"timestamp" gencodec:"required"`
-		Ttl                   *int64          `json:"ttl" gencodec:"required"`
-		Salt                  *int64          `json:"salt" gencodec:"required"`
+		Timestamp             *int64          `json:"validSince" gencodec:"required"`
+		Ttl                   *int64          `json:"validUntil" gencodec:"required"`
 		LrcFee                *Big            `json:"lrcFee" `
 		BuyNoMoreThanAmountB  *bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage *uint8          `json:"marginSplitPercentage" gencodec:"required"`
@@ -98,17 +94,13 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 	}
 	o.AmountB = (*big.Int)(dec.AmountB)
 	if dec.Timestamp == nil {
-		return errors.New("missing required field 'timestamp' for OrderJsonRequest")
+		return errors.New("missing required field 'validSince' for OrderJsonRequest")
 	}
 	o.Timestamp = *dec.Timestamp
 	if dec.Ttl == nil {
-		return errors.New("missing required field 'ttl' for OrderJsonRequest")
+		return errors.New("missing required field 'validUntil' for OrderJsonRequest")
 	}
 	o.Ttl = *dec.Ttl
-	if dec.Salt == nil {
-		return errors.New("missing required field 'salt' for OrderJsonRequest")
-	}
-	o.Salt = *dec.Salt
 	if dec.LrcFee != nil {
 		o.LrcFee = (*big.Int)(dec.LrcFee)
 	}

@@ -762,20 +762,18 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getPortfolio","params":
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": {
-    "tokens": [
+  "result": [
       {
           "token": "LRC",
           "amount": "0x000001234d",
-          "percentage": 2.35
+          "percentage": "2.35"
       },
       {
           "token": "WETH",
           "amount": "0x00000012dae734",
-          "percentage": 80.23
+          "percentage": "80.23"
       }
     ]
-  }
 }
 ```
 

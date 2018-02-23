@@ -72,6 +72,36 @@ type CommonTokenRequest struct {
 	Owner           string `json:"owner"`
 }
 
+type SingleContractVersion struct {
+	ContractVersion string `json:"contractVersion"`
+}
+
+type SingleMarket struct {
+	Market string `json:"market"`
+}
+
+type SingleOwner struct {
+	owner string `json:"owner"`
+}
+
+type CutoffRequest struct {
+	Address string `json:"address"`
+	ContractVersion string `json:"contractVersion"`
+	BlockNumber string `json:"blockNumber"`
+}
+
+type EstimatedAllocatedAllowanceQuery struct {
+	Owner string `json: "owner"`
+	Token string `json: "token"`
+}
+
+type TransactionQuery struct {
+	ThxHash       string `json:"thxHash"`
+	Owner           string `json:"owner"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
+}
+
 type OrderQuery struct {
 	Status          string `json:"status"`
 	PageIndex       int    `json:"pageIndex"`
@@ -187,7 +217,7 @@ func (j *JsonrpcServiceImpl) Start() {
 	if listener, err = net.Listen("tcp", ":8083"); err != nil {
 		return
 	}
-	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
+	go rpc.NewHTTPServer([]string{"v2"}, handler).Serve(listener)
 	log.Info(fmt.Sprintf("HTTP endpoint opened on 8083"))
 
 	return
@@ -288,18 +318,18 @@ func (j *JsonrpcServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 	return result, nil
 }
 
-func (j *JsonrpcServiceImpl) GetTicker(contractVersion string) (res []market.Ticker, err error) {
+func (j *JsonrpcServiceImpl) GetTickers(query SingleContractVersion) (res []market.Ticker, err error) {
 	res, err = j.trendManager.GetTicker()
 
 	for i, t := range res {
-		j.fillBuyAndSell(&t, contractVersion)
+		j.fillBuyAndSell(&t, query.ContractVersion)
 		res[i] = t
 	}
 	return
 }
 
-func (j *JsonrpcServiceImpl) GetTrend(market string) (res []market.Trend, err error) {
-	res, err = j.trendManager.GetTrends(market)
+func (j *JsonrpcServiceImpl) GetTrend(query SingleMarket) (res []market.Trend, err error) {
+	res, err = j.trendManager.GetTrends(query.Market)
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Start < res[j].Start
 	})
@@ -327,8 +357,8 @@ func (j *JsonrpcServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res ma
 	return
 }
 
-func (j *JsonrpcServiceImpl) GetCutoff(address, contractVersion, blockNumber string) (result string, err error) {
-	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[contractVersion]), common.HexToAddress(address), blockNumber)
+func (j *JsonrpcServiceImpl) GetCutoff(query CutoffRequest) (result string, err error) {
+	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[query.ContractVersion]), common.HexToAddress(query.Address), query.BlockNumber)
 	if err != nil {
 		return "", err
 	}
@@ -347,10 +377,13 @@ func (j *JsonrpcServiceImpl) GetPriceQuote(currency string) (result PriceQuote, 
 	return rst, nil
 }
 
-func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string) (frozenAmount string, err error) {
+func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAllocatedAllowanceQuery) (frozenAmount string, err error) {
 	statusSet := make([]types.OrderStatus, 0)
 	statusSet = append(statusSet, types.ORDER_NEW)
 	statusSet = append(statusSet, types.ORDER_PARTIAL)
+
+	token := query.Token
+	owner := query.Owner
 
 	tokenAddress := util.AliasToAddress(token)
 	if tokenAddress.Hex() == "" {
@@ -374,6 +407,34 @@ func (j *JsonrpcServiceImpl) GetEstimatedAllocatedAllowance(owner, token string)
 
 func (j *JsonrpcServiceImpl) GetSupportedMarket() (markets []string, err error) {
 	return util.AllMarkets, err
+}
+
+func (j *JsonrpcServiceImpl) GetPortfolio(query SingleOwner) (portfolios [] Portfolio, err error) {
+	portfolios = make([]Portfolio, 0)
+	mockPortfolio1 := Portfolio{Token:"LRC", Amount:"0x00123000da", Percentage:"80.32"}
+	mockPortfolio2 := Portfolio{Token:"ETH", Amount:"0x0000022", Percentage:"19.68"}
+	portfolios = append(portfolios, mockPortfolio1)
+	portfolios = append(portfolios, mockPortfolio2)
+	return portfolios, nil
+}
+
+func (j *JsonrpcServiceImpl) GetTransactions(query TransactionQuery) (transactions [] types.Transaction, err error) {
+	transactions = make([]types.Transaction, 0)
+	mockTxn1 := types.Transaction{
+		Protocol:common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC9"),
+		Owner: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC2"),
+		From: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC3"),
+		To: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC4"),
+		CreateTime:150134131,
+		UpdateTime:150101931,
+		TxHash:common.StringToHash("0xa226639a5852df7a61a19a473a5f6feb98be5247077a7b22b8c868178772d01e"),
+		BlockNumber:big.NewInt(5029675),
+		Status:1,
+		Value:big.NewInt(0x0000000a7640001),
+	}
+
+	transactions = append(transactions, mockTxn1)
+	return transactions, nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
