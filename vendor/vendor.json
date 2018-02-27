@@ -191,6 +191,12 @@
 			"revisionTime": "2017-08-15T08:56:58Z"
 		},
 		{
+			"checksumSHA1": "vVBeMnXsvfWeRxzptDU615+qxts=",
+			"path": "github.com/googollee/go-socket.io",
+			"revision": "ab4816a1fbc58a94fb9e7a637d548bb4dbee6491",
+			"revisionTime": "2017-02-23T22:18:44Z"
+		},
+		{
 			"checksumSHA1": "pgR0imj8+6ztCkoQ6EFm/Ifk+Es=",
 			"path": "github.com/gorilla/websocket",
 			"revision": "91f589db023d66e4aba7112d44cc0d2fb091c553",

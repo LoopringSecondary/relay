@@ -71,6 +71,7 @@ type RelayNode struct {
 	tickerCollector  market.Collector
 	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
+	socketIOService gateway.SocketIOServiceImpl
 	walletService    gateway.WalletServiceImpl
 }
 
@@ -78,7 +79,8 @@ func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
 	n.tickerCollector.Start()
 	n.jsonRpcService.Start()
-	n.websocketService.Start()
+	//n.websocketService.Start()
+	n.socketIOService.Start()
 
 }
 
@@ -137,6 +139,7 @@ func (n *Node) registerRelayNode() {
 	n.registerJsonRpcService()
 	n.registerWebsocketService()
 	n.registerWalletService()
+	n.registerSocketIOService()
 }
 
 func (n *Node) registerMineNode() {
@@ -283,6 +286,10 @@ func (n *Node) registerJsonRpcService() {
 
 func (n *Node) registerWebsocketService() {
 	n.relayNode.websocketService = *gateway.NewWebsocketService(n.globalConfig.Websocket.Port, n.relayNode.trendManager, n.accountManager, n.marketCapProvider)
+}
+
+func (n *Node) registerSocketIOService() {
+	n.relayNode.socketIOService = *gateway.NewSocketIOService(n.globalConfig.Websocket.Port, n.relayNode.walletService)
 }
 
 func (n *Node) registerMiner() {

@@ -21,6 +21,11 @@ package market
 import (
 	"github.com/robfig/cron"
 	"github.com/Loopring/relay/cache"
+	"strings"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"encoding/json"
 )
 
 type ExchangeType string
@@ -35,17 +40,14 @@ const cachePreKey = "TICKER_EX_"
 
 //TODO (xiaolu)  add more exchanges to this list
 var exchanges = map[string]string {
-	"binance" : "https://api.binance.com/api/v1/ticker/24hr?symbol=",
-	"okex" : "https://www.okex.com/api/v1/ticker.do?symbol=",
-	"huobi" : "https://api.huobi.pro/market/detail/merged?symbol=",
+	"binance" : "https://api.binance.com/api/v1/ticker/24hr?symbol=%s",
+	"okex" : "https://www.okex.com/api/v1/ticker.do?symbol=%s",
+	"huobi" : "https://api.huobi.pro/market/detail?symbol=%s",
 }
 
 const defaultSyncInterval = 5 // minutes
 
 type Exchange interface {
-	getTickerUrl() string
-	tickerMapper() Ticker
-	marketMapper() string
 	updateCache()
 }
 
@@ -67,18 +69,6 @@ type CollectorImpl struct {
 
 func NewExchange(name, tickerUrl string) *ExchangeImpl {
 	return &ExchangeImpl{name, tickerUrl}
-}
-
-func (e *ExchangeImpl) getTickerUrl() string {
-	return ""
-}
-
-func (e *ExchangeImpl) tickerMapper() Ticker {
-	return Ticker{}
-}
-
-func (e *ExchangeImpl) marketMapper() string {
-	return ""
 }
 
 func (e *ExchangeImpl) updateCache(){
@@ -119,7 +109,158 @@ func (c *CollectorImpl) getTickers(market string) ([] Ticker, error) {
 //
 //}
 
+type HuobiTicker struct {
+	Id           string         `json:"id"`
+	Timestamp    int64         `json:"ts"`
+	Close	     float64         `json:"close"`
+	Open      	 float64  		`json:"open"`
+	High      	 float64  		`json:"high"`
+	Low      	 float64  		`json:"low"`
+	Amount      	 float64  		`json:"amount"`
+	Count      int      `json:"count"`
+	Vol     float64       `json:"vol"`
+	Ask   []float64      `json:"ask"`
+	Bid   []float64  `json:"bid"`
+}
 
+type BinanceTicker struct {
+	Symbol           string         `json:"symbol"`
+	Change    float64         `json:"priceChangePercent"`
+	Close	     float64         `json:"prevClosePrice"`
+	Open      	 float64  		`json:"openPrice"`
+	High      	 float64  		`json:"highPrice"`
+	Low      	 float64  		`json:"lowPrice"`
+	LastPrice      	 float64  		`json:"lastPrice"`
+	Amount      	 float64  		`json:"volume"`
+	Vol     float64       `json:"quoteVolume"`
+	Ask    float64      `json:"askPrice"`
+	Bid   float64  `json:"bidPrice"`
+}
 
+type OkexTicker struct {
+	High      	 float64  		`json:"high"`
+	Low      	 float64  		`json:"low"`
+	LastPrice      	 float64  		`json:"last"`
+	Vol     float64       `json:"vol"`
+	Ask    float64      `json:"sell"`
+	Bid   float64  `json:"buy"`
+}
+
+func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
+
+	huobiMarket := strings.Replace(market, "-", "", 1)
+	huobiMarket = strings.ToLower(huobiMarket)
+	url := fmt.Sprintf(exchanges["huobi"], huobiMarket)
+	resp, err := http.Get(url)
+	if err != nil {
+		return ticker, err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if nil != err {
+		return ticker, err
+	} else {
+		var huobiTicker *HuobiTicker
+		if err := json.Unmarshal(body, &huobiTicker); nil != err {
+			return ticker, err
+		} else {
+			ticker = Ticker{}
+			ticker.Market = market
+			ticker.Amount = huobiTicker.Amount
+			ticker.Open = huobiTicker.Open
+			ticker.Close = huobiTicker.Close
+			ticker.Last = huobiTicker.Bid[0]
+			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			ticker.Exchange = "huobi"
+			ticker.Vol = huobiTicker.Vol
+			ticker.High = huobiTicker.High
+			ticker.Low = huobiTicker.Low
+
+			return ticker, nil
+		}
+	}
+}
+
+func GetTickerFromBinance(market string) (ticker Ticker, err error) {
+
+	binanceMarket := strings.Replace(market, "-", "", 1)
+	binanceMarket = strings.ToUpper(binanceMarket)
+	url := fmt.Sprintf(exchanges["binance"], binanceMarket)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return ticker, err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if nil != err {
+		return ticker, err
+	} else {
+		var binanceTicker *BinanceTicker
+		if err := json.Unmarshal(body, &binanceTicker); nil != err {
+			return ticker, err
+		} else {
+			ticker = Ticker{}
+			//ticker.Market = market
+			ticker.Amount = binanceTicker.Amount
+			ticker.Open = binanceTicker.Open
+			ticker.Close = binanceTicker.Close
+			ticker.Last = binanceTicker.LastPrice
+			ticker.Change = fmt.Sprintf("%.2f%%", binanceTicker.Change)
+			ticker.Exchange = "binance"
+			ticker.Vol = binanceTicker.Vol
+			ticker.High = binanceTicker.High
+			ticker.Low = binanceTicker.Low
+			return ticker, nil
+		}
+	}
+}
+
+func GetTickerFromOkex(market string) (ticker Ticker, err error) {
+
+	okexMarket := strings.Replace(market, "_", "", 1)
+	okexMarket = strings.ToLower(okexMarket)
+	url := fmt.Sprintf(exchanges["okex"], okexMarket)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return ticker, err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if nil != err {
+		return ticker, err
+	} else {
+		var okexTicker *OkexTicker
+		if err := json.Unmarshal(body, &okexTicker); nil != err {
+			return ticker, err
+		} else {
+			ticker = Ticker{}
+			//ticker.Market = market
+			ticker.Last = okexTicker.LastPrice
+			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			ticker.Exchange = "okex"
+			ticker.Vol = okexTicker.Vol
+			ticker.High = okexTicker.High
+			ticker.Low = okexTicker.Low
+			return ticker, nil
+		}
+	}
+}
 
 
