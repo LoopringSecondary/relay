@@ -51,7 +51,7 @@ func (e *GasPriceEvaluator) start() {
 			for {
 				select {
 				case <-e.stopChan:
-					break
+					return
 				default:
 					blockInterface, err := iterator.Next()
 					if nil == err {
