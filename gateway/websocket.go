@@ -37,26 +37,6 @@ type WebsocketServiceImpl struct {
 	upgrader       websocket.Upgrader
 }
 
-type NodeType int
-
-const (
-	TICKER NodeType = iota
-	PORTFOLIO
-	MARKETCAP
-	BALANCE
-	TRANSACTION
-	TEST
-)
-
-var MsgTypeRoute = map[NodeType]string{
-	TICKER:      "ticker",
-	PORTFOLIO:   "portfolio",
-	MARKETCAP:   "marketcap",
-	BALANCE:     "balance",
-	TRANSACTION: "transaction",
-	TEST:        "test",
-}
-
 type WebsocketRequest map[string]string
 
 func NewWebsocketService(port string, trendManager market.TrendManager, accountManager market.AccountManager, capProvider marketcap.MarketCapProvider) *WebsocketServiceImpl {
