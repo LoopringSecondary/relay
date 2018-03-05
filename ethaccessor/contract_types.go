@@ -286,8 +286,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 }
 
 type CancelOrderMethod struct {
-	AddressList    [3]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB
-	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
+	AddressList    [4]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB, authAddr
+	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, walletId, and cancelAmount
 	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB"`
 	MarginSplit    uint8             `fieldName:"marginSplitPercentage"`
 	V              uint8             `fieldName:"v"`
@@ -295,7 +295,7 @@ type CancelOrderMethod struct {
 	S              [32]byte          `fieldName:"s"`
 }
 
-// should add protocol
+// todo(fuk): modify internal cancelOrderMethod and implement related functions
 func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	var order types.Order
 
