@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"sync"
 
+	"fmt"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
@@ -42,7 +43,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"math/big"
-	"fmt"
 )
 
 const (
