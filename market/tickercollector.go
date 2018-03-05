@@ -26,6 +26,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/log"
 )
 
 type ExchangeType string
@@ -62,7 +64,7 @@ type Collector interface {
 }
 
 type CollectorImpl struct {
-	exs          []Exchange
+	exs          []ExchangeImpl
 	syncInterval int
 	cron         *cron.Cron
 }
@@ -72,16 +74,44 @@ func NewExchange(name, tickerUrl string) *ExchangeImpl {
 }
 
 func (e *ExchangeImpl) updateCache() {
-	cache.Set("", make([]byte, 0), 3600)
 
+	switch e.name {
+	case "binance":
+		updateCacheByExchange(e.name, GetTickerFromBinance)
+	case "okex":
+		updateCacheByExchange(e.name, GetTickerFromOkex)
+	case "huobi":
+		updateCacheByExchange(e.name, GetTickerFromHuobi)
+	}
+}
+
+func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error))  {
+	for _, v := range util.AllMarkets {
+		ticker, err := getter(v)
+		if err != nil {
+			log.Info("get ticker from huobi error " + err.Error())
+		} else {
+			setCache(exchange, v, ticker)
+		}
+	}
+}
+
+func setCache(exchange, market string, ticker Ticker) {
+	cacheKey := cachePreKey + exchange + "_" + market
+	tickerByte, err := json.Marshal(ticker)
+	if err != nil {
+		log.Info("marshal ticker json error " + err.Error())
+	} else {
+		cache.Set(cacheKey , tickerByte, 3600)
+	}
 }
 
 func NewCollector() *CollectorImpl {
-	rst := &CollectorImpl{exs: make([]Exchange, 0), syncInterval: defaultSyncInterval, cron: cron.New()}
+	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New()}
 
 	for k, v := range exchanges {
-		var exchange Exchange = NewExchange(k, v)
-		rst.exs = append(rst.exs, exchange)
+		exchange := NewExchange(k, v)
+		rst.exs = append(rst.exs, *exchange)
 	}
 	return rst
 }
@@ -97,8 +127,18 @@ func (c *CollectorImpl) Start() {
 
 func (c *CollectorImpl) getTickers(market string) ([]Ticker, error) {
 
-	cache.Get(cachePreKey + market + "_")
-	return nil, nil
+	result := make([]Ticker, 0)
+
+	for _, e := range c.exs {
+		cacheKey := cachePreKey + e.name + "_" + market
+		byteRst, err := cache.Get(cacheKey)
+		if err != nil {
+			var unmarshalRst Ticker
+			json.Unmarshal(byteRst, &unmarshalRst)
+			result = append(result, unmarshalRst)
+		}
+	}
+	return result, nil
 }
 
 //func (c *CollectorImpl) getTickerFromRemote(exchange string) ([] Ticker , error) {

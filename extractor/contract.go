@@ -398,7 +398,6 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-	ring.Protocol = common.HexToAddress(contract.To)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {

@@ -180,28 +180,24 @@ type TokenPrice struct {
 	Price float64 `json:"price"`
 }
 
-type WalletService interface {
-	GetTicker() (res []market.Ticker, err error)
-	TestPing(input int) (res string, err error)
-	GetPortfolio(owner string) (res []Portfolio, err error)
-	GetPriceQuote(currency string) (result PriceQuote, err error)
-}
-
 type WalletServiceImpl struct {
 	trendManager   market.TrendManager
 	orderManager   ordermanager.OrderManager
 	accountManager market.AccountManager
 	marketCap      marketcap.MarketCapProvider
 	ethForwarder   *EthForwarder
+	tickerCollector market.CollectorImpl
 }
 
-func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager, capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder) *WalletServiceImpl {
+func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
 	w.accountManager = accountManager
 	w.marketCap = capProvider
 	w.ethForwarder = ethForwarder
+	w.tickerCollector = collector
 	return w
 }
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
@@ -274,19 +270,24 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 
 func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]market.Ticker, err error) {
 	result = make(map[string]market.Ticker)
-	ticker1 := market.Ticker{}
-	ticker1.Exchange = "huobi"
-	ticker1.Market = mkt.Market
-	ticker1.Change = "-23.42%"
-	result["huobi"] = ticker1
+	loopringTicker, err := w.trendManager.GetTickerByMarket(mkt.Market)
+	if err != nil {
+		result["loopring"] = loopringTicker
+	}
+	outTickers, err := w.GetTickers(mkt)
+	if err != nil {
+		for k, v := range outTickers {
+			result[k] = v
+		}
+	}
 	return result, nil
 }
 
-func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
-	if len(owner) == 0 {
+func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
+	if len(owner.owner) == 0 {
 		return errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner)
+	return w.accountManager.UnlockedWallet(owner.owner)
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
