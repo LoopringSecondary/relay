@@ -109,35 +109,30 @@ func (so *SocketIOServiceImpl) Start() {
 		fmt.Println("emit message finished...")
 		fmt.Println(s.RemoteAddr())
 	})
-	server.OnEvent("/", "balance", func(s socketio.Conn, msg string) {
-		query := CommonTokenRequest{ContractVersion: "v1.0", Owner:msg}
-		res, err := so.walletService.GetBalance(query)
-		if err != nil {
-			s.Emit("balance", "get balance error")
-		} else {
 
-			b, _ := json.Marshal(res)
-			s.Emit("balance", string(b[:]))
-		}
-	})
+	for _, v := range MsgTypeRoute {
 
-	server.OnEvent("/", "balance_req", func(s socketio.Conn, msg string) {
-		fmt.Println("input msg is : " + msg)
-		context := make(map[string]string)
-		if s.Context() != nil {
-			context = s.Context().(map[string]string)
-		}
-		context["balance"] = msg
-		s.SetContext(context)
-		fmt.Println("current context is")
-		fmt.Println(s.Context())
-		so.connIdMap[s.ID()] = s
-	})
+		server.OnEvent("/", v + EventPostfixReq, func(s socketio.Conn, msg string) {
+			fmt.Println("input msg is : " + msg)
+			context := make(map[string]string)
+			if s != nil && s.Context() != nil {
+				context = s.Context().(map[string]string)
+			}
+			context[v] = msg
+			s.SetContext(context)
+			fmt.Println("current context is")
+			fmt.Println(s.Context())
+			so.connIdMap[s.ID()] = s
+		})
 
-	server.OnEvent("/", "balance_end", func(s socketio.Conn, msg string) {
-		delete(so.connIdMap, s.ID())
-		s.Close()
-	})
+		server.OnEvent("/", v + EventPostfixEnd, func(s socketio.Conn, msg string) {
+			if s != nil && s.Context() != nil {
+				businesses := s.Context().(map[string]string)
+				delete(businesses, v)
+				s.SetContext(businesses)
+			}
+		})
+	}
 
 	so.cron.AddFunc("0/10 * * * * *", func() {
 
@@ -166,6 +161,92 @@ func (so *SocketIOServiceImpl) Start() {
 								v.Emit("balance_res", string(b[:]))
 							}
 						}
+						if bk == "portfolio" {
+							var query SingleOwner
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetPortfolio(query)
+							if err != nil {
+								v.Emit("portfolio_res", "get portfolio error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("portfolio_res", string(b[:]))
+							}
+						}
+						if bk == "tickers" {
+							var query SingleMarket
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetTickers(query.Market)
+							if err != nil {
+								v.Emit("tickers_res", "get portfolio error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("tickers_res", string(b[:]))
+							}
+						}
+						if bk == "trends" {
+							var query SingleMarket
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetTrend(query)
+							if err != nil {
+								v.Emit("trends_res", "get trends error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("trends_res", string(b[:]))
+							}
+						}
+						if bk == "marketcap" {
+							var query PriceQuoteQuery
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetPriceQuote(query)
+							if err != nil {
+								v.Emit("marketcap_res", "get marketcap error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("marketcap_res", string(b[:]))
+							}
+						}
+						if bk == "transaction" {
+							var query TransactionQuery
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetTransactions(query)
+							if err != nil {
+								v.Emit("transaction_res", "get transaction error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("transaction_res", string(b[:]))
+							}
+						}
+						if bk == "depth" {
+							var query DepthQuery
+							err := json.Unmarshal([]byte(bv), &query)
+							if err != nil {
+								fmt.Println("unmarshal error " + bv)
+							}
+							res, err := so.walletService.GetDepth(query)
+							if err != nil {
+								v.Emit("depth_res", "get depth error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("depth_res", string(b[:]))
+							}
+						}
+
+
 					}
 				}
 			}
@@ -173,22 +254,6 @@ func (so *SocketIOServiceImpl) Start() {
 	})
 	so.cron.Start()
 
-
-
-
-	//for k, v := range MsgTypeRoute {
-	//	server.OnEvent("/", v + EventPostfixRes, func(s socketio.Conn, msg string) {
-	//		query := CommonTokenRequest{ContractVersion: "v1.0", Owner:msg}
-	//		res, err := so.walletService.GetBalance(query)
-	//		if err != nil {
-	//			s.Emit("balance", "get balance error")
-	//		} else {
-	//			b, _ := json.Marshal(res)
-	//			s.Emit("balance", string(b[:]))
-	//		}
-	//	})
-	//
-	//}
 
 	server.OnError("/", func(e error) {
 		fmt.Println("meet error:", e)
@@ -205,11 +270,5 @@ func (so *SocketIOServiceImpl) Start() {
 	log.Fatal(http.ListenAndServe(":" + so.port, nil))
 	log.Println("finished listen socket io....")
 
-}
-
-func buildContext(msgType, msg string) map[string]string {
-
-
-	return make(map[string]string)
 }
 

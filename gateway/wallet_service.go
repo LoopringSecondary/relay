@@ -87,6 +87,10 @@ type SingleOwner struct {
 	owner string `json:"owner"`
 }
 
+type PriceQuoteQuery struct {
+	currency string `json:"currency"`
+}
+
 type CutoffRequest struct {
 	Address string `json:"address"`
 	ContractVersion string `json:"contractVersion"`
@@ -214,18 +218,18 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 	return
 }
 
-func (w *WalletServiceImpl) GetPortfolio(owner string) (res []Portfolio, err error) {
-	if len(owner) == 0 {
+func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
+	if len(query.owner) == 0 {
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account := w.accountManager.GetBalance(DefaultContractVersion, owner)
+	account := w.accountManager.GetBalance(DefaultContractVersion, query.owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
 	}
 
-	priceQuote, err := w.GetPriceQuote(DefaultCapCurrency)
+	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
 	if err != nil {
 		return
 	}
@@ -256,11 +260,11 @@ func (w *WalletServiceImpl) GetPortfolio(owner string) (res []Portfolio, err err
 	return
 }
 
-func (w *WalletServiceImpl) GetPriceQuote(currency string) (result PriceQuote, err error) {
+func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQuote, err error) {
 
-	rst := PriceQuote{currency, make([]TokenPrice, 0)}
+	rst := PriceQuote{query.currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, currency)
+		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.currency)
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 	}
