@@ -240,7 +240,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 			contract.Event = &ethaccessor.OrderCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleOrderCancelledEvent}
 		case CUTOFF_EVT_NAME:
-			contract.Event = &ethaccessor.CutoffTimestampChangedEvent{}
+			contract.Event = &ethaccessor.AllOrdersCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffTimestampEvent}
 		}
 
@@ -880,7 +880,7 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 		return nil
 	}
 
-	contractEvent := contractData.Event.(*ethaccessor.CutoffTimestampChangedEvent)
+	contractEvent := contractData.Event.(*ethaccessor.AllOrdersCancelledEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()

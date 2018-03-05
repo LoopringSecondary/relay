@@ -136,7 +136,7 @@ type OrderCancelledEvent struct {
 	AmountCancelled *big.Int
 }
 
-type CutoffEvent struct {
+type AllOrdersCancelledEvent struct {
 	Owner           common.Address
 	ContractAddress common.Address
 	TxHash          common.Hash

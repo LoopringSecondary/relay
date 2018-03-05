@@ -24,6 +24,7 @@ import (
 	"math/big"
 )
 
+// todo(fuk): rename table
 type CutOffEvent struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
@@ -35,7 +36,7 @@ type CutOffEvent struct {
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
-func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
+func (e *CutOffEvent) ConvertDown(src *types.AllOrdersCancelledEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.ContractAddress.Hex()
 	e.TxHash = src.TxHash.Hex()
@@ -47,7 +48,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 }
 
 // convert dao/cutoffEvent to types/cutoffEvent
-func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
+func (e *CutOffEvent) ConvertUp(dst *types.AllOrdersCancelledEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
 	dst.ContractAddress = common.HexToAddress(e.Protocol)
 	dst.TxHash = common.HexToHash(e.TxHash)

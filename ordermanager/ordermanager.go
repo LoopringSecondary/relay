@@ -263,7 +263,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
-	event := input.(*types.CutoffEvent)
+	event := input.(*types.AllOrdersCancelledEvent)
 
 	protocol := event.ContractAddress
 	owner := event.Owner

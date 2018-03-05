@@ -142,13 +142,13 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
-type CutoffTimestampChangedEvent struct {
+type AllOrdersCancelledEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
-	evt := &types.CutoffEvent{}
+func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
+	evt := &types.AllOrdersCancelledEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = e.Cutoff
 

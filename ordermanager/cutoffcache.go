@@ -62,7 +62,7 @@ func (c *CutoffCache) Get(protocol, owner common.Address) (*big.Int, bool) {
 	cutoff, ok := c.get(protocol, owner)
 	if !ok {
 		if entity, err := c.rds.GetCutoffEvent(protocol, owner); err == nil {
-			var evt types.CutoffEvent
+			var evt types.AllOrdersCancelledEvent
 			entity.ConvertUp(&evt)
 			cutoff = evt.Cutoff
 			c.set(protocol, owner, cutoff)
@@ -74,7 +74,7 @@ func (c *CutoffCache) Get(protocol, owner common.Address) (*big.Int, bool) {
 	return cutoff, true
 }
 
-func (c *CutoffCache) Add(event *types.CutoffEvent) error {
+func (c *CutoffCache) Add(event *types.AllOrdersCancelledEvent) error {
 	entity := new(dao.CutOffEvent)
 	entity.ConvertDown(event)
 	if err := c.rds.Add(entity); err != nil {
