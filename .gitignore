@@ -1,5 +1,6 @@
 .idea
 relay.iml
+accountcmd
 relay
 *.log
 lrcleveldb

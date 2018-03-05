@@ -1,12 +1,12 @@
 package gateway
 
 import (
-	"gopkg.in/googollee/go-socket.io.v1"
 	"net/http"
 	"log"
 	"fmt"
 	"encoding/json"
 	"github.com/robfig/cron"
+	"github.com/googollee/go-socket.io"
 )
 
 
