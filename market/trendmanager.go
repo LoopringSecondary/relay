@@ -494,6 +494,27 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 	return
 }
 
+func (t *TrendManager) GetTickerByMarket(mkt string) (ticker Ticker, err error) {
+
+	if t.cacheReady {
+		if tickerInCache, ok := t.c.Get(tickerKey); ok {
+			tickerMap := tickerInCache.(map[string]Ticker)
+			for k, v := range tickerMap {
+				if k == mkt {
+					v.Buy = strconv.FormatFloat(v.Last, 'f', -1, 64)
+					v.Sell = strconv.FormatFloat(v.Last, 'f', -1, 64)
+					return v, err
+				}
+			}
+		} else {
+			err = errors.New("get ticker from cache error, no value found")
+		}
+	} else {
+		err = errors.New("cache is not ready , please access later")
+	}
+	return
+}
+
 func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err error) {
 
 	if t.cacheReady {

@@ -69,7 +69,7 @@ type Node struct {
 
 type RelayNode struct {
 	trendManager     market.TrendManager
-	tickerCollector  market.Collector
+	tickerCollector  market.CollectorImpl
 	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
 	socketIOService  gateway.SocketIOServiceImpl
@@ -276,16 +276,16 @@ func (n *Node) registerAccountManager() {
 }
 
 func (n *Node) registerTickerCollector() {
-	n.relayNode.tickerCollector = market.NewCollector()
+	n.relayNode.tickerCollector = *market.NewCollector()
 }
 
 func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
-	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder)
+	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector)
 }
 
 func (n *Node) registerJsonRpcService() {
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.walletService)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), &n.relayNode.walletService)
 }
 
 func (n *Node) registerWebsocketService() {

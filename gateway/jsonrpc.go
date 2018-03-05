@@ -19,10 +19,10 @@
 package gateway
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"net"
+	"fmt"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -37,10 +37,10 @@ type JsonrpcService interface {
 
 type JsonrpcServiceImpl struct {
 	port          string
-	walletService WalletServiceImpl
+	walletService *WalletServiceImpl
 }
 
-func NewJsonrpcService(port string, walletService WalletServiceImpl) *JsonrpcServiceImpl {
+func NewJsonrpcService(port string, walletService *WalletServiceImpl) *JsonrpcServiceImpl {
 	l := &JsonrpcServiceImpl{}
 	l.port = port
 	l.walletService = walletService
@@ -48,21 +48,18 @@ func NewJsonrpcService(port string, walletService WalletServiceImpl) *JsonrpcSer
 }
 
 func (j *JsonrpcServiceImpl) Start() {
-	log.Info("start jsonrpc service now.......1")
+
 	handler := rpc.NewServer()
 	if err := handler.RegisterName("loopring", j.walletService); err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	log.Info("start jsonrpc service now.......2")
-
 	var (
 		listener net.Listener
 		err      error
 	)
 
-	log.Info("start jsonrpc service now.......3")
 	if listener, err = net.Listen("tcp", ":8083"); err != nil {
 		return
 	}
