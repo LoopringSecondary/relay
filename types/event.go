@@ -39,15 +39,6 @@ type TokenUnRegisterEvent struct {
 	Time            *big.Int
 }
 
-type RinghashSubmittedEvent struct {
-	RingHash        common.Hash
-	RingMiner       common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Blocknumber     *big.Int
-	Time            *big.Int
-}
-
 type AddressAuthorizedEvent struct {
 	Protocol        common.Address
 	ContractAddress common.Address
@@ -211,23 +202,6 @@ type SubmitRingMethodEvent struct {
 	UsedGas      *big.Int
 	UsedGasPrice *big.Int
 	Err          error
-}
-
-type RingHashSubmitMethodEvent struct {
-	RingMiner    common.Address
-	RingHash     common.Hash
-	TxHash       common.Hash
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
-	Err          error
-}
-
-type BatchSubmitRingHashMethodEvent struct {
-	RingHashMinerMap map[common.Hash]common.Address
-	TxHash           common.Hash
-	UsedGas          *big.Int
-	UsedGasPrice     *big.Int
-	Err              error
 }
 
 type RingSubmitFailedEvent struct {

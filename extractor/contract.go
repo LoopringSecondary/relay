@@ -159,7 +159,6 @@ func newAbiProcessor(db dao.RdsService) *AbiProcessor {
 	processor.loadWethContract()
 	processor.loadProtocolContract()
 	processor.loadTokenRegisterContract()
-	processor.loadRingHashRegisteredContract()
 	processor.loadTokenTransferDelegateProtocol()
 
 	return processor
@@ -359,45 +358,6 @@ func (processor *AbiProcessor) loadTokenRegisterContract() {
 	}
 }
 
-func (processor *AbiProcessor) loadRingHashRegisteredContract() {
-	for name, event := range ethaccessor.RinghashRegistryAbi().Events {
-		if name != RINGHASHREGISTERED_EVT_NAME {
-			continue
-		}
-
-		contract := newEventData(&event, ethaccessor.RinghashRegistryAbi())
-		contract.Event = &ethaccessor.RingHashSubmittedEvent{}
-
-		watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRinghashSubmitEvent}
-		eventemitter.On(contract.Id.Hex(), watcher)
-
-		processor.events[contract.Id] = contract
-		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
-	}
-
-	for name, method := range ethaccessor.RinghashRegistryAbi().Methods {
-		if name != BATCHSUBMITRINGHASH_METHOD_NAME && name != SUBMITRINGHASH_METHOD_NAME {
-			continue
-		}
-
-		contract := newMethodData(&method, ethaccessor.RinghashRegistryAbi())
-		watcher := &eventemitter.Watcher{}
-
-		switch contract.Name {
-		case SUBMITRINGHASH_METHOD_NAME:
-			contract.Method = &ethaccessor.SubmitRingHashMethod{}
-			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingHashMethod}
-		case BATCHSUBMITRINGHASH_METHOD_NAME:
-			contract.Method = &ethaccessor.BatchSubmitRingHashMethod{}
-			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleBatchSubmitRingHashMethod}
-		}
-
-		eventemitter.On(contract.Id, watcher)
-		processor.methods[contract.Id] = contract
-		log.Infof("extractor,contract method name:%s -> key:%s", contract.Name, contract.Id)
-	}
-}
-
 func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 	for name, event := range ethaccessor.DelegateAbi().Events {
 		if name != ADDRESSAUTHORIZED_EVT_NAME && name != ADDRESSDEAUTHORIZED_EVT_NAME {
@@ -500,60 +460,6 @@ func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList 
 		model2.ConvertDown(&tx)
 		processor.db.SaveTransaction(&model2)
 	}
-}
-
-func (processor *AbiProcessor) handleSubmitRingHashMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-	method := contract.Method.(*ethaccessor.SubmitRingHashMethod)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s submitRingHash method unpack error:%s", contract.TxHash, err.Error())
-		return nil
-	}
-	evt, err := method.ConvertDown()
-	if err != nil {
-		log.Errorf("extractor,tx:%s submitRingHash method convert order data error:%s", contract.TxHash, err.Error())
-		return nil
-	}
-
-	evt.TxHash = common.HexToHash(contract.TxHash)
-	evt.UsedGas = contract.Gas
-	evt.UsedGasPrice = contract.GasPrice
-	evt.Err = contract.IsValid()
-
-	log.Debugf("extractor,tx:%s submitRingHash method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
-
-	eventemitter.Emit(eventemitter.Miner_SubmitRingHash_Method, evt)
-
-	return nil
-}
-
-func (processor *AbiProcessor) handleBatchSubmitRingHashMethod(input eventemitter.EventData) error {
-	contract := input.(MethodData)
-	method := contract.Method.(*ethaccessor.BatchSubmitRingHashMethod)
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(method, contract.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s batchSubmitRingHash method unpack error:%s", contract.TxHash, err.Error())
-		return nil
-	}
-	evt, err := method.ConvertDown()
-	if err != nil {
-		log.Errorf("extractor,tx:%s batchSubmitRingHash method convert order data error:%s", contract.TxHash, err.Error())
-		return nil
-	}
-
-	evt.TxHash = common.HexToHash(contract.TxHash)
-	evt.UsedGas = contract.Gas
-	evt.UsedGasPrice = contract.GasPrice
-	evt.Err = contract.IsValid()
-
-	log.Debugf("extractor,tx:%s batchSubmitRingHash method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
-
-	eventemitter.Emit(eventemitter.Miner_BatchSubmitRingHash_Method, evt)
-
-	return nil
 }
 
 func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventData) error {
@@ -995,30 +901,6 @@ func (processor *AbiProcessor) handleTokenUnRegisteredEvent(input eventemitter.E
 	log.Debugf("extractor,tx:%s tokenUnregistered event address:%s, symbol:%s", contractData.TxHash, evt.Token.Hex(), evt.Symbol)
 
 	eventemitter.Emit(eventemitter.TokenUnRegistered, evt)
-
-	return nil
-}
-
-func (processor *AbiProcessor) handleRinghashSubmitEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 3 {
-		log.Errorf("extractor,tx:%s ringHashSubmit event indexed fields number error", contractData.TxHash)
-		return nil
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.RingHashSubmittedEvent)
-	contractEvent.RingMiner = common.HexToAddress(contractData.Topics[1])
-	contractEvent.RingHash = common.HexToHash(contractData.Topics[2])
-
-	evt := contractEvent.ConvertDown()
-	evt.ContractAddress = common.HexToAddress(contractData.ContractAddress)
-	evt.Time = contractData.Time
-	evt.Blocknumber = contractData.BlockNumber
-	evt.TxHash = common.HexToHash(contractData.TxHash)
-
-	log.Debugf("extractor,tx:%s ringHashSubmit event ringhash:%s, ringMiner:%s", contractData.TxHash, evt.RingHash.Hex(), evt.RingMiner.Hex())
-
-	eventemitter.Emit(eventemitter.RingHashSubmitted, evt)
 
 	return nil
 }
