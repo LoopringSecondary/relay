@@ -85,7 +85,7 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 		switch method {
 		case "portfolio":
 			if v, ok := req["owner"]; ok {
-				return walletService.GetPortfolio(v)
+				return walletService.GetPortfolio(SingleOwner{v})
 			} else {
 				return nil, errors.New("owner must be applied")
 			}
@@ -93,14 +93,14 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 			balanceQuery := CommonTokenRequest{ContractVersion: req["contractVersion"], Owner: req["owner"]}
 			return walletService.GetBalance(balanceQuery)
 		case "tickers":
-			return walletService.GetTickers(req["market"])
+			return walletService.GetTickers(SingleMarket{req["market"]})
 		case "transactions":
 			pageIndex, _ := strconv.Atoi(req["pageIndex"])
 			pageSize, _ := strconv.Atoi(req["pageSize"])
 			txnQuery := TransactionQuery{ThxHash: req["thxHash"], Owner: req["owner"], PageIndex: pageIndex, PageSize: pageSize}
 			return walletService.GetTransactions(txnQuery)
 		case "marketcap":
-			return walletService.GetPriceQuote(req["currency"])
+			return walletService.GetPriceQuote(PriceQuoteQuery{req["currency"]})
 		case "depth":
 			length, _ := strconv.Atoi(req["length"])
 			depthQuery := DepthQuery{Length: length, Market: req["market"], ContractVersion: req["contractVersion"]}

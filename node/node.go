@@ -42,6 +42,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 	"math/big"
+	"fmt"
 )
 
 const (
@@ -77,8 +78,11 @@ type RelayNode struct {
 
 func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
+	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
+	fmt.Print("start jsonrpc in node......")
 	n.jsonRpcService.Start()
+	fmt.Print("end jsonrpc in node......")
 	//n.websocketService.Start()
 	n.socketIOService.Start()
 

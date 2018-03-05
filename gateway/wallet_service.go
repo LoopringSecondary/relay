@@ -272,11 +272,11 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTickers(mkt string) (result map[string]market.Ticker, err error) {
+func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]market.Ticker, err error) {
 	result = make(map[string]market.Ticker)
 	ticker1 := market.Ticker{}
 	ticker1.Exchange = "huobi"
-	ticker1.Market = mkt
+	ticker1.Market = mkt.Market
 	ticker1.Change = "-23.42%"
 	result["huobi"] = ticker1
 	return result, nil

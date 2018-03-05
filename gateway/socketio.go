@@ -178,7 +178,7 @@ func (so *SocketIOServiceImpl) Start() {
 							if err != nil {
 								fmt.Println("unmarshal error " + bv)
 							}
-							res, err := so.walletService.GetTickers(query.Market)
+							res, err := so.walletService.GetTickers(query)
 							if err != nil {
 								v.Emit("tickers_res", "get portfolio error")
 							} else {
