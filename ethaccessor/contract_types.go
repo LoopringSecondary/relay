@@ -231,16 +231,15 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 }
 
 type SubmitRingMethod struct {
-	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
-	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
-	Uint8ArgsList      [][2]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList,feeSelectionList
+	AddressList        [][3]common.Address `fieldName:"addressList"`   // owner,tokenS,tokenB(authAddress)
+	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
+	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList
 	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList"`
 	VList              []uint8             `fieldName:"vList"`
 	RList              [][32]uint8         `fieldName:"rList"`
 	SList              [][32]uint8         `fieldName:"sList"`
-	RingMiner          common.Address      `fieldName:"ringminer"`
-	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
-	Protocol           common.Address
+	MinerId            uint8               `fieldName:"minerId"`
+	FeeRecipient       uint16              `fieldName:"feeSelections"`
 }
 
 // should add protocol, miner, feeRecipient
@@ -256,7 +255,7 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	for i := 0; i < length; i++ {
 		var order types.Order
 
-		order.Protocol = m.Protocol
+		//todo(fuk): set order.Protocol
 		order.Owner = m.AddressList[i][0]
 		order.TokenS = m.AddressList[i][1]
 		if i == length-1 {
