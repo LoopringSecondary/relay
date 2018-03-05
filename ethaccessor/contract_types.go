@@ -320,6 +320,15 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	return &order, nil
 }
 
+type CancelAllOrdersByTradingPairMethod struct {
+	Token1 common.Address `fieldName:"token1"`
+	Token2 common.Address `fieldName:"token2"`
+	Cutoff uint           `fieldName:"cutoff"`
+}
+
+// todo(fuk): add internal cancelAllOrdersByTradingPair and implement related functions
+
+// todo(fuk): delete
 type SubmitRingHashMethod struct {
 	RingMiner common.Address `fieldName:"ringminer"`
 	RingHash  common.Hash    `fieldName:"ringhash"`
@@ -334,6 +343,7 @@ func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethodEvent, 
 	return &dst, nil
 }
 
+// todo(fuk): delete
 type BatchSubmitRingHashMethod struct {
 	RingMinerList []common.Address `fieldName:"ringminerList"`
 	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
