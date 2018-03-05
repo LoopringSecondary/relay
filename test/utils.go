@@ -206,9 +206,8 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(time.Now().Unix())
-	order.Ttl = big.NewInt(8640000)
-	order.Salt = big.NewInt(1000)
+	order.ValidSince = big.NewInt(time.Now().Unix())
+	order.ValidUntil = big.NewInt(8640000)
 	order.LrcFee = lrcFee
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0

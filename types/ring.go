@@ -105,7 +105,7 @@ func (ring *Ring) GenerateSubmitArgs(miner common.Address, feeReceipt common.Add
 		order := filledOrder.OrderState.RawOrder
 		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [2]common.Address{order.Owner, order.TokenS})
 		rateAmountS, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
-		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.Timestamp, order.Ttl, order.Salt, order.LrcFee, rateAmountS})
+		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS})
 
 		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [2]uint8{order.MarginSplitPercentage, filledOrder.FeeSelection})
 
