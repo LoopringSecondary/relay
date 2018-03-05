@@ -282,11 +282,11 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	return result, nil
 }
 
-func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
-	if len(owner) == 0 {
+func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
+	if len(owner.owner) == 0 {
 		return errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner)
+	return w.accountManager.UnlockedWallet(owner.owner)
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {

@@ -140,9 +140,9 @@ func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerTrendManager()
 	n.registerTickerCollector()
+	n.registerWalletService()
 	n.registerJsonRpcService()
 	n.registerWebsocketService()
-	n.registerWalletService()
 	n.registerSocketIOService()
 }
 
