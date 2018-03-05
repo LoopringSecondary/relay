@@ -155,6 +155,15 @@ func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
 	return evt
 }
 
+type OrdersCancelledEvent struct {
+	Owner  common.Address `fieldName:"_address"`
+	Token1 common.Address `fieldName:"_token1"`
+	Token2 common.Address `fieldName:"_token2"`
+	Cutoff *big.Int       `fieldName:"_cutoff"`
+}
+
+// todo(fuk): add internal ordersCancelled event,implement convert and parse functions
+
 type TokenRegisteredEvent struct {
 	Token  common.Address `fieldName:"addr"`
 	Symbol string         `fieldName:"symbol"`
