@@ -190,20 +190,6 @@ func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
 	return evt
 }
 
-type RingHashSubmittedEvent struct {
-	RingHash  common.Hash    `fieldName:"_ringhash"`
-	RingMiner common.Address `fieldName:"_ringminer"`
-}
-
-func (e *RingHashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
-	evt := &types.RinghashSubmittedEvent{}
-
-	evt.RingHash = e.RingHash
-	evt.RingMiner = e.RingMiner
-
-	return evt
-}
-
 type AddressAuthorizedEvent struct {
 	ContractAddress common.Address `fieldName:"addr"`
 	Number          int            `fieldName:"number"`
