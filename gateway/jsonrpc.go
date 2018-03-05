@@ -36,8 +36,8 @@ type JsonrpcService interface {
 }
 
 type JsonrpcServiceImpl struct {
-	port           string
-	walletService  WalletServiceImpl
+	port          string
+	walletService WalletServiceImpl
 }
 
 func NewJsonrpcService(port string, walletService WalletServiceImpl) *JsonrpcServiceImpl {
@@ -66,4 +66,3 @@ func (j *JsonrpcServiceImpl) Start() {
 
 	return
 }
-

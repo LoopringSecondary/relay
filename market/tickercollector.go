@@ -19,30 +19,30 @@
 package market
 
 import (
-	"github.com/robfig/cron"
-	"github.com/Loopring/relay/cache"
-	"strings"
+	"encoding/json"
 	"fmt"
+	"github.com/Loopring/relay/cache"
+	"github.com/robfig/cron"
 	"io/ioutil"
 	"net/http"
-	"encoding/json"
+	"strings"
 )
 
 type ExchangeType string
 
 const (
 	Binance ExchangeType = "binance"
-	OkEx ExchangeType = "okex"
-	Huobi ExchangeType = "huobi"
+	OkEx    ExchangeType = "okex"
+	Huobi   ExchangeType = "huobi"
 )
 
 const cachePreKey = "TICKER_EX_"
 
 //TODO (xiaolu)  add more exchanges to this list
-var exchanges = map[string]string {
-	"binance" : "https://api.binance.com/api/v1/ticker/24hr?symbol=%s",
-	"okex" : "https://www.okex.com/api/v1/ticker.do?symbol=%s",
-	"huobi" : "https://api.huobi.pro/market/detail?symbol=%s",
+var exchanges = map[string]string{
+	"binance": "https://api.binance.com/api/v1/ticker/24hr?symbol=%s",
+	"okex":    "https://www.okex.com/api/v1/ticker.do?symbol=%s",
+	"huobi":   "https://api.huobi.pro/market/detail?symbol=%s",
 }
 
 const defaultSyncInterval = 5 // minutes
@@ -52,7 +52,7 @@ type Exchange interface {
 }
 
 type ExchangeImpl struct {
-	name string
+	name      string
 	tickerUrl string
 }
 
@@ -62,25 +62,25 @@ type Collector interface {
 }
 
 type CollectorImpl struct {
-	exs []Exchange
+	exs          []Exchange
 	syncInterval int
-	cron *cron.Cron
+	cron         *cron.Cron
 }
 
 func NewExchange(name, tickerUrl string) *ExchangeImpl {
 	return &ExchangeImpl{name, tickerUrl}
 }
 
-func (e *ExchangeImpl) updateCache(){
+func (e *ExchangeImpl) updateCache() {
 	cache.Set("", make([]byte, 0), 3600)
 
 }
 
 func NewCollector() *CollectorImpl {
-	rst := &CollectorImpl{exs:make([]Exchange, 0), syncInterval: defaultSyncInterval, cron : cron.New()}
+	rst := &CollectorImpl{exs: make([]Exchange, 0), syncInterval: defaultSyncInterval, cron: cron.New()}
 
 	for k, v := range exchanges {
-		var exchange  Exchange = NewExchange(k, v)
+		var exchange Exchange = NewExchange(k, v)
 		rst.exs = append(rst.exs, exchange)
 	}
 	return rst
@@ -89,13 +89,13 @@ func NewCollector() *CollectorImpl {
 func (c *CollectorImpl) Start() {
 	// create cron job and exec sync
 	for _, e := range c.exs {
-		c.cron.AddFunc("@every " + string(c.syncInterval) + "m", e.updateCache)
+		c.cron.AddFunc("@every "+string(c.syncInterval)+"m", e.updateCache)
 	}
 	c.cron.Start()
 
 }
 
-func (c *CollectorImpl) getTickers(market string) ([] Ticker, error) {
+func (c *CollectorImpl) getTickers(market string) ([]Ticker, error) {
 
 	cache.Get(cachePreKey + market + "_")
 	return nil, nil
@@ -110,40 +110,40 @@ func (c *CollectorImpl) getTickers(market string) ([] Ticker, error) {
 //}
 
 type HuobiTicker struct {
-	Id           string         `json:"id"`
-	Timestamp    int64         `json:"ts"`
-	Close	     float64         `json:"close"`
-	Open      	 float64  		`json:"open"`
-	High      	 float64  		`json:"high"`
-	Low      	 float64  		`json:"low"`
-	Amount      	 float64  		`json:"amount"`
-	Count      int      `json:"count"`
-	Vol     float64       `json:"vol"`
-	Ask   []float64      `json:"ask"`
-	Bid   []float64  `json:"bid"`
+	Id        string    `json:"id"`
+	Timestamp int64     `json:"ts"`
+	Close     float64   `json:"close"`
+	Open      float64   `json:"open"`
+	High      float64   `json:"high"`
+	Low       float64   `json:"low"`
+	Amount    float64   `json:"amount"`
+	Count     int       `json:"count"`
+	Vol       float64   `json:"vol"`
+	Ask       []float64 `json:"ask"`
+	Bid       []float64 `json:"bid"`
 }
 
 type BinanceTicker struct {
-	Symbol           string         `json:"symbol"`
-	Change    float64         `json:"priceChangePercent"`
-	Close	     float64         `json:"prevClosePrice"`
-	Open      	 float64  		`json:"openPrice"`
-	High      	 float64  		`json:"highPrice"`
-	Low      	 float64  		`json:"lowPrice"`
-	LastPrice      	 float64  		`json:"lastPrice"`
-	Amount      	 float64  		`json:"volume"`
-	Vol     float64       `json:"quoteVolume"`
-	Ask    float64      `json:"askPrice"`
-	Bid   float64  `json:"bidPrice"`
+	Symbol    string  `json:"symbol"`
+	Change    float64 `json:"priceChangePercent"`
+	Close     float64 `json:"prevClosePrice"`
+	Open      float64 `json:"openPrice"`
+	High      float64 `json:"highPrice"`
+	Low       float64 `json:"lowPrice"`
+	LastPrice float64 `json:"lastPrice"`
+	Amount    float64 `json:"volume"`
+	Vol       float64 `json:"quoteVolume"`
+	Ask       float64 `json:"askPrice"`
+	Bid       float64 `json:"bidPrice"`
 }
 
 type OkexTicker struct {
-	High      	 float64  		`json:"high"`
-	Low      	 float64  		`json:"low"`
-	LastPrice      	 float64  		`json:"last"`
-	Vol     float64       `json:"vol"`
-	Ask    float64      `json:"sell"`
-	Bid   float64  `json:"buy"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	LastPrice float64 `json:"last"`
+	Vol       float64 `json:"vol"`
+	Ask       float64 `json:"sell"`
+	Bid       float64 `json:"buy"`
 }
 
 func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
@@ -262,5 +262,3 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 		}
 	}
 }
-
-

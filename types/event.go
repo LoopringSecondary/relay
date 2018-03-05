@@ -146,17 +146,16 @@ type CutoffEvent struct {
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int
-	Time               *big.Int
-	Blocknumber        *big.Int
-	TotalLrcFee        *big.Int
-	TradeAmount        int
-	Ringhash           common.Hash
-	TxHash             common.Hash
-	Miner              common.Address
-	FeeRecipient       common.Address
-	ContractAddress    common.Address
-	IsRinghashReserved bool
+	RingIndex       *big.Int
+	Time            *big.Int
+	Blocknumber     *big.Int
+	TotalLrcFee     *big.Int
+	TradeAmount     int
+	Ringhash        common.Hash
+	TxHash          common.Hash
+	Miner           common.Address
+	FeeRecipient    common.Address
+	ContractAddress common.Address
 }
 
 type WethDepositMethodEvent struct {

@@ -64,13 +64,12 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int       `fieldName:"_ringIndex"`
-	RingHash           common.Hash    `fieldName:"_ringhash"`
-	Miner              common.Address `fieldName:"_miner"`
-	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
-	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
-	OrderHashList      [][32]uint8    `fieldName:"_orderHashList"`
-	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
+	RingIndex     *big.Int       `fieldName:"_ringIndex"`
+	RingHash      common.Hash    `fieldName:"_ringhash"`
+	Miner         common.Address `fieldName:"_miner"`
+	FeeRecipient  common.Address `fieldName:"_feeRecipient"`
+	OrderHashList [][32]uint8    `fieldName:"_orderHashList"`
+	AmountsList   [][6]*big.Int  `fieldName:"_amountsList"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
@@ -85,7 +84,6 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt.Ringhash = e.RingHash
 	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
-	evt.IsRinghashReserved = e.IsRingHashReserved
 
 	var list []*types.OrderFilledEvent
 	lrcFee := big.NewInt(0)

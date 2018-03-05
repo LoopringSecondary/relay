@@ -43,7 +43,7 @@ const (
 
 type Ticker struct {
 	Market    string  `json:"market"`
-	Exchange string `json:"exchange"`
+	Exchange  string  `json:"exchange"`
 	Intervals string  `json:"interval"`
 	Amount    float64 `json:"amount"`
 	Vol       float64 `json:"vol"`

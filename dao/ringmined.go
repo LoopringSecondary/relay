@@ -24,6 +24,7 @@ import (
 	"math/big"
 )
 
+// todo(fuk): delete field isRinghashReserved
 type RingMinedEvent struct {
 	ID                 int    `gorm:"column:id;primary_key" json:"id"`
 	Protocol           string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
@@ -47,7 +48,6 @@ func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.FeeRecipient = event.FeeRecipient.Hex()
 	r.RingHash = event.Ringhash.Hex()
 	r.TxHash = event.TxHash.Hex()
-	r.IsRinghashReserved = event.IsRinghashReserved
 	r.BlockNumber = event.Blocknumber.Int64()
 	r.Time = event.Time.Int64()
 	r.TradeAmount = event.TradeAmount
@@ -62,7 +62,6 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.TxHash = common.HexToHash(r.TxHash)
 	event.Miner = common.HexToAddress(r.Miner)
 	event.FeeRecipient = common.HexToAddress(r.FeeRecipient)
-	event.IsRinghashReserved = r.IsRinghashReserved
 	event.Blocknumber = big.NewInt(r.BlockNumber)
 	event.Time = big.NewInt(r.Time)
 	event.TradeAmount = r.TradeAmount

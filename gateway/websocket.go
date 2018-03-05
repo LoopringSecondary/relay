@@ -33,8 +33,8 @@ type WebsocketService interface {
 }
 
 type WebsocketServiceImpl struct {
-	port           string
-	upgrader       websocket.Upgrader
+	port     string
+	upgrader websocket.Upgrader
 }
 
 type WebsocketRequest map[string]string

@@ -19,22 +19,22 @@
 package gateway
 
 import (
+	"fmt"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"qiniupkg.com/x/errors.v7"
-	"strconv"
-	"time"
-	"fmt"
-	"strings"
-	"github.com/Loopring/relay/dao"
 	"sort"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/log"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const DefaultContractVersion = "v1.1"
@@ -92,9 +92,9 @@ type PriceQuoteQuery struct {
 }
 
 type CutoffRequest struct {
-	Address string `json:"address"`
+	Address         string `json:"address"`
 	ContractVersion string `json:"contractVersion"`
-	BlockNumber string `json:"blockNumber"`
+	BlockNumber     string `json:"blockNumber"`
 }
 
 type EstimatedAllocatedAllowanceQuery struct {
@@ -103,10 +103,10 @@ type EstimatedAllocatedAllowanceQuery struct {
 }
 
 type TransactionQuery struct {
-	ThxHash       string `json:"thxHash"`
-	Owner           string `json:"owner"`
-	PageIndex       int    `json:"pageIndex"`
-	PageSize        int    `json:"pageSize"`
+	ThxHash   string `json:"thxHash"`
+	Owner     string `json:"owner"`
+	PageIndex int    `json:"pageIndex"`
+	PageSize  int    `json:"pageSize"`
 }
 
 type OrderQuery struct {
@@ -279,7 +279,7 @@ func (w *WalletServiceImpl) GetTickers(mkt string) (result map[string]market.Tic
 	ticker1.Market = mkt
 	ticker1.Change = "-23.42%"
 	result["huobi"] = ticker1
-	return result ,nil
+	return result, nil
 }
 
 func (w *WalletServiceImpl) UnlockedWallet(owner string) (err error) {
@@ -463,19 +463,19 @@ func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
 	return util.AllMarkets, err
 }
 
-func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (transactions [] types.Transaction, err error) {
+func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (transactions []types.Transaction, err error) {
 	transactions = make([]types.Transaction, 0)
 	mockTxn1 := types.Transaction{
-		Protocol:common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC9"),
-		Owner: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC2"),
-		From: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC3"),
-		To: common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC4"),
-		CreateTime:150134131,
-		UpdateTime:150101931,
-		TxHash:common.StringToHash(""),
-		BlockNumber:big.NewInt(5029675),
-		Status:1,
-		Value:big.NewInt(0x0000000a7640001),
+		Protocol:    common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC9"),
+		Owner:       common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC2"),
+		From:        common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC3"),
+		To:          common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC4"),
+		CreateTime:  150134131,
+		UpdateTime:  150101931,
+		TxHash:      common.StringToHash(""),
+		BlockNumber: big.NewInt(5029675),
+		Status:      1,
+		Value:       big.NewInt(0x0000000a7640001),
 	}
 
 	transactions = append(transactions, mockTxn1)

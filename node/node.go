@@ -71,7 +71,7 @@ type RelayNode struct {
 	tickerCollector  market.Collector
 	jsonRpcService   gateway.JsonrpcServiceImpl
 	websocketService gateway.WebsocketServiceImpl
-	socketIOService gateway.SocketIOServiceImpl
+	socketIOService  gateway.SocketIOServiceImpl
 	walletService    gateway.WalletServiceImpl
 }
 

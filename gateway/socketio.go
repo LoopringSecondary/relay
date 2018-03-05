@@ -1,14 +1,13 @@
 package gateway
 
 import (
-	"net/http"
-	"log"
-	"fmt"
 	"encoding/json"
-	"github.com/robfig/cron"
+	"fmt"
 	"github.com/googollee/go-socket.io"
+	"github.com/robfig/cron"
+	"log"
+	"net/http"
 )
-
 
 type BusinessType int
 
@@ -51,13 +50,11 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Credentials", "true")
 	//w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers", "accept, origin, content-type")
-	w.Header().Add("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS")
+	w.Header().Add("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS")
 	//w.Header().Add("Content-Type", "application/json;charset=utf-8")
 	fmt.Println(w.Header())
 	s.Server.ServeHTTP(w, r)
 }
-
-
 
 var MsgTypeRoute = map[BusinessType]string{
 	TICKER:      "tickers",
@@ -66,7 +63,7 @@ var MsgTypeRoute = map[BusinessType]string{
 	MARKETCAP:   "marketcap",
 	BALANCE:     "balance",
 	TRANSACTION: "transaction",
-	DEPTH: "depth",
+	DEPTH:       "depth",
 	TEST:        "test",
 }
 
@@ -76,17 +73,17 @@ type SocketIOService interface {
 }
 
 type SocketIOServiceImpl struct {
-	port           string
-	walletService  WalletServiceImpl
-	connIdMap map[string]socketio.Conn
+	port               string
+	walletService      WalletServiceImpl
+	connIdMap          map[string]socketio.Conn
 	connBusinessKeyMap map[string]socketio.Conn
-	cron *cron.Cron
+	cron               *cron.Cron
 }
 
 func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOServiceImpl {
 	so := &SocketIOServiceImpl{}
 	so.port = port
-	so.walletService  = walletService
+	so.walletService = walletService
 	so.connBusinessKeyMap = make(map[string]socketio.Conn)
 	so.connIdMap = make(map[string]socketio.Conn)
 	so.cron = cron.New()
@@ -112,7 +109,7 @@ func (so *SocketIOServiceImpl) Start() {
 
 	for _, v := range MsgTypeRoute {
 
-		server.OnEvent("/", v + EventPostfixReq, func(s socketio.Conn, msg string) {
+		server.OnEvent("/", v+EventPostfixReq, func(s socketio.Conn, msg string) {
 			fmt.Println("input msg is : " + msg)
 			context := make(map[string]string)
 			if s != nil && s.Context() != nil {
@@ -125,7 +122,7 @@ func (so *SocketIOServiceImpl) Start() {
 			so.connIdMap[s.ID()] = s
 		})
 
-		server.OnEvent("/", v + EventPostfixEnd, func(s socketio.Conn, msg string) {
+		server.OnEvent("/", v+EventPostfixEnd, func(s socketio.Conn, msg string) {
 			if s != nil && s.Context() != nil {
 				businesses := s.Context().(map[string]string)
 				delete(businesses, v)
@@ -140,7 +137,7 @@ func (so *SocketIOServiceImpl) Start() {
 			fmt.Println("start for loopring id " + id)
 			fmt.Println(v)
 			fmt.Println(v.Context())
-			if v.Context() ==  nil  {
+			if v.Context() == nil {
 				continue
 			} else {
 				businesses := v.Context().(map[string]string)
@@ -246,14 +243,12 @@ func (so *SocketIOServiceImpl) Start() {
 							}
 						}
 
-
 					}
 				}
 			}
 		}
 	})
 	so.cron.Start()
-
 
 	server.OnError("/", func(e error) {
 		fmt.Println("meet error:", e)
@@ -267,8 +262,7 @@ func (so *SocketIOServiceImpl) Start() {
 
 	http.Handle("/socket.io/", NewServer(*server))
 	log.Println("Serving at localhost: " + so.port)
-	log.Fatal(http.ListenAndServe(":" + so.port, nil))
+	log.Fatal(http.ListenAndServe(":"+so.port, nil))
 	log.Println("finished listen socket io....")
 
 }
-
