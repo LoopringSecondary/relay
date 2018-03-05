@@ -136,6 +136,16 @@ type AllOrdersCancelledEvent struct {
 	Cutoff          *big.Int
 }
 
+type OrdersCancelledEvent struct {
+	Owner       common.Address
+	Token1      common.Address
+	Token2      common.Address
+	Cutoff      *big.Int
+	Time        *big.Int
+	BlockNumber *big.Int
+	TxHashh     common.Hash
+}
+
 type RingMinedEvent struct {
 	RingIndex       *big.Int
 	Time            *big.Int
