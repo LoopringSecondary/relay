@@ -415,11 +415,9 @@ func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
 
-	txinfo := contract.setTxInfo()
-
 	// emit to miner
 	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = txinfo
+	evt.TxInfo = contract.setTxInfo()
 	evt.UsedGas = contract.Gas
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
