@@ -24,7 +24,6 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -112,11 +111,11 @@ func EstimateGas(callData []byte, to common.Address, blockNumber string) (gas, g
 	return accessor.EstimateGas(blockNumber, callData, to)
 }
 
-func SignAndSendTransaction(sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func SignAndSendTransaction(sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	return accessor.ContractSendTransactionByData("latest", sender, to, gas, gasPrice, value, callData)
 }
 
-func ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+func ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 	return accessor.ContractSendTransactionMethod(routeParam, a, contractAddress)
 }
 

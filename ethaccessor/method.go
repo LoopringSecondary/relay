@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -259,7 +258,7 @@ func (accessor *ethNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 	}
 }
 
-func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
+func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender common.Address, tx *ethTypes.Transaction) error {
 	var err error
 	if tx, err = crypto.SignTx(sender, tx, nil); nil != err {
 		return err
@@ -276,7 +275,7 @@ func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -285,7 +284,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 	}
 	var txHash string
 	var nonce types.Big
-	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
+	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Hex(), "pending"); nil != err {
 		return "", err
 	}
 	if value == nil {
@@ -307,8 +306,8 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 }
 
 //gas, gasPrice can be set to nil
-func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
-	return func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {

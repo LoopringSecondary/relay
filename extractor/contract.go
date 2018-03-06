@@ -425,7 +425,6 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-
 	// todo(fuk): ring.protocol???
 	// ring.Protocol = common.HexToAddress(contract.To)
 

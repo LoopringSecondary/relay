@@ -252,10 +252,10 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 
 		order.AmountS = m.UintArgsList[i][0]
 		order.AmountB = m.UintArgsList[i][1]
-		order.Timestamp = m.UintArgsList[i][2]
-		order.Ttl = m.UintArgsList[i][3]
-		order.Salt = m.UintArgsList[i][4]
-		order.LrcFee = m.UintArgsList[i][5]
+		order.ValidSince = m.UintArgsList[i][2]
+		order.ValidUntil = m.UintArgsList[i][3]
+		//order.Salt = m.UintArgsList[i][4]
+		order.LrcFee = m.UintArgsList[i][4]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
@@ -291,10 +291,10 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 
 	order.AmountS = m.OrderValues[0]
 	order.AmountB = m.OrderValues[1]
-	order.Timestamp = m.OrderValues[2]
-	order.Ttl = m.OrderValues[3]
-	order.Salt = m.OrderValues[4]
-	order.LrcFee = m.OrderValues[5]
+	order.ValidSince = m.OrderValues[2]
+	order.ValidUntil = m.OrderValues[3]
+	//order.Salt = m.OrderValues[4]
+	order.LrcFee = m.OrderValues[4]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit

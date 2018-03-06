@@ -19,16 +19,18 @@
 package crypto
 
 import (
+	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )
 
 type EthCrypto struct {
 	homestead bool
-	ks        *keystore.KeyStore
 }
 
 //签名验证
@@ -64,11 +66,6 @@ func (c EthCrypto) VRSToSig(v byte, r, s []byte) (sig []byte, err error) {
 	return sig, nil
 }
 
-func (c EthCrypto) Sign(hashPre []byte, signer accounts.Account) ([]byte, error) {
-	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
-	return c.ks.SignHash(signer, hash)
-}
-
 func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	r = make([]byte, 32)
 	s = make([]byte, 32)
@@ -78,13 +75,83 @@ func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	return v, r, s
 }
 
-func (c EthCrypto) UnlockAccount(acc accounts.Account, passphrase string) error {
+type EthKSCrypto struct {
+	EthCrypto
+	ks *keystore.KeyStore
+}
+
+func (c EthKSCrypto) Sign(hashPre []byte, signerAddr common.Address) ([]byte, error) {
+	signer := accounts.Account{Address: signerAddr}
+	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
+	return c.ks.SignHash(signer, hash)
+}
+
+func (c EthKSCrypto) UnlockAccount(acc accounts.Account, passphrase string) error {
 	return c.ks.Unlock(acc, passphrase)
 }
-func (c EthCrypto) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+
+func (c EthKSCrypto) SignTx(addr common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	a := accounts.Account{Address: addr}
 	return c.ks.SignTx(a, tx, chainID)
 }
 
-func NewCrypto(homestead bool, ks *keystore.KeyStore) EthCrypto {
-	return EthCrypto{homestead: homestead, ks: ks}
+func NewKSCrypto(homestead bool, ks *keystore.KeyStore) EthKSCrypto {
+	return EthKSCrypto{EthCrypto: EthCrypto{homestead: homestead}, ks: ks}
+}
+
+type EthPrivateKeyCrypto struct {
+	EthCrypto
+	privateKey *ecdsa.PrivateKey
+}
+
+func (c EthPrivateKeyCrypto) Sign(hashPre []byte, signerAddr common.Address) ([]byte, error) {
+	hash := c.GenerateHash([]byte("\x19Ethereum Signed Message:\n32"), hashPre)
+	return ethCrypto.Sign(hash, c.privateKey)
+}
+
+func (c EthPrivateKeyCrypto) Address() common.Address {
+	return ethCrypto.PubkeyToAddress(c.privateKey.PublicKey)
+}
+
+func (c EthPrivateKeyCrypto) SignTx(addr common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	var signer ethTypes.Signer
+	if chainID != nil {
+		signer = ethTypes.NewEIP155Signer(chainID)
+	} else {
+		signer = ethTypes.HomesteadSigner{}
+	}
+	if signature, err := ethCrypto.Sign(signer.Hash(tx).Bytes(), c.privateKey); nil != err {
+		return tx, err
+	} else {
+		return tx.WithSignature(signer, signature)
+	}
+}
+
+func NewPrivateKeyCrypto(homestead bool, privateKeyHex string) (EthPrivateKeyCrypto, error) {
+	if "0x" == privateKeyHex[0:2] {
+		privateKeyHex = privateKeyHex[2:]
+	}
+	if privateKey, err := ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex)); nil != err {
+		return EthPrivateKeyCrypto{}, err
+	} else {
+		return EthPrivateKeyCrypto{EthCrypto: EthCrypto{homestead: homestead}, privateKey: privateKey}, nil
+	}
+}
+
+func (h *EthPrivateKeyCrypto) UnmarshalText(input []byte) error {
+	privateKeyHex := string(input)
+	if "0x" == privateKeyHex[0:2] {
+		privateKeyHex = privateKeyHex[2:]
+	}
+	if privateKey, err := ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex)); nil != err {
+		return err
+	} else {
+		h.homestead = true
+		h.privateKey = privateKey
+		return nil
+	}
+}
+
+func (h *EthPrivateKeyCrypto) MarshalText() ([]byte, error) {
+	return []byte("0x" + common.Bytes2Hex(h.privateKey.D.Bytes())), nil
 }

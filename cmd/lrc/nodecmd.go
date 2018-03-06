@@ -123,7 +123,7 @@ func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 			var passphrase string
 			if ctx.IsSet(utils.PasswordsFlag.Name) {
 				passphrase = passwords[idx]
-				if err := crypto.UnlockAccount(acc, passphrase); nil != err {
+				if err := crypto.UnlockKSAccount(acc, passphrase); nil != err {
 					if keystore.ErrNoMatch == err {
 						log.Fatalf("err:", err.Error())
 					} else {
@@ -135,7 +135,7 @@ func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 				for trials := 1; trials < 4; trials++ {
 					fmt.Fprintf(ctx.App.Writer, "Unlocking account %s | Attempt %d/%d \n", acc.Address.Hex(), trials, 3)
 					passphrase, _ = getPassphraseFromTeminal(false, ctx.App.Writer)
-					if err := crypto.UnlockAccount(acc, passphrase); nil != err {
+					if err := crypto.UnlockKSAccount(acc, passphrase); nil != err {
 						if keystore.ErrNoMatch == err {
 							log.Fatalf("err:", err.Error())
 						} else {

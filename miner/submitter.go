@@ -201,7 +201,7 @@ func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Add
 		if gas, gasPrice, err := ethaccessor.EstimateGas(registryData, ringhashRegistryAddress, "latest"); nil != err {
 			return err
 		} else {
-			if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: miners[0]}, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
+			if txHash, err := ethaccessor.SignAndSendTransaction(miners[0], ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
 				return err
 			} else {
 				submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash)
@@ -220,7 +220,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringSubmitInfo *types.RingSubmi
 		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
 	}
 
-	if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: ringSubmitInfo.Miner}, ringhashRegistryAddress, ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, nil, ringSubmitInfo.RegistryData); nil != err {
+	if txHash, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringhashRegistryAddress, ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, nil, ringSubmitInfo.RegistryData); nil != err {
 		return err
 	} else {
 		ringSubmitInfo.RegistryTxHash = common.HexToHash(txHash)
@@ -230,7 +230,7 @@ func (submitter *RingSubmitter) ringhashRegistry(ringSubmitInfo *types.RingSubmi
 }
 
 func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) error {
-	if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: ringSubmitInfo.Miner}, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
+	if txHash, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
 		submitter.submitFailed([]common.Hash{ringSubmitInfo.Ringhash}, err)
 		return err
 	} else {
