@@ -151,9 +151,9 @@ func (submitter *RingSubmitter) listenNewRings() {
 					//		}
 					//	}
 					//} else {
-						for _, ringState := range ringInfos {
-							submitter.submitRing(ringState)
-						}
+					for _, ringState := range ringInfos {
+						submitter.submitRing(ringState)
+					}
 					//}
 				}
 			}
@@ -414,7 +414,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	var (
 		//implAddress *ethaccessor.ProtocolAddress
 		//exists      bool
-		err         error
+		err error
 	)
 	//if implAddress, exists = ethaccessor.ProtocolAddresses()[protocolAddress]; !exists {
 	//	return nil, errors.New("doesn't contain this version of protocol:" + protocolAddress.Hex())

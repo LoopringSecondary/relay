@@ -114,7 +114,7 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 }
 
 func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, txtype, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = to
@@ -127,9 +127,9 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 	}
 	tx.TxHash = src.TxHash
 	tx.OrderHash = src.OrderHash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }
@@ -150,22 +150,22 @@ func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status u
 }
 
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Address, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	tx.Owner = owner
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Status = status
 	tx.Value = src.AmountCancelled
 	tx.TxHash = src.TxHash
 	tx.OrderHash = src.OrderHash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }
 
 func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
@@ -173,15 +173,15 @@ func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, status
 	tx.Type = TX_TYPE_WRAP
 	tx.Status = status
 	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }
 
 func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
@@ -189,15 +189,15 @@ func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, 
 	tx.Type = TX_TYPE_UNWRAP
 	tx.Status = status
 	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }
 
 func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
@@ -205,15 +205,15 @@ func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent, status uint8) 
 	tx.Type = TX_TYPE_APPROVE
 	tx.Status = status
 	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }
 
 func (tx *Transaction) FromTransferEvent(src *TransferEvent, txhash common.Hash, sendOrReceive, status uint8) error {
-	tx.Protocol = src.ContractAddress
+	tx.Protocol = src.Protocol
 	if sendOrReceive == TX_TYPE_SEND {
 		tx.Owner = src.From
 		tx.From = src.From
@@ -227,9 +227,9 @@ func (tx *Transaction) FromTransferEvent(src *TransferEvent, txhash common.Hash,
 	tx.Type = sendOrReceive
 	tx.Status = status
 	tx.TxHash = txhash
-	tx.BlockNumber = src.Blocknumber
-	tx.CreateTime = src.Time.Int64()
-	tx.UpdateTime = src.Time.Int64()
+	tx.BlockNumber = src.BlockNumber
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 
 	return nil
 }

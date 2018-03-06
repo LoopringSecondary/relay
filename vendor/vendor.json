@@ -40,6 +40,12 @@
 			"revisionTime": "2017-06-13T09:22:38Z"
 		},
 		{
+			"checksumSHA1": "UoeCWTY/FdPkB8R65N6p8GCKY6Y=",
+			"path": "github.com/ethereum/bak/go-ethereum1/common",
+			"revision": "a92d8a26547c138953665387c57168e68bacdd13",
+			"revisionTime": "2017-09-18T21:07:19Z"
+		},
+		{
 			"checksumSHA1": "QuDIDOLqZKyLfz7vkSAvRWxcjtQ=",
 			"path": "github.com/ethereum/go-ethereum",
 			"revision": "bb57f1f1e579a353d4e21368c2217f0462352783",
@@ -193,6 +199,12 @@
 		{
 			"checksumSHA1": "vVBeMnXsvfWeRxzptDU615+qxts=",
 			"path": "github.com/googollee/go-socket.io",
+			"revision": "ab4816a1fbc58a94fb9e7a637d548bb4dbee6491",
+			"revisionTime": "2017-02-23T22:18:44Z"
+		},
+		{
+			"checksumSHA1": "KFcqlKw1C+EdZcJYC31XRu1/dlw=",
+			"path": "github.com/googollee/go-socket.io/parser",
 			"revision": "ab4816a1fbc58a94fb9e7a637d548bb4dbee6491",
 			"revisionTime": "2017-02-23T22:18:44Z"
 		},
@@ -597,6 +609,48 @@
 			"revisionTime": "2017-11-15T12:34:53Z"
 		},
 		{
+			"checksumSHA1": "1Y+TEqRavS2BMgl+9SCxtpCh4DM=",
+			"path": "gopkg.in/googollee/go-engine.io.v1",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "frVJPBaoL7lOS2G4KbuzdqJ4cbg=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/base",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "k7y54228FV0y4z4SAavsNL/vwGI=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/packet",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "DAbr8QGzHc7sj0ylGiBvIa6BE/Y=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/payload",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "w7S59GfT0SJiN4QK0hFKn27H3ig=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/transport",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "pZpSstilpgtlT11fTle10eyYiVo=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/transport/polling",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
+			"checksumSHA1": "dmvhcBgAVYrrfsFr6oCVNoP9QdQ=",
+			"path": "gopkg.in/googollee/go-engine.io.v1/transport/websocket",
+			"revision": "eae2c0880dada5047d480f859eba0513e113e67f",
+			"revisionTime": "2017-02-01T21:52:57Z"
+		},
+		{
 			"checksumSHA1": "DQXNV0EivoHm4q+bkdahYXrjjfE=",
 			"origin": "github.com/ethereum/go-ethereum/vendor/gopkg.in/karalabe/cookiejar.v2/collections/prque",
 			"path": "gopkg.in/karalabe/cookiejar.v2/collections/prque",
@@ -621,6 +675,12 @@
 			"path": "leb.io/hashland/keccakpg",
 			"revision": "e13accbe55f7fa03c73c74ace4cca4c425e47260",
 			"revisionTime": "2016-11-30T20:14:28Z"
+		},
+		{
+			"checksumSHA1": "ycfUUOhR4rwup16NDVE34RG8AGA=",
+			"path": "qiniupkg.com/x/errors.v7",
+			"revision": "f512abcf45ab4e2ba0fd4784c57b53d495997d66",
+			"revisionTime": "2015-07-21T03:41:13Z"
 		}
 	],
 	"rootPath": "github.com/Loopring/relay"

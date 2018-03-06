@@ -38,11 +38,11 @@ type CutOffEvent struct {
 // convert types/cutoffEvent to dao/CancelEvent
 func (e *CutOffEvent) ConvertDown(src *types.AllOrdersCancelledEvent) error {
 	e.Owner = src.Owner.Hex()
-	e.Protocol = src.ContractAddress.Hex()
+	e.Protocol = src.Protocol.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Cutoff = src.Cutoff.Int64()
-	e.BlockNumber = src.Blocknumber.Int64()
-	e.CreateTime = src.Time.Int64()
+	e.BlockNumber = src.BlockNumber.Int64()
+	e.CreateTime = src.BlockTime
 
 	return nil
 }
@@ -50,11 +50,11 @@ func (e *CutOffEvent) ConvertDown(src *types.AllOrdersCancelledEvent) error {
 // convert dao/cutoffEvent to types/cutoffEvent
 func (e *CutOffEvent) ConvertUp(dst *types.AllOrdersCancelledEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
-	dst.ContractAddress = common.HexToAddress(e.Protocol)
+	dst.Protocol = common.HexToAddress(e.Protocol)
 	dst.TxHash = common.HexToHash(e.TxHash)
-	dst.Blocknumber = big.NewInt(e.BlockNumber)
+	dst.BlockNumber = big.NewInt(e.BlockNumber)
 	dst.Cutoff = big.NewInt(e.Cutoff)
-	dst.Time = big.NewInt(e.CreateTime)
+	dst.BlockTime = e.CreateTime
 
 	return nil
 }

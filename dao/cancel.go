@@ -38,9 +38,9 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.AmountCancelled = src.AmountCancelled.String()
 	e.OrderHash = src.OrderHash.Hex()
 	e.TxHash = src.TxHash.Hex()
-	e.Protocol = src.ContractAddress.Hex()
-	e.CreateTime = src.Time.Int64()
-	e.BlockNumber = src.Blocknumber.Int64()
+	e.Protocol = src.Protocol.Hex()
+	e.CreateTime = src.BlockTime
+	e.BlockNumber = src.BlockNumber.Int64()
 
 	return nil
 }

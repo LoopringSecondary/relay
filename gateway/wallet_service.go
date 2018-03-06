@@ -181,11 +181,11 @@ type TokenPrice struct {
 }
 
 type WalletServiceImpl struct {
-	trendManager   market.TrendManager
-	orderManager   ordermanager.OrderManager
-	accountManager market.AccountManager
-	marketCap      marketcap.MarketCapProvider
-	ethForwarder   *EthForwarder
+	trendManager    market.TrendManager
+	orderManager    ordermanager.OrderManager
+	accountManager  market.AccountManager
+	marketCap       marketcap.MarketCapProvider
+	ethForwarder    *EthForwarder
 	tickerCollector market.CollectorImpl
 }
 
@@ -274,10 +274,10 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	if err != nil {
 		result["loopring"] = loopringTicker
 	}
-	outTickers, err := w.GetTickers(mkt)
+	outTickers, err := w.tickerCollector.GetTickers(mkt.Market)
 	if err != nil {
-		for k, v := range outTickers {
-			result[k] = v
+		for _, v := range outTickers {
+			result[v.Exchange] = v
 		}
 	}
 	return result, nil

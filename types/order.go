@@ -58,8 +58,8 @@ const (
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
-	AuthAddr	common.Address `json:"authAddr" gencodec:"required"`                    //
+	Protocol              common.Address             `json:"protocol" gencodec:"required"`       // 智能合约地址
+	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
 	WalletId              *big.Int                   `json:"walletId" gencodec:"required"`
 	TokenS                common.Address             `json:"tokenS" gencodec:"required"`     // 卖出erc20代币智能合约地址

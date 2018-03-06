@@ -56,10 +56,10 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.LrcFee = src.LrcFee.String()
 	f.SplitS = src.SplitS.String()
 	f.SplitB = src.SplitB.String()
-	f.Protocol = src.ContractAddress.Hex()
+	f.Protocol = src.Protocol.Hex()
 	f.RingIndex = src.RingIndex.Int64()
-	f.BlockNumber = src.Blocknumber.Int64()
-	f.CreateTime = src.Time.Int64()
+	f.BlockNumber = src.BlockNumber.Int64()
+	f.CreateTime = src.BlockTime
 	f.RingHash = src.Ringhash.Hex()
 	f.TxHash = src.TxHash.Hex()
 	f.PreOrderHash = src.PreOrderHash.Hex()
