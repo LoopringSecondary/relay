@@ -44,6 +44,5 @@ type SplitMinerAddress struct {
 func NewRing(filledOrders []*types.FilledOrder) *types.Ring {
 	ring := &types.Ring{}
 	ring.Orders = filledOrders
-	ring.Hash = ring.GenerateHash()
 	return ring
 }

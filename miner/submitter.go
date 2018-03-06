@@ -36,20 +36,20 @@ import (
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
-	minerAccountForSign accounts.Account
-	feeReceipt          common.Address //used to receive fee
+	minerAccountForSign   accounts.Account
+	miner                 *types.NameRegistryInfo
 
-	maxGasLimit *big.Int
-	minGasLimit *big.Int
+	maxGasLimit           *big.Int
+	minGasLimit           *big.Int
 
 	normalMinerAddresses  []*NormalMinerAddress
 	percentMinerAddresses []*SplitMinerAddress
 
-	dbService         dao.RdsService
-	marketCapProvider marketcap.MarketCapProvider
-	matcher           Matcher
+	dbService             dao.RdsService
+	marketCapProvider     marketcap.MarketCapProvider
+	matcher               Matcher
 
-	stopFuncs []func()
+	stopFuncs             []func()
 }
 
 type RingSubmitFailed struct {
@@ -90,13 +90,13 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
-	if len(options.NormalMiners) > 0 {
-		submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.NormalMiners[0].Address)}
-	} else {
-		submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.PercentMiners[0].Address)}
-	}
 
-	submitter.feeReceipt = common.HexToAddress(options.FeeReceipt)
+	//todo:需要更改为nameregistryinfo的类型
+	//if len(options.NormalMiners) > 0 {
+	//	submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.NormalMiners[0].Address)}
+	//} else {
+	//	submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.PercentMiners[0].Address)}
+	//}
 
 	submitter.stopFuncs = []func(){}
 	return submitter
@@ -423,7 +423,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 
 	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState}
 	if types.IsZeroHash(ringState.Hash) {
-		ringState.Hash = ringState.GenerateHash()
+		ringState.Hash = ringState.GenerateHash(submitter.miner)
 	}
 
 	ringSubmitInfo.ProtocolAddress = protocolAddress
@@ -455,18 +455,21 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	//	ringSubmitInfo.RegistryGas.Add(ringSubmitInfo.RegistryGas, big.NewInt(1000))
 	//}
 
-	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.minerAccountForSign.Address, submitter.feeReceipt)
-	ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",
-		ringSubmitArgs.AddressList,
-		ringSubmitArgs.UintArgsList,
-		ringSubmitArgs.Uint8ArgsList,
-		ringSubmitArgs.BuyNoMoreThanAmountBList,
-		ringSubmitArgs.VList,
-		ringSubmitArgs.RList,
-		ringSubmitArgs.SList,
-		ringSubmitArgs.Ringminer,
-		ringSubmitArgs.FeeRecepient,
-	)
+	if ringSubmitArgs,err1 := ringState.GenerateSubmitArgs(submitter.miner);nil != err1 {
+		return nil, err1
+	} else {
+		ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",
+			ringSubmitArgs.AddressList,
+			ringSubmitArgs.UintArgsList,
+			ringSubmitArgs.Uint8ArgsList,
+			ringSubmitArgs.BuyNoMoreThanAmountBList,
+			ringSubmitArgs.VList,
+			ringSubmitArgs.RList,
+			ringSubmitArgs.SList,
+			ringSubmitArgs.Miner.ParticipantId,
+			ringSubmitArgs.FeeSelections,
+		)
+	}
 	if nil != err {
 		return nil, err
 	}

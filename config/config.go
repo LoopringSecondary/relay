@@ -180,7 +180,7 @@ type NormalMinerAddress struct {
 
 type MinerOptions struct {
 	RingMaxLength         int `required:"true"` //recommended value:4
-	FeeRecepient          string
+	Name          string
 	Miner                 string
 	FeeReceipt            string                //address the receipt of fee
 	NormalMiners          []NormalMinerAddress  //
