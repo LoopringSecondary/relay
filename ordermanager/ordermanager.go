@@ -172,7 +172,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// get rds.Order and types.OrderState
-	state := &types.OrderState{UpdatedBlock: event.Blocknumber}
+	state := &types.OrderState{UpdatedBlock: event.BlockNumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// calculate dealt amount
-	state.UpdatedBlock = event.Blocknumber
+	state.UpdatedBlock = event.BlockNumber
 	state.DealtAmountS = new(big.Int).Add(state.DealtAmountS, event.AmountS)
 	state.DealtAmountB = new(big.Int).Add(state.DealtAmountB, event.AmountB)
 	state.SplitAmountS = new(big.Int).Add(state.SplitAmountS, event.SplitS)
@@ -249,7 +249,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 
 	// update order status
 	settleOrderStatus(state, om.mc)
-	state.UpdatedBlock = event.Blocknumber
+	state.UpdatedBlock = event.BlockNumber
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -265,10 +265,10 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
 	event := input.(*types.AllOrdersCancelledEvent)
 
-	protocol := event.ContractAddress
+	protocol := event.Protocol
 	owner := event.Owner
 	currentCutoff := event.Cutoff
-	lastCutoff, ok := om.cutoffCache.Get(event.ContractAddress, event.Owner)
+	lastCutoff, ok := om.cutoffCache.Get(event.Protocol, event.Owner)
 
 	var addErr, delErr error
 	if !ok {
@@ -276,7 +276,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	} else if ok && lastCutoff.Cmp(event.Cutoff) >= 0 {
 		log.Debugf("order manager, handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
 	} else {
-		delErr = om.cutoffCache.Del(event.ContractAddress, event.Owner)
+		delErr = om.cutoffCache.Del(event.Protocol, event.Owner)
 		addErr = om.cutoffCache.Add(event)
 	}
 

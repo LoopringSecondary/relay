@@ -81,7 +81,7 @@ func (c *CutoffCache) Add(event *types.AllOrdersCancelledEvent) error {
 		return err
 	}
 
-	return c.set(event.ContractAddress, event.Owner, event.Cutoff)
+	return c.set(event.Protocol, event.Owner, event.Cutoff)
 }
 
 func (c *CutoffCache) Del(protocol, owner common.Address) error {
