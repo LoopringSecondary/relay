@@ -217,11 +217,6 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	} else {
 		accessor.DelegateAbi = transferDelegateAbi
 	}
-	if tokenRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.TokenRegistryAbi); nil != err {
-		return err
-	} else {
-		accessor.TokenRegistryAbi = tokenRegistryAbi
-	}
 
 	for version, address := range commonOptions.ProtocolImpl.Address {
 		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
@@ -238,12 +233,6 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		} else {
 			log.Debugf("version:%s, contract:%s, ringhashRegistryAddress:%s", version, address, addr)
 			impl.RinghashRegistryAddress = common.HexToAddress(addr)
-		}
-		if err := callMethod(&addr, "tokenRegistryAddress", "latest"); nil != err {
-			return err
-		} else {
-			log.Debugf("version:%s, contract:%s, tokenRegistryAddress:%s", version, address, addr)
-			impl.TokenRegistryAddress = common.HexToAddress(addr)
 		}
 		if err := callMethod(&addr, "delegateAddress", "latest"); nil != err {
 			return err

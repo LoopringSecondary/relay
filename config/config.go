@@ -140,10 +140,9 @@ type KeyStoreOptions struct {
 }
 
 type ProtocolOptions struct {
-	Address          map[string]string
-	ImplAbi          string
-	DelegateAbi      string
-	TokenRegistryAbi string
+	Address     map[string]string
+	ImplAbi     string
+	DelegateAbi string
 }
 
 type CommonOptions struct {
