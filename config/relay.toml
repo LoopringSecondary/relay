@@ -79,7 +79,6 @@ name = "Loopring corporation"
 [miner]
     ringMaxLength = 4
     feeRecepient = "0x4bad3053d574cd54513babe21db3f09bea1d387d" #0x11a22b9b094422fef93eb6d37d3e6f7809d32e6965865bb403eaa6489a532d9d
-    ifRegistryRingHash = false
     rate_ratio_cvs_threshold = 1000000000000000
     [[miner.normal_miners]]
         address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"

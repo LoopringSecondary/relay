@@ -123,19 +123,6 @@ func ContractCallMethod(a *abi.ABI, contractAddress common.Address) func(result 
 	return accessor.ContractCallMethod(a, contractAddress)
 }
 
-func ProtocolCanSubmit(implAddress *ProtocolAddress, ringhash common.Hash, miner common.Address) (bool, error) {
-	callMethod := accessor.ContractCallMethod(accessor.RinghashRegistryAbi, implAddress.RinghashRegistryAddress)
-	var canSubmit types.Big
-	if err := callMethod(&canSubmit, "canSubmit", "latest", ringhash, miner); nil != err {
-		return false, err
-	} else {
-		if canSubmit.Int() <= 0 {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 func Erc20Balance(tokenAddress, ownerAddress common.Address, blockParameter string) (*big.Int, error) {
 	return accessor.Erc20Balance(tokenAddress, ownerAddress, blockParameter)
 }
@@ -195,10 +182,6 @@ func TokenRegistryAbi() *abi.ABI {
 	return accessor.TokenRegistryAbi
 }
 
-func RinghashRegistryAbi() *abi.ABI {
-	return accessor.RinghashRegistryAbi
-}
-
 func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
 }
@@ -228,11 +211,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	} else {
 		accessor.ProtocolImplAbi = protocolImplAbi
 	}
-	if registryAbi, err := NewAbi(commonOptions.ProtocolImpl.RegistryAbi); nil != err {
-		return err
-	} else {
-		accessor.RinghashRegistryAbi = registryAbi
-	}
+
 	if transferDelegateAbi, err := NewAbi(commonOptions.ProtocolImpl.DelegateAbi); nil != err {
 		return err
 	} else {
