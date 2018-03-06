@@ -703,7 +703,6 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.AmountB = types.BigintToHex(src.RawOrder.AmountB)
 	rawOrder.Timestamp = src.RawOrder.ValidSince.Int64()
 	rawOrder.Ttl = types.BigintToHex(src.RawOrder.ValidUntil)
-	rawOrder.Salt = types.BigintToHex(src.RawOrder.Salt)
 	rawOrder.LrcFee = types.BigintToHex(src.RawOrder.LrcFee)
 	rawOrder.BuyNoMoreThanAmountB = src.RawOrder.BuyNoMoreThanAmountB
 	rawOrder.MarginSplitPercentage = types.BigintToHex(big.NewInt(int64(src.RawOrder.MarginSplitPercentage)))
