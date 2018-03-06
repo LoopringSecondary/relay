@@ -43,13 +43,13 @@ type RingMinedEvent struct {
 func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.RingIndex = event.RingIndex.String()
 	r.TotalLrcFee = event.TotalLrcFee.String()
-	r.Protocol = event.ContractAddress.Hex()
+	r.Protocol = event.Protocol.Hex()
 	r.Miner = event.Miner.Hex()
 	r.FeeRecipient = event.FeeRecipient.Hex()
 	r.RingHash = event.Ringhash.Hex()
 	r.TxHash = event.TxHash.Hex()
-	r.BlockNumber = event.Blocknumber.Int64()
-	r.Time = event.Time.Int64()
+	r.BlockNumber = event.BlockNumber.Int64()
+	r.Time = event.BlockTime
 	r.TradeAmount = event.TradeAmount
 
 	return nil
@@ -62,8 +62,8 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.TxHash = common.HexToHash(r.TxHash)
 	event.Miner = common.HexToAddress(r.Miner)
 	event.FeeRecipient = common.HexToAddress(r.FeeRecipient)
-	event.Blocknumber = big.NewInt(r.BlockNumber)
-	event.Time = big.NewInt(r.Time)
+	event.BlockNumber = big.NewInt(r.BlockNumber)
+	event.BlockTime = r.Time
 	event.TradeAmount = r.TradeAmount
 
 	return nil
