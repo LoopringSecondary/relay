@@ -153,13 +153,7 @@ type RingSubmitInfo struct {
 	ProtocolUsedGas  *big.Int
 	ProtocolGasPrice *big.Int
 
-	RegistryData     []byte
-	RegistryGas      *big.Int
-	RegistryUsedGas  *big.Int
-	RegistryGasPrice *big.Int
-
 	SubmitTxHash   common.Hash
-	RegistryTxHash common.Hash
 	Received       *big.Rat
 	LegalCost      *big.Rat
 }
