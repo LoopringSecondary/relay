@@ -80,6 +80,12 @@ type RdsService interface {
 	UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
 	RollBackCutoff(from, to int64) error
 
+	// cutoffpair event table
+	GetCutoffPairEvent(protocol, owner, token1, token2 common.Address) (*CutOffEvent, error)
+	DelCutoffPairEvent(protocol, owner, token1, token2 common.Address) error
+	RollBackCutoffPair(from, to int64) error
+	UpdateCutoffPairEvent(protocol, owner, token1, token2 common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
+
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
 	TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error)
