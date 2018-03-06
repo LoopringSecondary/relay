@@ -89,9 +89,9 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.TokenB = src.TokenB.Hex()
 	o.TokenS = src.TokenS.Hex()
 	o.CreateTime = time.Now().Unix()
-	o.ValidTime = src.Timestamp.Int64()
-	o.Ttl = src.Ttl.Int64()
-	o.Salt = src.Salt.Int64()
+	o.ValidTime = src.ValidSince.Int64()
+	o.Ttl = src.ValidUntil.Int64()
+	//o.Salt = src.Salt.Int64()
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
 	if state.UpdatedBlock != nil {
@@ -122,9 +122,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
 	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
 	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
-	state.RawOrder.Timestamp = big.NewInt(o.ValidTime)
-	state.RawOrder.Ttl = big.NewInt(o.Ttl)
-	state.RawOrder.Salt = big.NewInt(o.Salt)
+	state.RawOrder.ValidSince = big.NewInt(o.ValidTime)
+	state.RawOrder.ValidUntil = big.NewInt(o.Ttl)
+	//state.RawOrder.Salt = big.NewInt(o.Salt)
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	state.RawOrder.MarginSplitPercentage = o.MarginSplitPercentage
 	state.RawOrder.V = o.V

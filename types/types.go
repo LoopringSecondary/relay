@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	Bytes32Length = 32
+	Bytes32Length    = 32
 )
 
 type Bytes32 [Bytes32Length]byte

@@ -701,8 +701,8 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
 	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
 	rawOrder.AmountB = types.BigintToHex(src.RawOrder.AmountB)
-	rawOrder.Timestamp = src.RawOrder.Timestamp.Int64()
-	rawOrder.Ttl = types.BigintToHex(src.RawOrder.Ttl)
+	rawOrder.Timestamp = src.RawOrder.ValidSince.Int64()
+	rawOrder.Ttl = types.BigintToHex(src.RawOrder.ValidUntil)
 	rawOrder.Salt = types.BigintToHex(src.RawOrder.Salt)
 	rawOrder.LrcFee = types.BigintToHex(src.RawOrder.LrcFee)
 	rawOrder.BuyNoMoreThanAmountB = src.RawOrder.BuyNoMoreThanAmountB

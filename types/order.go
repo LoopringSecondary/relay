@@ -41,33 +41,51 @@ const (
 )
 
 //订单原始信息
-/**
-1、是否整体成交
-2、指定成交对象，对方单的hash
-3、分润比例 是否需要设置
-4、成交方向 待定
-5、过期时间，使用块数
-*/
+//struct Order {
+//address owner;
+//address tokenS;
+//address tokenB;
+//address authAddr;
+//uint    validSince;
+//uint    validUntil;
+//uint    amountS;
+//uint    amountB;
+//uint    lrcFee;
+//bool    buyNoMoreThanAmountB;
+//uint    walletId;
+//uint8   marginSplitPercentage;
+//}
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address `json:"protocol" gencodec:"required"`  // 智能合约地址
-	TokenS                common.Address `json:"tokenS" gencodec:"required"`    // 卖出erc20代币智能合约地址
-	TokenB                common.Address `json:"tokenB" gencodec:"required"`    // 买入erc20代币智能合约地址
-	AmountS               *big.Int       `json:"amountS" gencodec:"required"`   // 卖出erc20代币数量上限
-	AmountB               *big.Int       `json:"amountB" gencodec:"required"`   // 买入erc20代币数量上限
-	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"` //
-	Ttl                   *big.Int       `json:"ttl" gencodec:"required"`       // 订单过期时间
-	Salt                  *big.Int       `json:"salt" gencodec:"required"`
-	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
-	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
-	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
-	V                     uint8          `json:"v" gencodec:"required"`
-	R                     Bytes32        `json:"r" gencodec:"required"`
-	S                     Bytes32        `json:"s" gencodec:"required"`
-	Price                 *big.Rat       `json:"price"`
-	Owner                 common.Address `json:"owner"`
-	Hash                  common.Hash    `json:"hash"`
+	Protocol common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
+	AuthAddr	common.Address `json:"authAddr" gencodec:"required"`                    //
+	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
+	WalletId              *big.Int                   `json:"walletId" gencodec:"required"`
+	TokenS                common.Address             `json:"tokenS" gencodec:"required"`     // 卖出erc20代币智能合约地址
+	TokenB                common.Address             `json:"tokenB" gencodec:"required"`     // 买入erc20代币智能合约地址
+	AmountS               *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
+	AmountB               *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
+	ValidSince            *big.Int                   `json:"validSince" gencodec:"required"` //
+	ValidUntil            *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
+	LrcFee                *big.Int                   `json:"lrcFee" `                        // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
+	BuyNoMoreThanAmountB  bool                       `json:"buyNoMoreThanAmountB" gencodec:"required"`
+	MarginSplitPercentage uint8                      `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
+	V                     uint8                      `json:"v" gencodec:"required"`
+	R                     Bytes32                    `json:"r" gencodec:"required"`
+	S                     Bytes32                    `json:"s" gencodec:"required"`
+	Price                 *big.Rat                   `json:"price"`
+	Owner                 common.Address             `json:"owner"`
+	Hash                  common.Hash                `json:"hash"`
+}
+
+type orderMarshaling struct {
+	AmountS    *Big
+	AmountB    *Big
+	ValidSince *Big
+	ValidUntil *Big
+	WalletId   *Big
+	LrcFee     *Big
 }
 
 //go:generate gencodec -type OrderJsonRequest -field-override orderJsonRequestMarshaling -out gen_order_request_json.go
@@ -91,15 +109,6 @@ type OrderJsonRequest struct {
 	Hash                  common.Hash    `json:"hash"`
 }
 
-type orderMarshaling struct {
-	AmountS   *Big
-	AmountB   *Big
-	Timestamp *Big
-	Ttl       *Big
-	Salt      *Big
-	LrcFee    *Big
-}
-
 type orderJsonRequestMarshaling struct {
 	AmountS *Big
 	AmountB *Big
@@ -119,13 +128,14 @@ func (o *Order) GenerateHash() common.Hash {
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
+		o.AuthPrivateKey.Address().Bytes(),
 		common.LeftPadBytes(o.AmountS.Bytes(), 32),
 		common.LeftPadBytes(o.AmountB.Bytes(), 32),
-		common.LeftPadBytes(o.Timestamp.Bytes(), 32),
-		common.LeftPadBytes(o.Ttl.Bytes(), 32),
-		common.LeftPadBytes(o.Salt.Bytes(), 32),
+		common.LeftPadBytes(o.ValidSince.Bytes(), 32),
+		common.LeftPadBytes(o.ValidUntil.Bytes(), 32),
 		common.LeftPadBytes(o.LrcFee.Bytes(), 32),
 		[]byte{buyNoMoreThanAmountB},
+		common.LeftPadBytes(o.WalletId.Bytes(), 32),
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
 	h.SetBytes(hashBytes)
@@ -279,7 +289,7 @@ func (ord *OrderState) ResolveStatus(allowance, balance *big.Int) {
 		return
 	}
 
-	if ord.RawOrder.Timestamp.Int64()+ord.RawOrder.Ttl.Int64() < time.Now().Unix() {
+	if ord.RawOrder.ValidSince.Int64()+ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
 		ord.Status = ORDER_EXPIRE
 		return
 	}
@@ -350,8 +360,8 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.TokenB = request.TokenB
 	order.AmountS = request.AmountS
 	order.AmountB = request.AmountB
-	order.Timestamp = big.NewInt(request.Timestamp)
-	order.Ttl = big.NewInt(request.Ttl)
+	order.ValidSince = big.NewInt(request.Timestamp)
+	order.ValidUntil = big.NewInt(request.Ttl)
 	// order.Salt = big.NewInt(request.Salt)
 	order.LrcFee = request.LrcFee
 	order.BuyNoMoreThanAmountB = request.BuyNoMoreThanAmountB

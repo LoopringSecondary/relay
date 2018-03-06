@@ -19,7 +19,7 @@
 package crypto
 
 import (
-	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 )
@@ -32,7 +32,7 @@ type Crypto interface {
 	//生成hash
 	GenerateHash(data ...[]byte) []byte
 	//签名
-	Sign(hash []byte, signer accounts.Account) ([]byte, error)
+	Sign(hash []byte, signer common.Address) ([]byte, error)
 	//签名恢复到地址
 	SigToAddress(hash, sig []byte) ([]byte, error)
 	//生成sig
@@ -40,7 +40,5 @@ type Crypto interface {
 
 	SigToVRS(sig []byte) (v byte, r []byte, s []byte)
 
-	UnlockAccount(acc accounts.Account, passphrase string) error
-
-	SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
+	SignTx(a common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }

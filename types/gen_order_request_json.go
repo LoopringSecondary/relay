@@ -5,8 +5,9 @@ package types
 import (
 	"encoding/json"
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var _ = (*orderJsonRequestMarshaling)(nil)

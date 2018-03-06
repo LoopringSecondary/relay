@@ -239,7 +239,7 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) registerCrypto(ks *keystore.KeyStore) {
-	c := crypto.NewCrypto(true, ks)
+	c := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(c)
 }
 
