@@ -58,7 +58,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.0"
-	DebugFile = "mainchain.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -151,7 +151,7 @@ func loadTestData() *TestEntity {
 
 func unlockAccounts() {
 	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	c := crypto.NewCrypto(false, ks)
+	c := crypto.NewKSCrypto(false, ks)
 	crypto.Initialize(c)
 
 	creator = accounts.Account{Address: entity.Creator.Address}
@@ -232,6 +232,9 @@ func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...
 }
 
 func PrepareTestData() {
+	// name registry
+	// nameRegistryAbi := ethaccessor.nam
+
 	//delegate registry
 	delegateAbi := ethaccessor.DelegateAbi()
 	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
@@ -241,7 +244,7 @@ func PrepareTestData() {
 	} else {
 		if res.Int() <= 0 {
 			delegateCallMethod := ethaccessor.ContractSendTransactionMethod("latest", delegateAbi, delegateAddress)
-			if hash, err := delegateCallMethod(creator, "authorizeAddress", nil, nil, nil, protocol); nil != err {
+			if hash, err := delegateCallMethod(creator.Address, "authorizeAddress", nil, nil, nil, protocol); nil != err {
 				log.Errorf("delegate add version error:%s", err.Error())
 			} else {
 				log.Infof("delegate add version hash:%s", hash)
@@ -262,7 +265,7 @@ func PrepareTestData() {
 		} else {
 			if res.Int() <= 0 {
 				registryMethod := ethaccessor.ContractSendTransactionMethod("latest", tokenRegisterAbi, tokenRegisterAddress)
-				if hash, err := registryMethod(creator, "registerToken", nil, nil, nil, tokenAddr, symbol); nil != err {
+				if hash, err := registryMethod(creator.Address, "registerToken", nil, nil, nil, tokenAddr, symbol); nil != err {
 					log.Errorf("token registry error:%s", err.Error())
 				} else {
 					log.Infof("token registry hash:%s", hash)
@@ -277,7 +280,8 @@ func PrepareTestData() {
 	for _, tokenAddr := range entity.Tokens {
 		erc20SendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddr)
 		for _, acc := range orderAccounts {
-			if hash, err := erc20SendMethod(acc, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(1000000000000000000))); nil != err {
+			amount := 1000000000000000000
+			if hash, err := erc20SendMethod(acc.Address, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, big.NewInt(int64(amount))); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -357,7 +361,7 @@ func SetTokenBalances() {
 			if balance, err := ethaccessor.Erc20Balance(tokenAddress, acc.Address, "latest"); nil != err {
 				fmt.Errorf(err.Error())
 			} else if balance.Cmp(big.NewInt(int64(0))) <= 0 {
-				hash, err := sendTransactionMethod(sender, "setBalance", nil, nil, nil, acc.Address, amount)
+				hash, err := sendTransactionMethod(sender.Address, "setBalance", nil, nil, nil, acc.Address, amount)
 				if nil != err {
 					fmt.Errorf(err.Error())
 				}
@@ -379,7 +383,7 @@ func SetTokenBalance(symbol string, account common.Address, amount *big.Int) {
 	tokenAddress := util.AllTokens[symbol].Protocol
 	sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", dummyTokenAbi, tokenAddress)
 
-	hash, err := sendTransactionMethod(sender, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, account, amount)
+	hash, err := sendTransactionMethod(sender.Address, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, account, amount)
 	if nil != err {
 		fmt.Errorf(err.Error())
 	}

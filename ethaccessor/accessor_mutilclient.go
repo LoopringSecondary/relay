@@ -188,6 +188,7 @@ type ethNodeAccessor struct {
 	ProtocolImplAbi   *abi.ABI
 	DelegateAbi       *abi.ABI
 	TokenRegistryAbi  *abi.ABI
+	NameRegistryAbi   *abi.ABI
 	WethAbi           *abi.ABI
 	WethAddress       common.Address
 	ProtocolAddresses map[common.Address]*ProtocolAddress

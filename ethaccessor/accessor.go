@@ -186,6 +186,10 @@ func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
 }
 
+func NameRegistryAbi() *abi.ABI {
+	return accessor.NameRegistryAbi
+}
+
 func Initialize(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) error {
 	var err error
 	accessor = &ethNodeAccessor{}
@@ -217,10 +221,17 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	} else {
 		accessor.DelegateAbi = transferDelegateAbi
 	}
+
 	if tokenRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.TokenRegistryAbi); nil != err {
 		return err
 	} else {
 		accessor.TokenRegistryAbi = tokenRegistryAbi
+	}
+
+	if nameRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.NameRegistryAbi); nil != err {
+		return err
+	} else {
+		accessor.NameRegistryAbi = nameRegistryAbi
 	}
 
 	for version, address := range commonOptions.ProtocolImpl.Address {
