@@ -271,14 +271,19 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]market.Ticker, err error) {
 	result = make(map[string]market.Ticker)
 	loopringTicker, err := w.trendManager.GetTickerByMarket(mkt.Market)
-	if err != nil {
+	if err == nil {
 		result["loopring"] = loopringTicker
+	} else {
+		log.Info("get ticker from loopring error" + err.Error())
+		return result, err
 	}
 	outTickers, err := w.tickerCollector.GetTickers(mkt.Market)
-	if err != nil {
+	if err == nil {
 		for _, v := range outTickers {
 			result[v.Exchange] = v
 		}
+	} else {
+		log.Info("get other exchanges ticker error"  + err.Error())
 	}
 	return result, nil
 }

@@ -92,13 +92,19 @@ func updateBinanceCache() {
 	updateCacheByExchange("binance", GetTickerFromBinance)
 }
 func updateOkexCache() {
-	updateCacheByExchange("okex", GetTickerFromOkex)
+	tickers, err := GetAllTickerFromOkex()
+	if err == nil && len(tickers) > 0 {
+		for _, t := range tickers {
+			setCache("okex", t.Market, t)
+		}
+	}
 }
 func updateHuobiCache() {
 	updateCacheByExchange("huobi", GetTickerFromHuobi)
 }
 
 func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
+
 	for _, v := range util.AllMarkets {
 		vv := strings.ToUpper(v)
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
@@ -133,9 +139,12 @@ func NewCollector() *CollectorImpl {
 
 func (c *CollectorImpl) Start() {
 	// create cron job and exec sync
-	c.cron.AddFunc("0 */1 * * * *", updateBinanceCache)
-	c.cron.AddFunc("0 */1 * * * *", updateOkexCache)
-	c.cron.AddFunc("0 */1 * * * *", updateHuobiCache)
+	updateBinanceCache()
+	updateOkexCache()
+	updateHuobiCache()
+	c.cron.AddFunc("@every 5m", updateBinanceCache)
+	c.cron.AddFunc("@every 5m", updateOkexCache)
+	c.cron.AddFunc("@every 5m", updateHuobiCache)
 	log.Info("start collect cron jobs......... ")
 	c.cron.Start()
 
@@ -148,10 +157,12 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 	for _, e := range c.exs {
 		cacheKey := cachePreKey + e.name + "_" + market
 		byteRst, err := cache.Get(cacheKey)
-		if err != nil {
+		if err == nil {
 			var unmarshalRst Ticker
 			json.Unmarshal(byteRst, &unmarshalRst)
 			result = append(result, unmarshalRst)
+		} else {
+			log.Info("get ticker from redis error" + err.Error())
 		}
 	}
 	return result, nil
@@ -199,12 +210,17 @@ type BinanceTicker struct {
 }
 
 type OkexTicker struct {
-	High      float64 `json:"high"`
-	Low       float64 `json:"low"`
-	LastPrice float64 `json:"last"`
-	Vol       float64 `json:"vol"`
-	Ask       float64 `json:"sell"`
-	Bid       float64 `json:"buy"`
+	Date 	  string  `json:"date"`
+	Ticker	  OkexInnerTicker `json:"ticker"`
+}
+
+type OkexInnerTicker struct {
+	High      string `json:"high"`
+	Low       string `json:"low"`
+	LastPrice string `json:"last"`
+	Vol       string `json:"vol"`
+	Ask       string `json:"sell"`
+	Bid       string `json:"buy"`
 }
 
 func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
@@ -237,11 +253,6 @@ func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
 
 			ticker = Ticker{}
 			innerTicker := huobiTicker.Tick
-			fmt.Println(huobiTicker)
-			fmt.Println(innerTicker.Amount)
-			fmt.Println(innerTicker.Vol)
-			fmt.Println(innerTicker.Bid)
-			fmt.Println(innerTicker.Ask)
 			ticker.Market = market
 			ticker.Amount = innerTicker.Amount
 			ticker.Open = innerTicker.Open
@@ -286,6 +297,7 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 		} else {
 			ticker = Ticker{}
 			//ticker.Market = market
+			ticker.Market = market
 			ticker.Amount, _ = strconv.ParseFloat(binanceTicker.Amount, 64)
 			ticker.Open, _ = strconv.ParseFloat(binanceTicker.Open, 64)
 			ticker.Close, _ = strconv.ParseFloat(binanceTicker.Close, 64)
@@ -323,19 +335,89 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 	if nil != err {
 		return ticker, err
 	} else {
-		var okexTicker *OkexTicker
-		if err := json.Unmarshal(body, &okexTicker); nil != err {
+		var okexOutTicker *OkexTicker
+		if err := json.Unmarshal(body, &okexOutTicker); nil != err {
 			return ticker, err
 		} else {
 			ticker = Ticker{}
-			//ticker.Market = market
-			ticker.Last = okexTicker.LastPrice
+			okexTicker := okexOutTicker.Ticker
+			ticker.Market = market
+			ticker.Last, _ = strconv.ParseFloat(okexTicker.LastPrice, 64)
 			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
 			ticker.Exchange = "okex"
-			ticker.Vol = okexTicker.Vol
-			ticker.High = okexTicker.High
-			ticker.Low = okexTicker.Low
+			ticker.Vol, _ = strconv.ParseFloat(okexTicker.Vol, 64)
+			ticker.High, _ = strconv.ParseFloat(okexTicker.High, 64)
+			ticker.Low, _ = strconv.ParseFloat(okexTicker.Low, 64)
 			return ticker, nil
 		}
 	}
+}
+
+type OkexFullTicker struct {
+	Code int `json:"code"`
+	Data [] OkexTickerElem  `json:"data"`
+	Msg string `json:"msg"`
+}
+
+type OkexTickerElem struct {
+	Buy string `json:"buy"`
+	Last string `json:"last"`
+	Vol string `json:"volume"`
+	Symbol string `json:"symbol"`
+	High string `json:"high"`
+	Low string `json:"low"`
+	Change string `json:"changePercentage"`
+}
+
+func GetAllTickerFromOkex() (tickers []Ticker, err error) {
+	tickers = make([]Ticker, 0)
+	resp, err := http.Get("https://www.okex.com/v2/markets/tickers")
+	if err != nil {
+		return tickers, err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	log.Info("get ticker response is " + string(body))
+	if nil != err {
+		return tickers, err
+	} else {
+		var okexOutTicker *OkexFullTicker
+		if err := json.Unmarshal(body, &okexOutTicker); nil != err {
+			return tickers, err
+		} else {
+
+			for _, v := range okexOutTicker.Data {
+				ticker := Ticker{}
+				okexMarket := strings.Replace(v.Symbol, "_", "-", 1)
+				okexMarket = strings.ToUpper(okexMarket)
+				okexMarket = strings.Replace(okexMarket, "ETH", "WETH", 1)
+				ticker.Market =  okexMarket
+				if stringInSlice(okexMarket, util.AllMarkets) {
+					ticker.Last, _ = strconv.ParseFloat(v.Last, 64)
+					ticker.Change = v.Change
+					ticker.Exchange = "okex"
+					ticker.Vol, _ = strconv.ParseFloat(v.Vol, 64)
+					ticker.High, _ = strconv.ParseFloat(v.High, 64)
+					ticker.Low, _ = strconv.ParseFloat(v.Low, 64)
+					tickers = append(tickers, ticker)
+				}
+			}
+
+			return tickers, nil
+		}
+	}
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
