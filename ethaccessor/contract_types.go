@@ -162,7 +162,14 @@ type OrdersCancelledEvent struct {
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-// todo(fuk): add internal ordersCancelled event,implement convert and parse functions
+func (e *OrdersCancelledEvent) ConvertDown() *types.OrdersCancelledEvent {
+	evt := &types.OrdersCancelledEvent{}
+	evt.Token1 = e.Token1
+	evt.Token2 = e.Token2
+	evt.Cutoff = e.Cutoff
+
+	return evt
+}
 
 type TokenRegisteredEvent struct {
 	Token  common.Address `fieldName:"addr"`

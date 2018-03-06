@@ -146,7 +146,8 @@ func (m *MethodData) IsValid() error {
 const (
 	RINGMINED_EVT_NAME           = "RingMined"
 	CANCEL_EVT_NAME              = "OrderCancelled"
-	CUTOFF_EVT_NAME              = "CutoffTimestampChanged"
+	CUTOFF_EVT_NAME              = "AllOrdersCancelled"
+	CUTOFFPAIR_EVT_NAME          = "OrdersCancelled"
 	TOKENREGISTERED_EVT_NAME     = "TokenRegistered"
 	TOKENUNREGISTERED_EVT_NAME   = "TokenUnregistered"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
@@ -266,6 +267,9 @@ func (processor *AbiProcessor) loadProtocolContract() {
 		case CUTOFF_EVT_NAME:
 			contract.Event = &ethaccessor.AllOrdersCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffTimestampEvent}
+		case CUTOFFPAIR_EVT_NAME:
+			contract.Event = &ethaccessor.OrdersCancelledEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairEvent}
 		}
 
 		eventemitter.On(contract.Id.Hex(), watcher)
@@ -805,6 +809,26 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventData) error {
+	contractData := input.(EventData)
+	if len(contractData.Topics) < 2 {
+		log.Errorf("extractor,tx:%s cutoffPair event indexed fields number error", contractData.TxHash)
+		return nil
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.OrdersCancelledEvent)
+	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
+
+	evt := contractEvent.ConvertDown()
+	evt.TxInfo = contractData.setTxInfo()
+
+	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+
+	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
 
 	return nil
 }

@@ -28,26 +28,27 @@ import (
 type Topic string
 
 const (
-	OrderCanceled                  = "OrderCanceled"
-	OrderFilled                    = "OrderFilled"
-	ExtractorFork                  = "ExtractorFork" //chain forked
-	OrderManagerFork               = "OrderManagerFork"
-	RingSubmitFailed               = "RingSubmitFailed" //submit ring failed
-	Transaction                    = "Transaction"
-	Gateway                        = "Gateway"
-	AccountTransfer                = "AccountTransfer"
-	AccountApproval                = "AccountApproval"
-	TokenRegistered                = "TokenRegistered"
-	TokenUnRegistered              = "TokenUnRegistered"
-	RingHashSubmitted              = "RingHashSubmitted"
-	AddressAuthorized              = "AddressAuthorized"
-	AddressDeAuthorized            = "AddressDeAuthorized"
-	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
-	OrderManagerExtractorRingMined = "OrderManagerRingMined"
-	OrderManagerExtractorFill      = "OrderManagerExtractorFill"
-	OrderManagerExtractorCancel    = "OrderManagerExtractorCancel"
-	OrderManagerExtractorCutoff    = "OrderManagerExtractorCutoff"
-	MinedOrderState                = "MinedOrderState" //orderbook send orderstate to miner
+	OrderCanceled                   = "OrderCanceled"
+	OrderFilled                     = "OrderFilled"
+	ExtractorFork                   = "ExtractorFork" //chain forked
+	OrderManagerFork                = "OrderManagerFork"
+	RingSubmitFailed                = "RingSubmitFailed" //submit ring failed
+	Transaction                     = "Transaction"
+	Gateway                         = "Gateway"
+	AccountTransfer                 = "AccountTransfer"
+	AccountApproval                 = "AccountApproval"
+	TokenRegistered                 = "TokenRegistered"
+	TokenUnRegistered               = "TokenUnRegistered"
+	RingHashSubmitted               = "RingHashSubmitted"
+	AddressAuthorized               = "AddressAuthorized"
+	AddressDeAuthorized             = "AddressDeAuthorized"
+	OrderManagerGatewayNewOrder     = "OrderManagerGatewayNewOrder"
+	OrderManagerExtractorRingMined  = "OrderManagerRingMined"
+	OrderManagerExtractorFill       = "OrderManagerExtractorFill"
+	OrderManagerExtractorCancel     = "OrderManagerExtractorCancel"
+	OrderManagerExtractorCutoff     = "OrderManagerExtractorCutoff"
+	OrderManagerExtractorCutoffPair = "OrderManagerExtractorCutoffPair"
+	MinedOrderState                 = "MinedOrderState" //orderbook send orderstate to miner
 
 	//Miner
 	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
