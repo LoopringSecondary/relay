@@ -274,10 +274,10 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	if err != nil {
 		result["loopring"] = loopringTicker
 	}
-	outTickers, err := w.GetTickers(mkt)
+	outTickers, err := w.tickerCollector.GetTickers(mkt.Market)
 	if err != nil {
-		for k, v := range outTickers {
-			result[k] = v
+		for _, v := range outTickers {
+			result[v.Exchange] = v
 		}
 	}
 	return result, nil
