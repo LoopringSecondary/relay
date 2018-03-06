@@ -119,11 +119,6 @@ type RingSubmitInfo struct {
 	ProtocolGasPrice string `gorm:"column:protocol_gas_price;type:varchar(50)"`
 	ProtocolUsedGas  string `gorm:"column:protocol_used_gas;type:varchar(50)"`
 
-	RegistryData     string `gorm:"column:registry_data;type:text"`
-	RegistryGas      string `gorm:"column:registry_gas;type:varchar(50)"`
-	RegistryGasPrice string `gorm:"column:registry_gas_price;type:varchar(50)"`
-	RegistryUsedGas  string `gorm:"column:registry_used_gas;type:varchar(50)"`
-
 	ProtocolTxHash string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
 	RegistryTxHash string `gorm:"column:registry_tx_hash;type:varchar(82)"`
 
@@ -147,10 +142,6 @@ func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
 	info.ProtocolGas = getBigIntString(typesInfo.ProtocolGas)
 	info.ProtocolUsedGas = getBigIntString(typesInfo.ProtocolUsedGas)
 	info.ProtocolGasPrice = getBigIntString(typesInfo.ProtocolGasPrice)
-	info.RegistryData = common.ToHex(typesInfo.RegistryData)
-	info.RegistryGas = getBigIntString(typesInfo.RegistryGas)
-	info.RegistryUsedGas = getBigIntString(typesInfo.RegistryUsedGas)
-	info.RegistryGasPrice = getBigIntString(typesInfo.RegistryGasPrice)
 	info.Miner = typesInfo.Miner.Hex()
 	return nil
 }
@@ -166,15 +157,7 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 	typesInfo.ProtocolUsedGas.SetString(info.ProtocolUsedGas, 0)
 	typesInfo.ProtocolGasPrice = new(big.Int)
 	typesInfo.ProtocolGasPrice.SetString(info.ProtocolGasPrice, 0)
-	typesInfo.RegistryData = common.FromHex(info.RegistryData)
-	typesInfo.RegistryGas = new(big.Int)
-	typesInfo.RegistryGas.SetString(info.RegistryGas, 0)
-	typesInfo.RegistryUsedGas = new(big.Int)
-	typesInfo.RegistryUsedGas.SetString(info.RegistryUsedGas, 0)
-	typesInfo.RegistryGasPrice = new(big.Int)
-	typesInfo.RegistryGasPrice.SetString(info.RegistryGasPrice, 0)
 	typesInfo.SubmitTxHash = common.HexToHash(info.ProtocolTxHash)
-	typesInfo.RegistryTxHash = common.HexToHash(info.RegistryTxHash)
 	typesInfo.Miner = common.HexToAddress(info.Miner)
 	return nil
 }
