@@ -22,14 +22,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/robfig/cron"
 	"io/ioutil"
 	"net/http"
-	"strings"
-	"github.com/Loopring/relay/market/util"
-	"github.com/Loopring/relay/log"
 	"qiniupkg.com/x/errors.v7"
 	"strconv"
+	"strings"
 )
 
 type ExchangeType string
@@ -98,7 +98,7 @@ func updateHuobiCache() {
 	updateCacheByExchange("huobi", GetTickerFromHuobi)
 }
 
-func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error))  {
+func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
 	for _, v := range util.AllMarkets {
 		vv := strings.ToUpper(v)
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
@@ -117,7 +117,7 @@ func setCache(exchange, market string, ticker Ticker) {
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
 	} else {
-		cache.Set(cacheKey , tickerByte, 3600)
+		cache.Set(cacheKey, tickerByte, 3600)
 	}
 }
 
@@ -166,26 +166,26 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 //}
 
 type HuobiTicker struct {
-	Timestamp int64     `json:"ts"`
-	ErrorCode string    `json:"err-code"`
-	Status    string    `json:"status"`
+	Timestamp int64            `json:"ts"`
+	ErrorCode string           `json:"err-code"`
+	Status    string           `json:"status"`
 	Tick      HuobiInnerTicker `json:"tick"`
 }
 
 type HuobiInnerTicker struct {
-	Close     float64   `json:"close"`
-	Open      float64   `json:"open"`
-	High      float64   `json:"high"`
-	Low       float64   `json:"low"`
-	Amount    float64   `json:"amount"`
-	Count     int       `json:"count"`
-	Vol       float64   `json:"vol"`
-	Ask       []float64 `json:"ask"`
-	Bid       []float64 `json:"bid"`
+	Close  float64   `json:"close"`
+	Open   float64   `json:"open"`
+	High   float64   `json:"high"`
+	Low    float64   `json:"low"`
+	Amount float64   `json:"amount"`
+	Count  int       `json:"count"`
+	Vol    float64   `json:"vol"`
+	Ask    []float64 `json:"ask"`
+	Bid    []float64 `json:"bid"`
 }
 
 type BinanceTicker struct {
-	Symbol    string  `json:"symbol"`
+	Symbol    string `json:"symbol"`
 	Change    string `json:"priceChangePercent"`
 	Close     string `json:"prevClosePrice"`
 	Open      string `json:"openPrice"`

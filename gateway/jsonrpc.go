@@ -19,10 +19,10 @@
 package gateway
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"net"
-	"fmt"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
