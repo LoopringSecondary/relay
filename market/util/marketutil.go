@@ -193,7 +193,7 @@ func TokenRegister(input eventemitter.EventData) error {
 	token.Symbol = strings.ToUpper(evt.Symbol)
 	token.Deny = false
 	token.IsMarket = false
-	token.Time = evt.Time.Int64()
+	token.Time = evt.BlockTime
 
 	// todo: how to get source token.Source = ""
 	SupportTokens[token.Symbol] = token
