@@ -142,7 +142,6 @@ type KeyStoreOptions struct {
 type ProtocolOptions struct {
 	Address          map[string]string
 	ImplAbi          string
-	RegistryAbi      string
 	DelegateAbi      string
 	TokenRegistryAbi string
 }
@@ -183,7 +182,6 @@ type MinerOptions struct {
 	FeeRecepient          string
 	Miner                 string
 	FeeReceipt            string //address the receipt of fee
-	IfRegistryRingHash    bool
 	NormalMiners          []NormalMinerAddress  //
 	PercentMiners         []PercentMinerAddress //
 	TimingMatcher         *TimingMatcher
