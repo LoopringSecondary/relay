@@ -157,12 +157,12 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 
 	//log.Info("received transfer event...")
 
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		tokenAlias := util.AddressToAlias(event.ContractAddress.Hex())
+		tokenAlias := util.AddressToAlias(event.Protocol.Hex())
 		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.From.Hex())
 		if errFrom != nil {
 			return errFrom
@@ -178,8 +178,8 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
 
 	event := input.(*types.ApprovalEvent)
-	log.Debugf("received approval event, %s, %s", event.ContractAddress.Hex(), event.Owner.Hex())
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	log.Debugf("received approval event, %s, %s", event.Protocol.Hex(), event.Owner.Hex())
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -193,7 +193,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethDepositMethodEvent)
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -207,7 +207,7 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethWithdrawalMethodEvent)
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -295,7 +295,7 @@ func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawa
 }
 
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
-	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
+	tokenAlias := util.AddressToAlias(event.Protocol.String())
 	spender := event.Spender.String()
 	address := strings.ToLower(event.Owner.String())
 
