@@ -145,7 +145,7 @@ func (p *CapProvider_CoinMarketCap) Start() {
 				}
 			case stopped := <-p.stopChan:
 				if stopped {
-					break
+					return
 				}
 			}
 		}

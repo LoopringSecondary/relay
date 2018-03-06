@@ -187,7 +187,6 @@ type ethNodeAccessor struct {
 	Erc20Abi            *abi.ABI
 	ProtocolImplAbi     *abi.ABI
 	DelegateAbi         *abi.ABI
-	RinghashRegistryAbi *abi.ABI
 	TokenRegistryAbi    *abi.ABI
 	WethAbi             *abi.ABI
 	WethAddress         common.Address
