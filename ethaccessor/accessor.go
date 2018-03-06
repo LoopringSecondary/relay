@@ -233,12 +233,6 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			log.Debugf("version:%s, contract:%s, lrcTokenAddress:%s", version, address, addr)
 			impl.LrcTokenAddress = common.HexToAddress(addr)
 		}
-		if err := callMethod(&addr, "ringhashRegistryAddress", "latest"); nil != err {
-			return err
-		} else {
-			log.Debugf("version:%s, contract:%s, ringhashRegistryAddress:%s", version, address, addr)
-			impl.RinghashRegistryAddress = common.HexToAddress(addr)
-		}
 		if err := callMethod(&addr, "tokenRegistryAddress", "latest"); nil != err {
 			return err
 		} else {

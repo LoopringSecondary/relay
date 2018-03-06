@@ -153,9 +153,9 @@ type RingSubmitInfo struct {
 	ProtocolUsedGas  *big.Int
 	ProtocolGasPrice *big.Int
 
-	SubmitTxHash   common.Hash
-	Received       *big.Rat
-	LegalCost      *big.Rat
+	SubmitTxHash common.Hash
+	Received     *big.Rat
+	LegalCost    *big.Rat
 }
 
 type RingSubmitInputs struct {
