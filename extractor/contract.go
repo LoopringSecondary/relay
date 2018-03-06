@@ -116,7 +116,6 @@ func (m *MethodData) IsValid() error {
 }
 
 const (
-	RINGHASHREGISTERED_EVT_NAME  = "RinghashSubmitted"
 	RINGMINED_EVT_NAME           = "RingMined"
 	CANCEL_EVT_NAME              = "OrderCancelled"
 	CUTOFF_EVT_NAME              = "CutoffTimestampChanged"
@@ -129,8 +128,6 @@ const (
 
 	SUBMITRING_METHOD_NAME          = "submitRing"
 	CANCELORDER_METHOD_NAME         = "cancelOrder"
-	SUBMITRINGHASH_METHOD_NAME      = "submitRinghash"
-	BATCHSUBMITRINGHASH_METHOD_NAME = "batchSubmitRinghash"
 	WETH_DEPOSIT_METHOD_NAME        = "deposit"
 	WETH_WITHDRAWAL_METHOD_NAME     = "withdraw"
 	APPROVAL_METHOD_NAME            = "approve"
