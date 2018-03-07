@@ -53,7 +53,7 @@ func TestSingleOrder(t *testing.T) {
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: testAcc.Address}
 	ks.Unlock(account, testAcc.Passphrase)
-	cyp := crypto.NewCrypto(true, ks)
+	cyp := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
@@ -229,7 +229,7 @@ func MatchTestPrepare() (*config.GlobalConfig, *test.TestEntity) {
 	ks.Unlock(acc1, password1)
 	ks.Unlock(acc2, password2)
 
-	cyp := crypto.NewCrypto(true, ks)
+	cyp := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(cyp)
 	return c, entity
 }

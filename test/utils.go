@@ -244,7 +244,7 @@ func PrepareTestData() {
 	} else {
 		if res.Int() <= 0 {
 			delegateCallMethod := ethaccessor.ContractSendTransactionMethod("latest", delegateAbi, delegateAddress)
-			if hash, err := delegateCallMethod(creator.Address, "authorizeAddress", nil, nil, nil, protocol); nil != err {
+			if hash, err := delegateCallMethod(creator.Address, "authorizeAddress", big.NewInt(106762), big.NewInt(21000000000), nil, protocol); nil != err {
 				log.Errorf("delegate add version error:%s", err.Error())
 			} else {
 				log.Infof("delegate add version hash:%s", hash)
@@ -265,7 +265,7 @@ func PrepareTestData() {
 		} else {
 			if res.Int() <= 0 {
 				registryMethod := ethaccessor.ContractSendTransactionMethod("latest", tokenRegisterAbi, tokenRegisterAddress)
-				if hash, err := registryMethod(creator.Address, "registerToken", nil, nil, nil, tokenAddr, symbol); nil != err {
+				if hash, err := registryMethod(creator.Address, "registerToken", big.NewInt(106762), big.NewInt(21000000000), nil, tokenAddr, symbol); nil != err {
 					log.Errorf("token registry error:%s", err.Error())
 				} else {
 					log.Infof("token registry hash:%s", hash)
