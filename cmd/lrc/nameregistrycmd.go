@@ -19,14 +19,20 @@
 package main
 
 import (
-	"gopkg.in/urfave/cli.v1"
-	"github.com/Loopring/relay/cmd/utils"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/cmd/utils"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"gopkg.in/urfave/cli.v1"
+	"math/big"
 )
 
 //name registry
@@ -49,20 +55,30 @@ func nameRegistryCommands() cli.Command {
 						Name:  "sender",
 						Usage: "used to send transaction",
 					},
+					cli.StringFlag{
+						Name:  "config",
+						Usage: "config file",
+					},
+					cli.StringFlag{
+						Name:  "gasPrice",
+						Usage: "gasPrice",
+					},
+					cli.StringFlag{
+						Name:  "protocolAddress",
+						Usage: "protocolAddress",
+					},
 				},
 			},
 			cli.Command{
 				Name:   "transferOwnership",
 				Usage:  "import a private key",
 				Action: importAccount,
-				Flags: []cli.Flag{
-
-				},
+				Flags:  []cli.Flag{},
 			},
 			cli.Command{
 				Name:   "addParticipant",
 				Usage:  "add participant to sender",
-				Action: importAccount,
+				Action: addParticipant,
 				Flags: []cli.Flag{
 					cli.StringFlag{
 						Name:  "feeRecipient",
@@ -76,42 +92,109 @@ func nameRegistryCommands() cli.Command {
 						Name:  "sender",
 						Usage: "used to send transaction",
 					},
+					cli.StringFlag{
+						Name:  "config",
+						Usage: "config file",
+					},
+					cli.StringFlag{
+						Name:  "gasPrice",
+						Usage: "gasPrice",
+					},
+					cli.StringFlag{
+						Name:  "protocolAddress",
+						Usage: "protocolAddress",
+					},
 				},
 			},
-
 		},
 	}
 	return c
 }
 
-func registerName(ctx *cli.Context) {
-	dir := ctx.String("name")
-	if "" == dir {
-		utils.ExitWithErr(ctx.App.Writer, errors.New("keystore file can't empty"))
-	}
+func addParticipant(ctx *cli.Context) {
+	globalConfig := utils.SetGlobalConfig(ctx)
+	logger := log.Initialize(globalConfig.Log)
+	defer func() {
+		if nil != logger {
+			logger.Sync()
+		}
+	}()
+	cache.NewCache(globalConfig.Redis)
+	initEthaccessor(globalConfig)
 
-	//cansubmit()
-	//registry
-	sender := common.HexToAddress(ctx.String("sender"))
+	gasPrice := new(big.Int)
+	gasPrice.SetString(ctx.String("gasPrice"), 10)
+	protocolAddress := common.HexToAddress(ctx.String("protocolAddress"))
+	registerAddress := ethaccessor.ProtocolAddresses()[protocolAddress].NameRegistryAddress
 
-	if passphrase, err := getPassphraseFromTeminal(false, ctx.App.Writer); nil != err {
+	sender := unlockSender(ctx, globalConfig.Keystore)
+
+	sendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.NameRegistryAbi(), registerAddress)
+
+	feeRecipient := common.HexToAddress(ctx.String("feeRecipient"))
+	signer := common.HexToAddress(ctx.String("signer"))
+	if txHash, err := sendMethod(sender, "addParticipant", big.NewInt(int64(1000000)), gasPrice, big.NewInt(int64(0)), feeRecipient, signer); nil != err {
+		fmt.Fprintf(ctx.App.Writer, "addParticipant err:%s sender:%s feeRecipient:%s signer:%s \n", err.Error(), sender.Hex(), feeRecipient, signer)
 		utils.ExitWithErr(ctx.App.Writer, err)
 	} else {
-		ks := keystore.NewKeyStore(dir, keystore.StandardScryptN, keystore.StandardScryptP)
-		if err := ks.Unlock(accounts.Account{Address:sender}, passphrase);nil != err {
-			fmt.Fprintf(ctx.App.Writer, "can't unlock account:%x \n", err.Error())
-			utils.ExitWithErr(ctx.App.Writer, err)
-		} else {
-			ethaccessor.ContractSendTransactionMethod()
-		}
+		fmt.Fprintf(ctx.App.Writer, "have send addParticipant transaction with hash:%s, you can see this in etherscan.io.\n", txHash)
 	}
 }
 
-func Init(ctx *cli.Context) {
-	globalConfig := utils.SetGlobalConfig(ctx)
-	err := ethaccessor.Initialize(globalConfig.Accessor, globalConfig.Common, common.Address{})
-	if nil != err {
-		fmt.Fprintf(ctx.App.Writer, "err:%s", err.Error())
-	}
+func registerName(ctx *cli.Context) {
 
+	globalConfig := utils.SetGlobalConfig(ctx)
+	logger := log.Initialize(globalConfig.Log)
+	defer func() {
+		if nil != logger {
+			logger.Sync()
+		}
+	}()
+	cache.NewCache(globalConfig.Redis)
+	initEthaccessor(globalConfig)
+
+	gasPrice := new(big.Int)
+	gasPrice.SetString(ctx.String("gasPrice"), 10)
+	protocolAddress := common.HexToAddress(ctx.String("protocolAddress"))
+	registerAddress := ethaccessor.ProtocolAddresses()[protocolAddress].NameRegistryAddress
+
+	//registry
+	name := ctx.String("name")
+	if "" == name {
+		utils.ExitWithErr(ctx.App.Writer, errors.New("the name to register can't be empty"))
+	}
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), registerAddress)
+	var ownerAddressHex string
+	err := callMethod(&ownerAddressHex, "getOwner", "latest", name)
+	if nil != err {
+		utils.ExitWithErr(ctx.App.Writer, err)
+	} else {
+		if !types.IsZeroAddress(common.HexToAddress(ownerAddressHex)) {
+			utils.ExitWithErr(ctx.App.Writer, errors.New(" the name: \""+name+"\" has been registered."))
+		}
+	}
+	sender := unlockSender(ctx, globalConfig.Keystore)
+
+	sendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.NameRegistryAbi(), registerAddress)
+
+	if txHash, err := sendMethod(sender, "registerName", big.NewInt(int64(100000)), gasPrice, big.NewInt(int64(0)), name); nil != err {
+		fmt.Fprintf(ctx.App.Writer, "can't register name:%s err:%s \n", name, err.Error())
+		utils.ExitWithErr(ctx.App.Writer, err)
+	} else {
+		fmt.Fprintf(ctx.App.Writer, "have send registerName transaction with hash:%s, you can see this in etherscan.io.\n", txHash)
+	}
+}
+
+func unlockSender(ctx *cli.Context, ksOptions config.KeyStoreOptions) common.Address {
+	ks := keystore.NewKeyStore(ksOptions.Keydir, ksOptions.ScryptN, ksOptions.ScryptP)
+	c := crypto.NewKSCrypto(true, ks)
+	crypto.Initialize(c)
+
+	sender := accounts.Account{Address: common.HexToAddress(ctx.String("sender"))}
+	unlockAccountFromTerminal(sender, ctx)
+	return sender.Address
+}
+
+func initEthaccessor(globalConfig *config.GlobalConfig) error {
+	return ethaccessor.Initialize(globalConfig.Accessor, globalConfig.Common, common.Address{})
 }

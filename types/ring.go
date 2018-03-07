@@ -53,9 +53,9 @@ type Ring struct {
 
 func (ring *Ring) FeeSelections() *big.Int {
 	feeSelections := big.NewInt(int64(0))
-	for idx,filledOrder := range ring.Orders {
+	for idx, filledOrder := range ring.Orders {
 		if filledOrder.FeeSelection > 0 {
-			feeSelections.Or(feeSelections, big.NewInt(int64(1 << uint(idx))))
+			feeSelections.Or(feeSelections, big.NewInt(int64(1<<uint(idx))))
 		}
 	}
 	return feeSelections
@@ -169,8 +169,8 @@ type RingSubmitInputs struct {
 	VList                    []uint8
 	RList                    []Bytes32
 	SList                    []Bytes32
-	Miner *NameRegistryInfo
-	FeeSelections	*big.Int
+	Miner                    *NameRegistryInfo
+	FeeSelections            *big.Int
 }
 
 func emptyRingSubmitArgs(nameInfo *NameRegistryInfo) *RingSubmitInputs {
