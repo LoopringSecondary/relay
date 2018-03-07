@@ -91,6 +91,17 @@ func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, 
 	return nil
 }
 
+func (accessor *ethNodeAccessor) GetCutoffPair(result interface{}, contractAddress, owner, token1, token2 common.Address, blockNumStr string) error {
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	if err := callMethod(result, "getTradingPairCutoffs", blockNumStr, owner, token1, token2); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) error {
 	reqElems := make([]rpc.BatchElem, 2*len(reqs))
 	erc20Abi := accessor.Erc20Abi

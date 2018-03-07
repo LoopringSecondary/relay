@@ -162,7 +162,14 @@ type OrdersCancelledEvent struct {
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-// todo(fuk): add internal ordersCancelled event,implement convert and parse functions
+func (e *OrdersCancelledEvent) ConvertDown() *types.OrdersCancelledEvent {
+	evt := &types.OrdersCancelledEvent{}
+	evt.Token1 = e.Token1
+	evt.Token2 = e.Token2
+	evt.Cutoff = e.Cutoff
+
+	return evt
+}
 
 type TokenRegisteredEvent struct {
 	Token  common.Address `fieldName:"addr"`
@@ -226,6 +233,7 @@ type SubmitRingMethod struct {
 	SList              [][32]uint8         `fieldName:"sList"`
 	MinerId            uint8               `fieldName:"minerId"`
 	FeeRecipient       uint16              `fieldName:"feeSelections"`
+	Protocol           common.Address
 }
 
 // should add protocol, miner, feeRecipient
@@ -241,7 +249,7 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	for i := 0; i < length; i++ {
 		var order types.Order
 
-		//todo(fuk): set order.Protocol
+		order.Protocol = m.Protocol
 		order.Owner = m.AddressList[i][0]
 		order.TokenS = m.AddressList[i][1]
 		if i == length-1 {
@@ -249,12 +257,12 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		} else {
 			order.TokenB = m.AddressList[i+1][1]
 		}
+		order.AuthAddr = m.AddressList[i][2]
 
 		order.AmountS = m.UintArgsList[i][0]
 		order.AmountB = m.UintArgsList[i][1]
 		order.ValidSince = m.UintArgsList[i][2]
 		order.ValidUntil = m.UintArgsList[i][3]
-		//order.Salt = m.UintArgsList[i][4]
 		order.LrcFee = m.UintArgsList[i][4]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
@@ -346,7 +354,7 @@ type ProtocolAddress struct {
 
 	TokenRegistryAddress common.Address
 
-	RinghashRegistryAddress common.Address
+	NameRegistryAddress common.Address
 
 	DelegateAddress common.Address
 }

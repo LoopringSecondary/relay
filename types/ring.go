@@ -24,12 +24,11 @@ import (
 	"math/big"
 )
 
-
 type NameRegistryInfo struct {
-	Name string
-	Owner common.Address
-	FeeRecipient common.Address
-	Singer common.Address
+	Name          string
+	Owner         common.Address
+	FeeRecipient  common.Address
+	Singer        common.Address
 	ParticipantId *big.Int
 }
 
@@ -118,8 +117,8 @@ func (ring *Ring) GenerateSubmitArgs(nameInfo *NameRegistryInfo) (*RingSubmitInp
 		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S)
 
 		//sign By authPrivateKey
-		if signBytes,err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
-			v,r,s := crypto.SigToVRS(signBytes)
+		if signBytes, err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
+			v, r, s := crypto.SigToVRS(signBytes)
 			authVList = append(authVList, v)
 			authRList = append(authRList, BytesToBytes32(r))
 			authSList = append(authSList, BytesToBytes32(s))
