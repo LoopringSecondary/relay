@@ -231,19 +231,16 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 	for _, v := range ethaccessor.ProtocolAddresses() {
 		protocolSymbol := "loopring"
 		delegateSymbol := "transfer_delegate"
-		ringhashRegisterSymbol := "ringhash_register"
 		tokenRegisterSymbol := "token_register"
 
 		processor.protocols[v.ContractAddress] = protocolSymbol
 		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
-		processor.protocols[v.RinghashRegistryAddress] = ringhashRegisterSymbol
 		processor.protocols[v.DelegateAddress] = delegateSymbol
 
 		processor.delegates[v.DelegateAddress] = delegateSymbol
 
 		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
-		log.Infof("extractor,contract protocol %s->%s", ringhashRegisterSymbol, v.RinghashRegistryAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", delegateSymbol, v.DelegateAddress.Hex())
 	}
 }

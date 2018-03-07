@@ -262,6 +262,12 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			log.Debugf("version:%s, contract:%s, delegateAddress:%s", version, address, addr)
 			impl.DelegateAddress = common.HexToAddress(addr)
 		}
+		if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
+			return err
+		} else {
+			log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
+			impl.NameRegistryAddress = common.HexToAddress(addr)
+		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 	}
 	accessor.MutilClient.startSyncStatus()

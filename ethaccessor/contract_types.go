@@ -354,7 +354,7 @@ type ProtocolAddress struct {
 
 	TokenRegistryAddress common.Address
 
-	RinghashRegistryAddress common.Address
+	NameRegistryAddress common.Address
 
 	DelegateAddress common.Address
 }
