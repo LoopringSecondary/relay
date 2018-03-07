@@ -49,7 +49,7 @@ type Transaction struct {
 	From        common.Address
 	To          common.Address
 	TxHash      common.Hash
-	Salt        []byte
+	Content     []byte
 	BlockNumber *big.Int
 	Value       *big.Int
 	Type        uint8
@@ -114,16 +114,16 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 		tx.Value = src.AmountB
 	}
 	tx.TxHash = txhash
-	tx.Salt = src.Hash.Bytes()
+	tx.Content = src.Hash.Bytes()
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
 	return nil
 }
 
-func (tx *Transaction) GetOrderSalt() (common.Hash, error) {
+func (tx *Transaction) GetOrderContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_BUY || tx.Type == TX_TYPE_SELL {
-		return common.BytesToHash(tx.Salt), nil
+		return common.BytesToHash(tx.Content), nil
 	} else {
 		return NilHash, fmt.Errorf("get order salt,transaction type error:%d", tx.Type)
 	}
@@ -140,15 +140,15 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 		tx.Value = src.AmountB
 	}
 
-	tx.Salt = src.OrderHash.Bytes()
+	tx.Content = src.OrderHash.Bytes()
 	tx.fullFilled(src.TxInfo)
 
 	return nil
 }
 
-func (tx *Transaction) GetFillSalt() (common.Hash, error) {
+func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
-		return common.BytesToHash(tx.Salt), nil
+		return common.BytesToHash(tx.Content), nil
 	} else {
 		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
 	}
@@ -163,7 +163,7 @@ func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status u
 	tx.Status = status
 	tx.Value = value
 
-	tx.Salt = src.Hash.Bytes()
+	tx.Content = src.Hash.Bytes()
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
@@ -177,7 +177,7 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Ad
 	tx.Owner = owner
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Value = src.AmountCancelled
-	tx.Salt = src.OrderHash.Bytes()
+	tx.Content = src.OrderHash.Bytes()
 
 	tx.fullFilled(src.TxInfo)
 
@@ -224,7 +224,7 @@ func (tx *Transaction) FromCutoffPairEvent(src *OrdersCancelledEvent) error {
 	if bs, err := json.Marshal(salt); err != nil {
 		return err
 	} else {
-		tx.Salt = bs
+		tx.Content = bs
 	}
 
 	tx.fullFilled(src.TxInfo)
@@ -244,19 +244,19 @@ func (tx *Transaction) FromCutoffPairMethodEvent(src *CutoffPairMethodEvent) err
 	if bs, err := json.Marshal(salt); err != nil {
 		return err
 	} else {
-		tx.Salt = bs
+		tx.Content = bs
 	}
 
 	tx.fullFilled(src.TxInfo)
 	return nil
 }
 
-func (tx *Transaction) GetCutoffPairSalt() (*CutoffPairSalt, error) {
+func (tx *Transaction) GetCutoffPairContent() (*CutoffPairSalt, error) {
 	if tx.Type != TX_TYPE_CUTOFF_PAIR {
 		return nil, fmt.Errorf("cutoff pair salt,transaction type error:%d", tx.Type)
 	}
 	var cutoffpair CutoffPairSalt
-	if err := json.Unmarshal(tx.Salt, &cutoffpair); err != nil {
+	if err := json.Unmarshal(tx.Content, &cutoffpair); err != nil {
 		return nil, err
 	}
 
