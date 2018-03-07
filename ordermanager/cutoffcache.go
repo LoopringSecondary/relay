@@ -62,12 +62,12 @@ func (c *CutoffCache) IsOrderCutoff(order *types.OrderState) bool {
 func (c *CutoffCache) GetCutoff(protocol, owner common.Address) *big.Int {
 	key := formatCutoffKey(protocol, owner)
 
-	if value, err := c.cache.Get(key); err == nil {
-		return big.NewInt(0).SetBytes(value)
+	if bs, err := c.cache.Get(key); err == nil {
+		return bytes2value(bs)
 	}
 
 	if cutoff, _ := ethaccessor.GetCutoff(protocol, owner, "latest"); cutoff.Cmp(big.NewInt(0)) > 0 {
-		c.cache.Set(key, cutoff.Bytes(), time.Now().Unix()+c.ttl)
+		c.UpdateCutoff(protocol, owner, cutoff)
 		return cutoff
 	}
 
@@ -77,26 +77,30 @@ func (c *CutoffCache) GetCutoff(protocol, owner common.Address) *big.Int {
 func (c *CutoffCache) GetCutoffPair(protocol, owner, token1, token2 common.Address) *big.Int {
 	key := formatCutoffPairKey(protocol, owner, token1, token2)
 
-	if value, err := c.cache.Get(key); err == nil {
-		return big.NewInt(0).SetBytes(value)
+	if bs, err := c.cache.Get(key); err == nil {
+		return bytes2value(bs)
 	}
 
 	if cutoff, _ := ethaccessor.GetCutoffPair(protocol, owner, token1, token2, "latest"); cutoff.Cmp(big.NewInt(0)) > 0 {
-		c.cache.Set(key, cutoff.Bytes(), time.Now().Unix()+c.ttl)
+		c.UpdateCutoffPair(protocol, owner, token1, token2, cutoff)
 		return cutoff
 	}
 
 	return big.NewInt(0)
 }
 
-// todo(fuk): cutoff event
-func (c *CutoffCache) UpdateCutoff() error {
-	return nil
+func (c *CutoffCache) UpdateCutoff(protocol, owner common.Address, cutoff *big.Int) error {
+	key := formatCutoffKey(protocol, owner)
+	bs := value2bytes(cutoff)
+
+	return c.cache.Set(key, bs, time.Now().Unix()+c.ttl)
 }
 
-// todo(fuk): cutoffpair event
-func (c *CutoffCache) UpdateCutoffPair() error {
-	return nil
+func (c *CutoffCache) UpdateCutoffPair(protocol, owner, token1, token2 common.Address, cutoff *big.Int) error {
+	key := formatCutoffPairKey(protocol, owner, token1, token2)
+	bs := value2bytes(cutoff)
+
+	return c.cache.Set(key, bs, time.Now().Unix()+c.ttl)
 }
 
 func formatCutoffKey(protocol, owner common.Address) string {
@@ -116,3 +120,6 @@ func formatCutoffPairKey(protocol, owner, token1, token2 common.Address) string 
 
 	return protocol.Hex() + "-" + owner.Hex() + "-" + string(bs)
 }
+
+func value2bytes(v *big.Int) []byte  { return v.Bytes() }
+func bytes2value(bs []byte) *big.Int { return big.NewInt(0).SetBytes(bs) }
