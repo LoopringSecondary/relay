@@ -313,13 +313,24 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	return &order, nil
 }
 
-type CancelAllOrdersByTradingPairMethod struct {
+type CancelAllOrdersMethod struct {
+	Cutoff uint `fieldName:"cutoff"`
+}
+
+func (method *CancelAllOrdersMethod) ConvertDown() *types.CutoffMethodEvent {
+	evt := &types.CutoffMethodEvent{}
+	evt.Value = big.NewInt(int64(method.Cutoff))
+
+	return evt
+}
+
+type CancelOrdersByTradingPairMethod struct {
 	Token1 common.Address `fieldName:"token1"`
 	Token2 common.Address `fieldName:"token2"`
 	Cutoff uint           `fieldName:"cutoff"`
 }
 
-func (method *CancelAllOrdersByTradingPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
+func (method *CancelOrdersByTradingPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
 	evt := &types.CutoffPairMethodEvent{}
 	evt.Value = big.NewInt(int64(method.Cutoff))
 	evt.Token1 = method.Token1

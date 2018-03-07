@@ -124,16 +124,14 @@ type RingMinedEvent struct {
 
 type WethDepositMethodEvent struct {
 	TxInfo
-	Sender   common.Address
-	Receiver common.Address
-	Value    *big.Int
+	Owner common.Address
+	Value *big.Int
 }
 
 type WethWithdrawalMethodEvent struct {
 	TxInfo
-	Sender   common.Address
-	Receiver common.Address
-	Value    *big.Int
+	Owner common.Address
+	Value *big.Int
 }
 
 type ApproveMethodEvent struct {

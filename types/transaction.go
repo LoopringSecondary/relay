@@ -264,9 +264,9 @@ func (tx *Transaction) GetCutoffPairSalt() (*CutoffPairSalt, error) {
 }
 
 func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error {
-	tx.Owner = src.Sender
-	tx.From = src.Sender
-	tx.To = src.Receiver
+	tx.Owner = src.From
+	tx.From = src.From
+	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_WRAP
 
@@ -276,9 +276,9 @@ func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error 
 }
 
 func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent) error {
-	tx.Owner = src.Sender
-	tx.From = src.Sender
-	tx.To = src.Receiver
+	tx.Owner = src.Owner
+	tx.From = src.From
+	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_UNWRAP
 
