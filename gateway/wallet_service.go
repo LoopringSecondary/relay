@@ -283,7 +283,7 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 			result[v.Exchange] = v
 		}
 	} else {
-		log.Info("get other exchanges ticker error"  + err.Error())
+		log.Info("get other exchanges ticker error" + err.Error())
 	}
 	return result, nil
 }

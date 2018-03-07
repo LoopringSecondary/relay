@@ -60,6 +60,7 @@ type OrderManagerImpl struct {
 	fillOrderWatcher   *eventemitter.Watcher
 	cancelOrderWatcher *eventemitter.Watcher
 	cutoffOrderWatcher *eventemitter.Watcher
+	cutoffPairWatcher  *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
 }
 
@@ -89,6 +90,7 @@ func (om *OrderManagerImpl) Start() {
 	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
 	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
+	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
 	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
@@ -96,6 +98,7 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
@@ -286,6 +289,11 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 
 	om.rds.SetCutOff(owner, currentCutoff)
 	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
+	return nil
+}
+
+func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
+
 	return nil
 }
 
