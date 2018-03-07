@@ -262,6 +262,16 @@ func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) er
 	return err
 }
 
+func (s *RdsServiceImpl) SetCutoffPair(owner, token1, token2 common.Address, cutoffTime *big.Int) error {
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	tokens := []string{token1.Hex(), token2.Hex()}
+	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
+		Where("token_s in (?)", tokens).
+		Where("token_b in (?)", tokens).
+		Update("status", types.ORDER_CUTOFF).Error
+	return err
+}
+
 func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error) {
 	var (
 		list []Order

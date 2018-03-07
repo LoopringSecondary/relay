@@ -24,12 +24,11 @@ import (
 	"math/big"
 )
 
-
 type NameRegistryInfo struct {
-	Name string
-	Owner common.Address
-	FeeRecipient common.Address
-	Singer common.Address
+	Name          string
+	Owner         common.Address
+	FeeRecipient  common.Address
+	Singer        common.Address
 	ParticipantId *big.Int
 }
 
@@ -54,9 +53,9 @@ type Ring struct {
 
 func (ring *Ring) FeeSelections() uint16 {
 	feeSelections := uint16(0)
-	for idx,filledOrder := range ring.Orders {
+	for idx, filledOrder := range ring.Orders {
 		if filledOrder.FeeSelection > 0 {
-			feeSelections = feeSelections | 1 << uint16(idx)
+			feeSelections = feeSelections | 1<<uint16(idx)
 		}
 	}
 	return feeSelections
@@ -74,7 +73,7 @@ func (ring *Ring) UniqueId() common.Hash {
 
 func (ring *Ring) GenerateHash(nameInfo *NameRegistryInfo) common.Hash {
 	//todo: add feeselection
-	hashBytes := crypto.GenerateHash(ring.UniqueId().Bytes(),common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32))
+	hashBytes := crypto.GenerateHash(ring.UniqueId().Bytes(), common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32))
 	return common.BytesToHash(hashBytes)
 }
 
@@ -115,8 +114,8 @@ func (ring *Ring) GenerateSubmitArgs(nameInfo *NameRegistryInfo) (*RingSubmitInp
 		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S)
 
 		//sign By authPrivateKey
-		if signBytes,err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
-			v,r,s := crypto.SigToVRS(signBytes)
+		if signBytes, err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
+			v, r, s := crypto.SigToVRS(signBytes)
 			authVList = append(authVList, v)
 			authRList = append(authRList, BytesToBytes32(r))
 			authSList = append(authSList, BytesToBytes32(s))
@@ -167,8 +166,8 @@ type RingSubmitInputs struct {
 	VList                    []uint8
 	RList                    []Bytes32
 	SList                    []Bytes32
-	Miner *NameRegistryInfo
-	FeeSelections	uint16
+	Miner                    *NameRegistryInfo
+	FeeSelections            uint16
 }
 
 func emptyRingSubmitArgs(nameInfo *NameRegistryInfo) *RingSubmitInputs {

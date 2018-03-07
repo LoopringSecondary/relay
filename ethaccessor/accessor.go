@@ -131,9 +131,17 @@ func Erc20Allowance(tokenAddress, ownerAddress, spender common.Address, blockPar
 	return accessor.Erc20Allowance(tokenAddress, ownerAddress, spender, blockParameter)
 }
 
+// todo(fuk): 需要测试，如果没有，合约是否返回为0
 func GetCutoff(contractAddress, owner common.Address, blockNumber string) (*big.Int, error) {
 	var cutoff types.Big
 	err := accessor.GetCutoff(&cutoff, contractAddress, owner, blockNumber)
+	return cutoff.BigInt(), err
+}
+
+// todo(fuk): 需要测试，如果没有，合约是否返回为0
+func GetCutoffPair(contractAddress, owner, token1, token2 common.Address, blockNumber string) (*big.Int, error) {
+	var cutoff types.Big
+	err := accessor.GetCutoffPair(&cutoff, contractAddress, owner, token1, token2, blockNumber)
 	return cutoff.BigInt(), err
 }
 
@@ -255,6 +263,12 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		} else {
 			log.Debugf("version:%s, contract:%s, delegateAddress:%s", version, address, addr)
 			impl.DelegateAddress = common.HexToAddress(addr)
+		}
+		if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
+			return err
+		} else {
+			log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
+			impl.NameRegistryAddress = common.HexToAddress(addr)
 		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 	}

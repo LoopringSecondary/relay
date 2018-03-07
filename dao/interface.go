@@ -48,6 +48,7 @@ type RdsService interface {
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
 	GetCutoffOrders(cutoffTime int64) ([]Order, error)
 	SetCutOff(owner common.Address, cutoffTime *big.Int) error
+	SetCutoffPair(owner, token1, token2 common.Address, cutoffTime *big.Int) error
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)

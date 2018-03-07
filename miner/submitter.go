@@ -36,20 +36,20 @@ import (
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
-	minerAccountForSign   accounts.Account
-	miner                 *types.NameRegistryInfo
+	minerAccountForSign accounts.Account
+	miner               *types.NameRegistryInfo
 
-	maxGasLimit           *big.Int
-	minGasLimit           *big.Int
+	maxGasLimit *big.Int
+	minGasLimit *big.Int
 
 	normalMinerAddresses  []*NormalMinerAddress
 	percentMinerAddresses []*SplitMinerAddress
 
-	dbService             dao.RdsService
-	marketCapProvider     marketcap.MarketCapProvider
-	matcher               Matcher
+	dbService         dao.RdsService
+	marketCapProvider marketcap.MarketCapProvider
+	matcher           Matcher
 
-	stopFuncs             []func()
+	stopFuncs []func()
 }
 
 type RingSubmitFailed struct {
@@ -455,7 +455,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	//	ringSubmitInfo.RegistryGas.Add(ringSubmitInfo.RegistryGas, big.NewInt(1000))
 	//}
 
-	if ringSubmitArgs,err1 := ringState.GenerateSubmitArgs(submitter.miner);nil != err1 {
+	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.miner); nil != err1 {
 		return nil, err1
 	} else {
 		ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",

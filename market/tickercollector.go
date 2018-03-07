@@ -210,8 +210,8 @@ type BinanceTicker struct {
 }
 
 type OkexTicker struct {
-	Date 	  string  `json:"date"`
-	Ticker	  OkexInnerTicker `json:"ticker"`
+	Date   string          `json:"date"`
+	Ticker OkexInnerTicker `json:"ticker"`
 }
 
 type OkexInnerTicker struct {
@@ -354,18 +354,18 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 }
 
 type OkexFullTicker struct {
-	Code int `json:"code"`
-	Data [] OkexTickerElem  `json:"data"`
-	Msg string `json:"msg"`
+	Code int              `json:"code"`
+	Data []OkexTickerElem `json:"data"`
+	Msg  string           `json:"msg"`
 }
 
 type OkexTickerElem struct {
-	Buy string `json:"buy"`
-	Last string `json:"last"`
-	Vol string `json:"volume"`
+	Buy    string `json:"buy"`
+	Last   string `json:"last"`
+	Vol    string `json:"volume"`
 	Symbol string `json:"symbol"`
-	High string `json:"high"`
-	Low string `json:"low"`
+	High   string `json:"high"`
+	Low    string `json:"low"`
 	Change string `json:"changePercentage"`
 }
 
@@ -396,7 +396,7 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 				okexMarket := strings.Replace(v.Symbol, "_", "-", 1)
 				okexMarket = strings.ToUpper(okexMarket)
 				okexMarket = strings.Replace(okexMarket, "ETH", "WETH", 1)
-				ticker.Market =  okexMarket
+				ticker.Market = okexMarket
 				if stringInSlice(okexMarket, util.AllMarkets) {
 					ticker.Last, _ = strconv.ParseFloat(v.Last, 64)
 					ticker.Change = v.Change

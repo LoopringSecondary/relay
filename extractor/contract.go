@@ -146,7 +146,8 @@ func (m *MethodData) IsValid() error {
 const (
 	RINGMINED_EVT_NAME           = "RingMined"
 	CANCEL_EVT_NAME              = "OrderCancelled"
-	CUTOFF_EVT_NAME              = "CutoffTimestampChanged"
+	CUTOFF_EVT_NAME              = "AllOrdersCancelled"
+	CUTOFFPAIR_EVT_NAME          = "OrdersCancelled"
 	TOKENREGISTERED_EVT_NAME     = "TokenRegistered"
 	TOKENUNREGISTERED_EVT_NAME   = "TokenUnregistered"
 	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
@@ -230,19 +231,16 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 	for _, v := range ethaccessor.ProtocolAddresses() {
 		protocolSymbol := "loopring"
 		delegateSymbol := "transfer_delegate"
-		ringhashRegisterSymbol := "ringhash_register"
 		tokenRegisterSymbol := "token_register"
 
 		processor.protocols[v.ContractAddress] = protocolSymbol
 		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
-		processor.protocols[v.RinghashRegistryAddress] = ringhashRegisterSymbol
 		processor.protocols[v.DelegateAddress] = delegateSymbol
 
 		processor.delegates[v.DelegateAddress] = delegateSymbol
 
 		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
-		log.Infof("extractor,contract protocol %s->%s", ringhashRegisterSymbol, v.RinghashRegistryAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", delegateSymbol, v.DelegateAddress.Hex())
 	}
 }
@@ -266,6 +264,9 @@ func (processor *AbiProcessor) loadProtocolContract() {
 		case CUTOFF_EVT_NAME:
 			contract.Event = &ethaccessor.AllOrdersCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffTimestampEvent}
+		case CUTOFFPAIR_EVT_NAME:
+			contract.Event = &ethaccessor.OrdersCancelledEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairEvent}
 		}
 
 		eventemitter.On(contract.Id.Hex(), watcher)
@@ -411,11 +412,9 @@ func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
 
-	txinfo := contract.setTxInfo()
-
 	// emit to miner
 	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = txinfo
+	evt.TxInfo = contract.setTxInfo()
 	evt.UsedGas = contract.Gas
 	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
@@ -425,8 +424,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-	// todo(fuk): ring.protocol???
-	// ring.Protocol = common.HexToAddress(contract.To)
+	ring.Protocol = evt.Protocol
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
@@ -805,6 +803,26 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventData) error {
+	contractData := input.(EventData)
+	if len(contractData.Topics) < 2 {
+		log.Errorf("extractor,tx:%s cutoffPair event indexed fields number error", contractData.TxHash)
+		return nil
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.OrdersCancelledEvent)
+	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
+
+	evt := contractEvent.ConvertDown()
+	evt.TxInfo = contractData.setTxInfo()
+
+	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+
+	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
 
 	return nil
 }
