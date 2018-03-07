@@ -128,10 +128,7 @@ func (c EthPrivateKeyCrypto) SignTx(addr common.Address, tx *types.Transaction, 
 }
 
 func NewPrivateKeyCrypto(homestead bool, privateKeyHex string) (EthPrivateKeyCrypto, error) {
-	if "0x" == privateKeyHex[0:2] {
-		privateKeyHex = privateKeyHex[2:]
-	}
-	if privateKey, err := ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex)); nil != err {
+	if privateKey, err := toECDSA(privateKeyHex); nil != err {
 		return EthPrivateKeyCrypto{}, err
 	} else {
 		return EthPrivateKeyCrypto{EthCrypto: EthCrypto{homestead: homestead}, privateKey: privateKey}, nil
@@ -140,10 +137,7 @@ func NewPrivateKeyCrypto(homestead bool, privateKeyHex string) (EthPrivateKeyCry
 
 func (h *EthPrivateKeyCrypto) UnmarshalText(input []byte) error {
 	privateKeyHex := string(input)
-	if "0x" == privateKeyHex[0:2] {
-		privateKeyHex = privateKeyHex[2:]
-	}
-	if privateKey, err := ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex)); nil != err {
+	if privateKey, err := toECDSA(privateKeyHex); nil != err {
 		return err
 	} else {
 		h.homestead = true
@@ -152,6 +146,13 @@ func (h *EthPrivateKeyCrypto) UnmarshalText(input []byte) error {
 	}
 }
 
+func toECDSA(privateKeyHex string) (*ecdsa.PrivateKey, error) {
+	if "0x" == privateKeyHex[0:2] {
+		privateKeyHex = privateKeyHex[2:]
+	}
+	return ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex))
+}
+
 func (h *EthPrivateKeyCrypto) MarshalText() ([]byte, error) {
-	return []byte("0x" + common.Bytes2Hex(h.privateKey.D.Bytes())), nil
+	return []byte(common.ToHex(h.privateKey.D.Bytes())), nil
 }

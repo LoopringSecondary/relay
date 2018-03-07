@@ -52,11 +52,11 @@ type Ring struct {
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
 }
 
-func (ring *Ring) FeeSelections() uint16 {
-	feeSelections := uint16(0)
+func (ring *Ring) FeeSelections() *big.Int {
+	feeSelections := big.NewInt(int64(0))
 	for idx,filledOrder := range ring.Orders {
 		if filledOrder.FeeSelection > 0 {
-			feeSelections = feeSelections | 1 << uint16(idx)
+			feeSelections.Or(feeSelections, big.NewInt(int64(1 << uint(idx))))
 		}
 	}
 	return feeSelections
@@ -73,8 +73,11 @@ func (ring *Ring) UniqueId() common.Hash {
 }
 
 func (ring *Ring) GenerateHash(nameInfo *NameRegistryInfo) common.Hash {
-	//todo: add feeselection
-	hashBytes := crypto.GenerateHash(ring.UniqueId().Bytes(),common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32))
+	hashBytes := crypto.GenerateHash(
+		ring.UniqueId().Bytes(),
+		common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32),
+		common.LeftPadBytes(ring.FeeSelections().Bytes(), 2),
+	)
 	return common.BytesToHash(hashBytes)
 }
 
@@ -168,7 +171,7 @@ type RingSubmitInputs struct {
 	RList                    []Bytes32
 	SList                    []Bytes32
 	Miner *NameRegistryInfo
-	FeeSelections	uint16
+	FeeSelections	*big.Int
 }
 
 func emptyRingSubmitArgs(nameInfo *NameRegistryInfo) *RingSubmitInputs {
