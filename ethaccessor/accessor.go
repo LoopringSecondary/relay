@@ -137,6 +137,12 @@ func GetCutoff(contractAddress, owner common.Address, blockNumber string) (*big.
 	return cutoff.BigInt(), err
 }
 
+func GetCutoffPair(contractAddress, owner, token1, token2 common.Address, blockNumber string) (*big.Int, error) {
+	var cutoff types.Big
+	err := accessor.GetCutoffPair(&cutoff, contractAddress, owner, token1, token2, blockNumber)
+	return cutoff.BigInt(), err
+}
+
 func GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumber string) (*big.Int, error) {
 	return accessor.GetCancelledOrFilled(contractAddress, orderhash, blockNumber)
 }
