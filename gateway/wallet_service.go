@@ -176,7 +176,7 @@ type PriceQuote struct {
 }
 
 type TokenPrice struct {
-	Token string  `json:"token"`
+	Token string  `json:"symbol"`
 	Price float64 `json:"price"`
 }
 
@@ -263,6 +263,9 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.currency)
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
+		if k == "WETH" {
+			rst.Tokens = append(rst.Tokens, TokenPrice{"ETH", floatPrice})
+		}
 	}
 
 	return rst, nil
@@ -286,6 +289,10 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 		log.Info("get other exchanges ticker error" + err.Error())
 	}
 	return result, nil
+}
+
+func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err error) {
+	return w.trendManager.GetTicker()
 }
 
 func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {

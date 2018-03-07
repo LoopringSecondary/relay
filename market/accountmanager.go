@@ -60,7 +60,7 @@ type AccountManager struct {
 }
 
 type Token struct {
-	Token     string `json:"token"`
+	Token     string `json:"symbol"`
 	Balance   string `json:"balance"`
 	Allowance string `json:"allowance"`
 }

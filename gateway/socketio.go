@@ -21,6 +21,7 @@ var EventPostfixs = []string{EventPostfixReq, EventPostfixRes, EventPostfixEnd}
 
 const (
 	TICKER BusinessType = iota
+	LOOPRING_TICKERS
 	PORTFOLIO
 	MARKETCAP
 	BALANCE
@@ -39,7 +40,6 @@ func NewServer(s socketio.Server) Server {
 }
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Header)
 	OriginList := r.Header["Origin"]
 	Origin := ""
 	if len(OriginList) > 0 {
@@ -52,12 +52,12 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Headers", "accept, origin, content-type")
 	w.Header().Add("Access-Control-Allow-Methods", "PUT,POST,GET,DELETE,OPTIONS")
 	//w.Header().Add("Content-Type", "application/json;charset=utf-8")
-	fmt.Println(w.Header())
 	s.Server.ServeHTTP(w, r)
 }
 
 var MsgTypeRoute = map[BusinessType]string{
 	TICKER:      "tickers",
+	LOOPRING_TICKERS:  "loopringTickers",
 	TRENDS:      "trends",
 	PORTFOLIO:   "portfolio",
 	MARKETCAP:   "marketcap",
@@ -108,27 +108,32 @@ func (so *SocketIOServiceImpl) Start() {
 	})
 
 	for _, v := range MsgTypeRoute {
+		go func(vv string) {
+			server.OnEvent("/", vv+EventPostfixReq, func(s socketio.Conn, msg string) {
+				fmt.Println("input msg is : " + msg)
+				fmt.Println("current v is " + vv)
+				fmt.Println("current msg is : "  + msg)
+				context := make(map[string]string)
+				if s != nil && s.Context() != nil {
+					context = s.Context().(map[string]string)
+				}
+				context[vv] = msg
+				s.SetContext(context)
+				fmt.Println("current context is")
+				fmt.Println(s.Context())
+				so.connIdMap[s.ID()] = s
+			})
+		}(v)
 
-		server.OnEvent("/", v+EventPostfixReq, func(s socketio.Conn, msg string) {
-			fmt.Println("input msg is : " + msg)
-			context := make(map[string]string)
-			if s != nil && s.Context() != nil {
-				context = s.Context().(map[string]string)
-			}
-			context[v] = msg
-			s.SetContext(context)
-			fmt.Println("current context is")
-			fmt.Println(s.Context())
-			so.connIdMap[s.ID()] = s
-		})
-
-		server.OnEvent("/", v+EventPostfixEnd, func(s socketio.Conn, msg string) {
-			if s != nil && s.Context() != nil {
-				businesses := s.Context().(map[string]string)
-				delete(businesses, v)
-				s.SetContext(businesses)
-			}
-		})
+		go func(vv string) {
+			server.OnEvent("/", vv+EventPostfixEnd, func(s socketio.Conn, msg string) {
+				if s != nil && s.Context() != nil {
+					businesses := s.Context().(map[string]string)
+					delete(businesses, vv)
+					s.SetContext(businesses)
+				}
+			})
+		}(v)
 	}
 
 	so.cron.AddFunc("0/10 * * * * *", func() {
@@ -180,10 +185,19 @@ func (so *SocketIOServiceImpl) Start() {
 							}
 							res, err := so.walletService.GetTickers(query)
 							if err != nil {
-								v.Emit("tickers_res", "get portfolio error")
+								v.Emit("tickers_res", "get tickers error")
 							} else {
 								b, _ := json.Marshal(res)
 								v.Emit("tickers_res", string(b[:]))
+							}
+						}
+						if bk == "loopringTickers" {
+							res, err := so.walletService.GetAllMarketTickers()
+							if err != nil {
+								v.Emit("loopringTickers_res", "get loopring tickers error")
+							} else {
+								b, _ := json.Marshal(res)
+								v.Emit("loopringTickers_res", string(b[:]))
 							}
 						}
 						if bk == "trends" {
