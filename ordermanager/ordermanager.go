@@ -41,7 +41,7 @@ type OrderManager interface {
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
-	IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool
+	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	IsValueDusted(tokenAddress common.Address, value *big.Rat) bool
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
@@ -76,7 +76,7 @@ func NewOrderManager(
 	om.processor = newForkProcess(om.rds, market)
 	om.um = userManager
 	om.mc = market
-	om.cutoffCache = NewCutoffCache(rds, options.CutoffCacheExpireTime, options.CutoffCacheCleanTime)
+	om.cutoffCache = NewCutoffCache(options.CutoffCacheCleanTime)
 
 	dustOrderValue = om.options.DustOrderValue
 
@@ -271,28 +271,36 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	protocol := event.Protocol
 	owner := event.Owner
 	currentCutoff := event.Cutoff
-	lastCutoff, ok := om.cutoffCache.Get(event.Protocol, event.Owner)
+	lastCutoff := om.cutoffCache.GetCutoff(protocol, owner)
 
-	var addErr, delErr error
-	if !ok {
-		addErr = om.cutoffCache.Add(event)
-	} else if ok && lastCutoff.Cmp(event.Cutoff) >= 0 {
-		log.Debugf("order manager, handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
+	if currentCutoff.Cmp(lastCutoff) <= 0 {
+		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
 	} else {
-		delErr = om.cutoffCache.Del(event.Protocol, event.Owner)
-		addErr = om.cutoffCache.Add(event)
+		om.cutoffCache.UpdateCutoff(protocol, owner, currentCutoff)
+		om.rds.SetCutOff(owner, currentCutoff)
+		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
 	}
 
-	if addErr != nil || delErr != nil {
-		return fmt.Errorf("order manager,handle cutoff error: cutoffCache add or del failed")
-	}
-
-	om.rds.SetCutOff(owner, currentCutoff)
-	log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
 	return nil
 }
 
 func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
+	event := input.(*types.OrdersCancelledEvent)
+
+	protocol := event.Protocol
+	owner := event.Owner
+	token1 := event.Token1
+	token2 := event.Token2
+	currentCutoffPair := event.Cutoff
+	lastCutoffPair := om.cutoffCache.GetCutoffPair(protocol, owner, token1, token2)
+
+	if currentCutoffPair.Cmp(lastCutoffPair) <= 0 {
+		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", protocol.Hex(), owner.Hex(), lastCutoffPair.String(), currentCutoffPair.String())
+	} else {
+		om.cutoffCache.UpdateCutoffPair(protocol, owner, token1, token2, currentCutoffPair)
+		om.rds.SetCutoffPair(owner, token1, token2, currentCutoffPair)
+		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", owner.Hex(), token1.Hex(), token2.Hex(), currentCutoffPair.String())
+	}
 
 	return nil
 }
@@ -416,8 +424,8 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 	return om.rds.RingMinedPageQuery(query, pageIndex, pageSize)
 }
 
-func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool {
-	return om.cutoffCache.IsOrderCutoff(protocol, owner, createTime)
+func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool {
+	return om.cutoffCache.IsOrderCutoff(protocol, owner, token1, token2, validsince)
 }
 
 func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error) {

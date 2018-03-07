@@ -19,39 +19,30 @@
 package ordermanager
 
 import (
-	ca "github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
 )
 
 type CutoffCache struct {
-	cache ca.Cache
-	ttl   int64
+	ttl int64
 }
 
-func NewCutoffCache(cache ca.Cache, expire int64) *CutoffCache {
+func NewCutoffCache(expire int64) *CutoffCache {
 	cutoffcache := &CutoffCache{}
-	cutoffcache.cache = cache
 	cutoffcache.ttl = expire
 
 	return cutoffcache
 }
 
 // 合约验证的是创建时间
-func (c *CutoffCache) IsOrderCutoff(order *types.OrderState) bool {
-	protocol := order.RawOrder.Protocol
-	owner := order.RawOrder.Owner
-	validsince := order.RawOrder.ValidSince
-
+func (c *CutoffCache) IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool {
 	if cutoff := c.GetCutoff(protocol, owner); cutoff.Cmp(validsince) > 0 {
 		return true
 	}
 
-	token1 := order.RawOrder.TokenS
-	token2 := order.RawOrder.TokenB
 	if cutoff := c.GetCutoffPair(protocol, owner, token1, token2); cutoff.Cmp(validsince) > 0 {
 		return true
 	}
@@ -62,7 +53,7 @@ func (c *CutoffCache) IsOrderCutoff(order *types.OrderState) bool {
 func (c *CutoffCache) GetCutoff(protocol, owner common.Address) *big.Int {
 	key := formatCutoffKey(protocol, owner)
 
-	if bs, err := c.cache.Get(key); err == nil {
+	if bs, err := cache.Get(key); err == nil {
 		return bytes2value(bs)
 	}
 
@@ -77,7 +68,7 @@ func (c *CutoffCache) GetCutoff(protocol, owner common.Address) *big.Int {
 func (c *CutoffCache) GetCutoffPair(protocol, owner, token1, token2 common.Address) *big.Int {
 	key := formatCutoffPairKey(protocol, owner, token1, token2)
 
-	if bs, err := c.cache.Get(key); err == nil {
+	if bs, err := cache.Get(key); err == nil {
 		return bytes2value(bs)
 	}
 
@@ -93,14 +84,14 @@ func (c *CutoffCache) UpdateCutoff(protocol, owner common.Address, cutoff *big.I
 	key := formatCutoffKey(protocol, owner)
 	bs := value2bytes(cutoff)
 
-	return c.cache.Set(key, bs, time.Now().Unix()+c.ttl)
+	return cache.Set(key, bs, time.Now().Unix()+c.ttl)
 }
 
 func (c *CutoffCache) UpdateCutoffPair(protocol, owner, token1, token2 common.Address, cutoff *big.Int) error {
 	key := formatCutoffPairKey(protocol, owner, token1, token2)
 	bs := value2bytes(cutoff)
 
-	return c.cache.Set(key, bs, time.Now().Unix()+c.ttl)
+	return cache.Set(key, bs, time.Now().Unix()+c.ttl)
 }
 
 func formatCutoffKey(protocol, owner common.Address) string {
