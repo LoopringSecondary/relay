@@ -19,6 +19,8 @@
 package types
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
@@ -37,6 +39,8 @@ const (
 	TX_TYPE_WRAP         = 6 // WETH DEPOSIT
 	TX_TYPE_UNWRAP       = 7 // WETH WITHDRAWAL
 	TX_TYPE_CANCEL_ORDER = 8
+	TX_TYPE_CUTOFF       = 9
+	TX_TYPE_CUTOFF_PAIR  = 10
 )
 
 type Transaction struct {
@@ -45,7 +49,7 @@ type Transaction struct {
 	From        common.Address
 	To          common.Address
 	TxHash      common.Hash
-	OrderHash   common.Hash
+	Content     []byte
 	BlockNumber *big.Int
 	Value       *big.Int
 	Type        uint8
@@ -88,6 +92,10 @@ func (tx *Transaction) TypeStr() string {
 		ret = "unwrap"
 	case TX_TYPE_CANCEL_ORDER:
 		ret = "cancel_order"
+	case TX_TYPE_CUTOFF:
+		ret = "cutoff"
+	case TX_TYPE_CUTOFF_PAIR:
+		ret = "cutoff_trading_pair"
 	}
 
 	return ret
@@ -106,42 +114,56 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 		tx.Value = src.AmountB
 	}
 	tx.TxHash = txhash
-	tx.OrderHash = src.Hash
+	tx.Content = src.Hash.Bytes()
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
 	return nil
 }
 
-func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, txtype, status uint8) error {
-	tx.Protocol = src.Protocol
+func (tx *Transaction) GetOrderContent() (common.Hash, error) {
+	if tx.Type == TX_TYPE_BUY || tx.Type == TX_TYPE_SELL {
+		return common.BytesToHash(tx.Content), nil
+	} else {
+		return NilHash, fmt.Errorf("get order salt,transaction type error:%d", tx.Type)
+	}
+}
+
+func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, txtype uint8) error {
 	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = to
 	tx.Type = txtype
-	tx.Status = status
 	if txtype == TX_TYPE_SELL {
 		tx.Value = src.AmountS
 	} else {
 		tx.Value = src.AmountB
 	}
-	tx.TxHash = src.TxHash
-	tx.OrderHash = src.OrderHash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+
+	tx.Content = src.OrderHash.Bytes()
+	tx.fullFilled(src.TxInfo)
 
 	return nil
+}
+
+func (tx *Transaction) GetFillContent() (common.Hash, error) {
+	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
+		return common.BytesToHash(tx.Content), nil
+	} else {
+		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
+	}
 }
 
 func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status uint8, value, blockNumber *big.Int, nowtime int64) error {
 	tx.Protocol = src.Protocol
 	tx.Owner = src.Owner
+	tx.From = src.Owner
+	tx.To = src.Protocol
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Status = status
 	tx.Value = value
-	tx.TxHash = txhash
-	tx.OrderHash = src.Hash
+
+	tx.Content = src.Hash.Bytes()
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
@@ -149,87 +171,159 @@ func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status u
 	return nil
 }
 
-func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Address, status uint8) error {
-	tx.Protocol = src.Protocol
+func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Address) error {
+	tx.From = src.From
+	tx.To = src.To
 	tx.Owner = owner
 	tx.Type = TX_TYPE_CANCEL_ORDER
-	tx.Status = status
 	tx.Value = src.AmountCancelled
-	tx.TxHash = src.TxHash
-	tx.OrderHash = src.OrderHash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+	tx.Content = src.OrderHash.Bytes()
+
+	tx.fullFilled(src.TxInfo)
 
 	return nil
 }
 
-func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, status uint8) error {
-	tx.Protocol = src.Protocol
+func (tx *Transaction) FromCutoffEvent(src *AllOrdersCancelledEvent) error {
+	tx.From = src.From
+	tx.To = src.To
+	tx.Owner = src.Owner
+	tx.Type = TX_TYPE_CUTOFF
+	tx.Value = src.Cutoff
+
+	tx.fullFilled(src.TxInfo)
+	return nil
+}
+
+func (tx *Transaction) FromCutoffMethodEvent(src *CutoffMethodEvent) error {
+	tx.From = src.From
+	tx.To = src.To
+	tx.Owner = src.Owner
+	tx.Type = TX_TYPE_CUTOFF
+	tx.Value = src.Value
+
+	tx.fullFilled(src.TxInfo)
+	return nil
+}
+
+type CutoffPairSalt struct {
+	Token1 common.Address `json:"token1"`
+	Token2 common.Address `json:"token2"`
+}
+
+func (tx *Transaction) FromCutoffPairEvent(src *OrdersCancelledEvent) error {
+	tx.From = src.From
+	tx.To = src.To
+	tx.Owner = src.Owner
+	tx.Type = TX_TYPE_CUTOFF_PAIR
+	tx.Value = src.Cutoff
+
+	var salt CutoffPairSalt
+	salt.Token1 = src.Token1
+	salt.Token2 = src.Token2
+	if bs, err := json.Marshal(salt); err != nil {
+		return err
+	} else {
+		tx.Content = bs
+	}
+
+	tx.fullFilled(src.TxInfo)
+	return nil
+}
+
+func (tx *Transaction) FromCutoffPairMethodEvent(src *CutoffPairMethodEvent) error {
+	tx.From = src.From
+	tx.To = src.To
+	tx.Owner = src.Owner
+	tx.Type = TX_TYPE_CUTOFF_PAIR
+	tx.Value = src.Value
+
+	var salt CutoffPairSalt
+	salt.Token1 = src.Token1
+	salt.Token2 = src.Token2
+	if bs, err := json.Marshal(salt); err != nil {
+		return err
+	} else {
+		tx.Content = bs
+	}
+
+	tx.fullFilled(src.TxInfo)
+	return nil
+}
+
+func (tx *Transaction) GetCutoffPairContent() (*CutoffPairSalt, error) {
+	if tx.Type != TX_TYPE_CUTOFF_PAIR {
+		return nil, fmt.Errorf("cutoff pair salt,transaction type error:%d", tx.Type)
+	}
+	var cutoffpair CutoffPairSalt
+	if err := json.Unmarshal(tx.Content, &cutoffpair); err != nil {
+		return nil, err
+	}
+
+	return &cutoffpair, nil
+}
+
+func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error {
 	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_WRAP
-	tx.Status = status
-	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+
+	tx.fullFilled(src.TxInfo)
 
 	return nil
 }
 
-func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, status uint8) error {
-	tx.Protocol = src.Protocol
-	tx.Owner = src.From
+func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent) error {
+	tx.Owner = src.Owner
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_UNWRAP
-	tx.Status = status
-	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+
+	tx.fullFilled(src.TxInfo)
 
 	return nil
 }
 
-func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent, status uint8) error {
-	tx.Protocol = src.Protocol
+func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent) error {
 	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_APPROVE
-	tx.Status = status
-	tx.TxHash = src.TxHash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+
+	tx.fullFilled(src.TxInfo)
 
 	return nil
 }
 
-func (tx *Transaction) FromTransferEvent(src *TransferEvent, txhash common.Hash, sendOrReceive, status uint8) error {
-	tx.Protocol = src.Protocol
+func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8) error {
 	if sendOrReceive == TX_TYPE_SEND {
-		tx.Owner = src.From
-		tx.From = src.From
-		tx.To = src.To
+		tx.Owner = src.Sender
 	} else {
-		tx.Owner = src.To
-		tx.From = src.From
-		tx.To = src.To
+		tx.Owner = src.Receiver
 	}
+	tx.From = src.Sender
+	tx.To = src.Receiver
 	tx.Value = src.Value
 	tx.Type = sendOrReceive
-	tx.Status = status
-	tx.TxHash = txhash
-	tx.BlockNumber = src.BlockNumber
-	tx.CreateTime = src.BlockTime
-	tx.UpdateTime = src.BlockTime
+
+	tx.fullFilled(src.TxInfo)
 
 	return nil
+}
+
+func (tx *Transaction) fullFilled(txinfo TxInfo) {
+	tx.Protocol = txinfo.Protocol
+	if txinfo.TxFailed {
+		tx.Status = TX_STATUS_FAILED
+	} else {
+		tx.Status = TX_STATUS_SUCCESS
+	}
+	tx.TxHash = txinfo.TxHash
+	tx.BlockNumber = txinfo.BlockNumber
+	tx.CreateTime = txinfo.BlockTime
+	tx.UpdateTime = txinfo.BlockTime
 }

@@ -301,7 +301,6 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.AmountB = m.OrderValues[1]
 	order.ValidSince = m.OrderValues[2]
 	order.ValidUntil = m.OrderValues[3]
-	//order.Salt = m.OrderValues[4]
 	order.LrcFee = m.OrderValues[4]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
@@ -314,13 +313,31 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	return &order, nil
 }
 
-type CancelAllOrdersByTradingPairMethod struct {
+type CancelAllOrdersMethod struct {
+	Cutoff uint `fieldName:"cutoff"`
+}
+
+func (method *CancelAllOrdersMethod) ConvertDown() *types.CutoffMethodEvent {
+	evt := &types.CutoffMethodEvent{}
+	evt.Value = big.NewInt(int64(method.Cutoff))
+
+	return evt
+}
+
+type CancelOrdersByTradingPairMethod struct {
 	Token1 common.Address `fieldName:"token1"`
 	Token2 common.Address `fieldName:"token2"`
 	Cutoff uint           `fieldName:"cutoff"`
 }
 
-// todo(fuk): add internal cancelAllOrdersByTradingPair and implement related functions
+func (method *CancelOrdersByTradingPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
+	evt := &types.CutoffPairMethodEvent{}
+	evt.Value = big.NewInt(int64(method.Cutoff))
+	evt.Token1 = method.Token1
+	evt.Token2 = method.Token2
+
+	return evt
+}
 
 type WethWithdrawalMethod struct {
 	Value *big.Int `fieldName:"amount"`

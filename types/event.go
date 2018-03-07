@@ -25,6 +25,8 @@ import (
 
 type TxInfo struct {
 	Protocol    common.Address
+	From        common.Address
+	To          common.Address
 	TxHash      common.Hash
 	BlockHash   common.Hash
 	BlockNumber *big.Int
@@ -58,9 +60,9 @@ type AddressDeAuthorizedEvent struct {
 
 type TransferEvent struct {
 	TxInfo
-	From  common.Address
-	To    common.Address
-	Value *big.Int
+	Sender   common.Address
+	Receiver common.Address
+	Value    *big.Int
 }
 
 type ApprovalEvent struct {
@@ -122,37 +124,18 @@ type RingMinedEvent struct {
 
 type WethDepositMethodEvent struct {
 	TxInfo
-	From  common.Address
-	To    common.Address
+	Owner common.Address
 	Value *big.Int
-}
-
-func (evt *WethDepositMethodEvent) ToTransaction() Transaction {
-	var tx Transaction
-	tx.Protocol = evt.Protocol
-	tx.From = evt.From
-	tx.To = evt.To
-	tx.BlockNumber = evt.BlockNumber
-	tx.TxHash = evt.TxHash
-	tx.Value = evt.Value
-	tx.CreateTime = evt.BlockTime
-	tx.UpdateTime = evt.BlockTime
-	tx.Type = TX_TYPE_WRAP
-	tx.Status = TX_STATUS_SUCCESS
-	return tx
 }
 
 type WethWithdrawalMethodEvent struct {
 	TxInfo
-	From  common.Address
-	To    common.Address
+	Owner common.Address
 	Value *big.Int
 }
 
 type ApproveMethodEvent struct {
 	TxInfo
-	From    common.Address
-	To      common.Address
 	Spender common.Address
 	Value   *big.Int
 	Owner   common.Address
@@ -163,6 +146,20 @@ type SubmitRingMethodEvent struct {
 	UsedGas      *big.Int
 	UsedGasPrice *big.Int
 	Err          error
+}
+
+type CutoffMethodEvent struct {
+	TxInfo
+	Value *big.Int
+	Owner common.Address
+}
+
+type CutoffPairMethodEvent struct {
+	TxInfo
+	Value  *big.Int
+	Token1 common.Address
+	Token2 common.Address
+	Owner  common.Address
 }
 
 type RingSubmitFailedEvent struct {
