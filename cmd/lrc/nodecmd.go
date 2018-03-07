@@ -131,26 +131,30 @@ func unlockAccount(ctx *cli.Context, globalConfig *config.GlobalConfig) {
 					}
 				}
 			} else {
-				unlocked := false
-				for trials := 1; trials < 4; trials++ {
-					fmt.Fprintf(ctx.App.Writer, "Unlocking account %s | Attempt %d/%d \n", acc.Address.Hex(), trials, 3)
-					passphrase, _ = getPassphraseFromTeminal(false, ctx.App.Writer)
-					if err := crypto.UnlockKSAccount(acc, passphrase); nil != err {
-						if keystore.ErrNoMatch == err {
-							log.Fatalf("err:", err.Error())
-						} else {
-							log.Infof("failed to unlock, try again")
-						}
-					} else {
-						unlocked = true
-						log.Infof("Unlocked address:%s", acc.Address.Hex())
-						break
-					}
-				}
-				if !unlocked {
-					utils.ExitWithErr(ctx.App.Writer, errors.New("3 incorrect passphrase attempts when unlocking address:"+acc.Address.Hex()))
-				}
+				unlockAccountFromTerminal(acc, ctx)
 			}
 		}
+	}
+}
+
+func unlockAccountFromTerminal(acc accounts.Account, ctx *cli.Context) {
+	unlocked := false
+	for trials := 1; trials < 4; trials++ {
+		fmt.Fprintf(ctx.App.Writer, "Unlocking account %s | Attempt %d/%d \n", acc.Address.Hex(), trials, 3)
+		passphrase, _ := getPassphraseFromTeminal(false, ctx.App.Writer)
+		if err := crypto.UnlockKSAccount(acc, passphrase); nil != err {
+			if keystore.ErrNoMatch == err {
+				log.Fatalf("err:", err.Error())
+			} else {
+				log.Infof("failed to unlock, try again")
+			}
+		} else {
+			unlocked = true
+			log.Infof("Unlocked address:%s", acc.Address.Hex())
+			break
+		}
+	}
+	if !unlocked {
+		utils.ExitWithErr(ctx.App.Writer, errors.New("3 incorrect passphrase attempts when unlocking address:"+acc.Address.Hex()))
 	}
 }
