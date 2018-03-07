@@ -19,98 +19,100 @@
 package ordermanager
 
 import (
-	"github.com/Loopring/relay/dao"
+	ca "github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	gocache "github.com/patrickmn/go-cache"
 	"math/big"
 	"time"
 )
 
 type CutoffCache struct {
-	cache  *gocache.Cache
-	expire time.Duration
-	clean  time.Duration
-	rds    dao.RdsService
+	cache ca.Cache
+	ttl   int64
 }
 
-func NewCutoffCache(rds dao.RdsService, expire, clean int64) *CutoffCache {
-	cache := &CutoffCache{}
-	cache.rds = rds
-	cache.expire = time.Duration(expire) * time.Second
+func NewCutoffCache(cache ca.Cache, expire int64) *CutoffCache {
+	cutoffcache := &CutoffCache{}
+	cutoffcache.cache = cache
+	cutoffcache.ttl = expire
 
-	if clean > 0 {
-		cache.clean = time.Duration(clean) * time.Second
-	} else {
-		cache.clean = gocache.NoExpiration
-	}
-	cache.cache = gocache.New(cache.expire, cache.clean)
-
-	return cache
+	return cutoffcache
 }
 
 // 合约验证的是创建时间
-func (c *CutoffCache) IsOrderCutoff(protocol, owner common.Address, createTime *big.Int) bool {
-	cutoff, ok := c.Get(protocol, owner)
-	if !ok || cutoff.Cmp(createTime) < 0 {
-		return false
+func (c *CutoffCache) IsOrderCutoff(order *types.OrderState) bool {
+	protocol := order.RawOrder.Protocol
+	owner := order.RawOrder.Owner
+	validsince := order.RawOrder.ValidSince
+
+	if cutoff := c.GetCutoff(protocol, owner); cutoff.Cmp(validsince) > 0 {
+		return true
 	}
-	return true
+
+	token1 := order.RawOrder.TokenS
+	token2 := order.RawOrder.TokenB
+	if cutoff := c.GetCutoffPair(protocol, owner, token1, token2); cutoff.Cmp(validsince) > 0 {
+		return true
+	}
+
+	return false
 }
 
-func (c *CutoffCache) Get(protocol, owner common.Address) (*big.Int, bool) {
-	cutoff, ok := c.get(protocol, owner)
-	if !ok {
-		if entity, err := c.rds.GetCutoffEvent(protocol, owner); err == nil {
-			var evt types.AllOrdersCancelledEvent
-			entity.ConvertUp(&evt)
-			cutoff = evt.Cutoff
-			c.set(protocol, owner, cutoff)
-		} else {
-			return big.NewInt(0), false
-		}
+func (c *CutoffCache) GetCutoff(protocol, owner common.Address) *big.Int {
+	key := formatCutoffKey(protocol, owner)
+
+	if value, err := c.cache.Get(key); err == nil {
+		return big.NewInt(0).SetBytes(value)
 	}
 
-	return cutoff, true
+	if cutoff, _ := ethaccessor.GetCutoff(protocol, owner, "latest"); cutoff.Cmp(big.NewInt(0)) > 0 {
+		c.cache.Set(key, cutoff.Bytes(), time.Now().Unix()+c.ttl)
+		return cutoff
+	}
+
+	return big.NewInt(0)
 }
 
-func (c *CutoffCache) Add(event *types.AllOrdersCancelledEvent) error {
-	entity := new(dao.CutOffEvent)
-	entity.ConvertDown(event)
-	if err := c.rds.Add(entity); err != nil {
-		return err
+func (c *CutoffCache) GetCutoffPair(protocol, owner, token1, token2 common.Address) *big.Int {
+	key := formatCutoffPairKey(protocol, owner, token1, token2)
+
+	if value, err := c.cache.Get(key); err == nil {
+		return big.NewInt(0).SetBytes(value)
 	}
 
-	return c.set(event.Protocol, event.Owner, event.Cutoff)
+	if cutoff, _ := ethaccessor.GetCutoffPair(protocol, owner, token1, token2, "latest"); cutoff.Cmp(big.NewInt(0)) > 0 {
+		c.cache.Set(key, cutoff.Bytes(), time.Now().Unix()+c.ttl)
+		return cutoff
+	}
+
+	return big.NewInt(0)
 }
 
-func (c *CutoffCache) Del(protocol, owner common.Address) error {
-	if err := c.rds.DelCutoffEvent(protocol, owner); err != nil {
-		return err
-	}
-	c.del(protocol, owner)
+// todo(fuk): cutoff event
+func (c *CutoffCache) UpdateCutoff() error {
 	return nil
 }
 
-func (c *CutoffCache) set(protocol, owner common.Address, cutoff *big.Int) error {
-	key := formatKey(protocol, owner)
-	return c.cache.Add(key, cutoff, c.expire)
+// todo(fuk): cutoffpair event
+func (c *CutoffCache) UpdateCutoffPair() error {
+	return nil
 }
 
-func (c *CutoffCache) get(protocol, owner common.Address) (*big.Int, bool) {
-	key := formatKey(protocol, owner)
-	data, ok := c.cache.Get(key)
-	if !ok {
-		return nil, false
-	}
-	return data.(*big.Int), true
-}
-
-func (c *CutoffCache) del(protocol, owner common.Address) {
-	key := formatKey(protocol, owner)
-	c.cache.Delete(key)
-}
-
-func formatKey(protocol, owner common.Address) string {
+func formatCutoffKey(protocol, owner common.Address) string {
 	return protocol.Hex() + "-" + owner.Hex()
+}
+
+// todo(fuk): need test
+func formatCutoffPairKey(protocol, owner, token1, token2 common.Address) string {
+	var bs []byte
+
+	bs1 := token1.Bytes()
+	bs2 := token2.Bytes()
+
+	for i := 0; i < len(bs1); i++ {
+		bs[i] = bs1[i] ^ bs2[i]
+	}
+
+	return protocol.Hex() + "-" + owner.Hex() + "-" + string(bs)
 }

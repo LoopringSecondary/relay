@@ -131,12 +131,14 @@ func Erc20Allowance(tokenAddress, ownerAddress, spender common.Address, blockPar
 	return accessor.Erc20Allowance(tokenAddress, ownerAddress, spender, blockParameter)
 }
 
+// todo(fuk): 需要测试，如果没有，合约是否返回为0
 func GetCutoff(contractAddress, owner common.Address, blockNumber string) (*big.Int, error) {
 	var cutoff types.Big
 	err := accessor.GetCutoff(&cutoff, contractAddress, owner, blockNumber)
 	return cutoff.BigInt(), err
 }
 
+// todo(fuk): 需要测试，如果没有，合约是否返回为0
 func GetCutoffPair(contractAddress, owner, token1, token2 common.Address, blockNumber string) (*big.Int, error) {
 	var cutoff types.Big
 	err := accessor.GetCutoffPair(&cutoff, contractAddress, owner, token1, token2, blockNumber)
