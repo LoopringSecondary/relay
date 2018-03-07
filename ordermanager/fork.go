@@ -51,13 +51,14 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	if err := p.dao.RollBackFill(from, to); err != nil {
 		log.Errorf("order manager fork error:%s", err.Error())
 	}
-	if err := p.dao.RollBackCancel(from, to); err != nil {
-		log.Errorf("order manager fork error:%s", err.Error())
-	}
-	if err := p.dao.RollBackCutoff(from, to); err != nil {
-		log.Errorf("order manager fork error:%s", err.Error())
-	}
+	//if err := p.dao.RollBackCancel(from, to); err != nil {
+	//	log.Errorf("order manager fork error:%s", err.Error())
+	//}
+	//if err := p.dao.RollBackCutoff(from, to); err != nil {
+	//	log.Errorf("order manager fork error:%s", err.Error())
+	//}
 
+	// todo(fuk): isOrderCutoff???
 	orderList, err := p.dao.GetOrdersWithBlockNumberRange(from, to)
 	if err != nil {
 		return err
