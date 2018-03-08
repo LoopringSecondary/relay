@@ -294,10 +294,8 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
-	var nonce types.Big
-	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Hex(), "pending"); nil != err {
-		return "", err
-	}
+	nonce := accessor.addressNextNonce(sender)
+	log.Infof("nonce:%s", nonce.String())
 	if value == nil {
 		value = big.NewInt(0)
 	}
@@ -328,6 +326,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
+			log.Infof("sender:%s", sender.Hex())
 			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
 		}
 	}
@@ -488,4 +487,29 @@ func (ethAccessor *ethNodeAccessor) GetSenderAddress(protocol common.Address) (c
 	}
 
 	return impl.DelegateAddress, nil
+}
+
+func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *big.Int {
+
+	log.Infof("noncenoncedddddd:%s", "iio")
+	if _, exists := accessor.AddressNonce[address]; !exists {
+		var nonce types.Big
+		if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
+			nonce = *(types.NewBigWithInt(0))
+		}
+		accessor.AddressNonce[address] = nonce.BigInt()
+	}
+	nonce := new(big.Int)
+	nonce.Set(accessor.AddressNonce[address])
+	return nonce
+}
+
+func (accessor *ethNodeAccessor) addressNextNonce(address common.Address) *big.Int {
+	accessor.mtx.Lock()
+	defer accessor.mtx.Unlock()
+
+	nonce := accessor.addressCurrentNonce(address)
+	nonce.Add(nonce, big.NewInt(int64(1)))
+	accessor.AddressNonce[address].Set(nonce)
+	return nonce
 }

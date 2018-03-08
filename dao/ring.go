@@ -120,7 +120,6 @@ type RingSubmitInfo struct {
 	ProtocolUsedGas  string `gorm:"column:protocol_used_gas;type:varchar(50)"`
 
 	ProtocolTxHash string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
-	RegistryTxHash string `gorm:"column:registry_tx_hash;type:varchar(82)"`
 
 	Miner string `gorm:"column:miner;type:varchar(42)"`
 	Err   string `gorm:"column:err;type:text"`

@@ -194,4 +194,6 @@ type ethNodeAccessor struct {
 	ProtocolAddresses map[common.Address]*ProtocolAddress
 	*MutilClient
 	gasPriceEvaluator *GasPriceEvaluator
+	mtx               sync.RWMutex
+	AddressNonce      map[common.Address]*big.Int
 }
