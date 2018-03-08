@@ -232,6 +232,8 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return
 	}
 
+
+
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)

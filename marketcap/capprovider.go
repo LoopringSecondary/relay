@@ -109,6 +109,8 @@ func (p *CapProvider_CoinMarketCap) GetEthCap() (*big.Rat, error) {
 
 func (p *CapProvider_CoinMarketCap) GetMarketCapByCurrency(tokenAddress common.Address, currencyStr string) (*big.Rat, error) {
 	currency := StringToLegalCurrency(currencyStr)
+	fmt.Println("current cap is ...............>>>>>>>>>")
+	fmt.Println(p.tokenMarketCaps)
 	if c, exists := p.tokenMarketCaps[tokenAddress]; exists {
 		var v *big.Rat
 		switch currency {
