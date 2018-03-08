@@ -226,6 +226,15 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return
 	}
 
+	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
+	b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
+	if bErr == nil {
+		ethBalance.Balance = types.HexToBigint(b)
+		balances["ETH"] = ethBalance
+	} else {
+		return res, bErr
+	}
+
 	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
 	if err != nil {
 		return
@@ -234,12 +243,18 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
+		fmt.Println("priceQuote key " + pq.Token)
+		fmt.Print("priceQuote value ")
+		fmt.Println(pq.Price)
 	}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
 		fmt.Println("start handle asset handler.....")
 		asset := priceQuoteMap[k]
+		fmt.Println(asset)
+		fmt.Println(v.Balance)
+		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		fmt.Println(totalAsset.Float64())
 		fmt.Println(asset)

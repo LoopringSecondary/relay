@@ -92,6 +92,7 @@ func updateBinanceCache() {
 	updateCacheByExchange("binance", GetTickerFromBinance)
 }
 func updateOkexCache() {
+	fmt.Println("start sync okex datas..............")
 	tickers, err := GetAllTickerFromOkex()
 	if err == nil && len(tickers) > 0 {
 		for _, t := range tickers {
@@ -105,6 +106,7 @@ func updateHuobiCache() {
 
 func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
 
+	fmt.Println("start sync exchange datas.............." + exchange)
 	for _, v := range util.AllMarkets {
 		vv := strings.ToUpper(v)
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
@@ -142,9 +144,9 @@ func (c *CollectorImpl) Start() {
 	updateBinanceCache()
 	updateOkexCache()
 	updateHuobiCache()
-	c.cron.AddFunc("@every 5m", updateBinanceCache)
-	c.cron.AddFunc("@every 5m", updateOkexCache)
-	c.cron.AddFunc("@every 5m", updateHuobiCache)
+	c.cron.AddFunc("@every 5s", updateBinanceCache)
+	c.cron.AddFunc("@every 5s", updateOkexCache)
+	c.cron.AddFunc("@every 5s", updateHuobiCache)
 	log.Info("start collect cron jobs......... ")
 	c.cron.Start()
 
@@ -341,7 +343,7 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 			ticker.Last, _ = strconv.ParseFloat(okexTicker.LastPrice, 64)
 			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
 			ticker.Exchange = "okex"
-			ticker.Vol, _ = strconv.ParseFloat(okexTicker.Vol, 64)
+			ticker.Amount, _ = strconv.ParseFloat(okexTicker.Vol, 64)
 			ticker.High, _ = strconv.ParseFloat(okexTicker.High, 64)
 			ticker.Low, _ = strconv.ParseFloat(okexTicker.Low, 64)
 			return ticker, nil
@@ -396,7 +398,7 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 					ticker.Last, _ = strconv.ParseFloat(v.Last, 64)
 					ticker.Change = v.Change
 					ticker.Exchange = "okex"
-					ticker.Vol, _ = strconv.ParseFloat(v.Vol, 64)
+					ticker.Amount, _ = strconv.ParseFloat(v.Vol, 64)
 					ticker.High, _ = strconv.ParseFloat(v.High, 64)
 					ticker.Low, _ = strconv.ParseFloat(v.Low, 64)
 					tickers = append(tickers, ticker)
