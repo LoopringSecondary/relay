@@ -215,7 +215,6 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 }
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
-	fmt.Println(query)
 	res = make([]Portfolio, 0)
 	if len(query.Owner) == 0 {
 		return nil, errors.New("owner can't be nil")
@@ -232,22 +231,20 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return
 	}
 
-
-
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
 	}
 
-	fmt.Println("price quote result is ")
-	fmt.Println(account)
-	fmt.Println(priceQuoteMap)
-
-	var totalAsset *big.Rat
+	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
+		fmt.Println("start handle asset handler.....")
 		asset := priceQuoteMap[k]
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		fmt.Println(totalAsset.Float64())
+		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
+		fmt.Println(totalAsset.Float64())
 	}
 
 	for k, v := range balances {
