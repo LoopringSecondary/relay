@@ -215,6 +215,7 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 }
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
+	fmt.Println(query)
 	if len(query.owner) == 0 {
 		return nil, errors.New("owner can't be nil")
 	}
