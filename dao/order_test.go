@@ -18,87 +18,44 @@
 package dao_test
 
 import (
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/test"
-	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 	"testing"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/types"
+	"fmt"
+	"github.com/Loopring/relay/crypto"
 )
 
 func TestRdsServiceImpl_NewOrder(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	o := dao.Order{}
+	o.ID = 1
+	o.Protocol = "0xC01172a87f6cC20E1E3b9aD13a9E715Fbc2D5AA9"
+	o.Owner = "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"
+	o.PrivateKey = "acfe437a8e0f65124c44647737c0471b8adc9a0763f139df76766f46d6af8e15"
+	o.WalletId = "1"
+	o.OrderHash = "0xcbb02f5df389993aea21e98e7ade8ae9f34e57eeb639dcd754ba79a0223d51e5"
+	o.TokenS = "0x2956356cD2a2bf3202F771F50D3D14A367b48070"
+	o.TokenB = "0xEF68e7C694F40c8202821eDF525dE3782458639f"
+	o.AmountS = "100000000000000000"
+	o.AmountB = "100000000000000000000"
+	o.CreateTime = 1520507123
+	o.ValidSince = 1520501925
+	o.ValidUntil = 1523093925
+	o.LrcFee  = "200000000000000000000"
+	o.BuyNoMoreThanAmountB = true
+	o.MarginSplitPercentage = 50
+	o.V = 27
+	o.R = "0xbbc27e0aa7a3df3942ab7886b78d205d7bf8161abbece04e8d841f0de508522e"
+	o.S = "0x2b19076f2fe24b58eedd00f0151d058bd7b1bf5fa38759c15902f03552492042"
+	o.Price = 0.001
+	o.UpdatedBlock = 0
+	o.DealtAmountS = "0"
+	o.DealtAmountB = "0"
+	o.Market ="LRC-WETH"
+	var state types.OrderState
+	c := crypto.NewKSCrypto(true, nil)
+	crypto.Initialize(c)
+	o.ConvertUp(&state)
+	fmt.Println(state)
 
-	ord := &dao.Order{}
-
-	suffix := "100002000030000418"
-	amountB, _ := new(big.Int).SetString("20000000"+suffix, 0)
-	amountS, _ := new(big.Int).SetString("1"+suffix, 0)
-	fee, _ := new(big.Int).SetString("466778", 0)
-	price, _ := new(big.Rat).SetFrac(amountB, amountS).Float64()
-
-	ord.Protocol = common.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876218").Hex()
-	ord.OrderHash = common.HexToHash("0x4753513505617586b115b82a0131f5a5da4325063e3f912a49b1aed7ceb80f26").Hex()
-	ord.Owner = common.HexToAddress("0xdff9092fc8b0ea74509b9ef5d0b74f7c80876219").Hex()
-	ord.TokenB = common.HexToAddress("0x937ff659c8a9d85aac39dfa84c4b49bb7c9b226e").Hex()
-	ord.TokenS = common.HexToAddress("0x8711ac984e6ce2169a2a6bd83ec15332c366ee4f").Hex()
-	ord.AmountB, _ = amountB.MarshalText()
-	ord.AmountS, _ = amountS.MarshalText()
-	ord.LrcFee, _ = fee.MarshalText()
-	ord.Price = real(complex(price, float64(0.01)))
-	ord.MarginSplitPercentage = 32
-	ord.BuyNoMoreThanAmountB = false
-	ord.Ttl = 10000000
-	ord.Salt = 800
-	ord.V = 127
-	ord.S = "11"
-	ord.R = "22"
-
-	if err := s.Add(ord); err != nil {
-		t.Fatal(err)
-	}
 }
 
-func TestRdsServiceImpl_GetOrderByHash(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
-	order, err := s.GetOrderByHash(common.HexToHash("0x7ee8521eabd792fb539975718c0e2433dba0fc3683d8c7d22a7ab1784e1ad383"))
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Log(order.TokenS)
-}
-
-func TestRdsServiceImpl_GetOrdersForMiner(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
-
-	filters := []types.OrderStatus{types.ORDER_CUTOFF, types.ORDER_FINISHED}
-	list, err := s.GetOrdersForMiner(test.TokenAddressA, test.TokenAddressB, 10, filters)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Log("length of list", len(list))
-
-	for _, v := range list {
-		t.Log(v.OrderHash)
-	}
-}
-
-func TestRdsServiceImpl_GetOrdersByHash(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
-	hashList := []string{
-		"0xb617960a443c1f351e2e7a90b5005953744c411ee99fae34f3c2f509f8c1a1f5",
-		"0xdb14bf9c71b6b026127f72b1efdd270c8940a6300fc6a2ce411eda492ded1c7c",
-		"0xce99ebf9f517ba2a6e87925f578994d762b8d581c02492beac50c92a91854968",
-	}
-	ordMap, err := s.GetOrdersByHash(hashList)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-
-	for _, v := range ordMap {
-		t.Logf("order owner:%s", v.Owner)
-	}
-}

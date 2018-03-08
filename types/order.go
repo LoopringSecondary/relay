@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"fmt"
 )
 
 type OrderStatus uint8
@@ -144,6 +145,7 @@ func (o *Order) GenerateHash() common.Hash {
 		common.LeftPadBytes(o.WalletId.Bytes(), 32),
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
+
 	h.SetBytes(hashBytes)
 
 	return *h
@@ -378,5 +380,6 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.R = request.R
 	order.S = request.S
 	order.Owner = request.Owner
+	order.WalletId = request.WalletId
 	return order
 }
