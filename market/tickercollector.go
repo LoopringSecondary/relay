@@ -276,7 +276,6 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 	url := fmt.Sprintf(exchanges["binance"], binanceMarket)
 
 	resp, err := http.Get(url)
-	log.Info("get ticker from " + url)
 	if err != nil {
 		return ticker, err
 	}
@@ -287,7 +286,6 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Info("get ticker response is " + string(body))
 	if nil != err {
 		return ticker, err
 	} else {
@@ -320,7 +318,6 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 	url := fmt.Sprintf(exchanges["okex"], okexMarket)
 
 	resp, err := http.Get(url)
-	log.Info("get ticker from " + url)
 	if err != nil {
 		return ticker, err
 	}
@@ -331,7 +328,6 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Info("get ticker response is " + string(body))
 	if nil != err {
 		return ticker, err
 	} else {
@@ -382,7 +378,6 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
-	log.Info("get ticker response is " + string(body))
 	if nil != err {
 		return tickers, err
 	} else {

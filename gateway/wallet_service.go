@@ -84,11 +84,11 @@ type SingleMarket struct {
 }
 
 type SingleOwner struct {
-	owner string `json:"owner"`
+	Owner string `json:"owner"`
 }
 
 type PriceQuoteQuery struct {
-	currency string `json:"currency"`
+	Currency string `json:"currency"`
 }
 
 type CutoffRequest struct {
@@ -216,11 +216,11 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
 	fmt.Println(query)
-	if len(query.owner) == 0 {
+	if len(query.Owner) == 0 {
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account := w.accountManager.GetBalance(DefaultContractVersion, query.owner)
+	account := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
@@ -259,9 +259,9 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 
 func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQuote, err error) {
 
-	rst := PriceQuote{query.currency, make([]TokenPrice, 0)}
+	rst := PriceQuote{query.Currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.currency)
+		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 		if k == "WETH" {
@@ -297,10 +297,10 @@ func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err e
 }
 
 func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
-	if len(owner.owner) == 0 {
+	if len(owner.Owner) == 0 {
 		return errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner.owner)
+	return w.accountManager.UnlockedWallet(owner.Owner)
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
