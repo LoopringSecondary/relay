@@ -278,7 +278,7 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	result = make(map[string]market.Ticker)
 	loopringTicker, err := w.trendManager.GetTickerByMarket(mkt.Market)
 	if err == nil {
-		result["loopring"] = loopringTicker
+		result["loopr"] = loopringTicker
 	} else {
 		log.Info("get ticker from loopring error" + err.Error())
 		return result, err
