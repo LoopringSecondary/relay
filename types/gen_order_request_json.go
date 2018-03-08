@@ -20,11 +20,11 @@ func (o OrderJsonRequest) MarshalJSON() ([]byte, error) {
 		TokenB                common.Address             `json:"tokenB" gencodec:"required"`
 		AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
-		WalletId              *big.Int                   `json:"walletId" gencodec:"required"`
+		WalletId              *Big                       `json:"walletId" gencodec:"required"`
 		AmountS               *Big                       `json:"amountS" gencodec:"required"`
 		AmountB               *Big                       `json:"amountB" gencodec:"required"`
-		ValidSince            int64                      `json:"validSince" gencodec:"required"`
-		ValidUntil            int64                      `json:"validUntil" gencodec:"required"`
+		ValidSince            *Big                       `json:"validSince" gencodec:"required"`
+		ValidUntil            *Big                       `json:"validUntil" gencodec:"required"`
 		LrcFee                *Big                       `json:"lrcFee" `
 		BuyNoMoreThanAmountB  bool                       `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage uint8                      `json:"marginSplitPercentage" gencodec:"required"`
@@ -41,11 +41,11 @@ func (o OrderJsonRequest) MarshalJSON() ([]byte, error) {
 	enc.TokenB = o.TokenB
 	enc.AuthAddr = o.AuthAddr
 	enc.AuthPrivateKey = o.AuthPrivateKey
-	enc.WalletId = o.WalletId
+	enc.WalletId = (*Big)(o.WalletId)
 	enc.AmountS = (*Big)(o.AmountS)
 	enc.AmountB = (*Big)(o.AmountB)
-	enc.ValidSince = o.ValidSince
-	enc.ValidUntil = o.ValidUntil
+	enc.ValidSince = (*Big)(o.ValidSince)
+	enc.ValidUntil = (*Big)(o.ValidUntil)
 	enc.LrcFee = (*Big)(o.LrcFee)
 	enc.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	enc.MarginSplitPercentage = o.MarginSplitPercentage
@@ -65,11 +65,11 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 		TokenB                *common.Address             `json:"tokenB" gencodec:"required"`
 		AuthAddr              *common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        *crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
-		WalletId              *big.Int                    `json:"walletId" gencodec:"required"`
+		WalletId              *Big                        `json:"walletId" gencodec:"required"`
 		AmountS               *Big                        `json:"amountS" gencodec:"required"`
 		AmountB               *Big                        `json:"amountB" gencodec:"required"`
-		ValidSince            *int64                      `json:"validSince" gencodec:"required"`
-		ValidUntil            *int64                      `json:"validUntil" gencodec:"required"`
+		ValidSince            *Big                        `json:"validSince" gencodec:"required"`
+		ValidUntil            *Big                        `json:"validUntil" gencodec:"required"`
 		LrcFee                *Big                        `json:"lrcFee" `
 		BuyNoMoreThanAmountB  *bool                       `json:"buyNoMoreThanAmountB" gencodec:"required"`
 		MarginSplitPercentage *uint8                      `json:"marginSplitPercentage" gencodec:"required"`
@@ -107,7 +107,7 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 	if dec.WalletId == nil {
 		return errors.New("missing required field 'walletId' for OrderJsonRequest")
 	}
-	o.WalletId = dec.WalletId
+	o.WalletId = (*big.Int)(dec.WalletId)
 	if dec.AmountS == nil {
 		return errors.New("missing required field 'amountS' for OrderJsonRequest")
 	}
@@ -119,11 +119,11 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 	if dec.ValidSince == nil {
 		return errors.New("missing required field 'validSince' for OrderJsonRequest")
 	}
-	o.ValidSince = *dec.ValidSince
+	o.ValidSince = (*big.Int)(dec.ValidSince)
 	if dec.ValidUntil == nil {
 		return errors.New("missing required field 'validUntil' for OrderJsonRequest")
 	}
-	o.ValidUntil = *dec.ValidUntil
+	o.ValidUntil = (*big.Int)(dec.ValidUntil)
 	if dec.LrcFee != nil {
 		o.LrcFee = (*big.Int)(dec.LrcFee)
 	}

@@ -92,7 +92,6 @@ func updateBinanceCache() {
 	updateCacheByExchange("binance", GetTickerFromBinance)
 }
 func updateOkexCache() {
-	fmt.Println("start sync okex datas..............")
 	tickers, err := GetAllTickerFromOkex()
 	if err == nil && len(tickers) > 0 {
 		for _, t := range tickers {
@@ -106,13 +105,12 @@ func updateHuobiCache() {
 
 func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
 
-	fmt.Println("start sync exchange datas.............." + exchange)
 	for _, v := range util.AllMarkets {
 		vv := strings.ToUpper(v)
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
 		ticker, err := getter(vv)
 		if err != nil {
-			log.Info("get ticker error " + err.Error())
+			log.Debug("get ticker error " + err.Error())
 		} else {
 			setCache(exchange, v, ticker)
 		}
