@@ -37,7 +37,7 @@ import (
 	"time"
 )
 
-const DefaultContractVersion = "v1.1"
+const DefaultContractVersion = "v1.2"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
@@ -84,11 +84,11 @@ type SingleMarket struct {
 }
 
 type SingleOwner struct {
-	owner string `json:"owner"`
+	Owner string `json:"owner"`
 }
 
 type PriceQuoteQuery struct {
-	currency string `json:"currency"`
+	Currency string `json:"currency"`
 }
 
 type CutoffRequest struct {
@@ -215,14 +215,24 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 }
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
-	if len(query.owner) == 0 {
+	res = make([]Portfolio, 0)
+	if len(query.Owner) == 0 {
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account := w.accountManager.GetBalance(DefaultContractVersion, query.owner)
+	account := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
+	}
+
+	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
+	b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
+	if bErr == nil {
+		ethBalance.Balance = types.HexToBigint(b)
+		balances["ETH"] = ethBalance
+	} else {
+		return res, bErr
 	}
 
 	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
@@ -233,22 +243,36 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
+		fmt.Println("priceQuote key " + pq.Token)
+		fmt.Print("priceQuote value ")
+		fmt.Println(pq.Price)
 	}
 
-	var totalAsset *big.Rat
+	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
+		fmt.Println("start handle asset handler.....")
 		asset := priceQuoteMap[k]
+		fmt.Println(asset)
+		fmt.Println(v.Balance)
+		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		fmt.Println(totalAsset.Float64())
+		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
+		fmt.Println(totalAsset.Float64())
 	}
 
-	res = make([]Portfolio, 0)
-
 	for k, v := range balances {
+		fmt.Println("start collect asset handler.....")
 		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
 		asset := priceQuoteMap[k]
+		fmt.Println(asset)
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		fmt.Println(asset)
+		fmt.Println(v.Balance)
+		fmt.Println(totalAsset)
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
+		fmt.Println(percentage)
 		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
 		res = append(res, portfolio)
 	}
@@ -258,9 +282,9 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 
 func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQuote, err error) {
 
-	rst := PriceQuote{query.currency, make([]TokenPrice, 0)}
+	rst := PriceQuote{query.Currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.currency)
+		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 		if k == "WETH" {
@@ -275,7 +299,7 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	result = make(map[string]market.Ticker)
 	loopringTicker, err := w.trendManager.GetTickerByMarket(mkt.Market)
 	if err == nil {
-		result["loopring"] = loopringTicker
+		result["loopr"] = loopringTicker
 	} else {
 		log.Info("get ticker from loopring error" + err.Error())
 		return result, err
@@ -296,10 +320,10 @@ func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err e
 }
 
 func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
-	if len(owner.owner) == 0 {
+	if len(owner.Owner) == 0 {
 		return errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner.owner)
+	return w.accountManager.UnlockedWallet(owner.Owner)
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {

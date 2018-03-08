@@ -16,6 +16,7 @@ var _ = (*orderMarshaling)(nil)
 func (o Order) MarshalJSON() ([]byte, error) {
 	type Order struct {
 		Protocol              common.Address             `json:"protocol" gencodec:"required"`
+		AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
 		WalletId              *Big                       `json:"walletId" gencodec:"required"`
 		TokenS                common.Address             `json:"tokenS" gencodec:"required"`
@@ -36,6 +37,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
+	enc.AuthAddr = o.AuthAddr
 	enc.AuthPrivateKey = o.AuthPrivateKey
 	enc.WalletId = (*Big)(o.WalletId)
 	enc.TokenS = o.TokenS
@@ -59,6 +61,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 func (o *Order) UnmarshalJSON(input []byte) error {
 	type Order struct {
 		Protocol              *common.Address             `json:"protocol" gencodec:"required"`
+		AuthAddr              *common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        *crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
 		WalletId              *Big                        `json:"walletId" gencodec:"required"`
 		TokenS                *common.Address             `json:"tokenS" gencodec:"required"`
@@ -85,6 +88,10 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'protocol' for Order")
 	}
 	o.Protocol = *dec.Protocol
+	if dec.AuthAddr == nil {
+		return errors.New("missing required field 'authAddr' for Order")
+	}
+	o.AuthAddr = *dec.AuthAddr
 	if dec.AuthPrivateKey == nil {
 		return errors.New("missing required field 'authPrivateKey' for Order")
 	}

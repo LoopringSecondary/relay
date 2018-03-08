@@ -108,32 +108,26 @@ func (so *SocketIOServiceImpl) Start() {
 	})
 
 	for _, v := range MsgTypeRoute {
-		go func(vv string) {
-			server.OnEvent("/", vv+EventPostfixReq, func(s socketio.Conn, msg string) {
-				fmt.Println("input msg is : " + msg)
-				fmt.Println("current v is " + vv)
-				fmt.Println("current msg is : "  + msg)
+			aliasOfV := v
+
+			server.OnEvent("/", aliasOfV + EventPostfixReq, func(s socketio.Conn, msg string) {
 				context := make(map[string]string)
 				if s != nil && s.Context() != nil {
 					context = s.Context().(map[string]string)
 				}
-				context[vv] = msg
+				context[aliasOfV] = msg
 				s.SetContext(context)
-				fmt.Println("current context is")
-				fmt.Println(s.Context())
 				so.connIdMap[s.ID()] = s
+				so.EmitNowByEventType(aliasOfV, s, msg)
 			})
-		}(v)
 
-		go func(vv string) {
-			server.OnEvent("/", vv+EventPostfixEnd, func(s socketio.Conn, msg string) {
+			server.OnEvent("/", aliasOfV + EventPostfixEnd, func(s socketio.Conn, msg string) {
 				if s != nil && s.Context() != nil {
 					businesses := s.Context().(map[string]string)
-					delete(businesses, vv)
+					delete(businesses, aliasOfV)
 					s.SetContext(businesses)
 				}
 			})
-		}(v)
 	}
 
 	so.cron.AddFunc("0/10 * * * * *", func() {
@@ -148,115 +142,7 @@ func (so *SocketIOServiceImpl) Start() {
 				businesses := v.Context().(map[string]string)
 				if businesses != nil {
 					for bk, bv := range businesses {
-						if bk == "balance" {
-							var query CommonTokenRequest
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetBalance(query)
-							if err != nil {
-								v.Emit("balance_res", "get balance error")
-							} else {
-
-								b, _ := json.Marshal(res)
-								v.Emit("balance_res", string(b[:]))
-							}
-						}
-						if bk == "portfolio" {
-							var query SingleOwner
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetPortfolio(query)
-							if err != nil {
-								v.Emit("portfolio_res", "get portfolio error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("portfolio_res", string(b[:]))
-							}
-						}
-						if bk == "tickers" {
-							var query SingleMarket
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetTickers(query)
-							if err != nil {
-								v.Emit("tickers_res", "get tickers error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("tickers_res", string(b[:]))
-							}
-						}
-						if bk == "loopringTickers" {
-							res, err := so.walletService.GetAllMarketTickers()
-							if err != nil {
-								v.Emit("loopringTickers_res", "get loopring tickers error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("loopringTickers_res", string(b[:]))
-							}
-						}
-						if bk == "trends" {
-							var query SingleMarket
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetTrend(query)
-							if err != nil {
-								v.Emit("trends_res", "get trends error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("trends_res", string(b[:]))
-							}
-						}
-						if bk == "marketcap" {
-							var query PriceQuoteQuery
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetPriceQuote(query)
-							if err != nil {
-								v.Emit("marketcap_res", "get marketcap error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("marketcap_res", string(b[:]))
-							}
-						}
-						if bk == "transaction" {
-							var query TransactionQuery
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetTransactions(query)
-							if err != nil {
-								v.Emit("transaction_res", "get transaction error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("transaction_res", string(b[:]))
-							}
-						}
-						if bk == "depth" {
-							var query DepthQuery
-							err := json.Unmarshal([]byte(bv), &query)
-							if err != nil {
-								fmt.Println("unmarshal error " + bv)
-							}
-							res, err := so.walletService.GetDepth(query)
-							if err != nil {
-								v.Emit("depth_res", "get depth error")
-							} else {
-								b, _ := json.Marshal(res)
-								v.Emit("depth_res", string(b[:]))
-							}
-						}
-
+						so.EmitNowByEventType(bk, v, bv)
 					}
 				}
 			}
@@ -278,5 +164,117 @@ func (so *SocketIOServiceImpl) Start() {
 	log.Println("Serving at localhost: " + so.port)
 	log.Fatal(http.ListenAndServe(":"+so.port, nil))
 	log.Println("finished listen socket io....")
+
+}
+
+func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv string) {
+	if bk == "balance" {
+		var query CommonTokenRequest
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetBalance(query)
+		if err != nil {
+			v.Emit("balance_res", "get balance error")
+		} else {
+
+			b, _ := json.Marshal(res)
+			v.Emit("balance_res", string(b[:]))
+		}
+	}
+	if bk == "portfolio" {
+		var query SingleOwner
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetPortfolio(query)
+		if err != nil {
+			v.Emit("portfolio_res", "get portfolio error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("portfolio_res", string(b[:]))
+		}
+	}
+	if bk == "tickers" {
+		var query SingleMarket
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetTickers(query)
+		if err != nil {
+			v.Emit("tickers_res", "get tickers error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("tickers_res", string(b[:]))
+		}
+	}
+	if bk == "loopringTickers" {
+		res, err := so.walletService.GetAllMarketTickers()
+		if err != nil {
+			v.Emit("loopringTickers_res", "get loopring tickers error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("loopringTickers_res", string(b[:]))
+		}
+	}
+	if bk == "trends" {
+		var query SingleMarket
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetTrend(query)
+		if err != nil {
+			v.Emit("trends_res", "get trends error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("trends_res", string(b[:]))
+		}
+	}
+	if bk == "marketcap" {
+		var query PriceQuoteQuery
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetPriceQuote(query)
+		if err != nil {
+			v.Emit("marketcap_res", "get marketcap error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("marketcap_res", string(b[:]))
+		}
+	}
+	if bk == "transaction" {
+		var query TransactionQuery
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetTransactions(query)
+		if err != nil {
+			v.Emit("transaction_res", "get transaction error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("transaction_res", string(b[:]))
+		}
+	}
+	if bk == "depth" {
+		var query DepthQuery
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetDepth(query)
+		if err != nil {
+			v.Emit("depth_res", "get depth error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("depth_res", string(b[:]))
+		}
+	}
 
 }
