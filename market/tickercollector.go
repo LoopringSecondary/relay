@@ -110,7 +110,7 @@ func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Tick
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
 		ticker, err := getter(vv)
 		if err != nil {
-			log.Debug("get ticker error " + err.Error())
+			//log.Debug("get ticker error " + err.Error())
 		} else {
 			setCache(exchange, v, ticker)
 		}

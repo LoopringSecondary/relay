@@ -132,10 +132,7 @@ func (so *SocketIOServiceImpl) Start() {
 
 	so.cron.AddFunc("0/10 * * * * *", func() {
 
-		for id, v := range so.connIdMap {
-			fmt.Println("start for loopring id " + id)
-			fmt.Println(v)
-			fmt.Println(v.Context())
+		for _, v := range so.connIdMap {
 			if v.Context() == nil {
 				continue
 			} else {

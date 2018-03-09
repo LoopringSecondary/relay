@@ -150,15 +150,19 @@ type RawOrderJsonResult struct {
 	TokenB                string `json:"tokenB"`  // 买入erc20代币智能合约地址
 	AmountS               string `json:"amountS"` // 卖出erc20代币数量上限
 	AmountB               string `json:"amountB"` // 买入erc20代币数量上限
-	Timestamp             int64  `json:"timestamp"`
-	Ttl                   string `json:"ttl"` // 订单过期时间
-	Salt                  string `json:"salt"`
+	ValidSince             string  `json:"validSince"`
+	ValidUntil                   string `json:"validUntil"` // 订单过期时间
+	//Salt                  string `json:"salt"`
 	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool   `json:"buyNoMoreThanAmountB"`
 	MarginSplitPercentage string `json:"marginSplitPercentage"` // 不为0时支付给交易所的分润比例，否则视为100%
 	V                     string `json:"v"`
 	R                     string `json:"r"`
 	S                     string `json:"s"`
+	WalletId              string `json:"walletId" gencodec:"required"`
+	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
+	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
+
 }
 
 type OrderJsonResult struct {
@@ -319,11 +323,17 @@ func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err e
 	return w.trendManager.GetTicker()
 }
 
-func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
+func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err error) {
 	if len(owner.Owner) == 0 {
-		return errors.New("owner can't be null string")
+		return "", errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner.Owner)
+
+	unlockRst := w.accountManager.UnlockedWallet(owner.Owner)
+	if unlockRst != nil {
+		return "", unlockRst
+	} else {
+		return "unlock_notice_success", nil
+	}
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
@@ -723,6 +733,7 @@ func buildOrderResult(src dao.PageResult) PageResult {
 
 func orderStateToJson(src types.OrderState) OrderJsonResult {
 
+	fmt.Println("json convet........step in.....")
 	rst := OrderJsonResult{}
 	rst.DealtAmountB = types.BigintToHex(src.DealtAmountB)
 	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)
@@ -737,14 +748,18 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
 	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
 	rawOrder.AmountB = types.BigintToHex(src.RawOrder.AmountB)
-	rawOrder.Timestamp = src.RawOrder.ValidSince.Int64()
-	rawOrder.Ttl = types.BigintToHex(src.RawOrder.ValidUntil)
+	rawOrder.ValidSince = types.BigintToHex(src.RawOrder.ValidSince)
+	rawOrder.ValidUntil = types.BigintToHex(src.RawOrder.ValidUntil)
 	rawOrder.LrcFee = types.BigintToHex(src.RawOrder.LrcFee)
 	rawOrder.BuyNoMoreThanAmountB = src.RawOrder.BuyNoMoreThanAmountB
 	rawOrder.MarginSplitPercentage = types.BigintToHex(big.NewInt(int64(src.RawOrder.MarginSplitPercentage)))
 	rawOrder.V = types.BigintToHex(big.NewInt(int64(src.RawOrder.V)))
 	rawOrder.R = src.RawOrder.R.Hex()
 	rawOrder.S = src.RawOrder.S.Hex()
+	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
+	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
+	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
+	rawOrder.AuthPrivateKey = string(auth)
 	rst.RawOrder = rawOrder
 	return rst
 }

@@ -341,12 +341,12 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 	if len(owner) == 0 {
 		return errors.New("owner can't be null string")
 	}
-	return rcache.Set(UnlockCachePreKey+owner, RedisCachePlaceHolder, DefaultUnlockTtl)
+	return rcache.Set(UnlockCachePreKey+strings.ToLower(owner), RedisCachePlaceHolder, DefaultUnlockTtl)
 }
 
 func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 	if len(owner) == 0 {
 		return false, errors.New("owner can't be null string")
 	}
-	return rcache.Exists(UnlockCachePreKey + owner)
+	return rcache.Exists(UnlockCachePreKey + strings.ToLower(owner))
 }
