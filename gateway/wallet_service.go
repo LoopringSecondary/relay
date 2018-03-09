@@ -150,7 +150,7 @@ type RawOrderJsonResult struct {
 	TokenB                string `json:"tokenB"`  // 买入erc20代币智能合约地址
 	AmountS               string `json:"amountS"` // 卖出erc20代币数量上限
 	AmountB               string `json:"amountB"` // 买入erc20代币数量上限
-	ValidSince             int64  `json:"validSince"`
+	ValidSince             string  `json:"validSince"`
 	ValidUntil                   string `json:"validUntil"` // 订单过期时间
 	//Salt                  string `json:"salt"`
 	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
@@ -739,7 +739,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
 	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
 	rawOrder.AmountB = types.BigintToHex(src.RawOrder.AmountB)
-	rawOrder.ValidSince = src.RawOrder.ValidSince.Int64()
+	rawOrder.ValidSince = types.BigintToHex(src.RawOrder.ValidSince)
 	rawOrder.ValidUntil = types.BigintToHex(src.RawOrder.ValidUntil)
 	rawOrder.LrcFee = types.BigintToHex(src.RawOrder.LrcFee)
 	rawOrder.BuyNoMoreThanAmountB = src.RawOrder.BuyNoMoreThanAmountB
