@@ -197,3 +197,9 @@ type ethNodeAccessor struct {
 	mtx               sync.RWMutex
 	AddressNonce      map[common.Address]*big.Int
 }
+
+type AddressNonce struct {
+	Address common.Address
+	Nonce *big.Int
+	mtx sync.RWMutex
+}

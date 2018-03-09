@@ -235,7 +235,7 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 
 func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if nil == accessor.gasPriceEvaluator.gasPrice {
+	if nil == accessor.gasPriceEvaluator.gasPrice || accessor.gasPriceEvaluator.gasPrice.Cmp(big.NewInt(int64(0))) <= 0 {
 		if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
 			return
 		}
@@ -294,7 +294,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
-	nonce := accessor.addressNextNonce(sender)
+	nonce := accessor.addressCurrentNonce(sender)
 	log.Infof("nonce:%s", nonce.String())
 	if value == nil {
 		value = big.NewInt(0)
@@ -310,6 +310,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
 		return "", err
 	} else {
+		accessor.addressNextNonce(sender)
 		return txHash, err
 	}
 }
@@ -326,7 +327,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
-			log.Infof("sender:%s", sender.Hex())
+			log.Infof("sender:%s, %s", sender.Hex(), gasPrice.String())
 			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
 		}
 	}
@@ -490,8 +491,6 @@ func (ethAccessor *ethNodeAccessor) GetSenderAddress(protocol common.Address) (c
 }
 
 func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *big.Int {
-
-	log.Infof("noncenoncedddddd:%s", "iio")
 	if _, exists := accessor.AddressNonce[address]; !exists {
 		var nonce types.Big
 		if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
