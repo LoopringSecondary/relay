@@ -320,11 +320,17 @@ func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err e
 	return w.trendManager.GetTicker()
 }
 
-func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (err error) {
+func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err error) {
 	if len(owner.Owner) == 0 {
-		return errors.New("owner can't be null string")
+		return "", errors.New("owner can't be null string")
 	}
-	return w.accountManager.UnlockedWallet(owner.Owner)
+
+	unlockRst := w.accountManager.UnlockedWallet(owner.Owner)
+	if unlockRst != nil {
+		return "", unlockRst
+	} else {
+		return "unlock_notice_success", nil
+	}
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
