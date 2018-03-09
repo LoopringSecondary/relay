@@ -18,11 +18,11 @@
 package dao_test
 
 import (
-	"testing"
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/types"
 	"fmt"
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/types"
+	"testing"
 )
 
 func TestRdsServiceImpl_NewOrder(t *testing.T) {
@@ -40,7 +40,7 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	o.CreateTime = 1520507123
 	o.ValidSince = 1520501925
 	o.ValidUntil = 1523093925
-	o.LrcFee  = "200000000000000000000"
+	o.LrcFee = "200000000000000000000"
 	o.BuyNoMoreThanAmountB = true
 	o.MarginSplitPercentage = 50
 	o.V = 27
@@ -50,7 +50,7 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	o.UpdatedBlock = 0
 	o.DealtAmountS = "0"
 	o.DealtAmountB = "0"
-	o.Market ="LRC-WETH"
+	o.Market = "LRC-WETH"
 	var state types.OrderState
 	c := crypto.NewKSCrypto(true, nil)
 	crypto.Initialize(c)
@@ -58,4 +58,3 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	fmt.Println(state)
 
 }
-

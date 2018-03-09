@@ -61,13 +61,15 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
-
+	//100000000000000000000
 	tokenAddress := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
+	amount, _ := new(big.Int).SetString("1000000000000000000000000000000000000000000000000000000", 0) // 100weth
+	//1000000000000000000000000000000000000
+	//1000000000000000000000000000000000000000000000000000000
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
-	if result, err := callMethod(account.Address, "approve", nil, nil, nil, spender, amount); nil != err {
+	if result, err := callMethod(account.Address, "approve", big.NewInt(1000000), big.NewInt(21000000000), nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -251,7 +253,7 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	account := accounts.Account{Address: account1}
 
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).SetInt64(1000000)
+	amount, _ := new(big.Int).SetString("100000000000000000000000000000000000000000000000000000000000000", 0)
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account.Address, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -325,11 +327,14 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	}
 }
 
+//mainnet
 //0x8924ce3be0895775b30f6ea7512c6d8318dc0c84da7e1eb4d1930e5658c92d04
 //0x1cff70d0eecd86d008b633f62ef171bbe71516c132adea3ff73ed419d56232fd
+//priv net
+//0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0x68ce1331a561e5b693a4780458910fab302da2f52bea4cef05f9ec9d5860e632", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d", "latest"); err == nil {
 		t.Logf("tx gasUsed:%s status:%s", tx.GasUsed.BigInt().String(), tx.Status.BigInt().String())
 	} else {
 		t.Fatalf(err.Error())

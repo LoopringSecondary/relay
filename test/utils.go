@@ -54,6 +54,7 @@ type TestEntity struct {
 	Creator         AccountEntity
 	KeystoreDir     string
 	AllowanceAmount int64
+	PrivateKey      crypto.EthPrivateKeyCrypto
 }
 
 const (
@@ -110,10 +111,16 @@ func loadTestData() *TestEntity {
 		Passphrase string
 	}
 
+	type AuthKey struct {
+		Address common.Address
+		Privkey string
+	}
+
 	type TestData struct {
 		Accounts        []Account
 		Creator         Account
 		AllowanceAmount int64
+		Auth            AuthKey
 	}
 
 	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/test/testdata.toml"
@@ -146,6 +153,7 @@ func loadTestData() *TestEntity {
 	e.KeystoreDir = cfg.Keystore.Keydir
 	e.AllowanceAmount = testData.AllowanceAmount
 
+	e.PrivateKey, _ = crypto.NewPrivateKeyCrypto(false, testData.Auth.Privkey)
 	return e
 }
 
@@ -199,7 +207,7 @@ func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 	return marketcap.NewMarketCapProvider(cfg.MarketCap)
 }
 
-func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
+func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
 	order.TokenS = tokenS
@@ -212,6 +220,8 @@ func CreateOrder(tokenS, tokenB, protocol, owner common.Address, amountS, amount
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
+	order.AuthPrivateKey = privateKey
+	order.WalletId = walletId
 	order.Hash = order.GenerateHash()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		log.Fatalf(err.Error())
