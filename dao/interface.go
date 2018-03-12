@@ -52,6 +52,8 @@ type RdsService interface {
 	CheckOrderCutoff(orderhash string, cutoff int64) bool
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
+	TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
+	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error
 	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error

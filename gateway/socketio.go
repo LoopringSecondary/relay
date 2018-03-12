@@ -26,6 +26,7 @@ const (
 	MARKETCAP
 	BALANCE
 	TRANSACTION
+	TRANSACTION_BY_HASH
 	DEPTH
 	TRENDS
 	TEST
@@ -56,15 +57,16 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var MsgTypeRoute = map[BusinessType]string{
-	TICKER:           "tickers",
-	LOOPRING_TICKERS: "loopringTickers",
-	TRENDS:           "trends",
-	PORTFOLIO:        "portfolio",
-	MARKETCAP:        "marketcap",
-	BALANCE:          "balance",
-	TRANSACTION:      "transaction",
-	DEPTH:            "depth",
-	TEST:             "test",
+	TICKER:              "tickers",
+	LOOPRING_TICKERS:    "loopringTickers",
+	TRENDS:              "trends",
+	PORTFOLIO:           "portfolio",
+	MARKETCAP:           "marketcap",
+	BALANCE:             "balance",
+	TRANSACTION:         "transaction",
+	TRANSACTION_BY_HASH: "trxByHashes",
+	DEPTH:               "depth",
+	TEST:                "test",
 }
 
 type SocketIOService interface {
@@ -259,6 +261,21 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 			v.Emit("transaction_res", string(b[:]))
 		}
 	}
+	if bk == "trxByHashes" {
+		var query TransactionQuery
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetTransactionsByHash(query)
+		if err != nil {
+			v.Emit("trxByHashes_res", "get transaction error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("trxByHashes_res", string(b[:]))
+		}
+	}
+
 	if bk == "depth" {
 		var query DepthQuery
 		err := json.Unmarshal([]byte(bv), &query)

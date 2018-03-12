@@ -116,7 +116,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()
-	n.registerIPFSSubService()
+	//n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
 	n.registerGateway()
@@ -164,7 +164,7 @@ func (n *Node) Start() {
 }
 
 func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 	n.marketCapProvider.Start()
 
 	if n.globalConfig.Mode == MODEL_RELAY {
@@ -280,7 +280,7 @@ func (n *Node) registerTickerCollector() {
 
 func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
-	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector)
+	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService)
 }
 
 func (n *Node) registerJsonRpcService() {
