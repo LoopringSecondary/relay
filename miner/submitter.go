@@ -22,7 +22,6 @@ import (
 	"errors"
 	"math/big"
 
-	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -100,7 +99,7 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	for addr, protocolAddr := range ethaccessor.ProtocolAddresses() {
 		var resHex string
 		callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), protocolAddr.NameRegistryAddress)
-		err := callMethod(&resHex, "getParticipantIds", "latest", options.Name, big.NewInt(int64(0)), big.NewInt(int64(10)))
+		err := callMethod(&resHex, "getParticipantIds", "latest", options.Name, big.NewInt(int64(0)), big.NewInt(int64(1000)))
 		if nil != err {
 			return nil, err
 		} else {
@@ -118,19 +117,26 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 
 				if nil == err {
 					nameInfo := &types.NameRegistryInfo{}
-					nameInfo.ParticipantId = new(big.Int)
-					nameInfo.ParticipantId.Set(id)
 					err2 := ethaccessor.NameRegistryAbi().Unpack(nameInfo, "getParticipantById", common.Hex2Bytes(strings.TrimPrefix(nameRegistryHex, "0x")), 1)
 					if nil == err2 {
+						nameInfo.ParticipantId = new(big.Int)
+						nameInfo.ParticipantId.Set(id)
 						nameInfos = append(nameInfos, nameInfo)
+
+						//if crypto.IsKSAccountUnlocked(nameInfo.Signer) {
+						//	nameInfos = append(nameInfos, nameInfo)
+						//} else {
+						//	log.Errorf("the signer address: %s participantId: %s hasn't been unlocked.", nameInfo.Signer.Hex(), id.String())
+						//}
 					} else {
-						fmt.Printf("", err2.Error())
+						log.Errorf("init submitter----unpack method:getParticipantById error:%s", err.Error())
 					}
 				} else {
+					log.Errorf("init submitter error:%s", err.Error())
 				}
 			}
 			if len(nameInfos) <= 0 {
-				return nil, errors.New("err")
+				return nil, errors.New("there isn't useable nameinfo.")
 			} else {
 				submitter.minerNameInfos[addr] = nameInfos
 			}
