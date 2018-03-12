@@ -104,9 +104,11 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 			return nil, err
 		} else {
 			participantIds := []*big.Int{}
-			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1)
+			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1000)
 			if nil != err1 {
 				return nil, err1
+			} else if len(participantIds) <= 0 {
+				return nil, errors.New("miner hasn't been registerd. you can use `relay nameRegistry` to register it first.")
 			}
 			nameInfos := []*types.NameRegistryInfo{}
 			for _, id := range participantIds {
