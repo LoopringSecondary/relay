@@ -28,7 +28,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 )
 
 func loadConfig() *config.GlobalConfig {
@@ -72,9 +71,6 @@ func createOrder(tokenS, tokenB, protocol common.Address, amountS, amountB *big.
 	order.TokenB = tokenB
 	order.AmountS = amountS
 	order.AmountB = amountB
-	order.Timestamp = big.NewInt(time.Now().Unix())
-	order.Ttl = big.NewInt(10000)
-	order.Salt = big.NewInt(1000)
 	order.LrcFee = big.NewInt(1000)
 	order.BuyNoMoreThanAmountB = false
 	order.MarginSplitPercentage = 0
@@ -98,16 +94,7 @@ func a() {
 
 	println(s)
 }
-func TestAllowance(t *testing.T) {
-	//a()
-	test.AllowanceToLoopring(nil, nil)
-	//b := new(big.Int)
-	//b.SetString("18428729675200069633", 0)
-	//println(common.Bytes2Hex(b.Bytes()))
-	//v := new(big.Rat)
-	//v.SetString("")
-	//println(v.String())
-}
+
 func TestSetTokenBalances(t *testing.T) {
 	test.SetTokenBalances()
 }

@@ -296,7 +296,10 @@ func (n *Node) registerSocketIOService() {
 }
 
 func (n *Node) registerMiner() {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
+	submitter, err := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
+	if nil != err {
+		log.Fatalf("failed to init submitter, error:%s", err.Error())
+	}
 	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
 	submitter.SetMatcher(matcher)

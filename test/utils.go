@@ -58,7 +58,7 @@ type TestEntity struct {
 }
 
 const (
-	Version   = "v1.0"
+	Version   = "v1.2"
 	DebugFile = "debug.toml"
 )
 
@@ -266,10 +266,13 @@ func PrepareTestData() {
 		}
 	}
 
+	log.Infof("tokenregistry")
+
 	//tokenregistry
 	tokenRegisterAbi := ethaccessor.TokenRegistryAbi()
 	tokenRegisterAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
 	for symbol, tokenAddr := range entity.Tokens {
+		log.Infof("token:%s addr:%s", symbol, tokenAddr.Hex())
 		callMethod := ethaccessor.ContractCallMethod(tokenRegisterAbi, tokenRegisterAddress)
 		var res types.Big
 		if err := callMethod(&res, "isTokenRegistered", "latest", tokenAddr); nil != err {
@@ -397,7 +400,7 @@ func SetTokenBalance(symbol string, account common.Address, amount *big.Int) {
 	sendTransactionMethod := ethaccessor.ContractSendTransactionMethod("latest", dummyTokenAbi, tokenAddress)
 
 	hash, err := sendTransactionMethod(sender.Address, "setBalance", big.NewInt(1000000), big.NewInt(21000000000), nil, account, amount)
-	if err != nil {
+	if nil != err {
 		fmt.Errorf(err.Error())
 	}
 	fmt.Printf("sendhash:%s", hash)

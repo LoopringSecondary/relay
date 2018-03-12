@@ -73,12 +73,6 @@ func mergeMinerConfig(ctx *cli.Context, minerOpts *config.MinerOptions) {
 	if ctx.IsSet("ringMaxLength") {
 		minerOpts.RingMaxLength = ctx.Int("ringMaxLength")
 	}
-	if ctx.IsSet("miner") {
-		minerOpts.Miner = ctx.String("miner")
-	}
-	if ctx.IsSet("feeRecepient") {
-		minerOpts.FeeReceipt = ctx.String("feeRecepient")
-	}
 }
 
 func mergeModeConfig(ctx *cli.Context, globalConfig *config.GlobalConfig) {

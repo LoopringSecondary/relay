@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"sync"
 )
 
 var accessor *ethNodeAccessor
@@ -201,6 +202,8 @@ func NameRegistryAbi() *abi.ABI {
 func Initialize(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) error {
 	var err error
 	accessor = &ethNodeAccessor{}
+	accessor.mtx = sync.RWMutex{}
+	accessor.AddressNonce = make(map[common.Address]*big.Int)
 	accessor.MutilClient = &MutilClient{}
 	accessor.MutilClient.Dail(accessorOptions.RawUrls)
 	if nil != err {
