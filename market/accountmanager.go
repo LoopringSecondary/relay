@@ -120,7 +120,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
-				log.Infof("get allowance failed, token:%s", v.Symbol)
+				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
 			} else {
 				allowance.allowance = allowanceAmount
 				account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
@@ -139,7 +139,8 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 		return
 	}
 
-	account := a.GetBalance("v1.0", address.Hex())
+	//todo(xiaolu): 从配置文件中获取
+	account := a.GetBalance("v1.2", address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return

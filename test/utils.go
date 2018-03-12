@@ -223,6 +223,7 @@ func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, token
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
 	order.AuthPrivateKey = privateKey
+	order.AuthAddr = order.AuthPrivateKey.Address()
 	order.WalletId = walletId
 	order.Hash = order.GenerateHash()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
