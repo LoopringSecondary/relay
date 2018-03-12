@@ -12,3 +12,5 @@ config/mainchain.toml
 config/docker.toml
 test/*.toml
 startup.sh
+nameregistry.sh
+addparticipant.sh
