@@ -44,7 +44,7 @@ var (
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 	owner := account1
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
 	test.SetTokenBalance("LRC", owner, amount)
 }
 
