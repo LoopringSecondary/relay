@@ -104,7 +104,7 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 			return nil, err
 		} else {
 			participantIds := []*big.Int{}
-			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1000)
+			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1)
 			if nil != err1 {
 				return nil, err1
 			} else if len(participantIds) <= 0 {
@@ -119,6 +119,8 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 					nameInfo := &types.NameRegistryInfo{}
 					err2 := ethaccessor.NameRegistryAbi().Unpack(nameInfo, "getParticipantById", common.Hex2Bytes(strings.TrimPrefix(nameRegistryHex, "0x")), 1)
 					if nil == err2 {
+						nameInfo.ParticipantId = new(big.Int)
+						nameInfo.ParticipantId.Set(id)
 						nameInfos = append(nameInfos, nameInfo)
 
 						//if crypto.IsKSAccountUnlocked(nameInfo.Signer) {
