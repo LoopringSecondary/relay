@@ -450,3 +450,5 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 func (submitter *RingSubmitter) SetMatcher(matcher Matcher) {
 	submitter.matcher = matcher
 }
+
+// TODO(hongyu): 初始化submmitter之前需要确认是否nameRegistry&addParticipant
