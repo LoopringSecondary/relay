@@ -165,8 +165,7 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenRegister(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
 	protocol := test.Protocol()
 	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
@@ -179,8 +178,7 @@ func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
 	protocol := test.Protocol()
 	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
@@ -206,8 +204,7 @@ func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
 
 // 注册合约
 func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
 	protocol := test.Protocol()
 	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
@@ -220,8 +217,7 @@ func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 }
 
 func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
 	protocol := test.Protocol()
 	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
@@ -295,6 +291,19 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 		t.Fatalf("call method tokenAddress error:%s", err.Error())
 	} else {
 		t.Logf("symbol:%s-> address:%s", symbol, result)
+	}
+}
+
+func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
+	protocol := test.Protocol()
+	miner := test.Entity().Creator.Address
+	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
+	var result string
+	if err := callMethod(&result, "nameMap", "latest", miner); nil != err {
+		t.Fatalf("call method nameMap error:%s", err.Error())
+	} else {
+		t.Logf("name:%s-> address:%s", result, miner.Hex())
 	}
 }
 
