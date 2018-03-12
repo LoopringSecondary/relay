@@ -99,12 +99,12 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	for addr, protocolAddr := range ethaccessor.ProtocolAddresses() {
 		var resHex string
 		callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), protocolAddr.NameRegistryAddress)
-		err := callMethod(&resHex, "getParticipantIds", "latest", options.Name, big.NewInt(int64(0)), big.NewInt(int64(10)))
+		err := callMethod(&resHex, "getParticipantIds", "latest", options.Name, big.NewInt(int64(0)), big.NewInt(int64(1000)))
 		if nil != err {
 			return nil, err
 		} else {
 			participantIds := []*big.Int{}
-			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1000)
+			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1)
 			if nil != err1 {
 				return nil, err1
 			} else if len(participantIds) <= 0 {
