@@ -264,6 +264,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.ValidSince = m.UintArgsList[i][2]
 		order.ValidUntil = m.UintArgsList[i][3]
 		order.LrcFee = m.UintArgsList[i][4]
+		// order.rateAmountS
+		order.WalletId = m.UintArgsList[i][6]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 

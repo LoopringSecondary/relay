@@ -36,6 +36,7 @@ type Order struct {
 	ID                    int     `gorm:"column:id;primary_key;"`
 	Protocol              string  `gorm:"column:protocol;type:varchar(42)"`
 	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
+	AuthAddress           string  `gorm:"column:auth_address;type:varchar(42)"`
 	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
 	WalletId              string  `gorm:"column:wallet_id;varchar(30)"`
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
@@ -90,6 +91,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 
 	auth, _ := src.AuthPrivateKey.MarshalText()
 	o.PrivateKey = string(auth)
+	o.AuthAddress = src.AuthAddr.Hex()
 	o.WalletId = state.RawOrder.WalletId.String()
 
 	o.OrderHash = src.Hash.Hex()
@@ -132,6 +134,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.ValidSince = big.NewInt(o.ValidSince)
 	state.RawOrder.ValidUntil = big.NewInt(o.ValidUntil)
 
+	state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
 	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
 	state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
 

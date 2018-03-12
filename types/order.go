@@ -134,7 +134,7 @@ func (o *Order) GenerateHash() common.Hash {
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
-		o.AuthPrivateKey.Address().Bytes(),
+		o.AuthAddr.Bytes(),
 		common.LeftPadBytes(o.AmountS.Bytes(), 32),
 		common.LeftPadBytes(o.AmountB.Bytes(), 32),
 		common.LeftPadBytes(o.ValidSince.Bytes(), 32),
