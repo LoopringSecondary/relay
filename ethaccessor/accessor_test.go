@@ -50,7 +50,7 @@ func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	owner := account1
-	tokenAddress := lrcTokenAddress
+	tokenAddress := wethTokenAddress
 	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
 		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
@@ -60,12 +60,9 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := accounts.Account{Address: account2}
-	//100000000000000000000
-	tokenAddress := wethTokenAddress
-	amount, _ := new(big.Int).SetString("1000000000000000000000000000000000000000000000000000000", 0) // 100weth
-	//1000000000000000000000000000000000000
-	//1000000000000000000000000000000000000000000000000000000
+	account := accounts.Account{Address: account1}
+	tokenAddress := lrcTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
@@ -77,14 +74,14 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
-	owner := account2
-	tokenAddress := wethTokenAddress
+	owner := account1
+	tokenAddress := lrcTokenAddress
 	spender := delegateAddress
 
 	if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
 	} else {
-		t.Log(allowance.String())
+		t.Log(new(big.Rat).SetFrac(allowance, big.NewInt(1e18)).FloatString(2))
 	}
 }
 

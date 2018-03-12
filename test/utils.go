@@ -346,7 +346,7 @@ func SetTokenBalances() {
 	dummyTokenAbi := &abi.ABI{}
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
 
-	sender := accounts.Account{Address: common.HexToAddress(cfg.Miner.Miner)}
+	sender := accounts.Account{Address: entity.Creator.Address}
 	amount, _ := new(big.Int).SetString("10000000000000000000000", 0) // 10^18 * 10000
 	//wethAmount, _ := new(big.Int).SetString("79992767978000000000", 0)
 
