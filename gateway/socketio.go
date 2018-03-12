@@ -26,6 +26,7 @@ const (
 	MARKETCAP
 	BALANCE
 	TRANSACTION
+	TRANSACTION_BY_HASH
 	DEPTH
 	TRENDS
 	TEST
@@ -56,15 +57,16 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 var MsgTypeRoute = map[BusinessType]string{
-	TICKER:      "tickers",
-	LOOPRING_TICKERS:  "loopringTickers",
-	TRENDS:      "trends",
-	PORTFOLIO:   "portfolio",
-	MARKETCAP:   "marketcap",
-	BALANCE:     "balance",
-	TRANSACTION: "transaction",
-	DEPTH:       "depth",
-	TEST:        "test",
+	TICKER:              "tickers",
+	LOOPRING_TICKERS:    "loopringTickers",
+	TRENDS:              "trends",
+	PORTFOLIO:           "portfolio",
+	MARKETCAP:           "marketcap",
+	BALANCE:             "balance",
+	TRANSACTION:         "transaction",
+	TRANSACTION_BY_HASH: "trxByHashes",
+	DEPTH:               "depth",
+	TEST:                "test",
 }
 
 type SocketIOService interface {
@@ -108,26 +110,26 @@ func (so *SocketIOServiceImpl) Start() {
 	})
 
 	for _, v := range MsgTypeRoute {
-			aliasOfV := v
+		aliasOfV := v
 
-			server.OnEvent("/", aliasOfV + EventPostfixReq, func(s socketio.Conn, msg string) {
-				context := make(map[string]string)
-				if s != nil && s.Context() != nil {
-					context = s.Context().(map[string]string)
-				}
-				context[aliasOfV] = msg
-				s.SetContext(context)
-				so.connIdMap[s.ID()] = s
-				so.EmitNowByEventType(aliasOfV, s, msg)
-			})
+		server.OnEvent("/", aliasOfV+EventPostfixReq, func(s socketio.Conn, msg string) {
+			context := make(map[string]string)
+			if s != nil && s.Context() != nil {
+				context = s.Context().(map[string]string)
+			}
+			context[aliasOfV] = msg
+			s.SetContext(context)
+			so.connIdMap[s.ID()] = s
+			so.EmitNowByEventType(aliasOfV, s, msg)
+		})
 
-			server.OnEvent("/", aliasOfV + EventPostfixEnd, func(s socketio.Conn, msg string) {
-				if s != nil && s.Context() != nil {
-					businesses := s.Context().(map[string]string)
-					delete(businesses, aliasOfV)
-					s.SetContext(businesses)
-				}
-			})
+		server.OnEvent("/", aliasOfV+EventPostfixEnd, func(s socketio.Conn, msg string) {
+			if s != nil && s.Context() != nil {
+				businesses := s.Context().(map[string]string)
+				delete(businesses, aliasOfV)
+				s.SetContext(businesses)
+			}
+		})
 	}
 
 	so.cron.AddFunc("0/10 * * * * *", func() {
@@ -259,6 +261,21 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 			v.Emit("transaction_res", string(b[:]))
 		}
 	}
+	if bk == "trxByHashes" {
+		var query TransactionQuery
+		err := json.Unmarshal([]byte(bv), &query)
+		if err != nil {
+			fmt.Println("unmarshal error " + bv)
+		}
+		res, err := so.walletService.GetTransactionsByHash(query)
+		if err != nil {
+			v.Emit("trxByHashes_res", "get transaction error")
+		} else {
+			b, _ := json.Marshal(res)
+			v.Emit("trxByHashes_res", string(b[:]))
+		}
+	}
+
 	if bk == "depth" {
 		var query DepthQuery
 		err := json.Unmarshal([]byte(bv), &query)

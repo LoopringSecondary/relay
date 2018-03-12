@@ -36,7 +36,7 @@ type Order struct {
 	ID                    int     `gorm:"column:id;primary_key;"`
 	Protocol              string  `gorm:"column:protocol;type:varchar(42)"`
 	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
-	PrivateKey            string  `gorm:"column:priv_key;type:varchar(256)"`
+	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
 	WalletId              string  `gorm:"column:wallet_id;varchar(30)"`
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`

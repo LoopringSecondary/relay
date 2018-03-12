@@ -98,9 +98,8 @@ func formatCutoffKey(protocol, owner common.Address) string {
 	return protocol.Hex() + "-" + owner.Hex()
 }
 
-// todo(fuk): need test
 func formatCutoffPairKey(protocol, owner, token1, token2 common.Address) string {
-	var bs []byte
+	bs := make([]byte, 20)
 
 	bs1 := token1.Bytes()
 	bs2 := token2.Bytes()
