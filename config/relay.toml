@@ -24,7 +24,7 @@ name = "Loopring corporation"
     port = "3306"
     user = "root"
     password = "111111"
-    db_name = "loopring_miner"
+    db_name = "miner_v2"
     table_prefix = "lpr_"
     debug = false
 
@@ -92,7 +92,7 @@ name = "Loopring corporation"
     		max_cache_rounds_length = 100
 
 [market]
-    token_file = "/Users/fukun/projects/gohome/src/github.com/Loopring/relay/config/tokens.json"
+    token_file = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/tokens.json"
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
@@ -106,6 +106,7 @@ name = "Loopring corporation"
 
 [keystore]
     keydir = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/ks_dir"
+
 
 [user_manager]
     white_list_open = true

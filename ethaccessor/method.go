@@ -308,6 +308,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+		log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
 		return "", err
 	} else {
 		accessor.addressNextNonce(sender)
