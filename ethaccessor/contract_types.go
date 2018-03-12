@@ -231,7 +231,7 @@ type SubmitRingMethod struct {
 	VList              []uint8             `fieldName:"vList"`
 	RList              [][32]uint8         `fieldName:"rList"`
 	SList              [][32]uint8         `fieldName:"sList"`
-	MinerId            uint8               `fieldName:"minerId"`
+	MinerId            *big.Int            `fieldName:"minerId"`
 	FeeRecipient       uint16              `fieldName:"feeSelections"`
 	Protocol           common.Address
 }
@@ -240,9 +240,9 @@ type SubmitRingMethod struct {
 func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	var list []*types.Order
 	length := len(m.AddressList)
+	vsrLength := 2*length + 1
 
-	// length of v.s.r list = length  +  1, they contained ring'vsr
-	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || length != len(m.VList)-1 || length != len(m.SList)-1 || length != len(m.RList)-1 || length < 2 {
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
 		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
 	}
 
@@ -264,6 +264,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.ValidSince = m.UintArgsList[i][2]
 		order.ValidUntil = m.UintArgsList[i][3]
 		order.LrcFee = m.UintArgsList[i][4]
+		// order.rateAmountS
+		order.WalletId = m.UintArgsList[i][6]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
