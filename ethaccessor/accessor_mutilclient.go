@@ -200,6 +200,6 @@ type ethNodeAccessor struct {
 
 type AddressNonce struct {
 	Address common.Address
-	Nonce *big.Int
-	mtx sync.RWMutex
+	Nonce   *big.Int
+	mtx     sync.RWMutex
 }
