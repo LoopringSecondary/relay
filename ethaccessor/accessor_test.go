@@ -43,14 +43,14 @@ var (
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	owner := account1
+	owner := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
 	test.SetTokenBalance("LRC", owner, amount)
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	owner := account1
-	tokenAddress := wethTokenAddress
+	tokenAddress := lrcTokenAddress
 	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
 		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
@@ -74,7 +74,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
-	owner := account1
+	owner := account2
 	tokenAddress := lrcTokenAddress
 	spender := delegateAddress
 
