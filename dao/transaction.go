@@ -123,3 +123,43 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 
 	return nil
 }
+
+func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
+	var (
+		trxs     []Transaction
+		err        error
+		data       = make([]interface{}, 0)
+		pageResult PageResult
+	)
+
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&trxs).Error; err != nil {
+		return pageResult, err
+	}
+
+	for _, v := range trxs {
+		data = append(data, v)
+	}
+
+	pageResult = PageResult{data, pageIndex, pageSize, 0}
+
+	err = s.db.Model(&Transaction{}).Where(query).Count(&pageResult.Total).Error
+	if err != nil {
+		return pageResult, err
+	}
+
+	return pageResult, err
+}
+
+func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([] Transaction, error) {
+	var trxs []Transaction
+	err := s.db.Where("tx_hash in (?)", hashes).Find(&trxs).Error
+	return trxs, err
+}

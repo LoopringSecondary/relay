@@ -105,6 +105,7 @@ type EstimatedAllocatedAllowanceQuery struct {
 type TransactionQuery struct {
 	ThxHash   string `json:"thxHash"`
 	Owner     string `json:"owner"`
+	TrxHashes []string `json:"trxHashes"`
 	PageIndex int    `json:"pageIndex"`
 	PageSize  int    `json:"pageSize"`
 }
@@ -191,10 +192,11 @@ type WalletServiceImpl struct {
 	marketCap       marketcap.MarketCapProvider
 	ethForwarder    *EthForwarder
 	tickerCollector market.CollectorImpl
+	rds dao.RdsService
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -202,6 +204,8 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	w.marketCap = capProvider
 	w.ethForwarder = ethForwarder
 	w.tickerCollector = collector
+	w.rds = rds
+
 	return w
 }
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
@@ -510,23 +514,55 @@ func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
 	return util.AllMarkets, err
 }
 
-func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (transactions []types.Transaction, err error) {
-	transactions = make([]types.Transaction, 0)
-	mockTxn1 := types.Transaction{
-		Protocol:    common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC9"),
-		Owner:       common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC2"),
-		From:        common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC3"),
-		To:          common.StringToAddress("0x66727f5DE8Fbd651Dc375BB926B16545DeD71EC4"),
-		CreateTime:  150134131,
-		UpdateTime:  150101931,
-		TxHash:      common.StringToHash(""),
-		BlockNumber: big.NewInt(5029675),
-		Status:      1,
-		Value:       big.NewInt(0x0000000a7640001),
+func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
+
+	trxQuery := make(map[string]interface{})
+	if query.Owner != "" {
+		trxQuery["owner"] = query.Owner
 	}
 
-	transactions = append(transactions, mockTxn1)
-	return transactions, nil
+	if query.ThxHash != "" {
+		trxQuery["tx_hash"] = query.ThxHash
+	}
+
+	pageIndex := query.PageIndex
+	pageSize := query.PageSize
+
+
+	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
+
+	if err != nil {
+		return pr, err
+	}
+
+	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
+
+	for _, d := range daoPr.Data {
+		o := d.(types.Transaction)
+		rst.Data = append(rst.Data, o)
+	}
+	return rst, nil
+}
+
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []types.Transaction, err error) {
+
+	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result = make([]types.Transaction, 0)
+	for _, r := range rst {
+		tr := types.Transaction{}
+		err = r.ConvertUp(&tr)
+		if err != nil {
+			log.Error("convert error occurs..." + err.Error())
+		}
+		result = append(result, tr)
+	}
+
+	return result, nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
