@@ -178,7 +178,10 @@ func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, re
 
 	// process method
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
-	if !txIsFailed && len(receipt.Logs) > 0 {
+
+	//todo(fuk): 这里txIsFailed在私链及测试链上为false，在主网上正常
+	// if !txIsFailed && len(receipt.Logs) > 0 {
+	if len(receipt.Logs) > 0 {
 		if err := l.processEvent(receipt, time); err != nil {
 			log.Errorf(err.Error())
 		}
