@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+	"github.com/Loopring/relay/log"
 )
 
 func ValidateSignatureValues(v byte, r, s []byte) bool {
@@ -55,6 +56,15 @@ func UnlockKSAccount(acc accounts.Account, passphrase string) error {
 		return c.UnlockAccount(acc, passphrase)
 	} else {
 		return errors.New("can't unlock ")
+	}
+}
+
+func IsKSAccountUnlocked(addr common.Address) bool {
+	if c, ok := crypto.(EthKSCrypto); ok {
+		return c.IsUnlocked(addr)
+	} else {
+		log.Errorf("unable to get address :%s lock status", addr.Hex())
+		return false
 	}
 }
 
