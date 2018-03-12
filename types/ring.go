@@ -28,7 +28,7 @@ type NameRegistryInfo struct {
 	Name          string
 	Owner         common.Address
 	FeeRecipient  common.Address
-	Singer        common.Address
+	Signer        common.Address
 	ParticipantId *big.Int
 }
 
@@ -49,6 +49,7 @@ type Ring struct {
 	Hash        common.Hash    `json:"hash"`
 	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
+	UniqueId    common.Hash    `json:"uniquedId"`
 }
 
 func (ring *Ring) FeeSelections() *big.Int {
@@ -61,19 +62,22 @@ func (ring *Ring) FeeSelections() *big.Int {
 	return feeSelections
 }
 
-func (ring *Ring) UniqueId() common.Hash {
-	orderHashBytes := ring.Orders[0].OrderState.RawOrder.Hash.Bytes()
-	for idx, order := range ring.Orders {
-		if idx > 0 {
-			orderHashBytes = Xor(orderHashBytes, order.OrderState.RawOrder.Hash.Bytes())
+func (ring *Ring) GenerateUniqueId() common.Hash {
+	if IsZeroHash(ring.UniqueId) {
+		orderHashBytes := ring.Orders[0].OrderState.RawOrder.Hash.Bytes()
+		for idx, order := range ring.Orders {
+			if idx > 0 {
+				orderHashBytes = Xor(orderHashBytes, order.OrderState.RawOrder.Hash.Bytes())
+			}
 		}
+		ring.UniqueId = common.BytesToHash(orderHashBytes)
 	}
-	return common.BytesToHash(orderHashBytes)
+	return ring.UniqueId
 }
 
 func (ring *Ring) GenerateHash(nameInfo *NameRegistryInfo) common.Hash {
 	hashBytes := crypto.GenerateHash(
-		ring.UniqueId().Bytes(),
+		ring.GenerateUniqueId().Bytes(),
 		common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32),
 		common.LeftPadBytes(ring.FeeSelections().Bytes(), 2),
 	)
@@ -85,7 +89,7 @@ func (ring *Ring) GenerateAndSetSignature(nameInfo *NameRegistryInfo) error {
 		ring.Hash = ring.GenerateHash(nameInfo)
 	}
 
-	if sig, err := crypto.Sign(ring.Hash.Bytes(), nameInfo.Singer); nil != err {
+	if sig, err := crypto.Sign(ring.Hash.Bytes(), nameInfo.Signer); nil != err {
 		return err
 	} else {
 		v, r, s := crypto.SigToVRS(sig)

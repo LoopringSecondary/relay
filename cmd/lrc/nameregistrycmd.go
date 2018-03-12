@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/urfave/cli.v1"
 	"math/big"
+	"strings"
 )
 
 //name registry
@@ -72,8 +73,17 @@ func nameRegistryCommands() cli.Command {
 			cli.Command{
 				Name:   "transferOwnership",
 				Usage:  "import a private key",
-				Action: importAccount,
-				Flags:  []cli.Flag{},
+				Action: transferOwnership,
+				Flags: []cli.Flag{
+					cli.StringFlag{
+						Name:  "config",
+						Usage: "config file",
+					},
+					cli.StringFlag{
+						Name:  "protocolAddress",
+						Usage: "protocolAddress",
+					},
+				},
 			},
 			cli.Command{
 				Name:   "addParticipant",
@@ -182,6 +192,51 @@ func registerName(ctx *cli.Context) {
 		utils.ExitWithErr(ctx.App.Writer, err)
 	} else {
 		fmt.Fprintf(ctx.App.Writer, "have send registerName transaction with hash:%s, you can see this in etherscan.io.\n", txHash)
+	}
+}
+
+func transferOwnership(ctx *cli.Context) {
+	globalConfig := utils.SetGlobalConfig(ctx)
+	logger := log.Initialize(globalConfig.Log)
+	defer func() {
+		if nil != logger {
+			logger.Sync()
+		}
+	}()
+	cache.NewCache(globalConfig.Redis)
+	initEthaccessor(globalConfig)
+
+	protocolAddress := common.HexToAddress(ctx.String("protocolAddress"))
+	registerAddress := ethaccessor.ProtocolAddresses()[protocolAddress].NameRegistryAddress
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), registerAddress)
+	var ownerAddressHex string
+	err := callMethod(&ownerAddressHex, "getParticipantIds", "latest", "miner1", big.NewInt(int64(0)), big.NewInt(int64(10)))
+	if nil != err {
+		utils.ExitWithErr(ctx.App.Writer, err)
+	} else {
+		println(ownerAddressHex)
+		ownerAddressHex = strings.TrimPrefix(ownerAddressHex, "0x")
+		b := common.Hex2Bytes(ownerAddressHex)
+		res := []*big.Int{}
+		err1 := ethaccessor.NameRegistryAbi().Unpack(&res, "getParticipantIds", b, 1)
+		if nil != err1 {
+			println(err1.Error())
+		}
+		println(res[0].String())
+		println(res[1].String())
+		println(len(res))
+		//type A struct {
+		//	FeeRecipient common.Address
+		//	Signer common.Address
+		//}
+		//res := &A{}
+		//err1 := ethaccessor.NameRegistryAbi().Unpack(res, "getParticipantId", b, 1)
+		//if nil != err1 {
+		//	println(err1.Error())
+		//}
+		//println("ownerAddressHex", ownerAddressHex)
+		//println("res[0]", res.FeeRecipient.Hex())
+		//println("res[1]", res.Signer.Hex())
 	}
 }
 
