@@ -107,11 +107,8 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 			participantIds := []*big.Int{}
 			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1)
 			if nil != err1 {
-				println("--------1")
-
 				return nil, err1
 			} else if len(participantIds) <= 0 {
-				println("--------2")
 				return nil, errors.New("miner hasn't been registerd. you can use `relay nameRegistry` to register it first.")
 			}
 			nameInfos := []*types.NameRegistryInfo{}
@@ -121,13 +118,15 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 
 				if nil == err {
 					nameInfo := &types.NameRegistryInfo{}
+					nameInfo.ParticipantId = new(big.Int)
+					nameInfo.ParticipantId.Set(id)
 					err2 := ethaccessor.NameRegistryAbi().Unpack(nameInfo, "getParticipantById", common.Hex2Bytes(strings.TrimPrefix(nameRegistryHex, "0x")), 1)
 					if nil == err2 {
 						nameInfos = append(nameInfos, nameInfo)
 					} else {
-						println("--------3")
 						fmt.Printf("", err2.Error())
 					}
+				} else {
 				}
 			}
 			if len(nameInfos) <= 0 {
@@ -292,7 +291,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 			ringSubmitArgs.RList,
 			ringSubmitArgs.SList,
 			ringSubmitArgs.Miner.ParticipantId,
-			ringSubmitArgs.FeeSelections,
+			uint16(ringSubmitArgs.FeeSelections.Uint64()),
 		)
 	}
 	if nil != err {
