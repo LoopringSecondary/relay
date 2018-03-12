@@ -126,7 +126,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 
 func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		trxs     []Transaction
+		trxs       []Transaction
 		err        error
 		data       = make([]interface{}, 0)
 		pageResult PageResult
@@ -158,7 +158,7 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 	return pageResult, err
 }
 
-func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([] Transaction, error) {
+func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
 	err := s.db.Where("tx_hash in (?)", hashes).Find(&trxs).Error
 	return trxs, err

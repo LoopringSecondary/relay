@@ -103,11 +103,11 @@ type EstimatedAllocatedAllowanceQuery struct {
 }
 
 type TransactionQuery struct {
-	ThxHash   string `json:"thxHash"`
-	Owner     string `json:"owner"`
+	ThxHash   string   `json:"thxHash"`
+	Owner     string   `json:"owner"`
 	TrxHashes []string `json:"trxHashes"`
-	PageIndex int    `json:"pageIndex"`
-	PageSize  int    `json:"pageSize"`
+	PageIndex int      `json:"pageIndex"`
+	PageSize  int      `json:"pageSize"`
 }
 
 type OrderQuery struct {
@@ -144,15 +144,15 @@ type RingMinedQuery struct {
 }
 
 type RawOrderJsonResult struct {
-	Protocol              string `json:"protocol"` // 智能合约地址
-	Owner                 string `json:"address"`
-	Hash                  string `json:"hash"`
-	TokenS                string `json:"tokenS"`  // 卖出erc20代币智能合约地址
-	TokenB                string `json:"tokenB"`  // 买入erc20代币智能合约地址
-	AmountS               string `json:"amountS"` // 卖出erc20代币数量上限
-	AmountB               string `json:"amountB"` // 买入erc20代币数量上限
-	ValidSince             string  `json:"validSince"`
-	ValidUntil                   string `json:"validUntil"` // 订单过期时间
+	Protocol   string `json:"protocol"` // 智能合约地址
+	Owner      string `json:"address"`
+	Hash       string `json:"hash"`
+	TokenS     string `json:"tokenS"`  // 卖出erc20代币智能合约地址
+	TokenB     string `json:"tokenB"`  // 买入erc20代币智能合约地址
+	AmountS    string `json:"amountS"` // 卖出erc20代币数量上限
+	AmountB    string `json:"amountB"` // 买入erc20代币数量上限
+	ValidSince string `json:"validSince"`
+	ValidUntil string `json:"validUntil"` // 订单过期时间
 	//Salt                  string `json:"salt"`
 	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool   `json:"buyNoMoreThanAmountB"`
@@ -192,7 +192,7 @@ type WalletServiceImpl struct {
 	marketCap       marketcap.MarketCapProvider
 	ethForwarder    *EthForwarder
 	tickerCollector market.CollectorImpl
-	rds dao.RdsService
+	rds             dao.RdsService
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
@@ -527,7 +527,6 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	pageIndex := query.PageIndex
 	pageSize := query.PageSize
-
 
 	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
 

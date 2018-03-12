@@ -648,7 +648,7 @@ func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEve
 		model dao.Transaction
 	)
 
-	log.Debugf("extractor:tx:%s saveApproveMethodAsTx", evt.TxHash.Hex())
+	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, txIsFailed:%t", evt.TxHash.Hex(), evt.TxFailed)
 
 	tx.FromApproveMethod(evt)
 	model.ConvertDown(&tx)
