@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
-	"time"
 )
 
 type EventData struct {
@@ -519,11 +518,8 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 		return nil
 	}
 
-	order, err := cancel.ConvertDown()
-	if err != nil {
-		log.Errorf("extractor,tx:%s cancelOrder method convert order data error:%s", contract.TxHash, err.Error())
-		return nil
-	}
+	order, cancelAmount, _ := cancel.ConvertDown()
+	txinfo := contract.setTxInfo()
 
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
@@ -533,51 +529,22 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	//eventemitter.Emit(eventemitter.Gateway, order)
 
 	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
-
-	//contract := input.(MethodData)
-	//cancel := contract.Method.(*ethaccessor.CancelOrderMethod)
-	//
-	//data := hexutil.MustDecode("0x" + contract.Input[10:])
-	//if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
-	//	log.Errorf("extractor,tx:%s cancelOrder method unpack error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//order, err := cancel.ConvertDown()
-	//if err != nil {
-	//	log.Errorf("extractor,tx:%s cancelOrder method convert order data error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
-	//
-	//order.Protocol = common.HexToAddress(contract.ContractAddress)
-	//eventemitter.Emit(eventemitter.Gateway, order)
-	//
-	//// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	//processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
+	if !contract.IsFailed {
+		processor.saveCancelOrderMethodAsTx(txinfo, cancelAmount)
+	}
 
 	return nil
 }
 
-func (processor *AbiProcessor) saveCancelOrderMethodAsTx(ord *types.Order, txhash string, amountS, amountB, blocknumber *big.Int) error {
-	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx:orderhash %s and is status:%t", txhash, ord.Hash.Hex())
+func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, amount *big.Int) error {
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%t", txinfo.TxHash.Hex(), txinfo.TxFailed)
 
 	var (
 		tx    types.Transaction
 		model dao.Transaction
-		value *big.Int
 	)
 
-	if amountS.Cmp(big.NewInt(0)) == 0 {
-		value = amountB
-	} else {
-		value = amountS
-	}
-	nowtime := time.Now().Unix()
-
-	tx.FromCancelMethod(ord, common.HexToHash(txhash), types.TX_STATUS_FAILED, value, blocknumber, nowtime)
+	tx.FromCancelMethod(txinfo, amount)
 	model.ConvertDown(&tx)
 	processor.db.SaveTransaction(&model)
 
@@ -874,6 +841,22 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 	log.Debugf("extractor,tx:%s orderCancelled event orderhash:%s, cancelAmount:%s", contractData.TxHash, evt.OrderHash.Hex(), evt.AmountCancelled.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
+
+	processor.saveCancelOrderEventAsTx(evt)
+	return nil
+}
+
+func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelledEvent) error {
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%t", evt.TxHash.Hex(), evt.TxFailed)
+
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	tx.FromCancelEvent(evt, evt.From)
+	model.ConvertDown(&tx)
+	processor.db.SaveTransaction(&model)
 
 	return nil
 }

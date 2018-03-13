@@ -292,7 +292,7 @@ type CancelOrderMethod struct {
 }
 
 // todo(fuk): modify internal cancelOrderMethod and implement related functions
-func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
+func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	var order types.Order
 
 	order.Owner = m.AddressList[0]
@@ -304,6 +304,8 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.ValidSince = m.OrderValues[2]
 	order.ValidUntil = m.OrderValues[3]
 	order.LrcFee = m.OrderValues[4]
+	order.WalletId = m.OrderValues[5]
+	cancelAmount := m.OrderValues[6]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit
@@ -312,7 +314,7 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.S = m.S
 	order.R = m.R
 
-	return &order, nil
+	return &order, cancelAmount, nil
 }
 
 type CancelAllOrdersMethod struct {

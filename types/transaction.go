@@ -156,20 +156,16 @@ func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	}
 }
 
-func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status uint8, value, blockNumber *big.Int, nowtime int64) error {
-	tx.Protocol = src.Protocol
-	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = src.Protocol
-	tx.Type = TX_TYPE_CANCEL_ORDER
-	tx.Status = status
-	tx.Value = value
+func (tx *Transaction) FromCancelMethod(txinfo TxInfo, value *big.Int) error {
+	tx.Owner = txinfo.From
+	tx.From = txinfo.From
+	tx.To = txinfo.To
 
-	tx.Content = src.Hash.Bytes()
-	tx.BlockNumber = blockNumber
+	tx.Type = TX_TYPE_CANCEL_ORDER
+	tx.Value = value
 	tx.LogIndex = 0
-	tx.CreateTime = nowtime
-	tx.UpdateTime = nowtime
+
+	tx.fullFilled(txinfo)
 
 	return nil
 }
@@ -179,8 +175,9 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Ad
 	tx.To = src.To
 	tx.Owner = owner
 	tx.Type = TX_TYPE_CANCEL_ORDER
+	tx.Status = TX_STATUS_SUCCESS
 	tx.Value = src.AmountCancelled
-	tx.Content = src.OrderHash.Bytes()
+	tx.Content = []byte(src.OrderHash.Hex())
 	tx.LogIndex = src.LogIndex
 
 	tx.fullFilled(src.TxInfo)

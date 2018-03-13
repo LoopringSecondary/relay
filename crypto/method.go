@@ -20,11 +20,11 @@ package crypto
 
 import (
 	"errors"
+	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
-	"github.com/Loopring/relay/log"
 )
 
 func ValidateSignatureValues(v byte, r, s []byte) bool {
