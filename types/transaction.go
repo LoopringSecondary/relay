@@ -114,7 +114,7 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 		tx.Value = src.AmountB
 	}
 	tx.TxHash = txhash
-	tx.Content = src.Hash.Bytes()
+	tx.Content = []byte(src.Hash.Hex())
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
@@ -123,7 +123,7 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 
 func (tx *Transaction) GetOrderContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_BUY || tx.Type == TX_TYPE_SELL {
-		return common.BytesToHash(tx.Content), nil
+		return common.HexToHash(string(tx.Content)), nil
 	} else {
 		return NilHash, fmt.Errorf("get order salt,transaction type error:%d", tx.Type)
 	}
@@ -140,7 +140,7 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 		tx.Value = src.AmountB
 	}
 
-	tx.Content = src.OrderHash.Bytes()
+	tx.Content = []byte(src.OrderHash.Hex())
 	tx.fullFilled(src.TxInfo)
 
 	return nil
@@ -148,7 +148,7 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 
 func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
-		return common.BytesToHash(tx.Content), nil
+		return common.HexToHash(string(tx.Content)), nil
 	} else {
 		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
 	}

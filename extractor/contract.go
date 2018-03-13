@@ -789,7 +789,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 
 			saveFillList = append(saveFillList, v)
 		} else {
-			log.Debugf("---------=======extractor,tx:%s orderFilled event cann't match order %s", contractData.TxHash, ord.OrderHash)
+			log.Debugf("extractor,tx:%s orderFilled event cann't match order %s", contractData.TxHash, ord.OrderHash)
 		}
 	}
 
@@ -827,6 +827,8 @@ func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEv
 
 		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY)
 		model2.ConvertDown(&tx)
+
+		log.Debugf("========1111111111")
 		processor.db.SaveTransaction(&model2)
 	}
 }

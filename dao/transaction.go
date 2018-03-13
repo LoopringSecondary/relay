@@ -32,7 +32,7 @@ type Transaction struct {
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	Content     []byte `gorm:"column:content;type:text"`
+	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Value       string `gorm:"column:amount;type:varchar(30)"`
 	Type        uint8  `gorm:"column:tx_type"`
@@ -49,7 +49,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
 	tx.TxHash = src.TxHash.Hex()
-	tx.Content = src.Content
+	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
 	tx.Type = src.Type
@@ -67,7 +67,7 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.TxHash)
-	dst.Content = tx.Content
+	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
 	dst.Type = tx.Type
