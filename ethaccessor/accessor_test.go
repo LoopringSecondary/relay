@@ -141,13 +141,13 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 // cutoff的值必须在两个块的timestamp之间
 func TestEthNodeAccessor_Cutoff(t *testing.T) {
 	account := accounts.Account{Address: account2}
-	cutoff := big.NewInt(1518700280)
+	cutoff := big.NewInt(1521931942)
 
 	protocol := test.Protocol()
 	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
-	if result, err := callMethod(account.Address, "setCutoff", nil, nil, nil, cutoff); nil != err {
-		t.Fatalf("call method setCutoff error:%s", err.Error())
+	if result, err := callMethod(account.Address, "cancelAllOrders", big.NewInt(200000), big.NewInt(21000000000), nil, cutoff); nil != err {
+		t.Fatalf("call method cancelAllOrders error:%s", err.Error())
 	} else {
 		t.Logf("cutoff result:%s", result)
 	}
