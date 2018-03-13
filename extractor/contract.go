@@ -439,74 +439,71 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
-	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-	ring.Protocol = evt.Protocol
-
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s submitRing method, unpack error:%s", evt.TxHash.Hex(), err.Error())
-		return nil
-	}
-	orderList, err := ring.ConvertDown()
-	if err != nil {
-		log.Errorf("extractor,tx:%s submitRing method convert order data error:%s", evt.TxHash.Hex(), err.Error())
-		return nil
-	}
-
-	// save order
-	for _, v := range orderList {
-		v.Protocol = common.HexToAddress(contract.ContractAddress)
-		v.Hash = v.GenerateHash()
-		log.Debugf("extractor,tx:%s submitRing method orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", evt.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
-		eventemitter.Emit(eventemitter.Gateway, v)
-	}
-
-	// save transactions while submitRing failed，otherwise save transactions while process ringmined event
-	if evt.TxFailed {
-		processor.saveOrderListAsTxs(evt.TxHash, orderList, &contract)
-	}
+	//ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+	//ring.Protocol = evt.Protocol
+	//
+	//data := hexutil.MustDecode("0x" + contract.Input[10:])
+	//if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
+	//	log.Errorf("extractor,tx:%s submitRing method, unpack error:%s", evt.TxHash.Hex(), err.Error())
+	//	return nil
+	//}
+	//orderList, err := ring.ConvertDown()
+	//if err != nil {
+	//	log.Errorf("extractor,tx:%s submitRing method convert order data error:%s", evt.TxHash.Hex(), err.Error())
+	//	return nil
+	//}
+	//
+	//// save order
+	//for _, v := range orderList {
+	//	v.Protocol = common.HexToAddress(contract.ContractAddress)
+	//	v.Hash = v.GenerateHash()
+	//	log.Debugf("extractor,tx:%s submitRing method orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", evt.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+	//	eventemitter.Emit(eventemitter.Gateway, v)
+	//}
+	//
+	//// save transactions while submitRing failed，otherwise save transactions while process ringmined event
+	//if evt.TxFailed {
+	//	processor.saveOrderListAsTxs(evt.TxHash, orderList, &contract)
+	//}
 
 	return nil
 }
 
-func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList []*types.Order, contract *MethodData) {
-	//todo(fuk): delete after test
-	return
-
-	length := len(orderList)
-
-	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and tx isFailed:%t", txhash.Hex(), length, contract.IsFailed)
-
-	nowtime := time.Now().Unix()
-
-	for i := 0; i < length; i++ {
-		var (
-			tx              types.Transaction
-			model1, model2  dao.Transaction
-			sellto, buyfrom common.Address
-		)
-		ord := orderList[i]
-		if i == length-1 {
-			sellto = orderList[0].Owner
-		} else {
-			sellto = orderList[i+1].Owner
-		}
-		if i == 0 {
-			buyfrom = orderList[length-1].Owner
-		} else {
-			buyfrom = orderList[i-1].Owner
-		}
-
-		// todo(fuk):emit as event,saved by wallet/relay but not extractor
-		tx.FromOrder(ord, txhash, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
-		model1.ConvertDown(&tx)
-		processor.db.SaveTransaction(&model1)
-
-		tx.FromOrder(ord, txhash, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
-		model2.ConvertDown(&tx)
-		processor.db.SaveTransaction(&model2)
-	}
-}
+//func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList []*types.Order, contract *MethodData) {
+//	length := len(orderList)
+//
+//	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and tx isFailed:%t", txhash.Hex(), length, contract.IsFailed)
+//
+//	nowtime := time.Now().Unix()
+//
+//	for i := 0; i < length; i++ {
+//		var (
+//			tx              types.Transaction
+//			model1, model2  dao.Transaction
+//			sellto, buyfrom common.Address
+//		)
+//		ord := orderList[i]
+//		if i == length-1 {
+//			sellto = orderList[0].Owner
+//		} else {
+//			sellto = orderList[i+1].Owner
+//		}
+//		if i == 0 {
+//			buyfrom = orderList[length-1].Owner
+//		} else {
+//			buyfrom = orderList[i-1].Owner
+//		}
+//
+//		// todo(fuk):emit as event,saved by wallet/relay but not extractor
+//		tx.FromOrder(ord, txhash, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+//		model1.ConvertDown(&tx)
+//		processor.db.SaveTransaction(&model1)
+//
+//		tx.FromOrder(ord, txhash, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
+//		model2.ConvertDown(&tx)
+//		processor.db.SaveTransaction(&model2)
+//	}
+//}
 
 func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
@@ -527,7 +524,9 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
 	order.Protocol = common.HexToAddress(contract.ContractAddress)
-	eventemitter.Emit(eventemitter.Gateway, order)
+
+	// 不再存储取消的订单
+	//eventemitter.Emit(eventemitter.Gateway, order)
 
 	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
 	processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
@@ -752,8 +751,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
 	var (
-		fillList,saveFillList      []*types.OrderFilledEvent
-		orderhashList []string
+		fillList, saveFillList []*types.OrderFilledEvent
+		orderhashList          []string
 	)
 	for _, fill := range fills {
 		fill.TxInfo = contractData.setTxInfo()
