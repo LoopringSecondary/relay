@@ -52,6 +52,7 @@ type Transaction struct {
 	Content     []byte
 	BlockNumber *big.Int
 	Value       *big.Int
+	LogIndex    int64
 	Type        uint8
 	Status      uint8
 	CreateTime  int64
@@ -114,7 +115,7 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 		tx.Value = src.AmountB
 	}
 	tx.TxHash = txhash
-	tx.Content = src.Hash.Bytes()
+	tx.Content = []byte(src.Hash.Hex())
 	tx.BlockNumber = blockNumber
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
@@ -123,7 +124,7 @@ func (tx *Transaction) FromOrder(src *Order, txhash common.Hash, to common.Addre
 
 func (tx *Transaction) GetOrderContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_BUY || tx.Type == TX_TYPE_SELL {
-		return common.BytesToHash(tx.Content), nil
+		return common.HexToHash(string(tx.Content)), nil
 	} else {
 		return NilHash, fmt.Errorf("get order salt,transaction type error:%d", tx.Type)
 	}
@@ -140,7 +141,8 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 		tx.Value = src.AmountB
 	}
 
-	tx.Content = src.OrderHash.Bytes()
+	tx.LogIndex = src.LogIndex
+	tx.Content = []byte(src.OrderHash.Hex())
 	tx.fullFilled(src.TxInfo)
 
 	return nil
@@ -148,7 +150,7 @@ func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, t
 
 func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
-		return common.BytesToHash(tx.Content), nil
+		return common.HexToHash(string(tx.Content)), nil
 	} else {
 		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
 	}
@@ -165,6 +167,7 @@ func (tx *Transaction) FromCancelMethod(src *Order, txhash common.Hash, status u
 
 	tx.Content = src.Hash.Bytes()
 	tx.BlockNumber = blockNumber
+	tx.LogIndex = 0
 	tx.CreateTime = nowtime
 	tx.UpdateTime = nowtime
 
@@ -178,6 +181,7 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Ad
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Value = src.AmountCancelled
 	tx.Content = src.OrderHash.Bytes()
+	tx.LogIndex = src.LogIndex
 
 	tx.fullFilled(src.TxInfo)
 
@@ -190,6 +194,7 @@ func (tx *Transaction) FromCutoffEvent(src *AllOrdersCancelledEvent) error {
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF
 	tx.Value = src.Cutoff
+	tx.LogIndex = src.LogIndex
 
 	tx.fullFilled(src.TxInfo)
 	return nil
@@ -201,6 +206,7 @@ func (tx *Transaction) FromCutoffMethodEvent(src *CutoffMethodEvent) error {
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF
 	tx.Value = src.Value
+	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
 	return nil
@@ -217,6 +223,7 @@ func (tx *Transaction) FromCutoffPairEvent(src *OrdersCancelledEvent) error {
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF_PAIR
 	tx.Value = src.Cutoff
+	tx.LogIndex = src.LogIndex
 
 	var salt CutoffPairSalt
 	salt.Token1 = src.Token1
@@ -237,6 +244,7 @@ func (tx *Transaction) FromCutoffPairMethodEvent(src *CutoffPairMethodEvent) err
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF_PAIR
 	tx.Value = src.Value
+	tx.LogIndex = 0
 
 	var salt CutoffPairSalt
 	salt.Token1 = src.Token1
@@ -269,6 +277,7 @@ func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error 
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_WRAP
+	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
 
@@ -281,6 +290,7 @@ func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent) 
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_UNWRAP
+	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
 
@@ -293,6 +303,7 @@ func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent) error {
 	tx.To = src.To
 	tx.Value = src.Value
 	tx.Type = TX_TYPE_APPROVE
+	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
 
@@ -309,6 +320,7 @@ func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8
 	tx.To = src.Receiver
 	tx.Value = src.Value
 	tx.Type = sendOrReceive
+	tx.LogIndex = src.LogIndex
 
 	tx.fullFilled(src.TxInfo)
 

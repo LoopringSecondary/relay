@@ -232,7 +232,7 @@ type SubmitRingMethod struct {
 	RList              [][32]uint8         `fieldName:"rList"`
 	SList              [][32]uint8         `fieldName:"sList"`
 	MinerId            *big.Int            `fieldName:"minerId"`
-	FeeRecipient       uint16              `fieldName:"feeSelections"`
+	FeeSelections      uint16              `fieldName:"feeSelections"`
 	Protocol           common.Address
 }
 

@@ -27,6 +27,7 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"strings"
 )
 
 type EthCrypto struct {
@@ -154,9 +155,7 @@ func (h *EthPrivateKeyCrypto) UnmarshalText(input []byte) error {
 }
 
 func toECDSA(privateKeyHex string) (*ecdsa.PrivateKey, error) {
-	if "0x" == privateKeyHex[0:2] {
-		privateKeyHex = privateKeyHex[2:]
-	}
+	privateKeyHex = strings.TrimLeft(privateKeyHex, "0x")
 	return ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex))
 }
 

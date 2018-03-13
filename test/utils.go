@@ -268,7 +268,6 @@ func PrepareTestData() {
 	}
 
 	log.Infof("tokenregistry")
-
 	//tokenregistry
 	tokenRegisterAbi := ethaccessor.TokenRegistryAbi()
 	tokenRegisterAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
@@ -296,8 +295,8 @@ func PrepareTestData() {
 	for _, tokenAddr := range entity.Tokens {
 		erc20SendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddr)
 		for _, acc := range orderAccounts {
-			amount, _ := big.NewInt(0).SetString("100000000000000000000", 0) // 10^18 * 100
-			if hash, err := erc20SendMethod(acc.Address, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, amount); nil != err {
+			approval := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
+			if hash, err := erc20SendMethod(acc.Address, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, approval); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -351,7 +350,7 @@ func SetTokenBalances() {
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
 
 	sender := accounts.Account{Address: entity.Creator.Address}
-	amount, _ := new(big.Int).SetString("10000000000000000000000", 0) // 10^18 * 10000
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
 	//wethAmount, _ := new(big.Int).SetString("79992767978000000000", 0)
 
 	// deposit weth

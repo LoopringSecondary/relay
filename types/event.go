@@ -29,6 +29,7 @@ type TxInfo struct {
 	To          common.Address
 	TxHash      common.Hash
 	BlockHash   common.Hash
+	LogIndex    int64
 	BlockNumber *big.Int
 	BlockTime   int64
 	TxFailed    bool
