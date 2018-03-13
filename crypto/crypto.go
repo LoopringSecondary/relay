@@ -79,6 +79,7 @@ func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 type EthKSCrypto struct {
 	EthCrypto
 	ks *keystore.KeyStore
+	unlockedAccounts map[common.Address]bool
 }
 
 func (c EthKSCrypto) Sign(hashPre []byte, signerAddr common.Address) ([]byte, error) {
@@ -88,7 +89,13 @@ func (c EthKSCrypto) Sign(hashPre []byte, signerAddr common.Address) ([]byte, er
 }
 
 func (c EthKSCrypto) UnlockAccount(acc accounts.Account, passphrase string) error {
+	c.unlockedAccounts[acc.Address] = true
 	return c.ks.Unlock(acc, passphrase)
+}
+
+func (c EthKSCrypto) IsUnlocked(addr common.Address) bool {
+	_,exists := c.unlockedAccounts[addr]
+	return exists
 }
 
 func (c EthKSCrypto) SignTx(addr common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
@@ -97,7 +104,7 @@ func (c EthKSCrypto) SignTx(addr common.Address, tx *types.Transaction, chainID 
 }
 
 func NewKSCrypto(homestead bool, ks *keystore.KeyStore) EthKSCrypto {
-	return EthKSCrypto{EthCrypto: EthCrypto{homestead: homestead}, ks: ks}
+	return EthKSCrypto{EthCrypto: EthCrypto{homestead: homestead}, ks: ks, unlockedAccounts:make(map[common.Address]bool)}
 }
 
 type EthPrivateKeyCrypto struct {

@@ -112,7 +112,9 @@ func (so *SocketIOServiceImpl) Start() {
 	for _, v := range MsgTypeRoute {
 		aliasOfV := v
 
-		server.OnEvent("/", aliasOfV+EventPostfixReq, func(s socketio.Conn, msg string) {
+		server.OnEvent("/", aliasOfV + EventPostfixReq, func(s socketio.Conn, msg string) {
+			fmt.Println("received msg ......." + msg)
+			fmt.Println("socket io id " + s.ID())
 			context := make(map[string]string)
 			if s != nil && s.Context() != nil {
 				context = s.Context().(map[string]string)
@@ -138,7 +140,9 @@ func (so *SocketIOServiceImpl) Start() {
 			if v.Context() == nil {
 				continue
 			} else {
+				fmt.Println("......start cron emit on id " + v.ID())
 				businesses := v.Context().(map[string]string)
+				fmt.Println(businesses)
 				if businesses != nil {
 					for bk, bv := range businesses {
 						so.EmitNowByEventType(bk, v, bv)

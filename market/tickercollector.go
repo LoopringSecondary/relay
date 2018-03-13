@@ -154,6 +154,10 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 
 	result := make([]Ticker, 0)
 
+	if len(market) <= 0 {
+		return nil, errors.New("market can't be null")
+	}
+
 	for _, e := range c.exs {
 		cacheKey := cachePreKey + e.name + "_" + market
 		byteRst, err := cache.Get(cacheKey)
