@@ -87,12 +87,12 @@ func TestEthNodeAccessor_Allowance(t *testing.T) {
 
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
-		model           *dao.Order
-		state           types.OrderState
-		err             error
-		result          string
-		orderhash       = common.HexToHash("0x38a4ff508746feddb75e1652e2c430e23a179f949f331ebe81e624801b4b6f4d")
-		cancelAmount, _ = new(big.Int).SetString("1000000000000000000000", 0)
+		model        *dao.Order
+		state        types.OrderState
+		err          error
+		result       string
+		orderhash    = common.HexToHash("0x5aacd9461805467f524daca721c31e3e7585c412f07f09e9d6cbcbffb26a2210")
+		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
 	// get order
@@ -107,8 +107,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	account := accounts.Account{Address: state.RawOrder.Owner}
 
 	// create cancel order contract function parameters
-	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
-	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, cancelAmount}
+	addresses := [4]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.AuthAddr}
+	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, state.RawOrder.WalletId, cancelAmount}
 	buyNoMoreThanB := state.RawOrder.BuyNoMoreThanAmountB
 	marginSplitPercentage := state.RawOrder.MarginSplitPercentage
 	v := state.RawOrder.V
