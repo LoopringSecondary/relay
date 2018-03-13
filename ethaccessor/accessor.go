@@ -150,6 +150,10 @@ func GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash,
 	return accessor.GetCancelledOrFilled(contractAddress, orderhash, blockNumber)
 }
 
+func GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNumber string) (*big.Int, error) {
+	return accessor.GetCancelled(contractAddress, orderhash, blockNumber)
+}
+
 func BatchTransactions(reqs []*BatchTransactionReq, blockNumber string) error {
 	return accessor.BatchTransactions(blockNumber, 5, reqs)
 }
