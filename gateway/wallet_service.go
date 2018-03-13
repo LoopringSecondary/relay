@@ -458,6 +458,9 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
+	if len(balanceQuery.Owner) == 0 {
+		return res, errors.New("owner can't be null")
+	}
 	account := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
 	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
@@ -530,6 +533,10 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
 
+	fmt.Println("page query result is ...")
+	fmt.Println(daoPr)
+	fmt.Println(err)
+
 	if err != nil {
 		return pr, err
 	}
@@ -537,7 +544,9 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
 
 	for _, d := range daoPr.Data {
-		o := d.(types.Transaction)
+		o := d.(dao.Transaction)
+		tr := types.Transaction{}
+		err = o.ConvertUp(&tr)
 		rst.Data = append(rst.Data, o)
 	}
 	return rst, nil

@@ -37,9 +37,18 @@ import (
 
 const (
 	OneHour = "1Hr"
+	TwoHour = "2Hr"
+	FourHour = "4Hr"
+	OneDay = "1Day"
+	OneWeek = "1Week"
+	//OneMonth = "1Month"
+	//OneYear = "1Year"
+
 	//TwoHour = "2Hr"
 	//OneDay = "1Day"
 )
+
+var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
 
 type Ticker struct {
 	Market    string  `json:"market"`
