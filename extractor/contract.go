@@ -926,15 +926,13 @@ func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent)
 		model1, model2 dao.Transaction
 	)
 
-	//log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
+	log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
 
 	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
 	model1.ConvertDown(&tx1)
 	model2.ConvertDown(&tx2)
 
-	log.Debugf("------transfer, ", tx1.Protocol.Hex(), tx1.Owner.Hex(), tx1.From.Hex(), tx1.To.Hex(), tx1.Value.String())
-	log.Debugf("------transfer, ", tx2.Protocol.Hex(), tx2.Owner.Hex(), tx2.From.Hex(), tx2.To.Hex(), tx2.Value.String())
 	if err := processor.db.SaveTransaction(&model1); err != nil {
 		log.Errorf(err.Error())
 		return err
