@@ -47,6 +47,7 @@ type EventData struct {
 	Time            *big.Int
 	Topics          []string
 	IsFailed        bool
+	LogIndex        int64
 }
 
 func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
@@ -69,6 +70,7 @@ func (event *EventData) FullFilled(evtLog *ethaccessor.Log, blockTime *big.Int, 
 	event.TxHash = txhash
 	event.BlockHash = evtLog.BlockHash
 	event.IsFailed = false
+	event.LogIndex = evtLog.LogIndex.Int64()
 }
 
 func (event *EventData) setTxInfo() types.TxInfo {
@@ -81,6 +83,7 @@ func (event *EventData) setTxInfo() types.TxInfo {
 	txinfo.To = common.HexToAddress(event.To)
 	txinfo.TxHash = common.HexToHash(event.TxHash)
 	txinfo.TxFailed = event.IsFailed
+	txinfo.LogIndex = event.LogIndex + 1
 
 	return txinfo
 }
@@ -447,6 +450,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	//	log.Errorf("extractor,tx:%s submitRing method, unpack error:%s", evt.TxHash.Hex(), err.Error())
 	//	return nil
 	//}
+
 	//orderList, err := ring.ConvertDown()
 	//if err != nil {
 	//	log.Errorf("extractor,tx:%s submitRing method convert order data error:%s", evt.TxHash.Hex(), err.Error())
@@ -655,9 +659,6 @@ func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEve
 	tx.FromApproveMethod(evt)
 	model.ConvertDown(&tx)
 
-	// todo(fuk): delete after test
-	log.Debugf("------- approve type:%d", model.Type)
-
 	return processor.db.SaveTransaction(&model)
 }
 
@@ -756,6 +757,8 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	)
 	for _, fill := range fills {
 		fill.TxInfo = contractData.setTxInfo()
+		fill.LogIndex = ringmined.LogIndex
+
 		log.Debugf("extractor,tx:%s orderFilled event ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 			contractData.TxHash,
 			fill.Ringhash.Hex(),
@@ -828,7 +831,6 @@ func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEv
 		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY)
 		model2.ConvertDown(&tx)
 
-		log.Debugf("========1111111111")
 		processor.db.SaveTransaction(&model2)
 	}
 }
@@ -924,21 +926,24 @@ func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent)
 		model1, model2 dao.Transaction
 	)
 
-	log.Debugf("extractor:tx:%s saveApproveMethodAsTx", evt.TxHash.Hex())
+	//log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
 
 	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
 	model1.ConvertDown(&tx1)
 	model2.ConvertDown(&tx2)
+
+	log.Debugf("------transfer, ", tx1.Protocol.Hex(), tx1.Owner.Hex(), tx1.From.Hex(), tx1.To.Hex(), tx1.Value.String())
+	log.Debugf("------transfer, ", tx2.Protocol.Hex(), tx2.Owner.Hex(), tx2.From.Hex(), tx2.To.Hex(), tx2.Value.String())
 	if err := processor.db.SaveTransaction(&model1); err != nil {
+		log.Errorf(err.Error())
 		return err
 	}
 	if err := processor.db.SaveTransaction(&model2); err != nil {
+		log.Errorf(err.Error())
 		return err
 	}
 
-	//todo(fuk):
-	log.Debugf("--------- transfer type, model1:%d, model2:%d", model1.Type, model2.Type)
 	return nil
 }
 
