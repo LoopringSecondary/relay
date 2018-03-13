@@ -552,20 +552,22 @@ func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, am
 }
 
 func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) error {
-	//contract := input.(MethodData)
-	//contractMethod := contract.Method.(*ethaccessor.CancelAllOrdersMethod)
-	//
-	//data := hexutil.MustDecode("0x" + contract.Input[10:])
-	//if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
-	//	log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//cutoff := contractMethod.ConvertDown()
-	//cutoff.TxInfo = contract.setTxInfo()
-	//log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash, cutoff.Owner.Hex(), cutoff.Value.Int64())
-	//
-	//processor.saveCutoffMethodAsTx(cutoff)
+	contract := input.(MethodData)
+	contractMethod := contract.Method.(*ethaccessor.CancelAllOrdersMethod)
+
+	data := hexutil.MustDecode("0x" + contract.Input[10:])
+	if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash, err.Error())
+		return nil
+	}
+
+	cutoff := contractMethod.ConvertDown()
+	cutoff.TxInfo = contract.setTxInfo()
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash, cutoff.Owner.Hex(), cutoff.Value.Int64())
+
+	if cutoff.TxFailed {
+		processor.saveCutoffMethodAsTx(cutoff)
+	}
 
 	return nil
 }

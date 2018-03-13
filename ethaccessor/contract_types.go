@@ -318,12 +318,12 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 }
 
 type CancelAllOrdersMethod struct {
-	Cutoff uint `fieldName:"cutoff"`
+	Cutoff *big.Int `fieldName:"cutoff"`
 }
 
 func (method *CancelAllOrdersMethod) ConvertDown() *types.CutoffMethodEvent {
 	evt := &types.CutoffMethodEvent{}
-	evt.Value = big.NewInt(int64(method.Cutoff))
+	evt.Value = method.Cutoff
 
 	return evt
 }

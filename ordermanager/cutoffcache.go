@@ -19,10 +19,8 @@
 package ordermanager
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
