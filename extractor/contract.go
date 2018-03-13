@@ -470,6 +470,9 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 }
 
 func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList []*types.Order, contract *MethodData) {
+	//todo(fuk): delete after test
+	return
+
 	length := len(orderList)
 
 	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and tx isFailed:%t", txhash.Hex(), length, contract.IsFailed)
@@ -652,6 +655,10 @@ func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEve
 
 	tx.FromApproveMethod(evt)
 	model.ConvertDown(&tx)
+
+	// todo(fuk): delete after test
+	log.Debugf("------- approve type:%d", model.Type)
+
 	return processor.db.SaveTransaction(&model)
 }
 
@@ -745,12 +752,11 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	eventemitter.Emit(eventemitter.OrderManagerExtractorRingMined, ringmined)
 
 	var (
-		fillList      []*types.OrderFilledEvent
+		fillList,saveFillList      []*types.OrderFilledEvent
 		orderhashList []string
 	)
 	for _, fill := range fills {
 		fill.TxInfo = contractData.setTxInfo()
-
 		log.Debugf("extractor,tx:%s orderFilled event ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 			contractData.TxHash,
 			fill.Ringhash.Hex(),
@@ -781,12 +787,15 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 			v.Owner = common.HexToAddress(ord.Owner)
 			v.Market, _ = util.WrapMarketByAddress(v.TokenB.Hex(), v.TokenS.Hex())
 			eventemitter.Emit(eventemitter.OrderManagerExtractorFill, v)
+
+			saveFillList = append(saveFillList, v)
 		} else {
-			log.Debugf("extractor,tx:%s orderFilled event cann't match order %s", contractData.TxHash, ord.OrderHash)
+			log.Debugf("---------=======extractor,tx:%s orderFilled event cann't match order %s", contractData.TxHash, ord.OrderHash)
 		}
 	}
 
-	processor.saveFillListAsTxs(fillList, &contractData)
+	// 只存储跟订单相关的fill
+	processor.saveFillListAsTxs(saveFillList, &contractData)
 	return nil
 }
 
@@ -927,6 +936,8 @@ func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent)
 		return err
 	}
 
+	//todo(fuk):
+	log.Debugf("--------- transfer type, model1:%d, model2:%d", model1.Type, model2.Type)
 	return nil
 }
 
