@@ -36,7 +36,7 @@ type CutOffEvent struct {
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
-func (e *CutOffEvent) ConvertDown(src *types.AllOrdersCancelledEvent) error {
+func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.Protocol.Hex()
 	e.TxHash = src.TxHash.Hex()
@@ -48,7 +48,7 @@ func (e *CutOffEvent) ConvertDown(src *types.AllOrdersCancelledEvent) error {
 }
 
 // convert dao/cutoffEvent to types/cutoffEvent
-func (e *CutOffEvent) ConvertUp(dst *types.AllOrdersCancelledEvent) error {
+func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
 	dst.Protocol = common.HexToAddress(e.Protocol)
 	dst.TxHash = common.HexToHash(e.TxHash)

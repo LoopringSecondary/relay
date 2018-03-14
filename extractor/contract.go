@@ -598,9 +598,13 @@ func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventDa
 
 	cutoffpair := contractMethod.ConvertDown()
 	cutoffpair.TxInfo = contract.setTxInfo()
+	cutoffpair.Owner = cutoffpair.From
+
 	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash, cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Value.Int64())
 
-	processor.saveCutoffPairMethodAsTx(cutoffpair)
+	if cutoffpair.TxFailed {
+		processor.saveCutoffPairMethodAsTx(cutoffpair)
+	}
 
 	return nil
 }
@@ -611,7 +615,7 @@ func (processor *AbiProcessor) saveCutoffPairMethodAsTx(evt *types.CutoffPairMet
 		model dao.Transaction
 	)
 
-	tx.FromCutoffPairMethodEvent(evt)
+	tx.FromCutoffPairMethod(evt)
 	model.ConvertDown(&tx)
 	processor.db.SaveTransaction(&model)
 	return nil
@@ -885,7 +889,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	return nil
 }
 
-func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.AllOrdersCancelledEvent) error {
+func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.CutoffEvent) error {
 	var (
 		tx    types.Transaction
 		model dao.Transaction
@@ -914,6 +918,21 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
+
+	processor.saveCutoffPairEventAsTx(evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) saveCutoffPairEventAsTx(evt *types.CutoffPairEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	tx.FromCutoffPairEvent(evt)
+	model.ConvertDown(&tx)
+	processor.db.SaveTransaction(&model)
 
 	return nil
 }

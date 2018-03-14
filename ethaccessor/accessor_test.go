@@ -35,6 +35,7 @@ var (
 	version              = test.Version
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
+	miner                = test.Entity().Creator
 	account1             = test.Entity().Accounts[0].Address
 	account2             = test.Entity().Accounts[1].Address
 	lrcTokenAddress      = util.AllTokens["LRC"].Protocol
@@ -164,6 +165,35 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_CutoffPair(t *testing.T) {
+	account := accounts.Account{Address: account2}
+	cutoff := big.NewInt(1531931942)
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
+
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
+	if result, err := callMethod(account.Address, "cancelAllOrdersByTradingPair", big.NewInt(200000), big.NewInt(21000000000), nil, token1, token2, cutoff); nil != err {
+		t.Fatalf("call method cancelAllOrdersByTradingPair error:%s", err.Error())
+	} else {
+		t.Logf("cutoff result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_GetCutoffPair(t *testing.T) {
+	owner := accounts.Account{Address: account2}
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	if timestamp, err := ethaccessor.GetCutoffPair(implAddress, owner.Address, token1, token2, "latest"); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("cutoffpair timestamp:%s", timestamp.String())
+	}
+}
+
 func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 	account := accounts.Account{Address: test.Entity().Creator.Address}
 
@@ -242,10 +272,9 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := accounts.Account{Address: account1}
-
+	account := miner
 	wethAddr := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000000000000000000000000000000000000000000000", 0)
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account.Address, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -255,10 +284,9 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
-	account := accounts.Account{Address: account1}
-
+	account := miner
 	wethAddr := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100", 0)
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account.Address, "withdraw", big.NewInt(200000), big.NewInt(21000000000), nil, amount); nil != err {
 		t.Fatalf("call method weth-withdraw error:%s", err.Error())

@@ -252,7 +252,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
-	event := input.(*types.AllOrdersCancelledEvent)
+	event := input.(*types.CutoffEvent)
 
 	protocol := event.Protocol
 	owner := event.Owner
@@ -272,7 +272,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 }
 
 func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
-	event := input.(*types.OrdersCancelledEvent)
+	event := input.(*types.CutoffPairEvent)
 
 	protocol := event.Protocol
 	owner := event.Owner
@@ -281,7 +281,8 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 	currentCutoffPair := event.Cutoff
 	lastCutoffPair := om.cutoffCache.GetCutoffPair(protocol, owner, token1, token2)
 
-	if currentCutoffPair.Cmp(lastCutoffPair) <= 0 {
+	// 首次存储到缓存，lastCutoffPair == currentCutoffPair
+	if currentCutoffPair.Cmp(lastCutoffPair) < 0 {
 		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", protocol.Hex(), owner.Hex(), lastCutoffPair.String(), currentCutoffPair.String())
 	} else {
 		om.cutoffCache.UpdateCutoffPair(protocol, owner, token1, token2, currentCutoffPair)
