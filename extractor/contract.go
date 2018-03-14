@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -175,17 +176,19 @@ const (
 )
 
 type AbiProcessor struct {
-	events    map[common.Hash]EventData
-	methods   map[string]MethodData
-	protocols map[common.Address]string
-	delegates map[common.Address]string
-	db        dao.RdsService
+	events         map[common.Hash]EventData
+	methods        map[string]MethodData
+	protocols      map[common.Address]string
+	delegates      map[common.Address]string
+	accountmanager *market.AccountManager
+	db             dao.RdsService
 }
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
-func newAbiProcessor(db dao.RdsService) *AbiProcessor {
+func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *AbiProcessor {
 	processor := &AbiProcessor{}
 
+	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
@@ -529,7 +532,7 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	//eventemitter.Emit(eventemitter.Gateway, order)
 
 	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	if !contract.IsFailed {
+	if contract.IsFailed {
 		processor.saveCancelOrderMethodAsTx(txinfo, cancelAmount)
 	}
 
@@ -545,8 +548,10 @@ func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, am
 	)
 
 	tx.FromCancelMethod(txinfo, amount)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
 	return nil
 }
@@ -580,8 +585,10 @@ func (processor *AbiProcessor) saveCutoffMethodAsTx(evt *types.CutoffMethodEvent
 	)
 
 	tx.FromCutoffMethodEvent(evt)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
 	return nil
 }
@@ -616,8 +623,11 @@ func (processor *AbiProcessor) saveCutoffPairMethodAsTx(evt *types.CutoffPairMet
 	)
 
 	tx.FromCutoffPairMethod(evt)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
+
 	return nil
 }
 
@@ -654,9 +664,12 @@ func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEve
 	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, txIsFailed:%t", evt.TxHash.Hex(), evt.TxFailed)
 
 	tx.FromApproveMethod(evt)
-	model.ConvertDown(&tx)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
-	return processor.db.SaveTransaction(&model)
+	return nil
 }
 
 func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventData) error {
@@ -684,8 +697,12 @@ func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositM
 	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethDepositMethod(evt)
-	model.ConvertDown(&tx)
-	return processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
+
+	return nil
 }
 
 func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.EventData) error {
@@ -719,8 +736,12 @@ func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithd
 	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethWithdrawalMethod(evt)
-	model.ConvertDown(&tx)
-	return processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
+
+	return nil
 }
 
 func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData) error {
@@ -822,13 +843,16 @@ func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEv
 		}
 
 		tx.FromFillEvent(fill, sellto, types.TX_TYPE_SELL)
-		model1.ConvertDown(&tx)
-		processor.db.SaveTransaction(&model1)
+		if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+			model1.ConvertDown(&tx)
+			processor.db.SaveTransaction(&model1)
+		}
 
 		tx.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY)
-		model2.ConvertDown(&tx)
-
-		processor.db.SaveTransaction(&model2)
+		if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+			model2.ConvertDown(&tx)
+			processor.db.SaveTransaction(&model2)
+		}
 	}
 }
 
@@ -862,8 +886,10 @@ func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelle
 	)
 
 	tx.FromCancelEvent(evt, evt.From)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
 	return nil
 }
@@ -896,8 +922,10 @@ func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.CutoffEvent) error
 	)
 
 	tx.FromCutoffEvent(evt)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
 	return nil
 }
@@ -931,8 +959,10 @@ func (processor *AbiProcessor) saveCutoffPairEventAsTx(evt *types.CutoffPairEven
 	)
 
 	tx.FromCutoffPairEvent(evt)
-	model.ConvertDown(&tx)
-	processor.db.SaveTransaction(&model)
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+		model.ConvertDown(&tx)
+		return processor.db.SaveTransaction(&model)
+	}
 
 	return nil
 }
@@ -975,13 +1005,11 @@ func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent)
 	model1.ConvertDown(&tx1)
 	model2.ConvertDown(&tx2)
 
-	if err := processor.db.SaveTransaction(&model1); err != nil {
-		log.Errorf(err.Error())
-		return err
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx1.Owner.Hex()); unlocked == true {
+		processor.db.SaveTransaction(&model1)
 	}
-	if err := processor.db.SaveTransaction(&model2); err != nil {
-		log.Errorf(err.Error())
-		return err
+	if unlocked, _ := processor.accountmanager.HasUnlocked(tx2.Owner.Hex()); unlocked == true {
+		processor.db.SaveTransaction(&model2)
 	}
 
 	return nil

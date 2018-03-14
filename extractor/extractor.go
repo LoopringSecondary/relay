@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -61,12 +62,13 @@ type ExtractorServiceImpl struct {
 }
 
 func NewExtractorService(options config.ExtractorOptions,
-	rds dao.RdsService) *ExtractorServiceImpl {
+	rds dao.RdsService,
+	accountmanager *market.AccountManager) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.options = options
 	l.dao = rds
-	l.processor = newAbiProcessor(rds)
+	l.processor = newAbiProcessor(rds, accountmanager)
 	l.detector = newForkDetector(rds)
 	l.stop = make(chan bool, 1)
 
