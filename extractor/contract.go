@@ -274,10 +274,10 @@ func (processor *AbiProcessor) loadProtocolContract() {
 			contract.Event = &ethaccessor.OrderCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleOrderCancelledEvent}
 		case CUTOFF_EVT_NAME:
-			contract.Event = &ethaccessor.AllOrdersCancelledEvent{}
-			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffTimestampEvent}
+			contract.Event = &ethaccessor.CutoffEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffEvent}
 		case CUTOFFPAIR_EVT_NAME:
-			contract.Event = &ethaccessor.OrdersCancelledEvent{}
+			contract.Event = &ethaccessor.CutoffPairEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairEvent}
 		}
 
@@ -556,7 +556,7 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	contractMethod := contract.Method.(*ethaccessor.CutoffMethod)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
+	if err := contract.CAbi.UnpackMethodInput(contractMethod.Cutoff, contract.Name, data); err != nil {
 		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash, err.Error())
 		return nil
 	}
@@ -863,14 +863,14 @@ func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelle
 	return nil
 }
 
-func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.EventData) error {
+func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
 		log.Errorf("extractor,tx:%s cutoffTimestampChanged event indexed fields number error", contractData.TxHash)
 		return nil
 	}
 
-	contractEvent := contractData.Event.(*ethaccessor.AllOrdersCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -904,7 +904,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 		return nil
 	}
 
-	contractEvent := contractData.Event.(*ethaccessor.OrdersCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffPairEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()

@@ -142,12 +142,12 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
-type AllOrdersCancelledEvent struct {
+type CutoffEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
+func (e *CutoffEvent) ConvertDown() *types.AllOrdersCancelledEvent {
 	evt := &types.AllOrdersCancelledEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = e.Cutoff
@@ -155,14 +155,14 @@ func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
 	return evt
 }
 
-type OrdersCancelledEvent struct {
+type CutoffPairEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Token1 common.Address `fieldName:"_token1"`
 	Token2 common.Address `fieldName:"_token2"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *OrdersCancelledEvent) ConvertDown() *types.OrdersCancelledEvent {
+func (e *CutoffPairEvent) ConvertDown() *types.OrdersCancelledEvent {
 	evt := &types.OrdersCancelledEvent{}
 	evt.Token1 = e.Token1
 	evt.Token2 = e.Token2
