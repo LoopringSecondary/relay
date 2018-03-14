@@ -185,7 +185,7 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent, owner common.Ad
 	return nil
 }
 
-func (tx *Transaction) FromCutoffEvent(src *AllOrdersCancelledEvent) error {
+func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
 	tx.From = src.From
 	tx.To = src.To
 	tx.Owner = src.Owner
@@ -214,7 +214,7 @@ type CutoffPairSalt struct {
 	Token2 common.Address `json:"token2"`
 }
 
-func (tx *Transaction) FromCutoffPairEvent(src *OrdersCancelledEvent) error {
+func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	tx.From = src.From
 	tx.To = src.To
 	tx.Owner = src.Owner
@@ -235,7 +235,7 @@ func (tx *Transaction) FromCutoffPairEvent(src *OrdersCancelledEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromCutoffPairMethodEvent(src *CutoffPairMethodEvent) error {
+func (tx *Transaction) FromCutoffPairMethod(src *CutoffPairMethodEvent) error {
 	tx.From = src.From
 	tx.To = src.To
 	tx.Owner = src.Owner

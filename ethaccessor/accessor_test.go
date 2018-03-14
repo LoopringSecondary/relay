@@ -164,6 +164,35 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_CutoffPair(t *testing.T) {
+	account := accounts.Account{Address: account2}
+	cutoff := big.NewInt(1531931942)
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
+
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
+	if result, err := callMethod(account.Address, "cancelAllOrdersByTradingPair", big.NewInt(200000), big.NewInt(21000000000), nil, token1, token2, cutoff); nil != err {
+		t.Fatalf("call method cancelAllOrdersByTradingPair error:%s", err.Error())
+	} else {
+		t.Logf("cutoff result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_GetCutoffPair(t *testing.T) {
+	owner := accounts.Account{Address: account2}
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	if timestamp, err := ethaccessor.GetCutoffPair(implAddress, owner.Address, token1, token2, "latest"); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("cutoffpair timestamp:%s", timestamp.String())
+	}
+}
+
 func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 	account := accounts.Account{Address: test.Entity().Creator.Address}
 

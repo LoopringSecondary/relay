@@ -147,8 +147,8 @@ type CutoffEvent struct {
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *CutoffEvent) ConvertDown() *types.AllOrdersCancelledEvent {
-	evt := &types.AllOrdersCancelledEvent{}
+func (e *CutoffEvent) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = e.Cutoff
 
@@ -162,8 +162,9 @@ type CutoffPairEvent struct {
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *CutoffPairEvent) ConvertDown() *types.OrdersCancelledEvent {
-	evt := &types.OrdersCancelledEvent{}
+func (e *CutoffPairEvent) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.Owner = e.Owner
 	evt.Token1 = e.Token1
 	evt.Token2 = e.Token2
 	evt.Cutoff = e.Cutoff
@@ -331,12 +332,12 @@ func (method *CutoffMethod) ConvertDown() *types.CutoffMethodEvent {
 type CutoffPairMethod struct {
 	Token1 common.Address `fieldName:"token1"`
 	Token2 common.Address `fieldName:"token2"`
-	Cutoff uint           `fieldName:"cutoff"`
+	Cutoff *big.Int       `fieldName:"cutoff"`
 }
 
 func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
 	evt := &types.CutoffPairMethodEvent{}
-	evt.Value = big.NewInt(int64(method.Cutoff))
+	evt.Value = method.Cutoff
 	evt.Token1 = method.Token1
 	evt.Token2 = method.Token2
 

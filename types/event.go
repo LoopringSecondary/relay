@@ -99,13 +99,13 @@ type OrderCancelledEvent struct {
 	AmountCancelled *big.Int
 }
 
-type AllOrdersCancelledEvent struct {
+type CutoffEvent struct {
 	TxInfo
 	Owner  common.Address
 	Cutoff *big.Int
 }
 
-type OrdersCancelledEvent struct {
+type CutoffPairEvent struct {
 	TxInfo
 	Owner  common.Address
 	Token1 common.Address
