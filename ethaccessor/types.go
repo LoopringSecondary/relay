@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type Block struct {
@@ -124,11 +125,20 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
+// todo: use case 2
 func (tx *TransactionReceipt) IsFailed() bool {
-	if tx.Status.BigInt().Int64() == 0 {
-		return true
+	// case 1
+	if len(tx.Logs) > 0 {
+		return false
 	}
-	return false
+
+	return true
+
+	// case2
+	//if tx.Status.BigInt().Int64() == 0 {
+	//	return true
+	//}
+	//return false
 }
 
 type BlockIterator struct {
