@@ -302,10 +302,10 @@ func (processor *AbiProcessor) loadProtocolContract() {
 			contract.Method = &ethaccessor.CancelOrderMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCancelOrderMethod}
 		case CUTOFF_METHOD_NAME:
-			contract.Method = &ethaccessor.CancelAllOrdersMethod{}
+			contract.Method = &ethaccessor.CutoffMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffMethod}
 		case CUTOFFPAIR_METHOD_NAME:
-			contract.Method = &ethaccessor.CancelOrdersByTradingPairMethod{}
+			contract.Method = &ethaccessor.CutoffPairMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairMethod}
 		}
 
@@ -553,7 +553,7 @@ func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, am
 
 func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
-	contractMethod := contract.Method.(*ethaccessor.CancelAllOrdersMethod)
+	contractMethod := contract.Method.(*ethaccessor.CutoffMethod)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
@@ -587,7 +587,7 @@ func (processor *AbiProcessor) saveCutoffMethodAsTx(evt *types.CutoffMethodEvent
 
 func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
-	contractMethod := contract.Method.(*ethaccessor.CancelOrdersByTradingPairMethod)
+	contractMethod := contract.Method.(*ethaccessor.CutoffPairMethod)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
@@ -880,6 +880,7 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
 
+	//processor.saveCutoffEventAsTx(evt)
 	return nil
 }
 
