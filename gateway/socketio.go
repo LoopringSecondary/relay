@@ -176,6 +176,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetBalance(query)
 		if err != nil {
@@ -191,6 +193,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetPortfolio(query)
 		if err != nil {
@@ -204,6 +208,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		var query SingleMarket
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
+			delete(so.connIdMap, v.ID())
+			v.Close()
 			fmt.Println("unmarshal error " + bv)
 		}
 		res, err := so.walletService.GetTickers(query)
@@ -228,6 +234,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetTrend(query)
 		if err != nil {
@@ -242,6 +250,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetPriceQuote(query)
 		if err != nil {
@@ -256,6 +266,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetTransactions(query)
 		if err != nil {
@@ -270,6 +282,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetTransactionsByHash(query)
 		if err != nil {
@@ -285,6 +299,8 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
+			delete(so.connIdMap, v.ID())
+			v.Close()
 		}
 		res, err := so.walletService.GetDepth(query)
 		if err != nil {

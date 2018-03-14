@@ -83,6 +83,11 @@ type SingleMarket struct {
 	Market string `json:"market"`
 }
 
+type TrendQuery struct {
+	Market string `json:"market"`
+	Interval string `json:"interval"`
+}
+
 type SingleOwner struct {
 	Owner string `json:"owner"`
 }
@@ -445,8 +450,8 @@ func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market
 	return
 }
 
-func (w *WalletServiceImpl) GetTrend(query SingleMarket) (res []market.Trend, err error) {
-	res, err = w.trendManager.GetTrends(query.Market)
+func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
+	res, err = w.trendManager.GetTrends(query.Market, query.Interval)
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Start < res[j].Start
 	})
