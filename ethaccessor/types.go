@@ -22,7 +22,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type Block struct {
