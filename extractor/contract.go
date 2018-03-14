@@ -883,6 +883,19 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 	return nil
 }
 
+func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.AllOrdersCancelledEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	tx.FromCutoffEvent(evt)
+	model.ConvertDown(&tx)
+	processor.db.SaveTransaction(&model)
+
+	return nil
+}
+
 func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
