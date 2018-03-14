@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
-	"time"
 )
 
 type EventData struct {
@@ -275,10 +274,10 @@ func (processor *AbiProcessor) loadProtocolContract() {
 			contract.Event = &ethaccessor.OrderCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleOrderCancelledEvent}
 		case CUTOFF_EVT_NAME:
-			contract.Event = &ethaccessor.AllOrdersCancelledEvent{}
-			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffTimestampEvent}
+			contract.Event = &ethaccessor.CutoffEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffEvent}
 		case CUTOFFPAIR_EVT_NAME:
-			contract.Event = &ethaccessor.OrdersCancelledEvent{}
+			contract.Event = &ethaccessor.CutoffPairEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairEvent}
 		}
 
@@ -303,10 +302,10 @@ func (processor *AbiProcessor) loadProtocolContract() {
 			contract.Method = &ethaccessor.CancelOrderMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCancelOrderMethod}
 		case CUTOFF_METHOD_NAME:
-			contract.Method = &ethaccessor.CancelAllOrdersMethod{}
+			contract.Method = &ethaccessor.CutoffMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffMethod}
 		case CUTOFFPAIR_METHOD_NAME:
-			contract.Method = &ethaccessor.CancelOrdersByTradingPairMethod{}
+			contract.Method = &ethaccessor.CutoffPairMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairMethod}
 		}
 
@@ -519,11 +518,8 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 		return nil
 	}
 
-	order, err := cancel.ConvertDown()
-	if err != nil {
-		log.Errorf("extractor,tx:%s cancelOrder method convert order data error:%s", contract.TxHash, err.Error())
-		return nil
-	}
+	order, cancelAmount, _ := cancel.ConvertDown()
+	txinfo := contract.setTxInfo()
 
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
@@ -533,51 +529,22 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	//eventemitter.Emit(eventemitter.Gateway, order)
 
 	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
-
-	//contract := input.(MethodData)
-	//cancel := contract.Method.(*ethaccessor.CancelOrderMethod)
-	//
-	//data := hexutil.MustDecode("0x" + contract.Input[10:])
-	//if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
-	//	log.Errorf("extractor,tx:%s cancelOrder method unpack error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//order, err := cancel.ConvertDown()
-	//if err != nil {
-	//	log.Errorf("extractor,tx:%s cancelOrder method convert order data error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash, order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
-	//
-	//order.Protocol = common.HexToAddress(contract.ContractAddress)
-	//eventemitter.Emit(eventemitter.Gateway, order)
-	//
-	//// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	//processor.saveCancelOrderMethodAsTx(order, contract.TxHash, order.AmountS, order.AmountB, contract.BlockNumber)
+	if !contract.IsFailed {
+		processor.saveCancelOrderMethodAsTx(txinfo, cancelAmount)
+	}
 
 	return nil
 }
 
-func (processor *AbiProcessor) saveCancelOrderMethodAsTx(ord *types.Order, txhash string, amountS, amountB, blocknumber *big.Int) error {
-	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx:orderhash %s and is status:%t", txhash, ord.Hash.Hex())
+func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, amount *big.Int) error {
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%t", txinfo.TxHash.Hex(), txinfo.TxFailed)
 
 	var (
 		tx    types.Transaction
 		model dao.Transaction
-		value *big.Int
 	)
 
-	if amountS.Cmp(big.NewInt(0)) == 0 {
-		value = amountB
-	} else {
-		value = amountS
-	}
-	nowtime := time.Now().Unix()
-
-	tx.FromCancelMethod(ord, common.HexToHash(txhash), types.TX_STATUS_FAILED, value, blocknumber, nowtime)
+	tx.FromCancelMethod(txinfo, amount)
 	model.ConvertDown(&tx)
 	processor.db.SaveTransaction(&model)
 
@@ -585,20 +552,23 @@ func (processor *AbiProcessor) saveCancelOrderMethodAsTx(ord *types.Order, txhas
 }
 
 func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) error {
-	//contract := input.(MethodData)
-	//contractMethod := contract.Method.(*ethaccessor.CancelAllOrdersMethod)
-	//
-	//data := hexutil.MustDecode("0x" + contract.Input[10:])
-	//if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
-	//	log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash, err.Error())
-	//	return nil
-	//}
-	//
-	//cutoff := contractMethod.ConvertDown()
-	//cutoff.TxInfo = contract.setTxInfo()
-	//log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash, cutoff.Owner.Hex(), cutoff.Value.Int64())
-	//
-	//processor.saveCutoffMethodAsTx(cutoff)
+	contract := input.(MethodData)
+	contractMethod := contract.Method.(*ethaccessor.CutoffMethod)
+
+	data := hexutil.MustDecode("0x" + contract.Input[10:])
+	if err := contract.CAbi.UnpackMethodInput(&contractMethod.Cutoff, contract.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash, err.Error())
+		return nil
+	}
+
+	cutoff := contractMethod.ConvertDown()
+	cutoff.TxInfo = contract.setTxInfo()
+	cutoff.Owner = cutoff.From
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash, cutoff.Owner.Hex(), cutoff.Value.Int64())
+
+	if cutoff.TxFailed {
+		processor.saveCutoffMethodAsTx(cutoff)
+	}
 
 	return nil
 }
@@ -618,7 +588,7 @@ func (processor *AbiProcessor) saveCutoffMethodAsTx(evt *types.CutoffMethodEvent
 
 func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
-	contractMethod := contract.Method.(*ethaccessor.CancelOrdersByTradingPairMethod)
+	contractMethod := contract.Method.(*ethaccessor.CutoffPairMethod)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(contractMethod, contract.Name, data); err != nil {
@@ -875,17 +845,33 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
 
+	processor.saveCancelOrderEventAsTx(evt)
 	return nil
 }
 
-func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.EventData) error {
+func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelledEvent) error {
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%t", evt.TxHash.Hex(), evt.TxFailed)
+
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	tx.FromCancelEvent(evt, evt.From)
+	model.ConvertDown(&tx)
+	processor.db.SaveTransaction(&model)
+
+	return nil
+}
+
+func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
 	if len(contractData.Topics) < 2 {
 		log.Errorf("extractor,tx:%s cutoffTimestampChanged event indexed fields number error", contractData.TxHash)
 		return nil
 	}
 
-	contractEvent := contractData.Event.(*ethaccessor.AllOrdersCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
@@ -894,6 +880,20 @@ func (processor *AbiProcessor) handleCutoffTimestampEvent(input eventemitter.Eve
 	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s", contractData.TxHash, evt.Owner.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
+
+	processor.saveCutoffEventAsTx(evt)
+	return nil
+}
+
+func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.AllOrdersCancelledEvent) error {
+	var (
+		tx    types.Transaction
+		model dao.Transaction
+	)
+
+	tx.FromCutoffEvent(evt)
+	model.ConvertDown(&tx)
+	processor.db.SaveTransaction(&model)
 
 	return nil
 }
@@ -905,7 +905,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 		return nil
 	}
 
-	contractEvent := contractData.Event.(*ethaccessor.OrdersCancelledEvent)
+	contractEvent := contractData.Event.(*ethaccessor.CutoffPairEvent)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()

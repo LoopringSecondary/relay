@@ -112,7 +112,7 @@ func (so *SocketIOServiceImpl) Start() {
 	for _, v := range MsgTypeRoute {
 		aliasOfV := v
 
-		server.OnEvent("/", aliasOfV + EventPostfixReq, func(s socketio.Conn, msg string) {
+		server.OnEvent("/", aliasOfV+EventPostfixReq, func(s socketio.Conn, msg string) {
 			fmt.Println("received msg ......." + msg)
 			fmt.Println("socket io id " + s.ID())
 			context := make(map[string]string)

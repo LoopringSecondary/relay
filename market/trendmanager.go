@@ -36,11 +36,11 @@ import (
 )
 
 const (
-	OneHour = "1Hr"
-	TwoHour = "2Hr"
+	OneHour  = "1Hr"
+	TwoHour  = "2Hr"
 	FourHour = "4Hr"
-	OneDay = "1Day"
-	OneWeek = "1Week"
+	OneDay   = "1Day"
+	OneWeek  = "1Week"
 	//OneMonth = "1Month"
 	//OneYear = "1Year"
 

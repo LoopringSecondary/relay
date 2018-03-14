@@ -142,12 +142,12 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
-type AllOrdersCancelledEvent struct {
+type CutoffEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
+func (e *CutoffEvent) ConvertDown() *types.AllOrdersCancelledEvent {
 	evt := &types.AllOrdersCancelledEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = e.Cutoff
@@ -155,14 +155,14 @@ func (e *AllOrdersCancelledEvent) ConvertDown() *types.AllOrdersCancelledEvent {
 	return evt
 }
 
-type OrdersCancelledEvent struct {
+type CutoffPairEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Token1 common.Address `fieldName:"_token1"`
 	Token2 common.Address `fieldName:"_token2"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *OrdersCancelledEvent) ConvertDown() *types.OrdersCancelledEvent {
+func (e *CutoffPairEvent) ConvertDown() *types.OrdersCancelledEvent {
 	evt := &types.OrdersCancelledEvent{}
 	evt.Token1 = e.Token1
 	evt.Token2 = e.Token2
@@ -292,7 +292,7 @@ type CancelOrderMethod struct {
 }
 
 // todo(fuk): modify internal cancelOrderMethod and implement related functions
-func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
+func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	var order types.Order
 
 	order.Owner = m.AddressList[0]
@@ -304,6 +304,8 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.ValidSince = m.OrderValues[2]
 	order.ValidUntil = m.OrderValues[3]
 	order.LrcFee = m.OrderValues[4]
+	order.WalletId = m.OrderValues[5]
+	cancelAmount := m.OrderValues[6]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit
@@ -312,27 +314,27 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.S = m.S
 	order.R = m.R
 
-	return &order, nil
+	return &order, cancelAmount, nil
 }
 
-type CancelAllOrdersMethod struct {
-	Cutoff uint `fieldName:"cutoff"`
+type CutoffMethod struct {
+	Cutoff *big.Int `fieldName:"cutoff"`
 }
 
-func (method *CancelAllOrdersMethod) ConvertDown() *types.CutoffMethodEvent {
+func (method *CutoffMethod) ConvertDown() *types.CutoffMethodEvent {
 	evt := &types.CutoffMethodEvent{}
-	evt.Value = big.NewInt(int64(method.Cutoff))
+	evt.Value = method.Cutoff
 
 	return evt
 }
 
-type CancelOrdersByTradingPairMethod struct {
+type CutoffPairMethod struct {
 	Token1 common.Address `fieldName:"token1"`
 	Token2 common.Address `fieldName:"token2"`
 	Cutoff uint           `fieldName:"cutoff"`
 }
 
-func (method *CancelOrdersByTradingPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
+func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
 	evt := &types.CutoffPairMethodEvent{}
 	evt.Value = big.NewInt(int64(method.Cutoff))
 	evt.Token1 = method.Token1

@@ -259,7 +259,8 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	currentCutoff := event.Cutoff
 	lastCutoff := om.cutoffCache.GetCutoff(protocol, owner)
 
-	if currentCutoff.Cmp(lastCutoff) <= 0 {
+	// 首次存储到缓存，lastCutoff == currentCutoff
+	if currentCutoff.Cmp(lastCutoff) < 0 {
 		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
 	} else {
 		om.cutoffCache.UpdateCutoff(protocol, owner, currentCutoff)

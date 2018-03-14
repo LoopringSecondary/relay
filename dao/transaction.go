@@ -109,6 +109,14 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	case types.TX_TYPE_SEND, types.TX_TYPE_RECEIVE:
 		query = "tx_hash=? and tx_log_index=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.LogIndex, latest.Type)
+
+	case types.TX_TYPE_CUTOFF:
+		query = "tx_hash=?"
+		args = append(args, latest.TxHash)
+	}
+
+	if len(query) == 0 || len(args) == 0 {
+		return nil
 	}
 
 	err := s.db.Where(query, args...).Find(&current).Error
