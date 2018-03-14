@@ -230,7 +230,7 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 		}
 	}
 	if bk == "trends" {
-		var query SingleMarket
+		var query TrendQuery
 		err := json.Unmarshal([]byte(bv), &query)
 		if err != nil {
 			fmt.Println("unmarshal error " + bv)
