@@ -35,34 +35,27 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	priceQuoteMap["RDN"] = new(big.Rat).SetFloat64(12.01)
 	priceQuoteMap["LRC"] = new(big.Rat).SetFloat64(2.32)
 	balances := make(map[string]market.Balance)
-	balances["WETH"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x2342342384")}
+	balances["WETH"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x2")}
 	balances["LRC"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x0")}
 	balances["RDN"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x0")}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
-		fmt.Println("start handle asset handler.....")
 		asset := priceQuoteMap[k]
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(totalAsset.Float64())
-		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
-		fmt.Println(totalAsset.Float64())
 	}
 
+	fmt.Println("total asset is .........")
+	fmt.Println(totalAsset.Float64())
+
 	for k, v := range balances {
-		fmt.Println("start collect asset handler.....")
 		portfolio := gateway.Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
 		asset := priceQuoteMap[k]
-		fmt.Println(asset)
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(totalAsset)
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
+		fmt.Println("percentage .......")
 		fmt.Println(percentage)
 		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
 	}

@@ -36,7 +36,7 @@ type OrderManager interface {
 	Stop()
 	MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]types.OrderState, error)
-	GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
+	GetOrders(query map[string]interface{}, statusList []types.OrderStatus, pageIndex, pageSize int) (dao.PageResult, error)
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
@@ -361,11 +361,15 @@ func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address
 	return list, nil
 }
 
-func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error) {
+func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, statusList []types.OrderStatus, pageIndex, pageSize int) (dao.PageResult, error) {
 	var (
 		pageRes dao.PageResult
 	)
-	tmp, err := om.rds.OrderPageQuery(query, pageIndex, pageSize)
+	sL := make([]int, 0)
+	for _, s := range statusList {
+		sL = append(sL, int(s))
+	}
+	tmp, err := om.rds.OrderPageQuery(query, sL, pageIndex, pageSize)
 
 	if err != nil {
 		return pageRes, err

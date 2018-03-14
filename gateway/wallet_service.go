@@ -123,6 +123,7 @@ type OrderQuery struct {
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
+	Side			string `json:"side"`
 }
 
 type DepthQuery struct {
@@ -355,8 +356,8 @@ func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res stri
 }
 
 func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
-	orderQuery, pi, ps := convertFromQuery(query)
-	queryRst, err := w.orderManager.GetOrders(orderQuery, pi, ps)
+	orderQuery, statusList, pi, ps := convertFromQuery(query)
+	queryRst, err := w.orderManager.GetOrders(orderQuery, statusList, pi, ps)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -578,24 +579,27 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 	return result, nil
 }
 
-func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
+func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
-	status := convertStatus(orderQuery.Status)
-	if uint8(status) != 0 {
-		query["status"] = uint8(status)
-	}
+	statusList = convertStatus(orderQuery.Status)
 	if orderQuery.Owner != "" {
 		query["owner"] = orderQuery.Owner
 	}
 	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
-	if orderQuery.Market != "" {
+
+	if util.IsSupportedMarket(orderQuery.Market) {
 		query["market"] = orderQuery.Market
 	}
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
+	}
+	if strings.ToLower(orderQuery.Side) == "buy" {
+		query["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(orderQuery.Side) == "sell" {
+		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
 	}
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
@@ -603,20 +607,24 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pag
 
 }
 
-func convertStatus(s string) types.OrderStatus {
+func convertStatus(s string) []types.OrderStatus {
 	switch s {
+	case "ORDER_OPENED":
+		return []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 	case "ORDER_NEW":
-		return types.ORDER_NEW
+		return []types.OrderStatus{types.ORDER_NEW}
 	case "ORDER_PARTIAL":
-		return types.ORDER_PARTIAL
+		return []types.OrderStatus{types.ORDER_PARTIAL}
 	case "ORDER_FINISHED":
-		return types.ORDER_FINISHED
+		return []types.OrderStatus{types.ORDER_FINISHED}
 	case "ORDER_CANCELED":
-		return types.ORDER_CANCEL
+		return []types.OrderStatus{types.ORDER_CANCEL}
 	case "ORDER_CUTOFF":
-		return types.ORDER_CUTOFF
+		return []types.OrderStatus{types.ORDER_CUTOFF}
+	case "ORDER_EXPIRE":
+		return []types.OrderStatus{types.ORDER_EXPIRE}
 	}
-	return types.ORDER_UNKNOWN
+	return []types.OrderStatus{types.ORDER_UNKNOWN}
 }
 
 func getStringStatus(s types.OrderStatus) string {

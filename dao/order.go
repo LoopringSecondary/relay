@@ -295,12 +295,13 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 	return list, err
 }
 
-func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
+func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error) {
 	var (
 		orders     []Order
 		err        error
 		data       = make([]interface{}, 0)
 		pageResult PageResult
+		statusStrList = make([]string, 0)
 	)
 
 	if pageIndex <= 0 {
@@ -311,8 +312,19 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
-		return pageResult, err
+
+	if len(statusList) == 1 {
+		query["status"] = statusList[0]
+		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
+	} else if len(statusList) > 1 {
+		for _, s := range statusList {
+			statusStrList = append(statusStrList, strconv.Itoa(s))
+		}
+		if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
 	}
 
 	for _, v := range orders {
@@ -321,7 +333,11 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 
 	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+	if len(statusList) == 1 {
+		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+	} else {
+		err = s.db.Model(&Order{}).Where(query).Where("status in (?)", statusStrList).Count(&pageResult.Total).Error
+	}
 	if err != nil {
 		return pageResult, err
 	}
