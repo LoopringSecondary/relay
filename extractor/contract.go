@@ -919,8 +919,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
 
-	// todo : free
-	// processor.saveCutoffPairEventAsTx(evt)
+	processor.saveCutoffPairEventAsTx(evt)
 
 	return nil
 }
