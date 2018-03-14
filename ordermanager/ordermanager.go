@@ -382,11 +382,11 @@ func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, statusList [
 		var state types.OrderState
 		model := v.(dao.Order)
 		if err := model.ConvertUp(&state); err != nil {
+			log.Debug("convertUp error occurs " + err.Error())
 			continue
 		}
 		pageRes.Data = append(pageRes.Data, state)
 	}
-
 	return pageRes, nil
 }
 

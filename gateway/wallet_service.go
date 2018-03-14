@@ -257,37 +257,21 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
-		fmt.Println("priceQuote key " + pq.Token)
-		fmt.Print("priceQuote value ")
-		fmt.Println(pq.Price)
 	}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
-		fmt.Println("start handle asset handler.....")
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(totalAsset.Float64())
-		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
-		fmt.Println(totalAsset.Float64())
 	}
 
 	for k, v := range balances {
-		fmt.Println("start collect asset handler.....")
 		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(totalAsset)
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
-		fmt.Println(percentage)
-		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
+		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
 
@@ -590,7 +574,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
 
-	if util.IsSupportedMarket(orderQuery.Market) {
+	if isAvailableMarket(orderQuery.Market) {
 		query["market"] = orderQuery.Market
 	}
 	if orderQuery.OrderHash != "" {
@@ -624,7 +608,7 @@ func convertStatus(s string) []types.OrderStatus {
 	case "ORDER_EXPIRE":
 		return []types.OrderStatus{types.ORDER_EXPIRE}
 	}
-	return []types.OrderStatus{types.ORDER_UNKNOWN}
+	return []types.OrderStatus{}
 }
 
 func getStringStatus(s types.OrderStatus) string {
@@ -835,4 +819,13 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
 	}
+}
+
+func isAvailableMarket(market string) bool {
+	for _, v := range util.AllMarkets {
+		if market == v  {
+			return true
+		}
+	}
+	return false
 }

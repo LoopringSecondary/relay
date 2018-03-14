@@ -24,8 +24,8 @@ import (
 	"testing"
 	"github.com/Loopring/relay/market"
 	"fmt"
-	"strconv"
 	"github.com/Loopring/relay/gateway"
+	"github.com/Loopring/relay/crypto"
 )
 
 
@@ -35,30 +35,36 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	priceQuoteMap["RDN"] = new(big.Rat).SetFloat64(12.01)
 	priceQuoteMap["LRC"] = new(big.Rat).SetFloat64(2.32)
 	balances := make(map[string]market.Balance)
-	balances["WETH"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x2")}
-	balances["LRC"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x0")}
-	balances["RDN"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x0")}
+	balances["WETH"] = market.Balance{Token:"WETH", Balance:types.HexToBigint("0x22")}
+	balances["LRC"] = market.Balance{Token:"LRC", Balance:types.HexToBigint("0x1")}
+	balances["RDN"] = market.Balance{Token:"RDN", Balance:types.HexToBigint("0x23")}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
-		asset := priceQuoteMap[k]
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
 	fmt.Println("total asset is .........")
 	fmt.Println(totalAsset.Float64())
+	fmt.Println("xxxxxxxxxxxx")
 
 	for k, v := range balances {
 		portfolio := gateway.Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
-		asset := priceQuoteMap[k]
+		asset := new(big.Rat).Set(priceQuoteMap[k])
+		fmt.Println(asset.Float64())
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(asset)
+		fmt.Println(asset.Float64())
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
 		fmt.Println("percentage .......")
 		fmt.Println(percentage)
-		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
+		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
+		fmt.Println(portfolio.Percentage)
 	}
+
+	s, _ := crypto.NewPrivateKeyCrypto(false, "0x7d0a1121fb170361b6483d922d72258e6d4da9aa65234ac7ba0c9c833e6adc71")
+	fmt.Println(s.Address().Hex())
 
 
 }

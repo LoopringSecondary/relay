@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/Loopring/relay/log"
 )
 
 // order amountS 上限1e30
@@ -134,7 +135,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.ValidSince = big.NewInt(o.ValidSince)
 	state.RawOrder.ValidUntil = big.NewInt(o.ValidUntil)
 
-	state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
+	if len(o.AuthAddress) > 0 {
+		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
+	}
 	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
 	state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
 
@@ -147,6 +150,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
 
 	if state.RawOrder.Hash != state.RawOrder.GenerateHash() {
+		log.Debug("different order hash found......")
+		log.Debug(state.RawOrder.Hash.Hex())
+		log.Debug(state.RawOrder.GenerateHash().Hex())
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
 
