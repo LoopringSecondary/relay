@@ -29,15 +29,15 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_UNKNOWN                OrderStatus = 0
-	ORDER_NEW                    OrderStatus = 1
-	ORDER_PARTIAL                OrderStatus = 2
-	ORDER_FINISHED               OrderStatus = 3
-	ORDER_CANCEL                 OrderStatus = 4
-	ORDER_CUTOFF                 OrderStatus = 5
-	ORDER_EXPIRE                 OrderStatus = 6
-	ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
-	ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
+	ORDER_UNKNOWN  OrderStatus = 0
+	ORDER_NEW      OrderStatus = 1
+	ORDER_PARTIAL  OrderStatus = 2
+	ORDER_FINISHED OrderStatus = 3
+	ORDER_CANCEL   OrderStatus = 4
+	ORDER_CUTOFF   OrderStatus = 5
+	ORDER_EXPIRE   OrderStatus = 6
+	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
+	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 )
 
 //订单原始信息
@@ -290,29 +290,37 @@ func InUnchangeableStatus(status OrderStatus) bool {
 	return false
 }
 
+func (ord *OrderState) IsExpired() bool {
+	if ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
+		return true
+	}
+
+	return false
+}
+
 // 解释订单最终状态
 func (ord *OrderState) ResolveStatus(allowance, balance *big.Int) {
 	if InUnchangeableStatus(ord.Status) {
 		return
 	}
 
-	if ord.RawOrder.ValidSince.Int64()+ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
+	if ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
 		ord.Status = ORDER_EXPIRE
 		return
 	}
 
-	cancelOrFilled := new(big.Int).Add(ord.CancelledAmountS, ord.DealtAmountS)
-	finished := new(big.Int).Add(cancelOrFilled, ord.SplitAmountS)
+	//cancelOrFilled := new(big.Int).Add(ord.CancelledAmountS, ord.DealtAmountS)
+	//finished := new(big.Int).Add(cancelOrFilled, ord.SplitAmountS)
 
-	if finished.Cmp(allowance) >= 0 {
-		ord.Status = ORDER_ALLOWANCE_INSUFFICIENT
-		return
-	}
-
-	if finished.Cmp(balance) >= 0 {
-		ord.Status = ORDER_BALANCE_INSUFFICIENT
-		return
-	}
+	//if finished.Cmp(allowance) >= 0 {
+	//	ord.Status = ORDER_ALLOWANCE_INSUFFICIENT
+	//	return
+	//}
+	//
+	//if finished.Cmp(balance) >= 0 {
+	//	ord.Status = ORDER_BALANCE_INSUFFICIENT
+	//	return
+	//}
 }
 
 const (
