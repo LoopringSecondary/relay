@@ -184,6 +184,23 @@ type OrderJsonResult struct {
 	Status           string             `json:"status"`
 }
 
+type TransactionJsonResult struct {
+	Protocol    common.Address `json:"protocol"`
+	Owner       common.Address `json:"owner"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	TxHash      common.Hash    `json:"txHash"`
+	Symbol      string         `json:"symbol"`
+	Content     []byte		   `json:"content"`
+	BlockNumber int64       `json:"blockNumber`
+	Value       string       `json:"value"`
+	LogIndex    int64 		   `json:"logIndex"`
+	Type        uint8 		   `json:"type"`
+	Status      uint8          `json:"status"`
+	CreateTime  int64 		   `json:"createTime"`
+	UpdateTime  int64		   `json:"updateTime"`
+}
+
 type PriceQuote struct {
 	Currency string       `json:"currency"`
 	Tokens   []TokenPrice `json:"tokens"`
@@ -517,9 +534,9 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	trxQuery := make(map[string]interface{})
 
-	//if v, ok := util.AllTokens[query.Symbol]; ok {
-	//	trxQuery["symbol"] = v.Protocol.Hex()
-	//}
+	if query.Symbol != "" {
+		trxQuery["symbol"] = query.Symbol
+	}
 
 	if query.Owner != "" {
 		trxQuery["owner"] = query.Owner
@@ -556,12 +573,12 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 		o := d.(dao.Transaction)
 		tr := types.Transaction{}
 		err = o.ConvertUp(&tr)
-		rst.Data = append(rst.Data, o)
+		rst.Data = append(rst.Data, toTxJsonResult(tr))
 	}
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []types.Transaction, err error) {
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []TransactionJsonResult, err error) {
 
 	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
 
@@ -569,14 +586,14 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 		return nil, err
 	}
 
-	result = make([]types.Transaction, 0)
+	result = make([]TransactionJsonResult, 0)
 	for _, r := range rst {
 		tr := types.Transaction{}
 		err = r.ConvertUp(&tr)
 		if err != nil {
 			log.Error("convert error occurs..." + err.Error())
 		}
-		result = append(result, tr)
+		result = append(result, toTxJsonResult(tr))
 	}
 
 	return result, nil
@@ -887,4 +904,23 @@ func txStatusToUint8(status string) int {
 	default:
 		return -1
 	}
+}
+
+func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
+	dst := TransactionJsonResult{}
+	dst.Protocol = tx.Protocol
+	dst.Owner = tx.Owner
+	dst.From = tx.From
+	dst.To = tx.To
+	dst.TxHash = tx.TxHash
+	dst.Content = []byte(tx.Content)
+	dst.BlockNumber = tx.BlockNumber.Int64()
+	dst.LogIndex = tx.LogIndex
+	dst.Value = types.BigintToHex(tx.Value)
+	dst.Type = tx.Type
+	dst.Status = tx.Status
+	dst.CreateTime = tx.CreateTime
+	dst.UpdateTime = tx.UpdateTime
+	dst.Symbol = tx.Symbol
+	return dst
 }
