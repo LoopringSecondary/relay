@@ -77,6 +77,7 @@ type RdsService interface {
 	GetCancelForkEvents(from, to int64) ([]CancelEvent, error)
 
 	// cutoff event table
+	GetCutoffEvent(txhash common.Hash) (CutOffEvent, error)
 	GetCutoffForkEvents(from, to int64) ([]CutOffEvent, error)
 	RollBackCutoff(from, to int64) error
 

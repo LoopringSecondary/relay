@@ -63,6 +63,12 @@ func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	return nil
 }
 
+func (s *RdsServiceImpl) GetCutoffEvent(txhash common.Hash) (CutOffEvent, error) {
+	var event CutOffEvent
+	err := s.db.Where("tx_hash=?").Where("fork=?", false).First(&event).Error
+	return event, err
+}
+
 func (s *RdsServiceImpl) GetCutoffForkEvents(from, to int64) ([]CutOffEvent, error) {
 	var (
 		list []CutOffEvent
