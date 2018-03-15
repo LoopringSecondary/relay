@@ -31,6 +31,8 @@ type CancelEvent struct {
 	BlockNumber     int64  `gorm:"column:block_number"`
 	CreateTime      int64  `gorm:"column:create_time"`
 	AmountCancelled string `gorm:"column:amount_cancelled;type:varchar(30)"`
+	LogIndex        int64  `gorm:"column:log_index"`
+	Fork            bool   `gorm:"fork"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent
@@ -41,21 +43,24 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.Protocol = src.Protocol.Hex()
 	e.CreateTime = src.BlockTime
 	e.BlockNumber = src.BlockNumber.Int64()
+	e.LogIndex = src.LogIndex
 
 	return nil
 }
 
-func (s *RdsServiceImpl) FindCancelEvent(orderhash, txhash common.Hash) (*CancelEvent, error) {
+func (s *RdsServiceImpl) GetCancelForkEvents(from, to int64) ([]CancelEvent, error) {
 	var (
-		model CancelEvent
-		err   error
+		list []CancelEvent
+		err  error
 	)
 
-	err = s.db.Where("order_hash = ? and tx_hash = ?", orderhash.Hex(), txhash.String()).First(&model).Error
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork=?", false).
+		Find(&list).Error
 
-	return &model, err
+	return list, err
 }
 
 func (s *RdsServiceImpl) RollBackCancel(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CancelEvent{}).Error
+	return s.db.Model(&CancelEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
