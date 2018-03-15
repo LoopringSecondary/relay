@@ -217,6 +217,19 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
 
+	_, err := om.rds.GetCancelEvent(event.OrderHash, event.TxHash)
+	if err == nil {
+		log.Debugf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash.Hex())
+		return nil
+	}
+	newCancelEventModel := &dao.CancelEvent{}
+	if err := newCancelEventModel.ConvertDown(event); err != nil {
+		return err
+	}
+	if err := om.rds.Add(newCancelEventModel); err != nil {
+		return err
+	}
+
 	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)

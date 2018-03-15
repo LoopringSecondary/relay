@@ -48,6 +48,12 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	return nil
 }
 
+func (s *RdsServiceImpl) GetCancelEvent(txhash, orderhash common.Hash) (CancelEvent, error) {
+	var event CancelEvent
+	err := s.db.Where("tx_hash=? and order_hash=?").Where("fork=?", false).First(&event).Error
+	return event, err
+}
+
 func (s *RdsServiceImpl) GetCancelForkEvents(from, to int64) ([]CancelEvent, error) {
 	var (
 		list []CancelEvent
