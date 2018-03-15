@@ -347,7 +347,7 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 
 func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 	// todo(fuk): delete after test
-	return true, nil
+	//return true, nil
 
 	if len(owner) == 0 {
 		return false, errors.New("owner can't be null string")
