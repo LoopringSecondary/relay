@@ -110,7 +110,7 @@ type EstimatedAllocatedAllowanceQuery struct {
 type TransactionQuery struct {
 	ThxHash   string   `json:"thxHash"`
 	Owner     string   `json:"owner"`
-	Protocol  string   `json: "symbol"`
+	Symbol  string   `json: "symbol"`
 	Status    string    `json: "status"`
 	TxType    string   `json:"txType"`
 	TrxHashes []string `json:"trxHashes"`
@@ -514,8 +514,8 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	trxQuery := make(map[string]interface{})
 
-	if query.Protocol != "" {
-		trxQuery["protocol"] = util.AllTokens[query.Protocol].Protocol.Hex()
+	if v, ok := util.AllTokens[query.Protocol]; ok {
+		trxQuery["symbol"] = v.Protocol.Hex()
 	}
 
 	if query.Owner != "" {
@@ -527,11 +527,11 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 	}
 
 	if txStatusToUint8(query.Status) > 0 {
-		trxQuery["status"] = txStatusToUint8(query.Status)
+		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
 	}
 
 	if txTypeToUint8(query.TxType) > 0 {
-		trxQuery["tx_type"] = txTypeToUint8(query.TxType)
+		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
 	}
 
 	pageIndex := query.PageIndex
@@ -846,7 +846,7 @@ func isAvailableMarket(market string) bool {
 	return false
 }
 
-func txTypeToUint8(txType string) uint8 {
+func txTypeToUint8(txType string) int {
 	switch txType {
 	case "pending":
 		return 0
@@ -859,7 +859,7 @@ func txTypeToUint8(txType string) uint8 {
 	}
 }
 
-func txStatusToUint8(status string) uint8 {
+func txStatusToUint8(status string) int {
 	switch status {
 	case "approve":
 		return 1
