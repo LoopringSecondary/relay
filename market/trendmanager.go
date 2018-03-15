@@ -52,7 +52,8 @@ const (
 	tsOneWeek = 7 * tsOneDay
 )
 
-var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
+//var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
+var allInterval = []string{OneHour, TwoHour}
 
 type Ticker struct {
 	Market    string  `json:"market"`
@@ -289,7 +290,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 0 * * * *", t.insertTrend)
+	t.cron.AddFunc("10 */5 * * * *", t.insertTrend)
 	t.cron.Start()
 }
 
@@ -347,8 +348,13 @@ func (t *TrendManager) insertByTrend(interval string) error {
 			}
 		}
 
-		toInsert.Open = trends[0].Open
-		toInsert.Close = trends[len(trends) - 1].Close
+		if len(trends) == 0 {
+			toInsert.Open = 0
+			toInsert.Close = 0
+		} else {
+			toInsert.Open = trends[0].Open
+			toInsert.Close = trends[len(trends) - 1].Close
+		}
 		toInsert.Vol = vol
 		toInsert.Amount = amount
 		toInsert.High = high

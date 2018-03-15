@@ -162,13 +162,16 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	//s, _ := crypto.NewPrivateKeyCrypto(false, "0x7d0a1121fb170361b6483d922d72258e6d4da9aa65234ac7ba0c9c833e6adc71")
 	//fmt.Println(s.Address().Hex())
 
+	fmt.Println(fmt.Sprintf("+%.2f%%", -2.3334))
+	fmt.Println(fmt.Sprintf("%.2f%%", -2.3334))
+	fmt.Println(fmt.Sprintf("+%.2f%%", 2.3334))
 
-	ab := AB{"tttt"}
-	abrq := ABReq1{A :"ttttttt", B: 10}
-	abrqJson, _ :=  json.Marshal(abrq)
+	//ab := AB{"tttt"}
+	//abrq := ABReq1{A :"ttttttt", B: 10}
+	//abrqJson, _ :=  json.Marshal(abrq)
 
 	//handleWithT(&ab, abrq, "ABTest1", string(abrqJson[:]))
-	handleWithT(&ab, nil, "ABTest2", string(abrqJson[:]))
+	//handleWithT(&ab, nil, "ABTest2", string(abrqJson[:]))
 
 }
 

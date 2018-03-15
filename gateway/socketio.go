@@ -96,7 +96,6 @@ func (so *SocketIOServiceImpl) Start() {
 		log.Fatal(err)
 	}
 	server.OnConnect("/", func(s socketio.Conn) error {
-		fmt.Println("connected:", s.ID())
 		so.connIdMap[s.ID()] = s
 		return nil
 	})
@@ -136,9 +135,7 @@ func (so *SocketIOServiceImpl) Start() {
 			if v.Context() == nil {
 				continue
 			} else {
-				fmt.Println("......start cron emit on id " + v.ID())
 				businesses := v.Context().(map[string]string)
-				fmt.Println(businesses)
 				if businesses != nil {
 					for bk, bv := range businesses {
 						so.EmitNowByEventType(bk, v, bv)

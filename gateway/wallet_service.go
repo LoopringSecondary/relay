@@ -285,7 +285,10 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 
 	rst := PriceQuote{query.Currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		price, err := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		if err != nil {
+			return result, err
+		}
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 		if k == "WETH" {
@@ -431,10 +434,10 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market.Ticker, err error) {
 	res, err = w.trendManager.GetTicker()
 
-	for i, t := range res {
-		w.fillBuyAndSell(&t, query.ContractVersion)
-		res[i] = t
-	}
+	//for i, t := range res {
+	//	w.fillBuyAndSell(&t, query.ContractVersion)
+	//	res[i] = t
+	//}
 	return
 }
 
@@ -514,9 +517,9 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	trxQuery := make(map[string]interface{})
 
-	if v, ok := util.AllTokens[query.Symbol]; ok {
-		trxQuery["symbol"] = v.Protocol.Hex()
-	}
+	//if v, ok := util.AllTokens[query.Symbol]; ok {
+	//	trxQuery["symbol"] = v.Protocol.Hex()
+	//}
 
 	if query.Owner != "" {
 		trxQuery["owner"] = query.Owner

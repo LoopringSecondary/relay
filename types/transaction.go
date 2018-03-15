@@ -46,20 +46,20 @@ const (
 // todo(fuk): mark,transaction不包含sell&buy
 
 type Transaction struct {
-	Protocol    common.Address
-	Owner       common.Address
-	From        common.Address
-	To          common.Address
-	TxHash      common.Hash
-	Symbol      string
-	Content     []byte
-	BlockNumber *big.Int
-	Value       *big.Int
-	LogIndex    int64
-	Type        uint8
-	Status      uint8
-	CreateTime  int64
-	UpdateTime  int64
+	Protocol    common.Address `json:"protocol"`
+	Owner       common.Address `json:"owner"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	TxHash      common.Hash    `json:"txHash"`
+	Symbol      string         `json:"symbol"`
+	Content     []byte		   `json:"content"`
+	BlockNumber *big.Int       `json:"blockNumber`
+	Value       *big.Int       `json:"value"`
+	LogIndex    int64 		   `json:"logIndex"`
+	Type        uint8 		   `json:"type"`
+	Status      uint8          `json:"status"`
+	CreateTime  int64 		   `json:"createTime"`
+	UpdateTime  int64		   `json:"updateTime"`
 }
 
 func (tx *Transaction) StatusStr() string {

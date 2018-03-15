@@ -119,7 +119,11 @@ func (p *CapProvider_CoinMarketCap) GetMarketCapByCurrency(tokenAddress common.A
 		case BTC:
 			v = c.PriceBtc
 		}
-		return new(big.Rat).Set(v), nil
+		if v == nil {
+			return nil, errors.New("tokenCap is nil")
+		} else {
+			return new(big.Rat).Set(v), nil
+		}
 	} else {
 		err := errors.New("not found tokenCap:" + tokenAddress.Hex())
 		res := new(big.Rat).SetInt64(int64(1))
