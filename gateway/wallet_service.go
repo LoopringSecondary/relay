@@ -514,7 +514,7 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	trxQuery := make(map[string]interface{})
 
-	if v, ok := util.AllTokens[query.Protocol]; ok {
+	if v, ok := util.AllTokens[query.Symbol]; ok {
 		trxQuery["symbol"] = v.Protocol.Hex()
 	}
 
