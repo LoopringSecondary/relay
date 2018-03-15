@@ -62,12 +62,12 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	signFilter := &SignFilter{}
 
 	// new cutoff filter
-	//cutoffFilter := &CutoffFilter{om: om}
+	cutoffFilter := &CutoffFilter{om: om}
 
 	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
-	//gateway.filters = append(gateway.filters, cutoffFilter)
+	gateway.filters = append(gateway.filters, cutoffFilter)
 }
 
 func HandleOrder(input eventemitter.EventData) error {
