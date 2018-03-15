@@ -24,11 +24,6 @@ import (
 	"math/big"
 )
 
-type Ring struct {
-	ID   int    `gorm:"column:id;primary_key;"`
-	Hash string `gorm:"column:hash;type:varchar(82)"`
-}
-
 type FilledOrder struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
@@ -39,12 +34,12 @@ type FilledOrder struct {
 	AvailableAmountB string `gorm:"column:available_amount_b;type:varchar(82)"`
 	FillAmountS      string `gorm:"column:fill_amount_s;type:varchar(82)" json:"fillAmountS"`
 	FillAmountB      string `gorm:"column:fill_amount_b;type:varchar(82)" json:"fillAmountB"`
-	LrcReward        string `gorm:"column:lrc_reward;type:varchar(82)" json:"lrcReward"`
-	LrcFee           string `gorm:"column:lrc_fee;type:varchar(82)" json:"lrcFee"`
-	FeeS             string `gorm:"column:fee_s;type:varchar(82)" json:"feeS"`
-	LegalFee         string `gorm:"column:legal_fee;type:varchar(82)" json:"legalFee"`
-	SPrice           string `gorm:"column:s_price;type:varchar(82)" json:"sPrice"`
-	BPrice           string `gorm:"column:b_price;type:varchar(82)" json:"sPrice"`
+	LrcReward        string `gorm:"column:lrc_reward;type:text" json:"lrcReward"`
+	LrcFee           string `gorm:"column:lrc_fee;type:varchar(100)" json:"lrcFee"`
+	FeeS             string `gorm:"column:fee_s;type:varchar(100)" json:"feeS"`
+	LegalFee         string `gorm:"column:legal_fee;type:text" json:"legalFee"`
+	SPrice           string `gorm:"column:s_price;type:text" json:"sPrice"`
+	BPrice           string `gorm:"column:b_price;type:text" json:"sPrice"`
 }
 
 func getRatString(v *big.Rat) string {
