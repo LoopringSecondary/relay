@@ -27,13 +27,13 @@ import (
 )
 
 type forkProcessor struct {
-	dao dao.RdsService
-	mc  marketcap.MarketCapProvider
+	db dao.RdsService
+	mc marketcap.MarketCapProvider
 }
 
 func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkProcessor {
 	processor := &forkProcessor{}
-	processor.dao = rds
+	processor.db = rds
 	processor.mc = mc
 
 	return processor
@@ -49,21 +49,21 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 
-	if err := p.dao.RollBackRingMined(from, to); err != nil {
+	if err := p.db.RollBackRingMined(from, to); err != nil {
 		log.Errorf("order manager fork error:%s", err.Error())
 	}
-	if err := p.dao.RollBackFill(from, to); err != nil {
+	if err := p.db.RollBackFill(from, to); err != nil {
 		log.Errorf("order manager fork error:%s", err.Error())
 	}
-	//if err := p.dao.RollBackCancel(from, to); err != nil {
+	//if err := p.db.RollBackCancel(from, to); err != nil {
 	//	log.Errorf("order manager fork error:%s", err.Error())
 	//}
-	//if err := p.dao.RollBackCutoff(from, to); err != nil {
+	//if err := p.db.RollBackCutoff(from, to); err != nil {
 	//	log.Errorf("order manager fork error:%s", err.Error())
 	//}
 
 	// todo(fuk): isOrderCutoff???
-	orderList, err := p.dao.GetOrdersWithBlockNumberRange(from, to)
+	orderList, err := p.db.GetOrdersWithBlockNumberRange(from, to)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 		}
 
 		model.ID = v.ID
-		if err := p.dao.Save(model); err != nil {
+		if err := p.db.Save(model); err != nil {
 			log.Debugf("order manager fork error:%s", err.Error())
 			continue
 		}
