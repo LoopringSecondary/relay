@@ -102,8 +102,8 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args = append(args, latest.TxHash, latest.Type)
 
 	case types.TX_TYPE_WRAP, types.TX_TYPE_UNWRAP:
-		query = "tx_hash=?"
-		args = append(args, latest.TxHash)
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 
 	case types.TX_TYPE_APPROVE:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
@@ -114,12 +114,12 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args = append(args, latest.TxHash, latest.LogIndex, latest.Type)
 
 	case types.TX_TYPE_CUTOFF:
-		query = "tx_hash=?"
-		args = append(args, latest.TxHash)
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 
 	case types.TX_TYPE_CUTOFF_PAIR:
-		query = "tx_hash=?"
-		args = append(args, latest.TxHash)
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 	}
 
 	if len(query) == 0 || len(args) == 0 {

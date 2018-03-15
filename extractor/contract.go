@@ -663,7 +663,7 @@ func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositM
 	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethDepositMethod(evt)
-	tx.Symbol = "ETH"
+	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
 	return processor.saveTransaction(&tx)
 }
 
@@ -695,7 +695,7 @@ func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithd
 	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethWithdrawalMethod(evt)
-	tx.Symbol = "ETH"
+	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
 	return processor.saveTransaction(&tx)
 }
 
