@@ -92,7 +92,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0x961e2b725edacb4c2d0cef4ad017c0840a7ff101b15a9f1e838b4f4970d9c78d")
+		orderhash    = common.HexToHash("0xf8a939b25bb35be88178e0cee91e81798f58ad81faa0676928bfc6e7bf9826b1")
 		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
@@ -140,21 +140,21 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 }
 
 // cutoff的值必须在两个块的timestamp之间
-func TestEthNodeAccessor_Cutoff(t *testing.T) {
-	account := accounts.Account{Address: account2}
-	cutoff := big.NewInt(1521931942)
+func TestEthNodeAccessor_CutoffAll(t *testing.T) {
+	account := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+	cutoff := big.NewInt(1531107175)
 
 	protocol := test.Protocol()
 	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
-	if result, err := callMethod(account.Address, "cancelAllOrders", big.NewInt(200000), big.NewInt(21000000000), nil, cutoff); nil != err {
+	if result, err := callMethod(account, "cancelAllOrders", big.NewInt(200000), big.NewInt(21000000000), nil, cutoff); nil != err {
 		t.Fatalf("call method cancelAllOrders error:%s", err.Error())
 	} else {
 		t.Logf("cutoff result:%s", result)
 	}
 }
 
-func TestEthNodeAccessor_GetCutoff(t *testing.T) {
+func TestEthNodeAccessor_GetCutoffAll(t *testing.T) {
 	owner := account1
 	protocol := test.Protocol()
 	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
@@ -166,15 +166,15 @@ func TestEthNodeAccessor_GetCutoff(t *testing.T) {
 }
 
 func TestEthNodeAccessor_CutoffPair(t *testing.T) {
-	account := accounts.Account{Address: account2}
-	cutoff := big.NewInt(1531931942)
+	account := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+	cutoff := big.NewInt(1531107175)
 	token1 := lrcTokenAddress
 	token2 := wethTokenAddress
 
 	protocol := test.Protocol()
 	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
-	if result, err := callMethod(account.Address, "cancelAllOrdersByTradingPair", big.NewInt(200000), big.NewInt(21000000000), nil, token1, token2, cutoff); nil != err {
+	if result, err := callMethod(account, "cancelAllOrdersByTradingPair", big.NewInt(200000), big.NewInt(21000000000), nil, token1, token2, cutoff); nil != err {
 		t.Fatalf("call method cancelAllOrdersByTradingPair error:%s", err.Error())
 	} else {
 		t.Logf("cutoff result:%s", result)
