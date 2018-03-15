@@ -77,6 +77,42 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 
 // calculate order's related values and status, update order
 func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
+	state := &types.OrderState{}
+	model, err := p.db.GetOrderByHash(evt.OrderHash)
+	if err != nil {
+		return err
+	}
+	if err := model.ConvertUp(state); err != nil {
+		return err
+	}
+
+	// judge order status
+	//if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
+	//	log.Debugf("order manager,handle order filled event,order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
+	//	return nil
+	//}
+
+	// calculate dealt amount
+	state.UpdatedBlock = evt.BlockNumber
+	state.DealtAmountS = new(big.Int).Sub(state.DealtAmountS, evt.AmountS)
+	state.DealtAmountB = new(big.Int).Sub(state.DealtAmountB, evt.AmountB)
+	state.SplitAmountS = new(big.Int).Sub(state.SplitAmountS, evt.SplitS)
+	state.SplitAmountB = new(big.Int).Sub(state.SplitAmountB, evt.SplitB)
+
+	log.Debugf("order manager,process fork fill event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
+
+	// update order status
+	settleOrderStatus(state, p.mc)
+
+	// update rds.Order
+	if err := model.ConvertDown(state); err != nil {
+		log.Errorf(err.Error())
+		return err
+	}
+	if err := p.db.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.SplitAmountS, state.SplitAmountB, state.UpdatedBlock); err != nil {
+		return err
+	}
+
 	return nil
 }
 
