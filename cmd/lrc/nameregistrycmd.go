@@ -214,7 +214,6 @@ func transferOwnership(ctx *cli.Context) {
 	if nil != err {
 		utils.ExitWithErr(ctx.App.Writer, err)
 	} else {
-		println(ownerAddressHex)
 		ownerAddressHex = strings.TrimPrefix(ownerAddressHex, "0x")
 		b := common.Hex2Bytes(ownerAddressHex)
 		res := []*big.Int{}
