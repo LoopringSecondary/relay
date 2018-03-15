@@ -184,9 +184,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Stop()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 	} else {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 		n.mineNode.Stop()
 	}
 	n.extractorService.Stop()
@@ -203,9 +203,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Start()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 	} else {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 		n.mineNode.Start()
 	}
 
