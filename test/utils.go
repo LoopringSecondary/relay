@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
@@ -183,11 +182,6 @@ func Cfg() *config.GlobalConfig { return cfg }
 func Entity() *TestEntity       { return entity }
 func Protocol() common.Address  { return common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version]) }
 func Delegate() common.Address  { return ethaccessor.ProtocolAddresses()[protocol].DelegateAddress }
-
-func GenerateExtractor() *extractor.ExtractorServiceImpl {
-	l := extractor.NewExtractorService(cfg.Extractor, rds)
-	return l
-}
 
 func GenerateUserManager() *usermanager.UserManagerImpl {
 	um := usermanager.NewUserManager(&cfg.UserManager, rds)

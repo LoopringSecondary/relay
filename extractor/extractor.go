@@ -197,6 +197,8 @@ func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, re
 	} else {
 		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
 	}
+
+	l.processNormalTransaction(&tx, &receipt, time)
 }
 
 func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, txIsFailed bool) error {
@@ -264,6 +266,10 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 	}
 
 	return nil
+}
+
+func (l *ExtractorServiceImpl) processNormalTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
+	return l.processor.handleEthTransfer(tx, receipt, time)
 }
 
 func (l *ExtractorServiceImpl) setBlockNumberRange() {

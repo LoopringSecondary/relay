@@ -43,12 +43,15 @@ const (
 	TX_TYPE_CUTOFF_PAIR  = 10
 )
 
+// todo(fuk): mark,transaction不包含sell&buy
+
 type Transaction struct {
 	Protocol    common.Address
 	Owner       common.Address
 	From        common.Address
 	To          common.Address
 	TxHash      common.Hash
+	Symbol      string
 	Content     []byte
 	BlockNumber *big.Int
 	Value       *big.Int
@@ -335,4 +338,5 @@ func (tx *Transaction) fullFilled(txinfo TxInfo) {
 	tx.BlockNumber = txinfo.BlockNumber
 	tx.CreateTime = txinfo.BlockTime
 	tx.UpdateTime = txinfo.BlockTime
+	tx.Symbol = txinfo.Symbol
 }
