@@ -91,3 +91,28 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 
 	return nil
 }
+
+type InnerForkEvent struct {
+	Type        string
+	BlockNumber int64
+	LogIndex    int64
+	Event       interface{}
+}
+
+type InnerForkEventList []InnerForkEvent
+
+func (l InnerForkEventList) Len() int {
+	return len(l)
+}
+
+func (l InnerForkEventList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+
+func (l InnerForkEventList) Less(i, j int) bool {
+	if l[i].BlockNumber == l[j].BlockNumber {
+		return l[i].LogIndex > l[j].LogIndex
+	} else {
+		return l[i].BlockNumber > l[j].BlockNumber
+	}
+}
