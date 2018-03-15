@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"math/big"
+	"sort"
 )
 
 type forkProcessor struct {
@@ -49,47 +50,129 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 
-	if err := p.db.RollBackRingMined(from, to); err != nil {
-		log.Errorf("order manager fork error:%s", err.Error())
-	}
-	if err := p.db.RollBackFill(from, to); err != nil {
-		log.Errorf("order manager fork error:%s", err.Error())
-	}
-	//if err := p.db.RollBackCancel(from, to); err != nil {
-	//	log.Errorf("order manager fork error:%s", err.Error())
-	//}
-	//if err := p.db.RollBackCutoff(from, to); err != nil {
-	//	log.Errorf("order manager fork error:%s", err.Error())
-	//}
-
-	// todo(fuk): isOrderCutoff???
-	orderList, err := p.db.GetOrdersWithBlockNumberRange(from, to)
-	if err != nil {
-		return err
+	list, _ := p.GetForkEvents(from, to)
+	if list.Len() == 0 {
+		log.Errorf("order manager fork error: non fork events")
+		return nil
 	}
 
-	forkBlockNumber := big.NewInt(from)
-	for _, v := range orderList {
-		state := &types.OrderState{}
-		if err := v.ConvertUp(state); err != nil {
-			log.Errorf("order manager fork error:%s", err.Error())
-			continue
-		}
+	sort.Sort(list)
 
-		model, err := newOrderEntity(state, p.mc, forkBlockNumber)
-		if err != nil {
-			log.Errorf("order manager fork error:%s", err.Error())
-			continue
-		}
-
-		model.ID = v.ID
-		if err := p.db.Save(model); err != nil {
-			log.Debugf("order manager fork error:%s", err.Error())
-			continue
+	for _, v := range list {
+		switch v.Type {
+		case FORK_EVT_TYPE_FILL:
+			p.RollBackSingleFill(v.Event.(*types.OrderFilledEvent))
+		case FORK_EVT_TYPE_CANCEL:
+			p.RollBackSingleCancel(v.Event.(*types.OrderCancelledEvent))
+		case FORK_EVT_TYPE_CUTOFF:
+			p.RollBackSingleCutoff(v.Event.(*types.CutoffEvent))
+		case FORK_EVT_TYPE_CUTOFF_PAIR:
+			p.RollBackSingleCutoffPair(v.Event.(*types.CutoffPairEvent))
 		}
 	}
+
+	p.MarkForkEvents(from, to)
+	return nil
+}
+
+// calculate order's related values and status, update order
+func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
+	return nil
+}
+
+func (p *forkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) error {
+	return nil
+}
+
+func (p *forkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
+	return nil
+}
+
+func (p *forkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) error {
+	return nil
+}
+
+// todo(fuk): process error
+func (p *forkProcessor) MarkForkEvents(from, to int64) error {
+	p.db.RollBackFill(from, to)
+	p.db.RollBackCancel(from, to)
+	p.db.RollBackCutoff(from, to)
+	p.db.RollBackCutoffPair(from, to)
 
 	return nil
+}
+
+const (
+	FORK_EVT_TYPE_FILL        = "fill"
+	FORK_EVT_TYPE_CANCEL      = "cancel"
+	FORK_EVT_TYPE_CUTOFF      = "cutoff"
+	FORK_EVT_TYPE_CUTOFF_PAIR = "cutoff_pair"
+)
+
+func (p *forkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error) {
+	var list InnerForkEventList
+
+	if fillList, _ := p.db.GetFillForkEvents(from, to); len(fillList) > 0 {
+		for _, v := range fillList {
+			var (
+				fill     types.OrderFilledEvent
+				innerEvt InnerForkEvent
+			)
+			v.ConvertUp(&fill)
+			innerEvt.LogIndex = fill.LogIndex
+			innerEvt.BlockNumber = fill.BlockNumber.Int64()
+			innerEvt.Type = FORK_EVT_TYPE_FILL
+			innerEvt.Event = &fill
+			list = append(list, innerEvt)
+		}
+	}
+
+	if cancelList, _ := p.db.GetCancelForkEvents(from, to); len(cancelList) > 0 {
+		for _, v := range cancelList {
+			var (
+				cancel   types.OrderCancelledEvent
+				innerEvt InnerForkEvent
+			)
+			v.ConvertUp(&cancel)
+			innerEvt.LogIndex = cancel.LogIndex
+			innerEvt.BlockNumber = cancel.BlockNumber.Int64()
+			innerEvt.Type = FORK_EVT_TYPE_CANCEL
+			innerEvt.Event = &cancel
+			list = append(list, innerEvt)
+		}
+	}
+
+	if cutoffList, _ := p.db.GetCutoffForkEvents(from, to); len(cutoffList) > 0 {
+		for _, v := range cutoffList {
+			var (
+				cutoff   types.CutoffEvent
+				innerEvt InnerForkEvent
+			)
+			v.ConvertUp(&cutoff)
+			innerEvt.LogIndex = cutoff.LogIndex
+			innerEvt.BlockNumber = cutoff.BlockNumber.Int64()
+			innerEvt.Type = FORK_EVT_TYPE_CUTOFF
+			innerEvt.Event = &cutoff
+			list = append(list, innerEvt)
+		}
+	}
+
+	if cutoffPairList, _ := p.db.GetCutoffPairForkEvents(from, to); len(cutoffPairList) > 0 {
+		for _, v := range cutoffPairList {
+			var (
+				cutoffPair types.CutoffPairEvent
+				innerEvt   InnerForkEvent
+			)
+			v.ConvertUp(&cutoffPair)
+			innerEvt.LogIndex = cutoffPair.LogIndex
+			innerEvt.BlockNumber = cutoffPair.BlockNumber.Int64()
+			innerEvt.Type = FORK_EVT_TYPE_CUTOFF_PAIR
+			innerEvt.Event = &cutoffPair
+			list = append(list, innerEvt)
+		}
+	}
+
+	return list, nil
 }
 
 type InnerForkEvent struct {
