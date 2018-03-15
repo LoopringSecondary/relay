@@ -139,6 +139,19 @@ func buildTimeQueryString(start, end int64) string {
 	return rst
 }
 
+func (s *RdsServiceImpl) GetFillForkEvents(from, to int64) ([]FillEvent, error) {
+	var (
+		list []FillEvent
+		err  error
+	)
+
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork=?", false).
+		Find(&list).Error
+
+	return list, err
+}
+
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&FillEvent{}).Error
+	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork=?", true).Error
 }

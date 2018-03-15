@@ -68,6 +68,7 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
+	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
