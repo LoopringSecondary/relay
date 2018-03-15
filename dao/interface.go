@@ -82,6 +82,7 @@ type RdsService interface {
 	RollBackCutoff(from, to int64) error
 
 	// cutoffpair event table
+	GetCutoffPairEvent(txhash common.Hash) (CutOffPairEvent, error)
 	GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEvent, error)
 	RollBackCutoffPair(from, to int64) error
 

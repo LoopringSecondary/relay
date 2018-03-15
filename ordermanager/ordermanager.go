@@ -224,9 +224,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 		return nil
 	}
 	newCancelEventModel := &dao.CancelEvent{}
-	if err := newCancelEventModel.ConvertDown(event); err != nil {
-		return err
-	}
+	newCancelEventModel.ConvertDown(event)
 	if err := om.rds.Add(newCancelEventModel); err != nil {
 		return err
 	}
@@ -275,9 +273,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 		return nil
 	}
 	newCutoffEventModel := &dao.CutOffEvent{}
-	if err := newCutoffEventModel.ConvertDown(event); err != nil {
-		return err
-	}
+	newCutoffEventModel.ConvertDown(event)
 	if err := om.rds.Add(newCutoffEventModel); err != nil {
 		return err
 	}
@@ -301,6 +297,18 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 
 func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
 	event := input.(*types.CutoffPairEvent)
+
+	// save cutoffPair event
+	_, err := om.rds.GetCutoffPairEvent(event.TxHash)
+	if err == nil {
+		log.Debugf("order manager,handle order cutoffPair event error:event %s have already exist", event.TxHash.Hex())
+		return nil
+	}
+	newCutoffPairEventModel := &dao.CutOffPairEvent{}
+	newCutoffPairEventModel.ConvertDown(event)
+	if err := om.rds.Add(newCutoffPairEventModel); err != nil {
+		return err
+	}
 
 	protocol := event.Protocol
 	owner := event.Owner
