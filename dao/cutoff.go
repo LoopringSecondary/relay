@@ -32,6 +32,8 @@ type CutOffEvent struct {
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	Cutoff      int64  `gorm:"column:cutoff"`
+	LogIndex    int64  `gorm:"column:log_index"`
+	Fork        bool   `gorm:"fork"`
 	CreateTime  int64  `gorm:"column:create_time"`
 }
 
@@ -41,6 +43,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Protocol = src.Protocol.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Cutoff = src.Cutoff.Int64()
+	e.LogIndex = src.LogIndex
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
 
@@ -53,32 +56,26 @@ func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.Protocol = common.HexToAddress(e.Protocol)
 	dst.TxHash = common.HexToHash(e.TxHash)
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
+	dst.LogIndex = e.LogIndex
 	dst.Cutoff = big.NewInt(e.Cutoff)
 	dst.BlockTime = e.CreateTime
 
 	return nil
 }
 
-func (s *RdsServiceImpl) GetCutoffEvent(protocol, owner common.Address) (*CutOffEvent, error) {
+func (s *RdsServiceImpl) GetCutoffForkEvents(from, to int64) ([]CutOffEvent, error) {
 	var (
-		model CutOffEvent
-		err   error
+		list []CutOffEvent
+		err  error
 	)
 
-	err = s.db.Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).First(&model).Error
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork=?", false).
+		Find(&list).Error
 
-	return &model, err
-}
-
-func (s *RdsServiceImpl) DelCutoffEvent(protocol, owner common.Address) error {
-	return s.db.Delete(CutOffEvent{}, "contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Error
+	return list, err
 }
 
 func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
-}
-
-func (s *RdsServiceImpl) UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {
-	item := map[string]interface{}{"tx_hash": txhash.Hex(), "block_number": blockNumber.Int64(), "cutoff": cutoff.Int64(), "create_time": createTime}
-	return s.db.Model(&CutOffEvent{}).Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Update(item).Error
+	return s.db.Model(&CutOffEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

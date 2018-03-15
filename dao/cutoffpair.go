@@ -19,7 +19,6 @@
 package dao
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -69,38 +68,6 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) GetCutoffPairEvent(protocol, owner, token1, token2 common.Address) (*CutOffEvent, error) {
-	var (
-		model CutOffEvent
-		err   error
-	)
-
-	if token1 == token2 {
-		return nil, fmt.Errorf("dao cutoffpair tokens %s %s should not be the same", token1.Hex(), token2.Hex())
-	}
-
-	addresses := []string{token1.Hex(), token2.Hex()}
-
-	err = s.db.Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).
-		Where("token1 in (?)", addresses).
-		Where("token2 in (?)", addresses).
-		First(&model).Error
-
-	return &model, err
-}
-
-func (s *RdsServiceImpl) DelCutoffPairEvent(protocol, owner, token1, token2 common.Address) error {
-	if token1 == token2 {
-		return fmt.Errorf("dao cutoffpair tokens %s %s should not be the same", token1.Hex(), token2.Hex())
-	}
-
-	addresses := []string{token1.Hex(), token2.Hex()}
-
-	return s.db.Delete(CutOffEvent{}, "contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).
-		Where("token1 in (?)", addresses).
-		Where("token2 in (?)", addresses).Error
-}
-
 func (s *RdsServiceImpl) GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEvent, error) {
 	var (
 		list []CutOffPairEvent
@@ -117,19 +84,4 @@ func (s *RdsServiceImpl) GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEv
 func (s *RdsServiceImpl) RollBackCutoffPair(from, to int64) error {
 	return s.db.Model(&CutOffPairEvent{}).Where("block_number > ? and block_number <= ?", from, to).
 		Update("fork=?", true).Error
-}
-
-func (s *RdsServiceImpl) UpdateCutoffPairEvent(protocol, owner, token1, token2 common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {
-	if token1 == token2 {
-		return fmt.Errorf("dao cutoffpair tokens %s %s should not be the same", token1.Hex(), token2.Hex())
-	}
-
-	addresses := []string{token1.Hex(), token2.Hex()}
-
-	item := map[string]interface{}{"tx_hash": txhash.Hex(), "block_number": blockNumber.Int64(), "cutoff": cutoff.Int64(), "create_time": createTime}
-
-	return s.db.Model(&CutOffEvent{}).Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).
-		Where("token1 in (?)", addresses).
-		Where("token2 in (?)", addresses).
-		Update(item).Error
 }
