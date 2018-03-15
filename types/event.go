@@ -33,6 +33,7 @@ type TxInfo struct {
 	BlockNumber *big.Int
 	BlockTime   int64
 	TxFailed    bool
+	Symbol      string
 }
 
 type TokenRegisterEvent struct {

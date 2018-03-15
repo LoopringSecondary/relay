@@ -28,6 +28,7 @@ import (
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
+	Symbol      string `gorm:"column:symbol;type:varchar(20)"`
 	Owner       string `gorm:"column:owner;type:varchar(42)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
@@ -58,6 +59,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
 	tx.UpdateTime = src.UpdateTime
+	tx.Symbol = src.Symbol
 
 	return nil
 }
@@ -77,6 +79,7 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Status = tx.Status
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
+	dst.Symbol = tx.Symbol
 
 	return nil
 }

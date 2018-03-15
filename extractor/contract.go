@@ -84,6 +84,7 @@ func (event *EventData) setTxInfo() types.TxInfo {
 	txinfo.TxHash = common.HexToHash(event.TxHash)
 	txinfo.TxFailed = event.IsFailed
 	txinfo.LogIndex = event.LogIndex + 1
+	txinfo.Symbol = ""
 
 	return txinfo
 }
@@ -143,6 +144,7 @@ func (method *MethodData) setTxInfo() types.TxInfo {
 	txinfo.To = common.HexToAddress(method.To)
 	txinfo.TxHash = common.HexToHash(method.TxHash)
 	txinfo.TxFailed = method.IsFailed
+	txinfo.Symbol = ""
 
 	return txinfo
 }
@@ -634,6 +636,8 @@ func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEve
 	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, txIsFailed:%t", evt.TxHash.Hex(), evt.TxFailed)
 
 	tx.FromApproveMethod(evt)
+	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
+
 	return processor.saveTransaction(&tx)
 }
 
@@ -659,6 +663,7 @@ func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositM
 	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethDepositMethod(evt)
+	tx.Symbol = "ETH"
 	return processor.saveTransaction(&tx)
 }
 
@@ -690,6 +695,7 @@ func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithd
 	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
 	tx.FromWethWithdrawalMethod(evt)
+	tx.Symbol = "ETH"
 	return processor.saveTransaction(&tx)
 }
 
@@ -775,7 +781,7 @@ func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEv
 
 	for i := 0; i < length; i++ {
 		var (
-			tx1,tx2         types.Transaction
+			tx1, tx2        types.Transaction
 			sellto, buyfrom common.Address
 		)
 		fill := fillList[i]
@@ -847,7 +853,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 }
 
 func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.CutoffEvent) error {
-	var tx  types.Transaction
+	var tx types.Transaction
 	tx.FromCutoffEvent(evt)
 	return processor.saveTransaction(&tx)
 }
@@ -875,7 +881,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 }
 
 func (processor *AbiProcessor) saveCutoffPairEventAsTx(evt *types.CutoffPairEvent) error {
-	var tx  types.Transaction
+	var tx types.Transaction
 	tx.FromCutoffPairEvent(evt)
 	return processor.saveTransaction(&tx)
 }
@@ -906,12 +912,14 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 }
 
 func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent) error {
-	var tx1, tx2  types.Transaction
+	var tx1, tx2 types.Transaction
 
 	log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
 
 	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
+	tx2.Symbol = tx1.Symbol
 	if err := processor.saveTransaction(&tx1); err != nil {
 		return err
 	}
