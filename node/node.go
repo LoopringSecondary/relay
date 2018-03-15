@@ -81,10 +81,10 @@ func (n *RelayNode) Start() {
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
 	fmt.Print("start jsonrpc in node......")
-	n.jsonRpcService.Start()
+	go n.jsonRpcService.Start()
 	fmt.Print("end jsonrpc in node......")
 	//n.websocketService.Start()
-	n.socketIOService.Start()
+	go n.socketIOService.Start()
 
 }
 
