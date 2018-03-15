@@ -236,29 +236,6 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	return list, err
 }
 
-// todo useless
-func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
-	var (
-		list []Order
-		err  error
-	)
-
-	err = s.db.Where("valid_since < ?", cutoffTime).Find(&list).Error
-
-	return list, err
-}
-
-// todo useless
-func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
-	model := Order{}
-	err := s.db.Where("order_hash = ? and valid_since < ?").Find(&model).Error
-	if err != nil {
-		return false
-	}
-
-	return true
-}
-
 func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
 	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
 	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
