@@ -192,7 +192,7 @@ type TransactionJsonResult struct {
 	TxHash      common.Hash    `json:"txHash"`
 	Symbol      string         `json:"symbol"`
 	Content     []byte		   `json:"content"`
-	BlockNumber int64       `json:"blockNumber`
+	BlockNumber int64       `json:"blockNumber"`
 	Value       string        `json:"value"`
 	LogIndex    int64 		   `json:"logIndex"`
 	Type        uint8 		   `json:"type"`
