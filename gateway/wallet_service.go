@@ -193,7 +193,7 @@ type TransactionJsonResult struct {
 	Symbol      string         `json:"symbol"`
 	Content     []byte		   `json:"content"`
 	BlockNumber int64       `json:"blockNumber`
-	Value       *big.Int        `json:"value"`
+	Value       string        `json:"value"`
 	LogIndex    int64 		   `json:"logIndex"`
 	Type        uint8 		   `json:"type"`
 	Status      uint8          `json:"status"`
@@ -916,7 +916,11 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = tx.BlockNumber.Int64()
 	dst.LogIndex = tx.LogIndex
-	dst.Value = tx.Value
+	if tx.Value == nil {
+		dst.Value = "0"
+	} else {
+		dst.Value = tx.Value.String()
+	}
 	dst.Type = tx.Type
 	dst.Status = tx.Status
 	dst.CreateTime = tx.CreateTime
