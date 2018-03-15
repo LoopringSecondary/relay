@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 type CancelEvent struct {
@@ -44,6 +45,19 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.CreateTime = src.BlockTime
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.LogIndex = src.LogIndex
+
+	return nil
+}
+
+// convert dao/cancelEvent to types/cancelEvent
+func (e *CancelEvent) ConvertUp(dst *types.OrderCancelledEvent) error {
+	dst.AmountCancelled, _ = new(big.Int).SetString(e.AmountCancelled, 0)
+	dst.OrderHash = common.HexToHash(e.OrderHash)
+	dst.TxHash = common.HexToHash(e.TxHash)
+	dst.Protocol = common.HexToAddress(e.Protocol)
+	dst.BlockTime = e.CreateTime
+	dst.BlockNumber = big.NewInt(e.BlockNumber)
+	dst.LogIndex = e.LogIndex
 
 	return nil
 }
