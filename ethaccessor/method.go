@@ -313,7 +313,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		value = big.NewInt(0)
 	}
 	// todo: modify gas
-	gas.SetString("1000000", 0)
+	//gas.SetString("1000000", 0)
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		value,

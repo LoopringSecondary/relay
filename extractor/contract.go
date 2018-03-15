@@ -1021,6 +1021,43 @@ func (processor *AbiProcessor) handleAddressDeAuthorizedEvent(input eventemitter
 	return nil
 }
 
+func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
+	var (
+		dst      types.TransferEvent
+		tx1, tx2 types.Transaction
+	)
+	if exist, _ := processor.accountmanager.HasUnlocked(tx.To); exist == false {
+		return nil
+	}
+	if tx.Value.BigInt().Cmp(big.NewInt(0)) <= 0 {
+		return nil
+	}
+
+	dst.TxHash = common.HexToHash(tx.Hash)
+	dst.Value = tx.Value.BigInt()
+	dst.LogIndex = 0
+	dst.Protocol = types.NilAddress
+	dst.Symbol = "ETH"
+	dst.BlockNumber = tx.BlockNumber.BigInt()
+	dst.BlockTime = time.Int64()
+
+	dst.Sender = common.HexToAddress(tx.From)
+	dst.Receiver = common.HexToAddress(tx.To)
+	tx1.FromTransferEvent(&dst, types.TX_TYPE_SEND)
+	if err := processor.saveTransaction(&tx1); err != nil {
+		return err
+	}
+
+	dst.Sender = common.HexToAddress(tx.To)
+	dst.Receiver = common.HexToAddress(tx.From)
+	tx2.FromTransferEvent(&dst, types.TX_TYPE_RECEIVE)
+	if err := processor.saveTransaction(&tx2); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 	var model dao.Transaction
 
