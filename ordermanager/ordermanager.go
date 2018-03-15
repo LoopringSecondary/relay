@@ -157,7 +157,7 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
 	event := input.(*types.OrderFilledEvent)
 
-	// save event
+	// save fill event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
 	if err == nil {
 		log.Debugf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
@@ -165,10 +165,8 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	newFillModel := &dao.FillEvent{}
-	if err := newFillModel.ConvertDown(event); err != nil {
-		log.Debugf("order manager,handle order filled event error:order %s convert down failed", event.OrderHash.Hex())
-		return err
-	}
+	newFillModel.ConvertDown(event)
+	newFillModel.Fork = false
 	if err := om.rds.Add(newFillModel); err != nil {
 		log.Debugf("order manager,handle order filled event error:order %s insert faild", event.OrderHash.Hex())
 		return err
@@ -225,6 +223,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 	newCancelEventModel := &dao.CancelEvent{}
 	newCancelEventModel.ConvertDown(event)
+	newCancelEventModel.Fork = false
 	if err := om.rds.Add(newCancelEventModel); err != nil {
 		return err
 	}
@@ -274,6 +273,7 @@ func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) erro
 	}
 	newCutoffEventModel := &dao.CutOffEvent{}
 	newCutoffEventModel.ConvertDown(event)
+	newCutoffEventModel.Fork = false
 	if err := om.rds.Add(newCutoffEventModel); err != nil {
 		return err
 	}
@@ -306,6 +306,7 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 	}
 	newCutoffPairEventModel := &dao.CutOffPairEvent{}
 	newCutoffPairEventModel.ConvertDown(event)
+	newCutoffPairEventModel.Fork = false
 	if err := om.rds.Add(newCutoffPairEventModel); err != nil {
 		return err
 	}

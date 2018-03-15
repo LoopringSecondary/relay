@@ -730,7 +730,6 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	)
 	for _, fill := range fills {
 		fill.TxInfo = contractData.setTxInfo()
-		fill.LogIndex = ringmined.LogIndex
 
 		log.Debugf("extractor,tx:%s orderFilled event ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 			contractData.TxHash,

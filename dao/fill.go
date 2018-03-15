@@ -46,6 +46,8 @@ type FillEvent struct {
 	SplitS        string `gorm:"column:split_s;type:varchar(30)" json:"splitS"`
 	SplitB        string `gorm:"column:split_b;type:varchar(30)" json:"splitB"`
 	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
+	LogIndex      int64  `gorm:"log_index"`
+	Fork          bool   `gorm:"fork"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -69,6 +71,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.FillIndex = src.FillIndex.Int64()
+	f.LogIndex = src.LogIndex
 	f.Market = src.Market
 
 	return nil
