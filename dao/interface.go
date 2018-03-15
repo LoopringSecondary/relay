@@ -86,6 +86,7 @@ type RdsService interface {
 	// cutoffpair event table
 	GetCutoffPairEvent(protocol, owner, token1, token2 common.Address) (*CutOffEvent, error)
 	DelCutoffPairEvent(protocol, owner, token1, token2 common.Address) error
+	GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEvent, error)
 	RollBackCutoffPair(from, to int64) error
 	UpdateCutoffPairEvent(protocol, owner, token1, token2 common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
 

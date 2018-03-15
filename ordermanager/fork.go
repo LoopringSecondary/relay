@@ -41,7 +41,7 @@ func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkPro
 
 //	todo(fuk): fork逻辑重构
 // 1.从各个事件表中获取所有处于分叉块中的事件(fill,cancel,cutoff,cutoffPair)并按照blockNumber以及logIndex倒序
-// 2.对每个事件进行回滚处理,并更新数据库
+// 2.对每个事件进行回滚处理,并更新数据库,即便订单已经过期也要对其相关数据进行更新
 // 3.删除所有分叉事件,或者对其进行标记
 func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	log.Debugf("order manager processing chain fork......")

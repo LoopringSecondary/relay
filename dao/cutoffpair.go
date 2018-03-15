@@ -33,8 +33,10 @@ type CutOffPairEvent struct {
 	Token2      string `gorm:"column:token2;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber int64  `gorm:"column:block_number"`
+	LogIndex    int64  `gorm:"column:log_index"`
 	Cutoff      int64  `gorm:"column:cutoff"`
 	CreateTime  int64  `gorm:"column:create_time"`
+	Fork        bool   `gorm:"column:fork"`
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
@@ -45,6 +47,7 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.Token1 = src.Token1.Hex()
 	e.Token2 = src.Token2.Hex()
 	e.Cutoff = src.Cutoff.Int64()
+	e.LogIndex = src.LogIndex
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
 
@@ -60,6 +63,7 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Token2 = common.HexToAddress(e.Token2)
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
 	dst.Cutoff = big.NewInt(e.Cutoff)
+	dst.LogIndex = e.LogIndex
 	dst.BlockTime = e.CreateTime
 
 	return nil
@@ -97,8 +101,22 @@ func (s *RdsServiceImpl) DelCutoffPairEvent(protocol, owner, token1, token2 comm
 		Where("token2 in (?)", addresses).Error
 }
 
+func (s *RdsServiceImpl) GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEvent, error) {
+	var (
+		list []CutOffPairEvent
+		err  error
+	)
+
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork = ?", false).
+		Find(&list).Error
+
+	return list, err
+}
+
 func (s *RdsServiceImpl) RollBackCutoffPair(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
+	return s.db.Model(&CutOffPairEvent{}).Where("block_number > ? and block_number <= ?", from, to).
+		Update("fork=?", true).Error
 }
 
 func (s *RdsServiceImpl) UpdateCutoffPairEvent(protocol, owner, token1, token2 common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {
