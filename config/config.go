@@ -125,6 +125,7 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
+	IsDev                   bool
 	Debug                   bool
 	SaveEventLog            bool
 	UseTestStartBlockNumber bool
