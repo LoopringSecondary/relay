@@ -288,7 +288,7 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 				v.ConvertDown(&state)
 				orderHashList = append(orderHashList, state.RawOrder.Hash)
 			}
-			om.rds.SetCutOffOrders(orderHashList)
+			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
 		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
@@ -326,7 +326,7 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 				v.ConvertDown(&state)
 				orderHashList = append(orderHashList, state.RawOrder.Hash)
 			}
-			om.rds.SetCutOffOrders(orderHashList)
+			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
 		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
 	}

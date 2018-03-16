@@ -24,7 +24,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"hash"
 	"math/big"
 	"strconv"
 	"strings"
