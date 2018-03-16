@@ -31,13 +31,13 @@ const (
 	TX_STATUS_SUCCESS = 1
 	TX_STATUS_FAILED  = 2
 
-	TX_TYPE_APPROVE      = 1
-	TX_TYPE_SEND         = 2 // SEND
-	TX_TYPE_RECEIVE      = 3
-	TX_TYPE_SELL         = 4 // SELL
-	TX_TYPE_BUY          = 5
+	TX_TYPE_APPROVE = 1
+	TX_TYPE_SEND    = 2 // SEND
+	TX_TYPE_RECEIVE = 3
+	TX_TYPE_SELL    = 4 // SELL
+	TX_TYPE_BUY     = 5
 	//TX_TYPE_WRAP         = 6 // WETH DEPOSIT
-	TX_TYPE_CONVERT       = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT      = 7 // WETH WITHDRAWAL
 	TX_TYPE_CANCEL_ORDER = 8
 	TX_TYPE_CUTOFF       = 9
 	TX_TYPE_CUTOFF_PAIR  = 10
@@ -52,14 +52,14 @@ type Transaction struct {
 	To          common.Address `json:"to"`
 	TxHash      common.Hash    `json:"txHash"`
 	Symbol      string         `json:"symbol"`
-	Content     []byte		   `json:"content"`
+	Content     []byte         `json:"content"`
 	BlockNumber *big.Int       `json:"blockNumber`
 	Value       *big.Int       `json:"value"`
-	LogIndex    int64 		   `json:"logIndex"`
-	Type        uint8 		   `json:"type"`
+	LogIndex    int64          `json:"logIndex"`
+	Type        uint8          `json:"type"`
 	Status      uint8          `json:"status"`
-	CreateTime  int64 		   `json:"createTime"`
-	UpdateTime  int64		   `json:"updateTime"`
+	CreateTime  int64          `json:"createTime"`
+	UpdateTime  int64          `json:"updateTime"`
 }
 
 func (tx *Transaction) StatusStr() string {

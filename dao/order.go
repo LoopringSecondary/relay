@@ -22,13 +22,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/log"
 )
 
 // order amountS 上限1e30
@@ -306,10 +306,10 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 
 func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		orders     []Order
-		err        error
-		data       = make([]interface{}, 0)
-		pageResult PageResult
+		orders        []Order
+		err           error
+		data          = make([]interface{}, 0)
+		pageResult    PageResult
 		statusStrList = make([]string, 0)
 	)
 
@@ -320,7 +320,6 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 	if pageSize <= 0 {
 		pageSize = 20
 	}
-
 
 	if len(statusList) == 1 {
 		query["status"] = statusList[0]

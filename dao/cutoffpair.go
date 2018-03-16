@@ -40,7 +40,7 @@ type CutOffPairEvent struct {
 	Fork          bool   `gorm:"column:fork"`
 }
 
-// convert types/cutoffEvent to dao/CancelEvent
+// convert types/cutoffPairEvent to dao/cutoffPairEvent
 func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.Protocol.Hex()
@@ -52,7 +52,7 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
 
-	var list []string
+	list := []string{}
 	for _, v := range src.OrderHashList {
 		list = append(list, v.Hex())
 	}
@@ -62,7 +62,7 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	return nil
 }
 
-// convert dao/cutoffEvent to types/cutoffEvent
+// convert dao/cutoffPairEvent to types/cutoffPairEvent
 func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
 	dst.Protocol = common.HexToAddress(e.Protocol)
@@ -73,16 +73,13 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Cutoff = big.NewInt(e.Cutoff)
 	dst.LogIndex = e.LogIndex
 	dst.BlockTime = e.CreateTime
+	dst.OrderHashList = []common.Hash{}
 
-	var (
-		list          []string
-		orderHashList []common.Hash
-	)
+	list := []string{}
 	json.Unmarshal([]byte(e.OrderHashList), &list)
 	for _, v := range list {
-		orderHashList = append(orderHashList, common.HexToHash(v))
+		dst.OrderHashList = append(dst.OrderHashList, common.HexToHash(v))
 	}
-	dst.OrderHashList = orderHashList
 
 	return nil
 }

@@ -285,7 +285,7 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.Cutoff); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
-				v.ConvertDown(&state)
+				v.ConvertUp(&state)
 				orderHashList = append(orderHashList, state.RawOrder.Hash)
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
@@ -323,7 +323,7 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.Cutoff); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
-				v.ConvertDown(&state)
+				v.ConvertUp(&state)
 				orderHashList = append(orderHashList, state.RawOrder.Hash)
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)

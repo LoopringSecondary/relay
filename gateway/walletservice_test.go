@@ -29,11 +29,11 @@ import (
 	"reflect"
 	//"github.com/libp2p/go-libp2p-interface-conn"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 )
 
-type AB struct  {
+type AB struct {
 	s string
 }
 
@@ -56,20 +56,19 @@ type ABReq2 struct {
 	C string
 }
 
-func (ab *AB) ABTest1(query ABReq1)(res1 ABRes1, err error) {
-	return ABRes1{A : "AA", B: 11}, nil
+func (ab *AB) ABTest1(query ABReq1) (res1 ABRes1, err error) {
+	return ABRes1{A: "AA", B: 11}, nil
 }
 
-func (ab *AB) ABTest2()(res2 ABRes2, err error) {
+func (ab *AB) ABTest2() (res2 ABRes2, err error) {
 	fmt.Println("step in abtest 2.....")
-	return ABRes2{C : "CC", D: 11}, nil
+	return ABRes2{C: "CC", D: 11}, nil
 }
 
 func handleWithT(ab *AB, query interface{}, methodName string, ctx string) {
 
 	results := make([]reflect.Value, 0)
 	var err error
-
 
 	//reflect.ValueOf(query).Elem().
 	if query == nil {
@@ -93,7 +92,7 @@ func handleWithT(ab *AB, query interface{}, methodName string, ctx string) {
 		err = results[1].Interface().(error)
 	}
 	if err != nil {
-		fmt.Println("invoke error .voke error .voke error .voke error ." +  err.Error())
+		fmt.Println("invoke error .voke error .voke error .voke error ." + err.Error())
 	} else {
 		fmt.Println(res)
 		b, _ := json.Marshal(res.Interface())
@@ -122,8 +121,6 @@ func SetField(obj interface{}, name string, value interface{}) error {
 	structFieldValue.Set(val)
 	return nil
 }
-
-
 
 func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	//priceQuoteMap := make(map[string]*big.Rat)
@@ -174,4 +171,3 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	//handleWithT(&ab, nil, "ABTest2", string(abrqJson[:]))
 
 }
-

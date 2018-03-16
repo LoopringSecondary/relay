@@ -84,7 +84,7 @@ type SingleMarket struct {
 }
 
 type TrendQuery struct {
-	Market string `json:"market"`
+	Market   string `json:"market"`
 	Interval string `json:"interval"`
 }
 
@@ -110,8 +110,8 @@ type EstimatedAllocatedAllowanceQuery struct {
 type TransactionQuery struct {
 	ThxHash   string   `json:"thxHash"`
 	Owner     string   `json:"owner"`
-	Symbol  string   `json: "symbol"`
-	Status    string    `json: "status"`
+	Symbol    string   `json: "symbol"`
+	Status    string   `json: "status"`
 	TxType    string   `json:"txType"`
 	TrxHashes []string `json:"trxHashes"`
 	PageIndex int      `json:"pageIndex"`
@@ -126,7 +126,7 @@ type OrderQuery struct {
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
-	Side			string `json:"side"`
+	Side            string `json:"side"`
 }
 
 type DepthQuery struct {
@@ -191,14 +191,14 @@ type TransactionJsonResult struct {
 	To          common.Address `json:"to"`
 	TxHash      common.Hash    `json:"txHash"`
 	Symbol      string         `json:"symbol"`
-	Content     []byte		   `json:"content"`
-	BlockNumber int64       `json:"blockNumber"`
-	Value       string        `json:"value"`
-	LogIndex    int64 		   `json:"logIndex"`
-	Type        string 		   `json:"type"`
-	Status      string          `json:"status"`
-	CreateTime  int64 		   `json:"createTime"`
-	UpdateTime  int64		   `json:"updateTime"`
+	Content     []byte         `json:"content"`
+	BlockNumber int64          `json:"blockNumber"`
+	Value       string         `json:"value"`
+	LogIndex    int64          `json:"logIndex"`
+	Type        string         `json:"type"`
+	Status      string         `json:"status"`
+	CreateTime  int64          `json:"createTime"`
+	UpdateTime  int64          `json:"updateTime"`
 }
 
 type PriceQuote struct {
@@ -867,7 +867,7 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 
 func isAvailableMarket(market string) bool {
 	for _, v := range util.AllMarkets {
-		if market == v  {
+		if market == v {
 			return true
 		}
 	}
@@ -878,9 +878,9 @@ func txTypeToUint8(txType string) int {
 	switch txType {
 	case "pending":
 		return 0
-	case "success" :
+	case "success":
 		return 1
-	case "failed" :
+	case "failed":
 		return 2
 	default:
 		return -1

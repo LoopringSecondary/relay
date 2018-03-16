@@ -49,7 +49,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
 
-	var list []string
+	list := []string{}
 	for _, v := range src.OrderHashList {
 		list = append(list, v.Hex())
 	}
@@ -68,16 +68,13 @@ func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.LogIndex = e.LogIndex
 	dst.Cutoff = big.NewInt(e.Cutoff)
 	dst.BlockTime = e.CreateTime
+	dst.OrderHashList = []common.Hash{}
 
-	var (
-		list          []string
-		orderHashList []common.Hash
-	)
+	list := []string{}
 	json.Unmarshal([]byte(e.OrderHashList), &list)
 	for _, v := range list {
-		orderHashList = append(orderHashList, common.HexToHash(v))
+		dst.OrderHashList = append(dst.OrderHashList, common.HexToHash(v))
 	}
-	dst.OrderHashList = orderHashList
 	return nil
 }
 

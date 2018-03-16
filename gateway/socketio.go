@@ -25,8 +25,8 @@ type Server struct {
 }
 
 type SocketIOJsonResp struct {
-	Error string `json:"error"`
-	Code  string `json:"code"`
+	Error string      `json:"error"`
+	Code  string      `json:"code"`
 	Data  interface{} `json:"data"`
 }
 
@@ -52,19 +52,19 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type InvokeInfo struct {
 	MethodName string
-	Query interface{}
+	Query      interface{}
 }
 
-var EventTypeRoute = map[string] InvokeInfo {
-	"tickers" : {"GetTickers", SingleMarket{}},
-	"loopringTickers" : {"GetAllMarketTickers", nil},
-	"trends" : {"GetTrend", TrendQuery{}},
-	"portfolio" : {"GetPortfolio", SingleOwner{}},
-	"marketcap" : {"GetPriceQuote", PriceQuoteQuery{}},
-	"balance" : {"GetBalance", CommonTokenRequest{}},
-	"transaction" : {"GetTransactions", TransactionQuery{}},
-	"trxByHashes" : {"GetTransactionsByHash", TransactionQuery{}},
-	"depth" : {"GetDepth", DepthQuery{}},
+var EventTypeRoute = map[string]InvokeInfo{
+	"tickers":         {"GetTickers", SingleMarket{}},
+	"loopringTickers": {"GetAllMarketTickers", nil},
+	"trends":          {"GetTrend", TrendQuery{}},
+	"portfolio":       {"GetPortfolio", SingleOwner{}},
+	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}},
+	"balance":         {"GetBalance", CommonTokenRequest{}},
+	"transaction":     {"GetTransactions", TransactionQuery{}},
+	"trxByHashes":     {"GetTransactionsByHash", TransactionQuery{}},
+	"depth":           {"GetDepth", DepthQuery{}},
 }
 
 type SocketIOService interface {
@@ -183,7 +183,7 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 		if err != nil {
 			log.Println("unmarshal error " + err.Error())
 			errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
-			conn.Emit(eventType + EventPostfixRes, string(errJson[:]))
+			conn.Emit(eventType+EventPostfixRes, string(errJson[:]))
 			if conn != nil && conn.Context() != nil {
 				context := conn.Context().(map[string]string)
 				delete(context, eventType)
@@ -204,10 +204,10 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 	}
 	if err != nil {
 		errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
-		conn.Emit(eventType + EventPostfixRes, string(errJson[:]))
+		conn.Emit(eventType+EventPostfixRes, string(errJson[:]))
 	} else {
-		rst := SocketIOJsonResp{Data:res.Interface()}
+		rst := SocketIOJsonResp{Data: res.Interface()}
 		b, _ := json.Marshal(rst)
-		conn.Emit(eventType + EventPostfixRes, string(b[:]))
+		conn.Emit(eventType+EventPostfixRes, string(b[:]))
 	}
 }
