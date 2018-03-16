@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"hash"
 	"math/big"
 	"strconv"
 	"strings"
@@ -263,12 +264,18 @@ func (s *RdsServiceImpl) GetCutoffPairOrders(owner, token1, token2 common.Addres
 	return list, err
 }
 
-func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash) error {
+func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error {
 	var list []string
+
+	items := map[string]interface{}{
+		"status":        uint8(types.ORDER_CUTOFF),
+		"updated_block": blockNumber.Int64(),
+	}
+
 	for _, v := range orderHashList {
 		list = append(list, v.Hex())
 	}
-	err := s.db.Model(&Order{}).Where("order_hash in (?)", list).Update("status", types.ORDER_CUTOFF).Error
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", list).Update(items).Error
 	return err
 }
 
@@ -350,6 +357,14 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"updated_block":      blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
+}
+
+func (s *RdsServiceImpl) UpdateOrderWhileRollbackCutoff(orderhash common.Hash, status types.OrderStatus, blockNumber *big.Int) error {
+	items := map[string]interface{}{
+		"status":        uint8(status),
+		"updated_block": blockNumber.Int64(),
+	}
+	return s.db.Model(&Order{}).Where("order_hash = ?", orderhash.Hex()).Update(items).Error
 }
 
 func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {
