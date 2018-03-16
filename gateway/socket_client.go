@@ -106,7 +106,7 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 			depthQuery := DepthQuery{Length: length, Market: req["market"], ContractVersion: req["contractVersion"]}
 			return walletService.GetDepth(depthQuery)
 		case "trends":
-			query := SingleMarket{Market: req["market"]}
+			query := TrendQuery{Market: req["market"]}
 			return walletService.GetTrend(query)
 		}
 

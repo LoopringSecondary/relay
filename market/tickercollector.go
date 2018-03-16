@@ -262,7 +262,11 @@ func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
 			ticker.Open = innerTicker.Open
 			ticker.Close = innerTicker.Close
 			ticker.Last = innerTicker.Bid[0]
-			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			if ticker.Last - ticker.Open > 0 {
+				ticker.Change = fmt.Sprintf("+%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			} else {
+				ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			}
 			ticker.Exchange = "huobi"
 			ticker.Vol = innerTicker.Vol
 			ticker.High = innerTicker.High
@@ -305,7 +309,11 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 			ticker.Close, _ = strconv.ParseFloat(binanceTicker.Close, 64)
 			ticker.Last, _ = strconv.ParseFloat(binanceTicker.LastPrice, 64)
 			change, _ := strconv.ParseFloat(binanceTicker.Change, 64)
-			ticker.Change = fmt.Sprintf("%.2f%%", change)
+			if change > 0 {
+				ticker.Change = fmt.Sprintf("+%.2f%%", change)
+			} else {
+				ticker.Change = fmt.Sprintf("%.2f%%", change)
+			}
 			ticker.Exchange = "binance"
 			ticker.Vol, _ = strconv.ParseFloat(binanceTicker.Vol, 64)
 			ticker.High, _ = strconv.ParseFloat(binanceTicker.High, 64)
@@ -343,7 +351,11 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 			okexTicker := okexOutTicker.Ticker
 			ticker.Market = market
 			ticker.Last, _ = strconv.ParseFloat(okexTicker.LastPrice, 64)
-			ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			if 100*(ticker.Last-ticker.Open)/ticker.Open > 0 {
+				ticker.Change = fmt.Sprintf("+%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			} else {
+				ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
+			}
 			ticker.Exchange = "okex"
 			ticker.Amount, _ = strconv.ParseFloat(okexTicker.Vol, 64)
 			ticker.High, _ = strconv.ParseFloat(okexTicker.High, 64)

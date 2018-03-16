@@ -83,6 +83,11 @@ type SingleMarket struct {
 	Market string `json:"market"`
 }
 
+type TrendQuery struct {
+	Market string `json:"market"`
+	Interval string `json:"interval"`
+}
+
 type SingleOwner struct {
 	Owner string `json:"owner"`
 }
@@ -105,6 +110,9 @@ type EstimatedAllocatedAllowanceQuery struct {
 type TransactionQuery struct {
 	ThxHash   string   `json:"thxHash"`
 	Owner     string   `json:"owner"`
+	Symbol  string   `json: "symbol"`
+	Status    string    `json: "status"`
+	TxType    string   `json:"txType"`
 	TrxHashes []string `json:"trxHashes"`
 	PageIndex int      `json:"pageIndex"`
 	PageSize  int      `json:"pageSize"`
@@ -118,6 +126,7 @@ type OrderQuery struct {
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
+	Side			string `json:"side"`
 }
 
 type DepthQuery struct {
@@ -173,6 +182,23 @@ type OrderJsonResult struct {
 	CancelledAmountS string             `json:"cancelledAmountS"`
 	CancelledAmountB string             `json:"cancelledAmountB"`
 	Status           string             `json:"status"`
+}
+
+type TransactionJsonResult struct {
+	Protocol    common.Address `json:"protocol"`
+	Owner       common.Address `json:"owner"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	TxHash      common.Hash    `json:"txHash"`
+	Symbol      string         `json:"symbol"`
+	Content     []byte		   `json:"content"`
+	BlockNumber int64       `json:"blockNumber"`
+	Value       string        `json:"value"`
+	LogIndex    int64 		   `json:"logIndex"`
+	Type        string 		   `json:"type"`
+	Status      string          `json:"status"`
+	CreateTime  int64 		   `json:"createTime"`
+	UpdateTime  int64		   `json:"updateTime"`
 }
 
 type PriceQuote struct {
@@ -251,39 +277,31 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
-		fmt.Println("priceQuote key " + pq.Token)
-		fmt.Print("priceQuote value ")
-		fmt.Println(pq.Price)
 	}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
-		fmt.Println("start handle asset handler.....")
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(totalAsset.Float64())
-		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
-		fmt.Println(totalAsset.Float64())
 	}
 
 	for k, v := range balances {
-		fmt.Println("start collect asset handler.....")
-		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
+		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(totalAsset)
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
-		fmt.Println(percentage)
-		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
+		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
+
+	sort.Slice(res, func(i, j int) bool {
+		percentStrLeft := strings.Replace(res[i].Percentage, "%", "", 1)
+		percentStrRight := strings.Replace(res[j].Percentage, "%", "", 1)
+		left, _ := strconv.ParseFloat(percentStrLeft, 64)
+		right, _ := strconv.ParseFloat(percentStrRight, 64)
+		return left < right
+	})
 
 	return
 }
@@ -292,7 +310,10 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 
 	rst := PriceQuote{query.Currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		price, err := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		if err != nil {
+			return result, err
+		}
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 		if k == "WETH" {
@@ -350,8 +371,8 @@ func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res stri
 }
 
 func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
-	orderQuery, pi, ps := convertFromQuery(query)
-	queryRst, err := w.orderManager.GetOrders(orderQuery, pi, ps)
+	orderQuery, statusList, pi, ps := convertFromQuery(query)
+	queryRst, err := w.orderManager.GetOrders(orderQuery, statusList, pi, ps)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -438,15 +459,15 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market.Ticker, err error) {
 	res, err = w.trendManager.GetTicker()
 
-	for i, t := range res {
-		w.fillBuyAndSell(&t, query.ContractVersion)
-		res[i] = t
-	}
+	//for i, t := range res {
+	//	w.fillBuyAndSell(&t, query.ContractVersion)
+	//	res[i] = t
+	//}
 	return
 }
 
-func (w *WalletServiceImpl) GetTrend(query SingleMarket) (res []market.Trend, err error) {
-	res, err = w.trendManager.GetTrends(query.Market)
+func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
+	res, err = w.trendManager.GetTrends(query.Market, query.Interval)
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Start < res[j].Start
 	})
@@ -520,12 +541,25 @@ func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
 
 	trxQuery := make(map[string]interface{})
+
+	if query.Symbol != "" {
+		trxQuery["symbol"] = query.Symbol
+	}
+
 	if query.Owner != "" {
 		trxQuery["owner"] = query.Owner
 	}
 
 	if query.ThxHash != "" {
 		trxQuery["tx_hash"] = query.ThxHash
+	}
+
+	if txStatusToUint8(query.Status) > 0 {
+		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
+	}
+
+	if txTypeToUint8(query.TxType) > 0 {
+		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
 	}
 
 	pageIndex := query.PageIndex
@@ -547,12 +581,12 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 		o := d.(dao.Transaction)
 		tr := types.Transaction{}
 		err = o.ConvertUp(&tr)
-		rst.Data = append(rst.Data, o)
+		rst.Data = append(rst.Data, toTxJsonResult(tr))
 	}
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []types.Transaction, err error) {
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []TransactionJsonResult, err error) {
 
 	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
 
@@ -560,37 +594,40 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 		return nil, err
 	}
 
-	result = make([]types.Transaction, 0)
+	result = make([]TransactionJsonResult, 0)
 	for _, r := range rst {
 		tr := types.Transaction{}
 		err = r.ConvertUp(&tr)
 		if err != nil {
 			log.Error("convert error occurs..." + err.Error())
 		}
-		result = append(result, tr)
+		result = append(result, toTxJsonResult(tr))
 	}
 
 	return result, nil
 }
 
-func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
+func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
-	status := convertStatus(orderQuery.Status)
-	if uint8(status) != 0 {
-		query["status"] = uint8(status)
-	}
+	statusList = convertStatus(orderQuery.Status)
 	if orderQuery.Owner != "" {
 		query["owner"] = orderQuery.Owner
 	}
 	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
-	if orderQuery.Market != "" {
+
+	if isAvailableMarket(orderQuery.Market) {
 		query["market"] = orderQuery.Market
 	}
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
+	}
+	if strings.ToLower(orderQuery.Side) == "buy" {
+		query["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(orderQuery.Side) == "sell" {
+		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
 	}
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
@@ -598,20 +635,24 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pag
 
 }
 
-func convertStatus(s string) types.OrderStatus {
+func convertStatus(s string) []types.OrderStatus {
 	switch s {
+	case "ORDER_OPENED":
+		return []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 	case "ORDER_NEW":
-		return types.ORDER_NEW
+		return []types.OrderStatus{types.ORDER_NEW}
 	case "ORDER_PARTIAL":
-		return types.ORDER_PARTIAL
+		return []types.OrderStatus{types.ORDER_PARTIAL}
 	case "ORDER_FINISHED":
-		return types.ORDER_FINISHED
+		return []types.OrderStatus{types.ORDER_FINISHED}
 	case "ORDER_CANCELED":
-		return types.ORDER_CANCEL
+		return []types.OrderStatus{types.ORDER_CANCEL}
 	case "ORDER_CUTOFF":
-		return types.ORDER_CUTOFF
+		return []types.OrderStatus{types.ORDER_CUTOFF}
+	case "ORDER_EXPIRE":
+		return []types.OrderStatus{types.ORDER_EXPIRE}
 	}
-	return types.ORDER_UNKNOWN
+	return []types.OrderStatus{}
 }
 
 func getStringStatus(s types.OrderStatus) string {
@@ -822,4 +863,74 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
 	}
+}
+
+func isAvailableMarket(market string) bool {
+	for _, v := range util.AllMarkets {
+		if market == v  {
+			return true
+		}
+	}
+	return false
+}
+
+func txTypeToUint8(txType string) int {
+	switch txType {
+	case "pending":
+		return 0
+	case "success" :
+		return 1
+	case "failed" :
+		return 2
+	default:
+		return -1
+	}
+}
+
+func txStatusToUint8(status string) int {
+	switch status {
+	case "approve":
+		return 1
+	case "send":
+		return 2
+	case "receive":
+		return 3
+	case "sell":
+		return 4
+	case "buy":
+		return 5
+	case "convert":
+		return 7
+	case "cancel_order":
+		return 8
+	case "cutoff":
+		return 9
+	case "cutoff_trading_pair":
+		return 10
+	default:
+		return -1
+	}
+}
+
+func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
+	dst := TransactionJsonResult{}
+	dst.Protocol = tx.Protocol
+	dst.Owner = tx.Owner
+	dst.From = tx.From
+	dst.To = tx.To
+	dst.TxHash = tx.TxHash
+	dst.Content = []byte(tx.Content)
+	dst.BlockNumber = tx.BlockNumber.Int64()
+	dst.LogIndex = tx.LogIndex
+	if tx.Value == nil {
+		dst.Value = "0"
+	} else {
+		dst.Value = tx.Value.String()
+	}
+	dst.Type = tx.TypeStr()
+	dst.Status = tx.StatusStr()
+	dst.CreateTime = tx.CreateTime
+	dst.UpdateTime = tx.UpdateTime
+	dst.Symbol = tx.Symbol
+	return dst
 }

@@ -174,9 +174,10 @@ Get loopring order list.
 
 - `owner` - The address, if is null, will query all orders.
 - `orderHash` - The order hash.
-- `status` - order status enum string.(status collection is : ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
+- `status` - order status enum string.(status collection is : ORDER_OPENED(include ORDER_NEW and ORDER_PARTIAL), ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
 - `contractVersion` - the loopring contract version you selected.
 - `market` - The market of the order.(format is LRC-WETH)
+- `side` - The side of order. only support "buy" and "sell".
 - `pageIndex` - The page want to query, default is 1.
 - `pageSize` - The size per page, default is 50.
 
@@ -185,7 +186,8 @@ params: {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
   "status" : "ORDER_CANCEL",
-  "contractVersion" : "v1.0",
+  "side" : "buy",
+  "contractVersion" : "v1.2",
   "market" : "coss-weth",
   "pageIndex" : 2,
   "pageSize" : 40

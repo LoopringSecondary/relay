@@ -50,7 +50,7 @@ type RdsService interface {
 	GetCutoffPairOrders(owner, token1, token2 common.Address, cutoffTime *big.Int) ([]Order, error)
 	SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
-	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
+	OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error)
 	TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
