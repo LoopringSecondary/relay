@@ -40,10 +40,15 @@ func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkPro
 	return processor
 }
 
-//	todo(fuk): fork逻辑重构
+//	fork process chain fork logic in order manager
 // 1.从各个事件表中获取所有处于分叉块中的事件(fill,cancel,cutoff,cutoffPair)并按照blockNumber以及logIndex倒序
-// 2.对每个事件进行回滚处理,并更新数据库,即便订单已经过期也要对其相关数据进行更新
-// 3.删除所有分叉事件,或者对其进行标记
+// 2.遍历event,处理各个类型event对应的回滚逻辑:
+//   a.处理fill,不需关心订单当前状态,减去相应fill量,然后判定订单status为new/partial/finished
+//   b.处理cancel,在合约里,订单是可以被持续cancel的,ordermanager跟随合约逻辑,即便订单已经处于finished/cutoff状态,cancel的量也会递增
+//     那么,在回滚时,我们可以不关心订单状态(前提是订单只有finished状态,没有cancelled状态,如果前端展示需要cancelled状态,必须根据cancel的量进行计算)
+//   c.处理cutoff,合约里cutoff可以重复提交,而在ordermanager中,所有cutoff事件都会被存储,但是更新订单时,同一个订单不会被多次cutoff
+//     那么,在回滚时,我们需要知道某一个订单以前是否也cutoff过,在dao/cutoff中我们存储了orderhashList,可以将这些订单取出并按照订单量重置状态
+//   d.处理cutoffPair,同cutoff
 func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 	log.Debugf("order manager processing chain fork......")
 
@@ -80,26 +85,19 @@ func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
 	state := &types.OrderState{}
 	model, err := p.db.GetOrderByHash(evt.OrderHash)
 	if err != nil {
-		return err
+		log.Debugf("fork fill event,order:%s not exist in dao/fill", evt.OrderHash.Hex())
+		return nil
 	}
-	if err := model.ConvertUp(state); err != nil {
-		return err
-	}
-
-	// judge order status
-	//if state.Status == types.ORDER_CUTOFF || state.Status == types.ORDER_FINISHED || state.Status == types.ORDER_UNKNOWN {
-	//	log.Debugf("order manager,handle order filled event,order %s status is %d ", state.RawOrder.Hash.Hex(), state.Status)
-	//	return nil
-	//}
+	model.ConvertUp(state)
 
 	// calculate dealt amount
 	state.UpdatedBlock = evt.BlockNumber
-	state.DealtAmountS = new(big.Int).Sub(state.DealtAmountS, evt.AmountS)
-	state.DealtAmountB = new(big.Int).Sub(state.DealtAmountB, evt.AmountB)
-	state.SplitAmountS = new(big.Int).Sub(state.SplitAmountS, evt.SplitS)
-	state.SplitAmountB = new(big.Int).Sub(state.SplitAmountB, evt.SplitB)
+	state.DealtAmountS = safeSub(state.DealtAmountS, evt.AmountS)
+	state.DealtAmountB = safeSub(state.DealtAmountB, evt.AmountB)
+	state.SplitAmountS = safeSub(state.SplitAmountS, evt.SplitS)
+	state.SplitAmountB = safeSub(state.SplitAmountB, evt.SplitB)
 
-	log.Debugf("order manager,process fork fill event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
+	log.Debugf("fork fill event, orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
 	settleOrderStatus(state, p.mc)
@@ -117,14 +115,88 @@ func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
 }
 
 func (p *forkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) error {
+	// get rds.Order and types.OrderState
+	state := &types.OrderState{}
+	model, err := p.db.GetOrderByHash(evt.OrderHash)
+	if err != nil {
+		log.Debugf("fork order cancelled event,order:%s not exist in dao/order", evt.OrderHash.Hex())
+		return nil
+	}
+	model.ConvertUp(state)
+
+	// calculate remainAmount and cancelled amount should be saved whether order is finished or not
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		state.CancelledAmountB = safeSub(state.CancelledAmountB, evt.AmountCancelled)
+		log.Debugf("fork order cancelled event,order:%s cancelled amountb:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountB.String())
+	} else {
+		state.CancelledAmountS = safeSub(state.CancelledAmountS, evt.AmountCancelled)
+		log.Debugf("fork order cancelled event,order:%s cancelled amounts:%s", state.RawOrder.Hash.Hex(), state.CancelledAmountS.String())
+	}
+
+	// update order status
+	settleOrderStatus(state, p.mc)
+	state.UpdatedBlock = evt.BlockNumber
+
+	// update rds.Order
+	if err := model.ConvertDown(state); err != nil {
+		return err
+	}
+	if err := p.db.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.UpdatedBlock); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (p *forkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
+	if len(evt.OrderHashList) == 0 {
+		log.Debugf("fork cutoff event,tx:%s,no order cutoff", evt.TxHash.Hex())
+		return nil
+	}
+
+	for _, orderhash := range evt.OrderHashList {
+		state := &types.OrderState{}
+		model, err := p.db.GetOrderByHash(orderhash)
+		if err != nil {
+			log.Debugf("fork cutoff event,order:%s not exist in dao/order", orderhash.Hex())
+			continue
+		}
+		model.ConvertUp(state)
+
+		// update order status
+		settleOrderStatus(state, p.mc)
+
+		if err := p.db.UpdateOrderWhileRollbackCutoff(orderhash, state.Status, evt.BlockNumber); err != nil {
+			log.Errorf("fork cutoff event,error:%s", err.Error())
+		}
+	}
+
 	return nil
 }
 
 func (p *forkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) error {
+	if len(evt.OrderHashList) == 0 {
+		log.Debugf("fork cutoffPair event,tx:%s,no order cutoff", evt.TxHash.Hex())
+		return nil
+	}
+
+	for _, orderhash := range evt.OrderHashList {
+		state := &types.OrderState{}
+		model, err := p.db.GetOrderByHash(orderhash)
+		if err != nil {
+			log.Debugf("fork cutoffPair event,order:%s not exist in dao/order", orderhash.Hex())
+			continue
+		}
+		model.ConvertUp(state)
+
+		// update order status
+		settleOrderStatus(state, p.mc)
+
+		if err := p.db.UpdateOrderWhileRollbackCutoff(orderhash, state.Status, evt.BlockNumber); err != nil {
+			log.Errorf("fork cutoffPair event,error:%s", err.Error())
+		}
+	}
+
 	return nil
 }
 
@@ -233,5 +305,15 @@ func (l InnerForkEventList) Less(i, j int) bool {
 		return l[i].LogIndex > l[j].LogIndex
 	} else {
 		return l[i].BlockNumber > l[j].BlockNumber
+	}
+}
+
+func safeSub(x, y *big.Int) *big.Int {
+	zero := big.NewInt(0)
+	ret := new(big.Int).Sub(x, y)
+	if ret.Cmp(zero) >= 0 {
+		return ret
+	} else {
+		return zero
 	}
 }
