@@ -287,13 +287,21 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	}
 
 	for k, v := range balances {
-		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
+		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		percentage, _ := asset.Quo(asset, totalAsset).Float64()
 		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
+
+	sort.Slice(res, func(i, j int) bool {
+		percentStrLeft := strings.Replace(res[i].Percentage, "%", "", 1)
+		percentStrRight := strings.Replace(res[j].Percentage, "%", "", 1)
+		left, _ := strconv.ParseFloat(percentStrLeft, 64)
+		right, _ := strconv.ParseFloat(percentStrRight, 64)
+		return left < right
+	})
 
 	return
 }
@@ -891,9 +899,7 @@ func txStatusToUint8(status string) int {
 		return 4
 	case "buy":
 		return 5
-	case "wrap":
-		return 6
-	case "unwrap":
+	case "convert":
 		return 7
 	case "cancel_order":
 		return 8

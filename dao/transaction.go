@@ -101,7 +101,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		query = "tx_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.Type)
 
-	case types.TX_TYPE_WRAP, types.TX_TYPE_UNWRAP:
+	case types.TX_TYPE_CONVERT:
 		query = "tx_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.Type)
 

@@ -36,8 +36,8 @@ const (
 	TX_TYPE_RECEIVE      = 3
 	TX_TYPE_SELL         = 4 // SELL
 	TX_TYPE_BUY          = 5
-	TX_TYPE_WRAP         = 6 // WETH DEPOSIT
-	TX_TYPE_UNWRAP       = 7 // WETH WITHDRAWAL
+	//TX_TYPE_WRAP         = 6 // WETH DEPOSIT
+	TX_TYPE_CONVERT       = 7 // WETH WITHDRAWAL
 	TX_TYPE_CANCEL_ORDER = 8
 	TX_TYPE_CUTOFF       = 9
 	TX_TYPE_CUTOFF_PAIR  = 10
@@ -90,10 +90,8 @@ func (tx *Transaction) TypeStr() string {
 		ret = "sell"
 	case TX_TYPE_BUY:
 		ret = "buy"
-	case TX_TYPE_WRAP:
-		ret = "wrap"
-	case TX_TYPE_UNWRAP:
-		ret = "unwrap"
+	case TX_TYPE_CONVERT:
+		ret = "convert"
 	case TX_TYPE_CANCEL_ORDER:
 		ret = "cancel_order"
 	case TX_TYPE_CUTOFF:
@@ -276,7 +274,7 @@ func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error 
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
-	tx.Type = TX_TYPE_WRAP
+	tx.Type = TX_TYPE_CONVERT
 	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
@@ -289,7 +287,7 @@ func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent) 
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
-	tx.Type = TX_TYPE_UNWRAP
+	tx.Type = TX_TYPE_CONVERT
 	tx.LogIndex = 0
 
 	tx.fullFilled(src.TxInfo)
