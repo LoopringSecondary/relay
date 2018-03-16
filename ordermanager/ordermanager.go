@@ -89,7 +89,7 @@ func (om *OrderManagerImpl) Start() {
 	om.ringMinedWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
 	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
-	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCutoff}
+	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoff}
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
@@ -262,72 +262,82 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	return nil
 }
 
-func (om *OrderManagerImpl) handleOrderCutoff(input eventemitter.EventData) error {
-	event := input.(*types.CutoffEvent)
+// 所有cutoff event都应该存起来,但不是所有event都会影响订单
+func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
+	evt := input.(*types.CutoffEvent)
 
-	// save cutoff event
-	_, err := om.rds.GetCutoffEvent(event.TxHash)
+	// check tx exist
+	_, err := om.rds.GetCutoffEvent(evt.TxHash)
 	if err == nil {
-		log.Debugf("order manager,handle order cutoff event error:event %s have already exist", event.TxHash.Hex())
+		log.Debugf("order manager,handle order cutoff event error:event %s have already exist", evt.TxHash.Hex())
 		return nil
 	}
-	newCutoffEventModel := &dao.CutOffEvent{}
-	newCutoffEventModel.ConvertDown(event)
-	newCutoffEventModel.Fork = false
-	if err := om.rds.Add(newCutoffEventModel); err != nil {
-		return err
-	}
 
-	protocol := event.Protocol
-	owner := event.Owner
-	currentCutoff := event.Cutoff
-	lastCutoff := om.cutoffCache.GetCutoff(protocol, owner)
+	lastCutoff := om.cutoffCache.GetCutoff(evt.Protocol, evt.Owner)
+
+	var orderHashList []common.Hash
 
 	// 首次存储到缓存，lastCutoff == currentCutoff
-	if currentCutoff.Cmp(lastCutoff) < 0 {
-		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", protocol.Hex(), owner.Hex(), lastCutoff.String(), currentCutoff.String())
+	if evt.Cutoff.Cmp(lastCutoff) < 0 {
+		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoff.String(), evt.Cutoff.String())
 	} else {
-		om.cutoffCache.UpdateCutoff(protocol, owner, currentCutoff)
-		om.rds.SetCutOff(owner, currentCutoff)
-		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", event.Owner.Hex(), event.Cutoff.String())
+		om.cutoffCache.UpdateCutoff(evt.Protocol, evt.Owner, evt.Cutoff)
+		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.Cutoff); len(orders) > 0 {
+			for _, v := range orders {
+				var state types.OrderState
+				v.ConvertDown(&state)
+				orderHashList = append(orderHashList, state.RawOrder.Hash)
+			}
+			om.rds.SetCutOffOrders(orderHashList)
+		}
+		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Cutoff.String())
 	}
 
-	return nil
+	// save cutoff event
+	evt.OrderHashList = orderHashList
+	newCutoffEventModel := &dao.CutOffEvent{}
+	newCutoffEventModel.ConvertDown(evt)
+	newCutoffEventModel.Fork = false
+
+	return om.rds.Add(newCutoffEventModel)
 }
 
 func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
-	event := input.(*types.CutoffPairEvent)
+	evt := input.(*types.CutoffPairEvent)
 
-	// save cutoffPair event
-	_, err := om.rds.GetCutoffPairEvent(event.TxHash)
+	// check tx exist
+	_, err := om.rds.GetCutoffPairEvent(evt.TxHash)
 	if err == nil {
-		log.Debugf("order manager,handle order cutoffPair event error:event %s have already exist", event.TxHash.Hex())
+		log.Debugf("order manager,handle order cutoffPair event error:event %s have already exist", evt.TxHash.Hex())
 		return nil
 	}
-	newCutoffPairEventModel := &dao.CutOffPairEvent{}
-	newCutoffPairEventModel.ConvertDown(event)
-	newCutoffPairEventModel.Fork = false
-	if err := om.rds.Add(newCutoffPairEventModel); err != nil {
-		return err
-	}
 
-	protocol := event.Protocol
-	owner := event.Owner
-	token1 := event.Token1
-	token2 := event.Token2
-	currentCutoffPair := event.Cutoff
-	lastCutoffPair := om.cutoffCache.GetCutoffPair(protocol, owner, token1, token2)
+	lastCutoffPair := om.cutoffCache.GetCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2)
 
+	var orderHashList []common.Hash
 	// 首次存储到缓存，lastCutoffPair == currentCutoffPair
-	if currentCutoffPair.Cmp(lastCutoffPair) < 0 {
-		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", protocol.Hex(), owner.Hex(), lastCutoffPair.String(), currentCutoffPair.String())
+	if evt.Cutoff.Cmp(lastCutoffPair) < 0 {
+		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoffPair.String(), evt.Cutoff.String())
 	} else {
-		om.cutoffCache.UpdateCutoffPair(protocol, owner, token1, token2, currentCutoffPair)
-		om.rds.SetCutoffPair(owner, token1, token2, currentCutoffPair)
-		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", owner.Hex(), token1.Hex(), token2.Hex(), currentCutoffPair.String())
+		om.cutoffCache.UpdateCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2, evt.Cutoff)
+		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.Cutoff); len(orders) > 0 {
+			for _, v := range orders {
+				var state types.OrderState
+				v.ConvertDown(&state)
+				orderHashList = append(orderHashList, state.RawOrder.Hash)
+			}
+			om.rds.SetCutOffOrders(orderHashList)
+		}
+		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
 	}
 
-	return nil
+	// save transaction
+	evt.OrderHashList = orderHashList
+	newCutoffPairEventModel := &dao.CutOffPairEvent{}
+	newCutoffPairEventModel.ConvertDown(evt)
+	newCutoffPairEventModel.Fork = false
+
+	return om.rds.Add(newCutoffPairEventModel)
 }
 
 func (om *OrderManagerImpl) IsOrderFullFinished(state *types.OrderState) bool {

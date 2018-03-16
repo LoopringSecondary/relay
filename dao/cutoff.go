@@ -19,6 +19,7 @@
 package dao
 
 import (
+	"encoding/json"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -26,15 +27,16 @@ import (
 
 // todo(fuk): rename table
 type CutOffEvent struct {
-	ID          int    `gorm:"column:id;primary_key;"`
-	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner       string `gorm:"column:owner;type:varchar(42)"`
-	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	BlockNumber int64  `gorm:"column:block_number"`
-	Cutoff      int64  `gorm:"column:cutoff"`
-	LogIndex    int64  `gorm:"column:log_index"`
-	Fork        bool   `gorm:"fork"`
-	CreateTime  int64  `gorm:"column:create_time"`
+	ID            int    `gorm:"column:id;primary_key;"`
+	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	Owner         string `gorm:"column:owner;type:varchar(42)"`
+	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber   int64  `gorm:"column:block_number"`
+	Cutoff        int64  `gorm:"column:cutoff"`
+	LogIndex      int64  `gorm:"column:log_index"`
+	Fork          bool   `gorm:"fork"`
+	CreateTime    int64  `gorm:"column:create_time"`
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
@@ -46,6 +48,13 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.LogIndex = src.LogIndex
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
+
+	var list []string
+	for _, v := range src.OrderHashList {
+		list = append(list, v.Hex())
+	}
+	bs, _ := json.Marshal(list)
+	e.OrderHashList = string(bs)
 
 	return nil
 }
@@ -60,6 +69,15 @@ func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.Cutoff = big.NewInt(e.Cutoff)
 	dst.BlockTime = e.CreateTime
 
+	var (
+		list          []string
+		orderHashList []common.Hash
+	)
+	json.Unmarshal([]byte(e.OrderHashList), &list)
+	for _, v := range list {
+		orderHashList = append(orderHashList, common.HexToHash(v))
+	}
+	dst.OrderHashList = orderHashList
 	return nil
 }
 

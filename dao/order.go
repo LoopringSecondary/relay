@@ -236,19 +236,39 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	return list, err
 }
 
-func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
+func (s *RdsServiceImpl) GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
 	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
-	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
-	return err
+	err = s.db.Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Find(&list).Error
+	return list, err
 }
 
-func (s *RdsServiceImpl) SetCutoffPair(owner, token1, token2 common.Address, cutoffTime *big.Int) error {
+func (s *RdsServiceImpl) GetCutoffPairOrders(owner, token1, token2 common.Address, cutoffTime *big.Int) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
 	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
 	tokens := []string{token1.Hex(), token2.Hex()}
-	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
+	err = s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
 		Where("token_s in (?)", tokens).
 		Where("token_b in (?)", tokens).
-		Update("status", types.ORDER_CUTOFF).Error
+		Find(&list).Error
+
+	return list, err
+}
+
+func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash) error {
+	var list []string
+	for _, v := range orderHashList {
+		list = append(list, v.Hex())
+	}
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", list).Update("status", types.ORDER_CUTOFF).Error
 	return err
 }
 

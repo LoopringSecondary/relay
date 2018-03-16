@@ -102,16 +102,18 @@ type OrderCancelledEvent struct {
 
 type CutoffEvent struct {
 	TxInfo
-	Owner  common.Address
-	Cutoff *big.Int
+	Owner         common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type CutoffPairEvent struct {
 	TxInfo
-	Owner  common.Address
-	Token1 common.Address
-	Token2 common.Address
-	Cutoff *big.Int
+	Owner         common.Address
+	Token1        common.Address
+	Token2        common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type RingMinedEvent struct {

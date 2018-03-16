@@ -19,23 +19,25 @@
 package dao
 
 import (
+	"encoding/json"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
 type CutOffPairEvent struct {
-	ID          int    `gorm:"column:id;primary_key;"`
-	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner       string `gorm:"column:owner;type:varchar(42)"`
-	Token1      string `gorm:"column:token1;type:varchar(42)"`
-	Token2      string `gorm:"column:token2;type:varchar(42)"`
-	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	BlockNumber int64  `gorm:"column:block_number"`
-	LogIndex    int64  `gorm:"column:log_index"`
-	Cutoff      int64  `gorm:"column:cutoff"`
-	CreateTime  int64  `gorm:"column:create_time"`
-	Fork        bool   `gorm:"column:fork"`
+	ID            int    `gorm:"column:id;primary_key;"`
+	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	Owner         string `gorm:"column:owner;type:varchar(42)"`
+	Token1        string `gorm:"column:token1;type:varchar(42)"`
+	Token2        string `gorm:"column:token2;type:varchar(42)"`
+	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber   int64  `gorm:"column:block_number"`
+	LogIndex      int64  `gorm:"column:log_index"`
+	Cutoff        int64  `gorm:"column:cutoff"`
+	CreateTime    int64  `gorm:"column:create_time"`
+	Fork          bool   `gorm:"column:fork"`
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
@@ -49,6 +51,13 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.LogIndex = src.LogIndex
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
+
+	var list []string
+	for _, v := range src.OrderHashList {
+		list = append(list, v.Hex())
+	}
+	bs, _ := json.Marshal(list)
+	e.OrderHashList = string(bs)
 
 	return nil
 }
@@ -64,6 +73,16 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Cutoff = big.NewInt(e.Cutoff)
 	dst.LogIndex = e.LogIndex
 	dst.BlockTime = e.CreateTime
+
+	var (
+		list          []string
+		orderHashList []common.Hash
+	)
+	json.Unmarshal([]byte(e.OrderHashList), &list)
+	for _, v := range list {
+		orderHashList = append(orderHashList, common.HexToHash(v))
+	}
+	dst.OrderHashList = orderHashList
 
 	return nil
 }
