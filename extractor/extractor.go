@@ -171,37 +171,33 @@ func (l *ExtractorServiceImpl) processBlock() {
 		receipt := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
-		l.processTransaction(transaction, receipt, block.Timestamp.BigInt(), currentBlock.BlockNumber)
+		l.processTransaction(&transaction, &receipt, block.Timestamp.BigInt())
 	}
 }
 
-func (l *ExtractorServiceImpl) processTransaction(tx ethaccessor.Transaction, receipt ethaccessor.TransactionReceipt, time, blockNumber *big.Int) {
+func (l *ExtractorServiceImpl) processTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
 	txIsFailed := receipt.IsFailed(l.options.IsDev)
 
-	// process method
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	//todo(fuk): 这里txIsFailed在私链及测试链上为false，在主网上正常
-	// if !txIsFailed && len(receipt.Logs) > 0 {
 	if len(receipt.Logs) > 0 {
-		if err := l.processEvent(receipt, time); err != nil {
+		if err := l.processEvent(tx, receipt, blockTime); err != nil {
 			log.Errorf(err.Error())
 		}
 	}
 
-	// process contract
 	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		if err := l.processMethod(tx, time, blockNumber, txIsFailed); err != nil {
+		if err := l.processMethod(tx, receipt, blockTime, txIsFailed); err != nil {
 			log.Errorf(err.Error())
 		}
 	} else {
 		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
 	}
 
-	l.processNormalTransaction(&tx, &receipt, time)
+	l.processNormalTransaction(tx, receipt, blockTime)
 }
 
-func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, blockNumber *big.Int, txIsFailed bool) error {
+func (l *ExtractorServiceImpl) processMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txIsFailed bool) error {
 	var (
 		method MethodData
 		ok     bool
@@ -222,13 +218,13 @@ func (l *ExtractorServiceImpl) processMethod(tx ethaccessor.Transaction, time, b
 		return nil
 	}
 
-	method.FullFilled(&tx, time, txIsFailed)
+	method.FullFilled(tx, receipt, blockTime, txIsFailed)
 
 	eventemitter.Emit(method.Id, method)
 	return nil
 }
 
-func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionReceipt, time *big.Int) error {
+func (l *ExtractorServiceImpl) processEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	txhash := receipt.TransactionHash
 
 	for _, evtLog := range receipt.Logs {
@@ -261,7 +257,7 @@ func (l *ExtractorServiceImpl) processEvent(receipt ethaccessor.TransactionRecei
 		}
 
 		// full filled event and emit to abi processor
-		event.FullFilled(&evtLog, time, txhash, receipt.From, receipt.To)
+		event.FullFilled(&evtLog, tx, receipt, blockTime)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 

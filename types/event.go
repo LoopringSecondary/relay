@@ -23,19 +23,6 @@ import (
 	"math/big"
 )
 
-type TxInfo struct {
-	Protocol    common.Address
-	From        common.Address
-	To          common.Address
-	TxHash      common.Hash
-	BlockHash   common.Hash
-	LogIndex    int64
-	BlockNumber *big.Int
-	BlockTime   int64
-	TxFailed    bool
-	Symbol      string
-}
-
 type TokenRegisterEvent struct {
 	TxInfo
 	Token  common.Address

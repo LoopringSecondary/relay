@@ -22,7 +22,6 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"time"
 )
 
 type Transaction struct {
@@ -39,6 +38,10 @@ type Transaction struct {
 	Value       string `gorm:"column:amount;type:varchar(30)"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
+	GasLimit    string `gorm:"column:gas_limit;type:varchar(30)"`
+	GasUsed     string `gorm:"column:gas_used;type:varchar(30)"`
+	GasPrice    string `gorm:"column:gas_price;type:varchar(30)"`
+	Nonce       string `gorm:"column:nonce;type:varchar(30)"`
 	CreateTime  int64  `gorm:"column:create_time"`
 	UpdateTime  int64  `gorm:"column:update_time"`
 }
@@ -60,6 +63,10 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.CreateTime = src.CreateTime
 	tx.UpdateTime = src.UpdateTime
 	tx.Symbol = src.Symbol
+	tx.GasLimit = src.GasLimit.String()
+	tx.GasUsed = src.GasUsed.String()
+	tx.GasPrice = src.GasPrice.String()
+	tx.Nonce = src.Nonce.String()
 
 	return nil
 }
@@ -80,6 +87,10 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
 	dst.Symbol = tx.Symbol
+	dst.GasLimit, _ = new(big.Int).SetString(tx.GasLimit, 0)
+	dst.GasUsed, _ = new(big.Int).SetString(tx.GasUsed, 0)
+	dst.GasPrice, _ = new(big.Int).SetString(tx.GasPrice, 0)
+	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)
 
 	return nil
 }
@@ -133,7 +144,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 
 	if latest.Value != current.Value || latest.Status != current.Status {
 		latest.ID = current.ID
-		latest.UpdateTime = time.Now().Unix()
+		latest.CreateTime = current.CreateTime
 		if err := s.db.Save(latest).Error; err != nil {
 			return err
 		}
