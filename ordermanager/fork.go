@@ -27,13 +27,13 @@ import (
 	"sort"
 )
 
-type forkProcessor struct {
+type ForkProcessor struct {
 	db dao.RdsService
 	mc marketcap.MarketCapProvider
 }
 
-func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkProcessor {
-	processor := &forkProcessor{}
+func NewForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *ForkProcessor {
+	processor := &ForkProcessor{}
 	processor.db = rds
 	processor.mc = mc
 
@@ -49,7 +49,7 @@ func newForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *forkPro
 //   c.处理cutoff,合约里cutoff可以重复提交,而在ordermanager中,所有cutoff事件都会被存储,但是更新订单时,同一个订单不会被多次cutoff
 //     那么,在回滚时,我们需要知道某一个订单以前是否也cutoff过,在dao/cutoff中我们存储了orderhashList,可以将这些订单取出并按照订单量重置状态
 //   d.处理cutoffPair,同cutoff
-func (p *forkProcessor) fork(event *types.ForkedEvent) error {
+func (p *ForkProcessor) Fork(event *types.ForkedEvent) error {
 	log.Debugf("order manager processing chain fork......")
 
 	from := event.ForkBlock.Int64()
@@ -81,7 +81,7 @@ func (p *forkProcessor) fork(event *types.ForkedEvent) error {
 }
 
 // calculate order's related values and status, update order
-func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
+func (p *ForkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
 	state := &types.OrderState{}
 	model, err := p.db.GetOrderByHash(evt.OrderHash)
 	if err != nil {
@@ -114,7 +114,7 @@ func (p *forkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
 	return nil
 }
 
-func (p *forkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) error {
+func (p *ForkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) error {
 	// get rds.Order and types.OrderState
 	state := &types.OrderState{}
 	model, err := p.db.GetOrderByHash(evt.OrderHash)
@@ -148,7 +148,7 @@ func (p *forkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) err
 	return nil
 }
 
-func (p *forkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
+func (p *ForkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
 	if len(evt.OrderHashList) == 0 {
 		log.Debugf("fork cutoff event,tx:%s,no order cutoff", evt.TxHash.Hex())
 		return nil
@@ -174,7 +174,7 @@ func (p *forkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
 	return nil
 }
 
-func (p *forkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) error {
+func (p *ForkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) error {
 	if len(evt.OrderHashList) == 0 {
 		log.Debugf("fork cutoffPair event,tx:%s,no order cutoff", evt.TxHash.Hex())
 		return nil
@@ -201,7 +201,7 @@ func (p *forkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) err
 }
 
 // todo(fuk): process error
-func (p *forkProcessor) MarkForkEvents(from, to int64) error {
+func (p *ForkProcessor) MarkForkEvents(from, to int64) error {
 	p.db.RollBackFill(from, to)
 	p.db.RollBackCancel(from, to)
 	p.db.RollBackCutoff(from, to)
@@ -217,7 +217,7 @@ const (
 	FORK_EVT_TYPE_CUTOFF_PAIR = "cutoff_pair"
 )
 
-func (p *forkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error) {
+func (p *ForkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error) {
 	var list InnerForkEventList
 
 	if fillList, _ := p.db.GetFillForkEvents(from, to); len(fillList) > 0 {

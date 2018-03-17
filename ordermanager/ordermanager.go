@@ -51,7 +51,7 @@ type OrderManager interface {
 type OrderManagerImpl struct {
 	options            *config.OrderManagerOptions
 	rds                dao.RdsService
-	processor          *forkProcessor
+	processor          *ForkProcessor
 	um                 usermanager.UserManager
 	mc                 marketcap.MarketCapProvider
 	cutoffCache        *CutoffCache
@@ -73,7 +73,7 @@ func NewOrderManager(
 	om := &OrderManagerImpl{}
 	om.options = options
 	om.rds = rds
-	om.processor = newForkProcess(om.rds, market)
+	om.processor = NewForkProcess(om.rds, market)
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(options.CutoffCacheCleanTime)
@@ -112,7 +112,7 @@ func (om *OrderManagerImpl) Stop() {
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
-	if err := om.processor.fork(input.(*types.ForkedEvent)); err != nil {
+	if err := om.processor.Fork(input.(*types.ForkedEvent)); err != nil {
 		log.Errorf("order manager,handle fork error:%s", err.Error())
 	}
 	return nil
