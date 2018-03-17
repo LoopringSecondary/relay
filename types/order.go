@@ -77,6 +77,7 @@ type Order struct {
 	Price                 *big.Rat                   `json:"price"`
 	Owner                 common.Address             `json:"owner"`
 	Hash                  common.Hash                `json:"hash"`
+	Market				  string				     `json:"market"`
 }
 
 type orderMarshaling struct {

@@ -46,6 +46,7 @@ type FillEvent struct {
 	SplitS        string `gorm:"column:split_s;type:varchar(30)" json:"splitS"`
 	SplitB        string `gorm:"column:split_b;type:varchar(30)" json:"splitB"`
 	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
+	Side 		  string `json:"side"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill

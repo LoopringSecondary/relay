@@ -41,9 +41,9 @@ const DefaultContractVersion = "v1.2"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
-	Token      string
-	Amount     string
-	Percentage string
+	Token      string `json:"token"`
+	Amount     string `json:"amount"`
+	Percentage string `json:"percentage"`
 }
 
 type PageResult struct {
@@ -65,9 +65,9 @@ type AskBid struct {
 }
 
 type DepthElement struct {
-	Price  string
-	Size   *big.Rat
-	Amount *big.Rat
+	Price  string `json:"price"`
+	Size   *big.Rat `json:"size"`
+	Amount *big.Rat `json:"amount"`
 }
 
 type CommonTokenRequest struct {
@@ -136,20 +136,20 @@ type DepthQuery struct {
 }
 
 type FillQuery struct {
-	ContractVersion string
-	Market          string
-	Owner           string
-	OrderHash       string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	Market          string `json:"market"`
+	Owner           string `json:"owner"`
+	OrderHash       string `json:"orderHash"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int `json:"pageIndex"`
+	PageSize        int `json:"pageSize"`
 }
 
 type RingMinedQuery struct {
-	ContractVersion string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int `json:"pageIndex"`
+	PageSize        int `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -172,6 +172,8 @@ type RawOrderJsonResult struct {
 	WalletId              string `json:"walletId" gencodec:"required"`
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
+	Market                string `json:"market"`
+	Side				  string `json:"side"`
 
 }
 
@@ -449,8 +451,14 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 
 	for _, f := range res.Data {
 		fill := f.(dao.FillEvent)
+		if util.IsBuy(fill.TokenB) {
+			fill.Side = "buy"
+		} else {
+			fill.Side = "sell"
+		}
 		fill.TokenS = util.AddressToAlias(fill.TokenS)
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
+
 		result.Data = append(result.Data, fill)
 	}
 	return result, nil
@@ -618,9 +626,10 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
 
-	if isAvailableMarket(orderQuery.Market) {
+	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
 	}
+
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
 	}
@@ -629,6 +638,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 	} else if strings.ToLower(orderQuery.Side) == "sell" {
 		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
 	}
+
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
@@ -658,9 +668,9 @@ func convertStatus(s string) []types.OrderStatus {
 func getStringStatus(s types.OrderStatus) string {
 	switch s {
 	case types.ORDER_NEW:
-		return "ORDER_NEW"
+		return "ORDER_OPENED"
 	case types.ORDER_PARTIAL:
-		return "ORDER_PARTIAL"
+		return "ORDER_OPENED"
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
@@ -843,6 +853,12 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.S = src.RawOrder.S.Hex()
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
+	rawOrder.Market = src.RawOrder.Market
+	if rawOrder.TokenB == "WETH" {
+		rawOrder.Side = "sell"
+	} else {
+		rawOrder.Side = "buy"
+	}
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rst.RawOrder = rawOrder
