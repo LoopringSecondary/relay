@@ -292,7 +292,13 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		percentage, _ := asset.Quo(asset, totalAsset).Float64()
+		totalAssetFloat, _ := totalAsset.Float64()
+		var percentage float64
+		if totalAssetFloat == 0 {
+			percentage = 0
+		} else {
+			percentage, _ = asset.Quo(asset, totalAsset).Float64()
+		}
 		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
