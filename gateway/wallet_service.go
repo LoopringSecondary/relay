@@ -143,6 +143,7 @@ type FillQuery struct {
 	RingHash        string `json:"ringHash"`
 	PageIndex       int `json:"pageIndex"`
 	PageSize        int `json:"pageSize"`
+	Side	        string `json:"side"`
 }
 
 type RingMinedQuery struct {
@@ -308,7 +309,7 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		percentStrRight := strings.Replace(res[j].Percentage, "%", "", 1)
 		left, _ := strconv.ParseFloat(percentStrLeft, 64)
 		right, _ := strconv.ParseFloat(percentStrRight, 64)
-		return left < right
+		return left > right
 	})
 
 	return
@@ -794,6 +795,13 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	if q.RingHash != "" {
 		rst["ring_hash"] = q.RingHash
 	}
+
+	if strings.ToLower(q.Side) == "buy" {
+		rst["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(q.Side) == "sell" {
+		rst["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	}
+
 
 	return rst, pi, ps
 }
