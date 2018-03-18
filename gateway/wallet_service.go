@@ -904,7 +904,7 @@ func isAvailableMarket(market string) bool {
 	return false
 }
 
-func txTypeToUint8(txType string) int {
+func txStatusToUint8(txType string) int {
 	switch txType {
 	case "pending":
 		return 0
@@ -917,7 +917,7 @@ func txTypeToUint8(txType string) int {
 	}
 }
 
-func txStatusToUint8(status string) int {
+func txTypeToUint8(status string) int {
 	switch status {
 	case "approve":
 		return 1
