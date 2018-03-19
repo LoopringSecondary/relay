@@ -328,11 +328,11 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	return price
 }
 
-func IsBuy(s string) bool {
-	if IsAddress(s) {
-		s = AddressToAlias(s)
+func IsBuy(tokenB string) bool {
+	if IsAddress(tokenB) {
+		tokenB = AddressToAlias(tokenB)
 	}
-	if _, ok := SupportTokens[s]; !ok {
+	if _, ok := SupportTokens[tokenB]; !ok {
 		return false
 	}
 	return true

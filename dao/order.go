@@ -159,6 +159,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.UpdatedBlock = big.NewInt(o.UpdatedBlock)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
+	state.RawOrder.Market = o.Market
 
 	return nil
 }
@@ -333,6 +334,10 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 		if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 			return pageResult, err
 		}
+	} else {
+		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
 	}
 
 	for _, v := range orders {
@@ -341,7 +346,7 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 
 	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	if len(statusList) == 1 {
+	if len(statusList) <= 1 {
 		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
 	} else {
 		err = s.db.Model(&Order{}).Where(query).Where("status in (?)", statusStrList).Count(&pageResult.Total).Error

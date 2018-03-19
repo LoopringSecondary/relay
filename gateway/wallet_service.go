@@ -41,9 +41,9 @@ const DefaultContractVersion = "v1.2"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
-	Token      string
-	Amount     string
-	Percentage string
+	Token      string `json:"token"`
+	Amount     string `json:"amount"`
+	Percentage string `json:"percentage"`
 }
 
 type PageResult struct {
@@ -65,9 +65,9 @@ type AskBid struct {
 }
 
 type DepthElement struct {
-	Price  string
-	Size   *big.Rat
-	Amount *big.Rat
+	Price  string `json:"price"`
+	Size   *big.Rat `json:"size"`
+	Amount *big.Rat `json:"amount"`
 }
 
 type CommonTokenRequest struct {
@@ -136,20 +136,21 @@ type DepthQuery struct {
 }
 
 type FillQuery struct {
-	ContractVersion string
-	Market          string
-	Owner           string
-	OrderHash       string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	Market          string `json:"market"`
+	Owner           string `json:"owner"`
+	OrderHash       string `json:"orderHash"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int `json:"pageIndex"`
+	PageSize        int `json:"pageSize"`
+	Side	        string `json:"side"`
 }
 
 type RingMinedQuery struct {
-	ContractVersion string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int `json:"pageIndex"`
+	PageSize        int `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -172,6 +173,8 @@ type RawOrderJsonResult struct {
 	WalletId              string `json:"walletId" gencodec:"required"`
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
+	Market                string `json:"market"`
+	Side				  string `json:"side"`
 
 }
 
@@ -290,7 +293,13 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		percentage, _ := asset.Quo(asset, totalAsset).Float64()
+		totalAssetFloat, _ := totalAsset.Float64()
+		var percentage float64
+		if totalAssetFloat == 0 {
+			percentage = 0
+		} else {
+			percentage, _ = asset.Quo(asset, totalAsset).Float64()
+		}
 		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
@@ -300,7 +309,7 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		percentStrRight := strings.Replace(res[j].Percentage, "%", "", 1)
 		left, _ := strconv.ParseFloat(percentStrLeft, 64)
 		right, _ := strconv.ParseFloat(percentStrRight, 64)
-		return left < right
+		return left > right
 	})
 
 	return
@@ -449,8 +458,14 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 
 	for _, f := range res.Data {
 		fill := f.(dao.FillEvent)
+		if util.IsBuy(fill.TokenB) {
+			fill.Side = "buy"
+		} else {
+			fill.Side = "sell"
+		}
 		fill.TokenS = util.AddressToAlias(fill.TokenS)
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
+
 		result.Data = append(result.Data, fill)
 	}
 	return result, nil
@@ -618,9 +633,10 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
 
-	if isAvailableMarket(orderQuery.Market) {
+	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
 	}
+
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
 	}
@@ -629,6 +645,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 	} else if strings.ToLower(orderQuery.Side) == "sell" {
 		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
 	}
+
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
@@ -658,9 +675,9 @@ func convertStatus(s string) []types.OrderStatus {
 func getStringStatus(s types.OrderStatus) string {
 	switch s {
 	case types.ORDER_NEW:
-		return "ORDER_NEW"
+		return "ORDER_OPENED"
 	case types.ORDER_PARTIAL:
-		return "ORDER_PARTIAL"
+		return "ORDER_OPENED"
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
@@ -779,6 +796,13 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 		rst["ring_hash"] = q.RingHash
 	}
 
+	if strings.ToLower(q.Side) == "buy" {
+		rst["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(q.Side) == "sell" {
+		rst["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	}
+
+
 	return rst, pi, ps
 }
 
@@ -843,6 +867,12 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.S = src.RawOrder.S.Hex()
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
+	rawOrder.Market = src.RawOrder.Market
+	if rawOrder.TokenB == "WETH" {
+		rawOrder.Side = "sell"
+	} else {
+		rawOrder.Side = "buy"
+	}
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rst.RawOrder = rawOrder
@@ -874,7 +904,7 @@ func isAvailableMarket(market string) bool {
 	return false
 }
 
-func txTypeToUint8(txType string) int {
+func txStatusToUint8(txType string) int {
 	switch txType {
 	case "pending":
 		return 0
@@ -887,7 +917,7 @@ func txTypeToUint8(txType string) int {
 	}
 }
 
-func txStatusToUint8(status string) int {
+func txTypeToUint8(status string) int {
 	switch status {
 	case "approve":
 		return 1
