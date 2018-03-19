@@ -104,6 +104,5 @@ func (s *RdsServiceImpl) GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEv
 }
 
 func (s *RdsServiceImpl) RollBackCutoffPair(from, to int64) error {
-	return s.db.Model(&CutOffPairEvent{}).Where("block_number > ? and block_number <= ?", from, to).
-		Update("fork=?", true).Error
+	return s.db.Model(&CutOffPairEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

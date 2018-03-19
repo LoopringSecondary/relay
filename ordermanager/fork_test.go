@@ -20,6 +20,9 @@ package ordermanager_test
 
 import (
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
+	"math/big"
 	"sort"
 	"testing"
 )
@@ -34,5 +37,18 @@ func TestInnerForkEventList_Sort(t *testing.T) {
 
 	for _, v := range list {
 		t.Logf("event blockNumber:%d, logIndex:%d", v.BlockNumber, v.LogIndex)
+	}
+}
+
+func TestForkProcessor_RollBack(t *testing.T) {
+	db := test.Rds()
+	mc := test.GenerateMarketCap()
+	p := ordermanager.NewForkProcess(db, mc)
+
+	forkBlock := big.NewInt(8787)
+	detectBlock := big.NewInt(8801)
+	event := &types.ForkedEvent{ForkBlock: forkBlock, DetectedBlock: detectBlock}
+	if err := p.Fork(event); err != nil {
+		t.Fatalf(err.Error())
 	}
 }

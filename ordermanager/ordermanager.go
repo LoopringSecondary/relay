@@ -113,7 +113,7 @@ func (om *OrderManagerImpl) Stop() {
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	if err := om.processor.Fork(input.(*types.ForkedEvent)); err != nil {
-		log.Errorf("order manager,handle fork error:%s", err.Error())
+		log.Fatalf("order manager,handle fork error:%s", err.Error())
 	}
 	return nil
 }

@@ -47,8 +47,8 @@ type FillEvent struct {
 	SplitS        string `gorm:"column:split_s;type:varchar(30)" json:"splitS"`
 	SplitB        string `gorm:"column:split_b;type:varchar(30)" json:"splitB"`
 	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
-	LogIndex      int64  `gorm:"log_index"`
-	Fork          bool   `gorm:"fork"`
+	LogIndex      int64  `gorm:"column:log_index"`
+	Fork          bool   `gorm:"column:fork"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -181,5 +181,5 @@ func (s *RdsServiceImpl) GetFillForkEvents(from, to int64) ([]FillEvent, error) 
 }
 
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork=?", true).Error
+	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

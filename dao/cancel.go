@@ -33,7 +33,7 @@ type CancelEvent struct {
 	CreateTime      int64  `gorm:"column:create_time"`
 	AmountCancelled string `gorm:"column:amount_cancelled;type:varchar(30)"`
 	LogIndex        int64  `gorm:"column:log_index"`
-	Fork            bool   `gorm:"fork"`
+	Fork            bool   `gorm:"column:fork"`
 }
 
 // convert chainClient/orderCancelledEvent to dao/CancelEvent

@@ -19,6 +19,7 @@
 package ordermanager
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/marketcap"
@@ -57,8 +58,7 @@ func (p *ForkProcessor) Fork(event *types.ForkedEvent) error {
 
 	list, _ := p.GetForkEvents(from, to)
 	if list.Len() == 0 {
-		log.Errorf("order manager fork error: non fork events")
-		return nil
+		return fmt.Errorf("order manager fork error: non fork events")
 	}
 
 	sort.Sort(list)
@@ -76,8 +76,7 @@ func (p *ForkProcessor) Fork(event *types.ForkedEvent) error {
 		}
 	}
 
-	p.MarkForkEvents(from, to)
-	return nil
+	return p.MarkForkEvents(from, to)
 }
 
 // calculate order's related values and status, update order
@@ -138,11 +137,9 @@ func (p *ForkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) err
 	state.UpdatedBlock = evt.BlockNumber
 
 	// update rds.Order
-	if err := model.ConvertDown(state); err != nil {
-		return err
-	}
+	model.ConvertDown(state)
 	if err := p.db.UpdateOrderWhileCancel(state.RawOrder.Hash, state.Status, state.CancelledAmountS, state.CancelledAmountB, state.UpdatedBlock); err != nil {
-		return err
+		return fmt.Errorf("fork cancel event,error:%s", err.Error())
 	}
 
 	return nil
@@ -167,8 +164,10 @@ func (p *ForkProcessor) RollBackSingleCutoff(evt *types.CutoffEvent) error {
 		settleOrderStatus(state, p.mc)
 
 		if err := p.db.UpdateOrderWhileRollbackCutoff(orderhash, state.Status, evt.BlockNumber); err != nil {
-			log.Errorf("fork cutoff event,error:%s", err.Error())
+			return fmt.Errorf("fork cutoff event,error:%s", err.Error())
 		}
+
+		log.Debugf("fork cutoff event,order:%s", orderhash.Hex())
 	}
 
 	return nil
@@ -193,19 +192,28 @@ func (p *ForkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) err
 		settleOrderStatus(state, p.mc)
 
 		if err := p.db.UpdateOrderWhileRollbackCutoff(orderhash, state.Status, evt.BlockNumber); err != nil {
-			log.Errorf("fork cutoffPair event,error:%s", err.Error())
+			return fmt.Errorf("fork cutoffPair event,error:%s", err.Error())
 		}
+
+		log.Debugf("fork cutoff pair event,order:%s", orderhash.Hex())
 	}
 
 	return nil
 }
 
-// todo(fuk): process error
 func (p *ForkProcessor) MarkForkEvents(from, to int64) error {
-	p.db.RollBackFill(from, to)
-	p.db.RollBackCancel(from, to)
-	p.db.RollBackCutoff(from, to)
-	p.db.RollBackCutoffPair(from, to)
+	if err := p.db.RollBackFill(from, to); err != nil {
+		return fmt.Errorf("fork rollback fill events error:%s", err.Error())
+	}
+	if err := p.db.RollBackCancel(from, to); err != nil {
+		return fmt.Errorf("fork rollback cancel events error:%s", err.Error())
+	}
+	if err := p.db.RollBackCutoff(from, to); err != nil {
+		return fmt.Errorf("fork rollback cutoff events error:%s", err.Error())
+	}
+	if err := p.db.RollBackCutoffPair(from, to); err != nil {
+		return fmt.Errorf("fork rollback cutoffPair events error:%s", err.Error())
+	}
 
 	return nil
 }
