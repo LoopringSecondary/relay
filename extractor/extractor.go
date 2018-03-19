@@ -56,6 +56,7 @@ type ExtractorServiceImpl struct {
 	startBlockNumber *big.Int
 	endBlockNumber   *big.Int
 	iterator         *ethaccessor.BlockIterator
+	pendingTxWatcher *eventemitter.Watcher
 	syncComplete     bool
 	forkComplete     bool
 	forktest         bool
@@ -80,6 +81,9 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
+	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.watchPendingTx}
+	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
+
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
 		for {
@@ -94,6 +98,7 @@ func (l *ExtractorServiceImpl) Start() {
 }
 
 func (l *ExtractorServiceImpl) Stop() {
+	eventemitter.Un(eventemitter.PendingTransaction, l.pendingTxWatcher)
 	l.stop <- true
 }
 
@@ -115,6 +120,11 @@ func (l *ExtractorServiceImpl) sync(blockNumber *big.Int) {
 	} else {
 		log.Debugf("extractor,chain block syncing... ")
 	}
+}
+
+func (l *ExtractorServiceImpl) watchPendingTx(input eventemitter.EventData) error {
+	tx := input.(*ethaccessor.Transaction)
+	return l.processPendingTransaction(tx)
 }
 
 func (l *ExtractorServiceImpl) processBlock() {
@@ -197,6 +207,33 @@ func (l *ExtractorServiceImpl) processTransaction(tx *ethaccessor.Transaction, r
 	l.processNormalTransaction(tx, receipt, blockTime)
 }
 
+func (l *ExtractorServiceImpl) processPendingTransaction(tx *ethaccessor.Transaction) error {
+	var (
+		method MethodData
+		ok     bool
+	)
+
+	txhash := tx.Hash
+	input := common.FromHex(tx.Input)
+
+	// 过滤方法
+	if len(input) < 4 || len(tx.Input) < 10 {
+		l.debug("extractor,tx:%s contract method id %s length invalid", txhash, common.ToHex(input))
+		return nil
+	}
+
+	id := common.ToHex(input[0:4])
+	if method, ok = l.processor.GetMethod(id); !ok {
+		l.debug("extractor,tx:%s contract method id error:%s", txhash, id)
+		return nil
+	}
+
+	method.FullFilled(tx, nil, big.NewInt(0), types.TX_STATUS_PENDING)
+
+	eventemitter.Emit(method.Id, method)
+	return nil
+}
+
 func (l *ExtractorServiceImpl) processMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txIsFailed bool) error {
 	var (
 		method MethodData
@@ -218,7 +255,11 @@ func (l *ExtractorServiceImpl) processMethod(tx *ethaccessor.Transaction, receip
 		return nil
 	}
 
-	method.FullFilled(tx, receipt, blockTime, txIsFailed)
+	status := types.TX_STATUS_SUCCESS
+	if txIsFailed {
+		status = types.TX_STATUS_FAILED
+	}
+	method.FullFilled(tx, receipt, blockTime, status)
 
 	eventemitter.Emit(method.Id, method)
 	return nil

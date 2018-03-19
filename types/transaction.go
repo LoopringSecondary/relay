@@ -27,6 +27,7 @@ import (
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
 const (
+	TX_STATUS_UNKNOWN = 0
 	TX_STATUS_PENDING = 1
 	TX_STATUS_SUCCESS = 2
 	TX_STATUS_FAILED  = 3
@@ -54,12 +55,13 @@ type TxInfo struct {
 	LogIndex    int64          `json:"logIndex"`
 	BlockNumber *big.Int       `json:"blockNumber`
 	BlockTime   int64          `json:"block_time"`
-	TxFailed    bool           `json:"tx_failed"`
-	Symbol      string         `json:"symbol"`
-	GasLimit    *big.Int       `json:"gas_limit"`
-	GasUsed     *big.Int       `json:"gas_used"`
-	GasPrice    *big.Int       `json:"gas_price"`
-	Nonce       *big.Int       `json:"nonce"`
+	//TxFailed    bool           `json:"tx_failed"`
+	Status   int      `json:"status"`
+	Symbol   string   `json:"symbol"`
+	GasLimit *big.Int `json:"gas_limit"`
+	GasUsed  *big.Int `json:"gas_used"`
+	GasPrice *big.Int `json:"gas_price"`
+	Nonce    *big.Int `json:"nonce"`
 }
 
 type Transaction struct {
@@ -300,11 +302,13 @@ func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8
 
 func (tx *Transaction) fullFilled(txinfo TxInfo) {
 	tx.TxInfo = txinfo
-	if txinfo.TxFailed {
-		tx.Status = TX_STATUS_FAILED
-	} else {
-		tx.Status = TX_STATUS_SUCCESS
-	}
+	//if txinfo.Status != TX_STATUS_PENDING {
+	//	if txinfo.TxFailed {
+	//		tx.Status = TX_STATUS_FAILED
+	//	} else {
+	//		tx.Status = TX_STATUS_SUCCESS
+	//	}
+	//}
 	tx.CreateTime = txinfo.BlockTime
 	tx.UpdateTime = txinfo.BlockTime
 }

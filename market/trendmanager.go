@@ -79,17 +79,17 @@ type Cache struct {
 }
 
 type Trend struct {
-	Intervals  string `json:"intervals"`
-	Market     string `json:"market"`
+	Intervals  string  `json:"intervals"`
+	Market     string  `json:"market"`
 	Vol        float64 `json:"vol"`
 	Amount     float64 `json:"amount"`
-	CreateTime int64  `json:"createTime"`
+	CreateTime int64   `json:"createTime"`
 	Open       float64 `json:"open"`
 	Close      float64 `json:"close"`
 	High       float64 `json:"high"`
 	Low        float64 `json:"low"`
-	Start      int64 `json:"start"`
-	End        int64 `json:"end"`
+	Start      int64   `json:"start"`
+	End        int64   `json:"end"`
 }
 
 type TrendManager struct {
