@@ -61,9 +61,8 @@ name = "Loopring corporation"
     start_block_number = 339287
     end_block_number = 0
     confirm_block_number = 5
-    is_dev = true
+    is_main_net = false
     debug = false
-    save_event_log = true
     use_test_start_block_number = false
 
 [common]

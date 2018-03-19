@@ -65,7 +65,7 @@ type AskBid struct {
 }
 
 type DepthElement struct {
-	Price  string `json:"price"`
+	Price  string   `json:"price"`
 	Size   *big.Rat `json:"size"`
 	Amount *big.Rat `json:"amount"`
 }
@@ -141,16 +141,16 @@ type FillQuery struct {
 	Owner           string `json:"owner"`
 	OrderHash       string `json:"orderHash"`
 	RingHash        string `json:"ringHash"`
-	PageIndex       int `json:"pageIndex"`
-	PageSize        int `json:"pageSize"`
-	Side	        string `json:"side"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
+	Side            string `json:"side"`
 }
 
 type RingMinedQuery struct {
 	ContractVersion string `json:"contractVersion"`
 	RingHash        string `json:"ringHash"`
-	PageIndex       int `json:"pageIndex"`
-	PageSize        int `json:"pageSize"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -174,8 +174,7 @@ type RawOrderJsonResult struct {
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
 	Market                string `json:"market"`
-	Side				  string `json:"side"`
-
+	Side                  string `json:"side"`
 }
 
 type OrderJsonResult struct {
@@ -801,7 +800,6 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	} else if strings.ToLower(q.Side) == "sell" {
 		rst["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
 	}
-
 
 	return rst, pi, ps
 }

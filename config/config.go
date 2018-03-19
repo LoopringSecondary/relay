@@ -125,9 +125,8 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
-	IsDev                   bool
+	IsMainNet               bool
 	Debug                   bool
-	SaveEventLog            bool
 	UseTestStartBlockNumber bool
 	ConfirmBlockNumber      uint64
 	StartBlockNumber        *big.Int
