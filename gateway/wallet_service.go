@@ -905,11 +905,11 @@ func isAvailableMarket(market string) bool {
 func txStatusToUint8(txType string) int {
 	switch txType {
 	case "pending":
-		return 0
-	case "success":
 		return 1
-	case "failed":
+	case "success" :
 		return 2
+	case "failed" :
+		return 3
 	default:
 		return -1
 	}

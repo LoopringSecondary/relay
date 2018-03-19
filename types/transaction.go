@@ -27,9 +27,9 @@ import (
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
 const (
-	TX_STATUS_PENDING = 0
-	TX_STATUS_SUCCESS = 1
-	TX_STATUS_FAILED  = 2
+	TX_STATUS_PENDING = 1
+	TX_STATUS_SUCCESS = 2
+	TX_STATUS_FAILED  = 3
 
 	TX_TYPE_APPROVE = 1
 	TX_TYPE_SEND    = 2 // SEND
