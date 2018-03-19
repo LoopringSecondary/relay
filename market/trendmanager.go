@@ -22,7 +22,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/types"
 	"github.com/patrickmn/go-cache"
 	"github.com/robfig/cron"
 	"log"
@@ -31,8 +33,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/types"
 )
 
 const (
@@ -47,11 +47,11 @@ const (
 	//TwoHour = "2Hr"
 	//OneDay = "1Day"
 
-	tsOneHour = 60 * 60
-	tsTwoHour = 2 * tsOneHour
+	tsOneHour  = 60 * 60
+	tsTwoHour  = 2 * tsOneHour
 	tsFourHour = 4 * tsOneHour
-	tsOneDay = 24 * tsOneHour
-	tsOneWeek = 7 * tsOneDay
+	tsOneDay   = 24 * tsOneHour
+	tsOneWeek  = 7 * tsOneDay
 )
 
 //var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
@@ -149,7 +149,7 @@ func (t *TrendManager) refreshCacheByInterval(interval string) {
 		}
 		trendMap[mkt] = mktCache
 	}
-	t.c.Set(trendKeyPre + interval, trendMap, cache.NoExpiration)
+	t.c.Set(trendKeyPre+interval, trendMap, cache.NoExpiration)
 }
 
 func (t *TrendManager) updateCache() {
@@ -201,7 +201,7 @@ func (t *TrendManager) refreshCache() {
 		ticker := calculateTicker(mkt, fills, mktCache.Trends, firstSecondThisHour)
 		tickerMap[mkt] = ticker
 	}
-	t.c.Set(trendKeyPre + OneHour, trendMap, cache.NoExpiration)
+	t.c.Set(trendKeyPre+OneHour, trendMap, cache.NoExpiration)
 	t.c.Set(tickerKey, tickerMap, cache.NoExpiration)
 
 }
@@ -358,7 +358,7 @@ func (t *TrendManager) insertByTrend(interval string) error {
 			toInsert.Close = 0
 		} else {
 			toInsert.Open = trends[0].Open
-			toInsert.Close = trends[len(trends) - 1].Close
+			toInsert.Close = trends[len(trends)-1].Close
 		}
 		toInsert.Vol = vol
 		toInsert.Amount = amount
@@ -396,7 +396,7 @@ func getTsInterval(interval string) int64 {
 }
 
 func isTimeToInsert(interval string) bool {
-	return time.Now().Unix() % getTsInterval(interval) < tsOneHour
+	return time.Now().Unix()%getTsInterval(interval) < tsOneHour
 }
 
 func (t *TrendManager) insertTrend() {
@@ -516,8 +516,8 @@ func (t *TrendManager) insertTrend() {
 	intervals := append(allInterval[:0], allInterval[1:]...)
 	for _, i := range intervals {
 		wgInterval.Add(1)
-	    go t.insertTrendByInterval(i)
-	    wgInterval.Done()
+		go t.insertTrendByInterval(i)
+		wgInterval.Done()
 	}
 	wgInterval.Wait()
 	t.updateCache()
@@ -727,13 +727,13 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 			tc := trendMap[market]
 			tc.Fills = append(tc.Fills, *newFillModel)
 			trendMap[market] = tc
-			t.c.Set(trendKeyPre + OneHour, trendMap, cache.NoExpiration)
+			t.c.Set(trendKeyPre+OneHour, trendMap, cache.NoExpiration)
 			t.reCalTicker(market)
 		} else {
 			fills := make([]dao.FillEvent, 0)
 			fills = append(fills, *newFillModel)
 			newCache := Cache{make([]Trend, 0), fills}
-			t.c.Set(trendKeyPre + OneHour, newCache, cache.NoExpiration)
+			t.c.Set(trendKeyPre+OneHour, newCache, cache.NoExpiration)
 			t.reCalTicker(market)
 		}
 	} else {

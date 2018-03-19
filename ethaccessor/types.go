@@ -124,20 +124,18 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
-// todo: use case 2
-func (tx *TransactionReceipt) IsFailed() bool {
-	// case 1
-	if len(tx.Logs) > 0 {
+func (tx *TransactionReceipt) IsFailed(isDevNet bool) bool {
+	if isDevNet {
+		if len(tx.Logs) > 0 {
+			return false
+		}
+		return true
+	} else {
+		if tx.Status.BigInt().Int64() == 0 {
+			return true
+		}
 		return false
 	}
-
-	return true
-
-	// case2
-	//if tx.Status.BigInt().Int64() == 0 {
-	//	return true
-	//}
-	//return false
 }
 
 type BlockIterator struct {

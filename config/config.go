@@ -59,6 +59,8 @@ func LoadConfig(file string) *GlobalConfig {
 	//	}
 	//}
 
+	// extractor.IsDevNet default false
+
 	return c
 }
 
@@ -125,8 +127,8 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
+	IsDevNet                bool
 	Debug                   bool
-	SaveEventLog            bool
 	UseTestStartBlockNumber bool
 	ConfirmBlockNumber      uint64
 	StartBlockNumber        *big.Int
