@@ -770,7 +770,7 @@ Get the total frozen amount of all unfinished orders
 
 ##### Parameters
 
-1. `owner` - The address, if is null, will query all orders.
+1. `owner` - The address.
 2. `token` - The specify token which you want to get.
 
 ```js
