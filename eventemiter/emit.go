@@ -49,6 +49,7 @@ const (
 	OrderManagerExtractorCutoff     = "OrderManagerExtractorCutoff"
 	OrderManagerExtractorCutoffPair = "OrderManagerExtractorCutoffPair"
 	MinedOrderState                 = "MinedOrderState" //orderbook send orderstate to miner
+	WalletTransactionSubmitted      = "WalletTransactionSubmitted"
 
 	//Miner
 	Miner_DeleteOrderState           = "Miner_DeleteOrderState"

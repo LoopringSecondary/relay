@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/Loopring/relay/eventemiter"
 )
 
 const DefaultContractVersion = "v1.2"
@@ -90,6 +91,10 @@ type TrendQuery struct {
 
 type SingleOwner struct {
 	Owner string `json:"owner"`
+}
+
+type TxNotify struct {
+	TxHash string `json:"txHash"`
 }
 
 type PriceQuoteQuery struct {
@@ -367,6 +372,16 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 	} else {
 		return "unlock_notice_success", nil
 	}
+}
+
+func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
+	if len(txNotify.TxHash) == 0 {
+		return "", errors.New("txHash can't be null string")
+	}
+	tx := &ethaccessor.Transaction{}
+	//ethaccessor.GetTransactionByHash(&tx, txNotify.TxHash, "pending")
+	eventemitter.Emit(eventemitter.WalletTransactionSubmitted, tx)
+	return
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
