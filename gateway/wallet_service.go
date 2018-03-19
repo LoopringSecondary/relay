@@ -529,12 +529,12 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	return
 }
 
-func (w *WalletServiceImpl) GetCutoff(query CutoffRequest) (result string, err error) {
+func (w *WalletServiceImpl) GetCutoff(query CutoffRequest) (result int64, err error) {
 	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[query.ContractVersion]), common.HexToAddress(query.Address), query.BlockNumber)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	return cutoff.String(), nil
+	return cutoff.Int64(), nil
 }
 
 func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAllocatedAllowanceQuery) (frozenAmount string, err error) {
