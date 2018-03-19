@@ -124,17 +124,17 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
-func (tx *TransactionReceipt) IsFailed(isMainNet bool) bool {
-	if isMainNet {
-		if tx.Status.BigInt().Int64() == 0 {
-			return true
-		}
-		return false
-	} else {
+func (tx *TransactionReceipt) IsFailed(isDevNet bool) bool {
+	if isDevNet {
 		if len(tx.Logs) > 0 {
 			return false
 		}
 		return true
+	} else {
+		if tx.Status.BigInt().Int64() == 0 {
+			return true
+		}
+		return false
 	}
 }
 

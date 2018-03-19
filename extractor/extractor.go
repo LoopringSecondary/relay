@@ -176,7 +176,7 @@ func (l *ExtractorServiceImpl) processBlock() {
 }
 
 func (l *ExtractorServiceImpl) processTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
-	txIsFailed := receipt.IsFailed(l.options.IsMainNet)
+	txIsFailed := receipt.IsFailed(l.options.IsDevNet)
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 

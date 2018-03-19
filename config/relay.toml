@@ -61,7 +61,7 @@ name = "Loopring corporation"
     start_block_number = 339287
     end_block_number = 0
     confirm_block_number = 5
-    is_main_net = false
+    is_dev_net = false
     debug = false
     use_test_start_block_number = false
 
