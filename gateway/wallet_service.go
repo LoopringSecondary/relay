@@ -537,15 +537,22 @@ func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAlloca
 		return "", err
 	}
 
-	if token == "LRC" {
-		allLrcFee, err := w.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
-		if err != nil {
-			return "", err
-		}
-		amount.Add(amount, allLrcFee)
+	return types.BigintToHex(amount), err
+}
+
+func (w *WalletServiceImpl) GetFrozenLRCFee(query SingleOwner) (frozenAmount string, err error) {
+	statusSet := make([]types.OrderStatus, 0)
+	statusSet = append(statusSet, types.ORDER_NEW)
+	statusSet = append(statusSet, types.ORDER_PARTIAL)
+
+	owner := query.Owner
+
+	allLrcFee, err := w.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
+	if err != nil {
+		return "", err
 	}
 
-	return types.BigintToHex(amount), err
+	return types.BigintToHex(allLrcFee), err
 }
 
 func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
