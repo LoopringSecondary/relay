@@ -55,13 +55,12 @@ type TxInfo struct {
 	LogIndex    int64          `json:"logIndex"`
 	BlockNumber *big.Int       `json:"blockNumber`
 	BlockTime   int64          `json:"block_time"`
-	//TxFailed    bool           `json:"tx_failed"`
-	Status   int      `json:"status"`
-	Symbol   string   `json:"symbol"`
-	GasLimit *big.Int `json:"gas_limit"`
-	GasUsed  *big.Int `json:"gas_used"`
-	GasPrice *big.Int `json:"gas_price"`
-	Nonce    *big.Int `json:"nonce"`
+	Status      uint8          `json:"status"`
+	Symbol      string         `json:"symbol"`
+	GasLimit    *big.Int       `json:"gas_limit"`
+	GasUsed     *big.Int       `json:"gas_used"`
+	GasPrice    *big.Int       `json:"gas_price"`
+	Nonce       *big.Int       `json:"nonce"`
 }
 
 type Transaction struct {
@@ -70,7 +69,6 @@ type Transaction struct {
 	Content    []byte         `json:"content"`
 	Value      *big.Int       `json:"value"`
 	Type       uint8          `json:"type"`
-	Status     uint8          `json:"status"`
 	CreateTime int64          `json:"createTime"`
 	UpdateTime int64          `json:"updateTime"`
 }
@@ -302,13 +300,6 @@ func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8
 
 func (tx *Transaction) fullFilled(txinfo TxInfo) {
 	tx.TxInfo = txinfo
-	//if txinfo.Status != TX_STATUS_PENDING {
-	//	if txinfo.TxFailed {
-	//		tx.Status = TX_STATUS_FAILED
-	//	} else {
-	//		tx.Status = TX_STATUS_SUCCESS
-	//	}
-	//}
 	tx.CreateTime = txinfo.BlockTime
 	tx.UpdateTime = txinfo.BlockTime
 }

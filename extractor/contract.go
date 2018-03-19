@@ -80,7 +80,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, status int) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, status uint8) {
 	method.TxInfo = setTxInfo(tx, receipt, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
@@ -523,7 +523,7 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	cutoff := contractMethod.ConvertDown()
 	cutoff.TxInfo = contract.TxInfo
 	cutoff.Owner = cutoff.From
-	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64())
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64(), cutoff.Status)
 
 	if cutoff.Status == types.TX_STATUS_PENDING || cutoff.Status == types.TX_STATUS_FAILED {
 		processor.saveCutoffMethodAsTx(cutoff)
@@ -805,7 +805,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String())
+	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
 
