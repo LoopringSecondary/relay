@@ -129,6 +129,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 // step.6 start schedule update
 
 func (t *TrendManager) refreshCacheByInterval(interval string) {
+	interval = strings.ToLower(interval)
 	log.Println("start refresh cache by interval " + interval)
 
 	trendMap := make(map[string]Cache)
@@ -606,6 +607,7 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend T
 
 func (t *TrendManager) GetTrends(market, interval string) (trends []Trend, err error) {
 
+	interval = strings.ToLower(interval)
 	market = strings.ToUpper(market)
 
 	if t.cacheReady {

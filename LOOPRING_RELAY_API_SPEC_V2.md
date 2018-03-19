@@ -31,6 +31,7 @@ Websocket(mainnet) : wss://relay1.loopring.io/ws/(+business_key)
 * [loopring_submitOrder](#loopring_submitorder)
 * [loopring_getOrders](#loopring_getorders)
 * [loopring_getDepth](#loopring_getdepth)
+* [loopring_getTicker](#loopring_getticker)
 * [loopring_getTickers](#loopring_gettickers)
 * [loopring_getFills](#loopring_getfills)
 * [loopring_getTrend](#loopring_gettrend)
@@ -38,9 +39,11 @@ Websocket(mainnet) : wss://relay1.loopring.io/ws/(+business_key)
 * [loopring_getCutoff](#loopring_getcutoff)
 * [loopring_getPriceQuote](#loopring_getpricequote)
 * [loopring_getEstimatedAllocatedAllowance](#loopring_getestimatedallocatedallowance)
+* [loopring_getGetFrozenLRCFee](#loopring_getgetfrozenlrcfee)
 * [loopring_getSupportedMarket](#loopring_getsupportedmarket)
 * [loopring_getPortfolio](#loopring_getportfolio)
 * [loopring_getTransactions](#loopring_gettransactions)
+* [loopring_unlockWallet](#loopring_unlockwallet)
 
 ## Websocket Methods 
 
@@ -304,9 +307,9 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
 ***
 
 
-#### loopring_getTickers
+#### loopring_getTicker
 
-Get 24hr merged tickers info from loopring relay.
+Get loopring 24hr merged tickers info from loopring relay.
 
 ##### Parameters
 1. `contractVersion` - The loopring protocol version.
@@ -315,6 +318,93 @@ Get 24hr merged tickers info from loopring relay.
 ```js
 params: {
     "contractVersion" : "v1.0"
+}
+```
+
+##### Returns
+
+1. `high` - The 24hr highest price.
+2. `low`  - The 24hr lowest price.
+3. `last` - The newest dealt price.
+4. `vol` - The 24hr exchange volume.
+5. `amount` - The 24hr exchange amount.
+5. `buy` - The highest buy price in the depth.
+6. `sell` - The lowest sell price in the depth.
+7. `change` - The 24hr change percent of price.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":{see above}},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": [{
+    "exchange" : "",
+    "market":"EOS-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "exchange" : "",
+    "market":"LRC-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "exchange" : "",
+    "market":"RDN-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "exchange" : "",
+    "market":"SAN-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  }]
+}
+```
+
+***
+
+#### loopring_getTickers
+
+Get all market 24hr merged tickers info from loopring relay.
+
+##### Parameters
+1. `market` - The market info like LRC-WETH.
+
+
+```js
+params: {
+    "market" : "LRC-WETH"
 }
 ```
 
@@ -484,10 +574,10 @@ Get trend info per market.
 ##### Parameters
 
 1. `market` - The market type.
-2. `interval` - The interval like 1hr, 2hr, 4hr, 1d...
+2. `interval` - The interval like 1Hr, 2Hr, 4Hr, 1Day, 1Week.
 
 ```js
-params: {"market" : "LRC-WETH", "interval" : "2hr"}
+params: {"market" : "LRC-WETH", "interval" : "2Hr"}
 
 ```
 
@@ -702,7 +792,38 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getEstimatedAllocatedAll
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": {"0x2347ad6c"}
+  "result": ["0x2347ad6c"]
+}
+```
+***
+
+#### loopring_getGetFrozenLRCFee
+
+Get the total frozen lrcFee of all unfinished orders
+
+##### Parameters
+
+1. `owner` - The address, if is null, will query all orders.
+
+```js
+params: {
+  "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+}
+```
+
+##### Returns
+- `string` - The frozen amount in hex format.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getGetFrozenLRCFee","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": ["0x2347ad6c"]
 }
 ```
 ***
@@ -851,6 +972,41 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getTransactions","param
 
 }
 ```
+
+#### loopring_unlockWallet
+
+Tell the relay the unlocked wallet info.
+
+##### Parameters
+
+- `owner` - The address, if is null, will query all orders.
+
+```js
+params: {
+  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+}
+```
+
+##### Returns
+
+`Account` - Account balance info object.
+
+1. `string` - Success or fail info.
+
+##### Example
+```js
+// Request
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_unlockWallet","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": ["unlock_notice_success"]
+}
+```
+
+***
 
 ***
 
