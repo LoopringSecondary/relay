@@ -982,18 +982,14 @@ func (processor *AbiProcessor) handleAddressDeAuthorizedEvent(input eventemitter
 	return nil
 }
 
-func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
+func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int, status uint8) error {
 	var (
 		dst      types.TransferEvent
 		tx1, tx2 types.Transaction
 	)
-	if exist, _ := processor.accountmanager.HasUnlocked(tx.To); exist == false {
-		return nil
-	}
-	if tx.Value.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return nil
-	}
 
+	dst.From = common.HexToAddress(tx.From)
+	dst.To = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
 	dst.LogIndex = 0
@@ -1001,6 +997,17 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	dst.Symbol = "ETH"
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
+	dst.Status = status
+
+	dst.GasLimit = tx.Gas.BigInt()
+	dst.GasPrice = tx.GasPrice.BigInt()
+	dst.Nonce = tx.Nonce.BigInt()
+
+	if receipt == nil {
+		dst.GasUsed = big.NewInt(0)
+	} else {
+		dst.GasUsed = receipt.GasUsed.BigInt()
+	}
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
@@ -1016,6 +1023,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 		return err
 	}
 
+	// todo(fuk): emit to account manager
 	return nil
 }
 

@@ -29,7 +29,7 @@ import (
 func TestExtractorServiceImpl_PendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xed3308cfd4ede1e27de3e7ebdb192d13c2193eb989974dcf2091711bab62518d", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0x757101ccfc17aaefb105b14a6cb66f85733d8fcbdfb30525ad83a3cf79a1d3a7", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)

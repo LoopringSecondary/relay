@@ -85,6 +85,15 @@ func (tx *Transaction) IsNull() bool {
 	return types.IsZeroHash(common.HexToHash(tx.Hash))
 }
 
+func (tx *Transaction) IsPending() bool {
+	println("======== tx blocknumber", tx.BlockNumber.BigInt().String())
+	if tx.BlockNumber.BigInt().Cmp(big.NewInt(0)) <= 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 type Log struct {
 	LogIndex         types.Big `json:"logIndex"`
 	BlockNumber      types.Big `json:"blockNumber"`
