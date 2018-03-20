@@ -82,7 +82,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchPendingTx}
+	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.ProcessPendingTransaction}
 	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
@@ -121,11 +121,6 @@ func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
 	} else {
 		log.Debugf("extractor,chain block syncing... ")
 	}
-}
-
-func (l *ExtractorServiceImpl) WatchPendingTx(input eventemitter.EventData) error {
-	tx := input.(*ethaccessor.Transaction)
-	return l.ProcessPendingTransaction(tx)
 }
 
 func (l *ExtractorServiceImpl) ProcessBlock() {
@@ -182,11 +177,11 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 		receipt := block.Receipts[idx]
 
 		l.debug("extractor,tx:%s", transaction.Hash)
-		l.ProcessTransaction(&transaction, &receipt, block.Timestamp.BigInt())
+		l.ProcessMinedTransaction(&transaction, &receipt, block.Timestamp.BigInt())
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
+func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
 	txIsFailed := receipt.IsFailed(l.options.IsDevNet)
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
@@ -214,7 +209,8 @@ func (l *ExtractorServiceImpl) ProcessTransaction(tx *ethaccessor.Transaction, r
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
+func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.EventData) error {
+	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
 
 	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
@@ -233,19 +229,24 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transac
 	}
 }
 
-func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transaction) (*MethodData, string, bool) {
+func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transaction) (MethodData, string, bool) {
 	input := common.FromHex(tx.Input)
+
+	var (
+		method MethodData
+		ok     bool
+	)
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
 		l.debug("extractor,tx:%s contract method id %s length invalid", tx.Hash, tx.Input)
-		return nil, "", false
+		return method, "", false
 	}
 
 	id := common.ToHex(input[0:4])
-	method, ok := l.processor.GetMethod(id)
+	method, ok = l.processor.GetMethod(id)
 
-	return &method, id, ok
+	return method, id, ok
 }
 
 func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txIsFailed bool) error {
