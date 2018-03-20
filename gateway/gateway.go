@@ -183,6 +183,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if o.Price.Cmp(new(big.Rat).SetFrac(f.MaxPrice, big.NewInt(1))) > 0 || o.Price.Cmp(new(big.Rat).SetFrac(big.NewInt(1), f.MaxPrice)) < 0 {
 		return false, fmt.Errorf("dao order convert down,price out of range")
 	}
+
 	return true, nil
 }
 

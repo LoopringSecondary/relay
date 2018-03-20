@@ -695,7 +695,17 @@ func convertStatus(s string) []types.OrderStatus {
 	return []types.OrderStatus{}
 }
 
-func getStringStatus(s types.OrderStatus) string {
+func getStringStatus(order types.OrderState) string {
+	s := order.Status
+
+	if order.IsExpired() {
+		return "ORDER_EXPIRE"
+	}
+
+	if order.IsExpired() {
+		return "ORDER_PENDING"
+	}
+
 	switch s {
 	case types.ORDER_NEW:
 		return "ORDER_OPENED"
@@ -707,6 +717,10 @@ func getStringStatus(s types.OrderStatus) string {
 		return "ORDER_CANCELED"
 	case types.ORDER_CUTOFF:
 		return "ORDER_CUTOFF"
+	case types.ORDER_PENDING:
+		return "ORDER_PENDING"
+	case types.ORDER_EXPIRE:
+		return "ORDER_EXPIRE"
 	}
 	return "ORDER_UNKNOWN"
 }
@@ -870,7 +884,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)
 	rst.CancelledAmountB = types.BigintToHex(src.CancelledAmountB)
 	rst.CancelledAmountS = types.BigintToHex(src.CancelledAmountS)
-	rst.Status = getStringStatus(src.Status)
+	rst.Status = getStringStatus(src)
 	rawOrder := RawOrderJsonResult{}
 	rawOrder.Protocol = src.RawOrder.Protocol.String()
 	rawOrder.Owner = src.RawOrder.Owner.String()
@@ -915,15 +929,6 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
 	}
-}
-
-func isAvailableMarket(market string) bool {
-	for _, v := range util.AllMarkets {
-		if market == v {
-			return true
-		}
-	}
-	return false
 }
 
 func txStatusToUint8(txType string) int {
