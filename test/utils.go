@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
@@ -201,6 +202,10 @@ func GenerateDaoService() *dao.RdsServiceImpl {
 
 func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 	return marketcap.NewMarketCapProvider(cfg.MarketCap)
+}
+
+func GenerateAccountManager() market.AccountManager {
+	return market.NewAccountManager()
 }
 
 func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {

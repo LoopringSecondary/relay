@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
@@ -35,7 +36,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/eventemiter"
 )
 
 const DefaultContractVersion = "v1.2"
@@ -381,7 +381,7 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	tx := &ethaccessor.Transaction{}
 	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
 	if err == nil {
-		eventemitter.Emit(eventemitter.WalletTransactionSubmitted, tx)
+		eventemitter.Emit(eventemitter.PendingTransaction, tx)
 	}
 	return
 }
@@ -935,9 +935,9 @@ func txStatusToUint8(txType string) int {
 	switch txType {
 	case "pending":
 		return 1
-	case "success" :
+	case "success":
 		return 2
-	case "failed" :
+	case "failed":
 		return 3
 	default:
 		return -1

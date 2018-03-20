@@ -57,7 +57,7 @@ func (event *EventData) FullFilled(evtLog *ethaccessor.Log, tx *ethaccessor.Tran
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
 	event.LogIndex = evtLog.LogIndex.Int64() + 1
-	event.TxFailed = false
+	event.Status = types.TX_STATUS_SUCCESS
 }
 
 type MethodData struct {
@@ -80,12 +80,12 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txFailed bool) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, status uint8) {
 	method.TxInfo = setTxInfo(tx, receipt, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
-	method.TxFailed = txFailed
 	method.LogIndex = 0
+	method.Status = status
 }
 
 func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) types.TxInfo {
@@ -99,7 +99,11 @@ func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionRece
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
 	txinfo.GasLimit = tx.Gas.BigInt()
-	txinfo.GasUsed = receipt.GasUsed.BigInt()
+	if receipt != nil {
+		txinfo.GasUsed = receipt.GasUsed.BigInt()
+	} else {
+		txinfo.GasUsed = big.NewInt(0)
+	}
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
 	txinfo.Symbol = ""
@@ -108,7 +112,7 @@ func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionRece
 }
 
 func (m *MethodData) IsValid() error {
-	if m.TxFailed == true {
+	if m.Status == types.TX_STATUS_FAILED {
 		return fmt.Errorf("method %s transaction failed", m.Name)
 	}
 	return nil
@@ -492,7 +496,7 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	//eventemitter.Emit(eventemitter.Gateway, order)
 
 	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	if contract.TxFailed {
+	if contract.Status == types.TX_STATUS_FAILED || contract.Status == types.TX_STATUS_PENDING {
 		processor.saveCancelOrderMethodAsTx(txinfo, cancelAmount)
 	}
 
@@ -500,7 +504,7 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 }
 
 func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, amount *big.Int) error {
-	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%t", txinfo.TxHash.Hex(), txinfo.TxFailed)
+	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%d", txinfo.TxHash.Hex(), txinfo.Status)
 	var tx types.Transaction
 	tx.FromCancelMethod(txinfo, amount)
 	return processor.saveTransaction(&tx)
@@ -519,9 +523,9 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	cutoff := contractMethod.ConvertDown()
 	cutoff.TxInfo = contract.TxInfo
 	cutoff.Owner = cutoff.From
-	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64())
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64(), cutoff.Status)
 
-	if cutoff.TxFailed {
+	if cutoff.Status == types.TX_STATUS_PENDING || cutoff.Status == types.TX_STATUS_FAILED {
 		processor.saveCutoffMethodAsTx(cutoff)
 	}
 
@@ -551,7 +555,7 @@ func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventDa
 
 	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Value.Int64())
 
-	if cutoffpair.TxFailed {
+	if cutoffpair.Status == types.TX_STATUS_PENDING || cutoffpair.Status == types.TX_STATUS_FAILED {
 		processor.saveCutoffPairMethodAsTx(cutoffpair)
 	}
 
@@ -591,7 +595,7 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEvent) error {
 	var tx types.Transaction
 
-	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, txIsFailed:%t", evt.TxHash.Hex(), evt.TxFailed)
+	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, status:%d", evt.TxHash.Hex(), evt.Status)
 
 	tx.FromApproveMethod(evt)
 	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
@@ -734,7 +738,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEvent, contract *EventData) {
 	length := len(fillList)
 
-	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and tx isFailed:%t", contract.TxHash.Hex(), length, contract.TxFailed)
+	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and tx status:%d", contract.TxHash.Hex(), length, contract.Status)
 
 	for i := 0; i < length; i++ {
 		var (
@@ -801,7 +805,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String())
+	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
 
@@ -978,18 +982,14 @@ func (processor *AbiProcessor) handleAddressDeAuthorizedEvent(input eventemitter
 	return nil
 }
 
-func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
+func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int, status uint8) error {
 	var (
 		dst      types.TransferEvent
 		tx1, tx2 types.Transaction
 	)
-	if exist, _ := processor.accountmanager.HasUnlocked(tx.To); exist == false {
-		return nil
-	}
-	if tx.Value.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return nil
-	}
 
+	dst.From = common.HexToAddress(tx.From)
+	dst.To = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
 	dst.LogIndex = 0
@@ -997,6 +997,17 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	dst.Symbol = "ETH"
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
+	dst.Status = status
+
+	dst.GasLimit = tx.Gas.BigInt()
+	dst.GasPrice = tx.GasPrice.BigInt()
+	dst.Nonce = tx.Nonce.BigInt()
+
+	if receipt == nil {
+		dst.GasUsed = big.NewInt(0)
+	} else {
+		dst.GasUsed = receipt.GasUsed.BigInt()
+	}
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
@@ -1012,6 +1023,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 		return err
 	}
 
+	// todo(fuk): emit to account manager
 	return nil
 }
 

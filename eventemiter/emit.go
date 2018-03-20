@@ -75,7 +75,8 @@ const (
 	ApproveMethod        = "ApproveMethod"
 
 	// Transaction
-	TransactionEvent = "TransactionEvent"
+	TransactionEvent   = "TransactionEvent"
+	PendingTransaction = "PendingTransaction"
 )
 
 var watchers map[string][]*Watcher
