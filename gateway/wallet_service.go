@@ -381,7 +381,7 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	tx := &ethaccessor.Transaction{}
 	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
 	if err == nil {
-		eventemitter.Emit(eventemitter.WalletTransactionSubmitted, tx)
+		eventemitter.Emit(eventemitter.PendingTransaction, tx)
 	}
 	return
 }
