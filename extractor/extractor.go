@@ -229,19 +229,24 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	}
 }
 
-func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transaction) (*MethodData, string, bool) {
+func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transaction) (MethodData, string, bool) {
 	input := common.FromHex(tx.Input)
+
+	var (
+		method MethodData
+		ok bool
+	)
 
 	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
 		l.debug("extractor,tx:%s contract method id %s length invalid", tx.Hash, tx.Input)
-		return nil, "", false
+		return method, "", false
 	}
 
 	id := common.ToHex(input[0:4])
-	method, ok := l.processor.GetMethod(id)
+	method, ok = l.processor.GetMethod(id)
 
-	return &method, id, ok
+	return method, id, ok
 }
 
 func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txIsFailed bool) error {
