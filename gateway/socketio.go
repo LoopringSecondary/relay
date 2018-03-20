@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"gopkg.in/googollee/go-engine.io.v1"
+	"time"
 )
 
 type BusinessType int
@@ -91,7 +93,9 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 }
 
 func (so *SocketIOServiceImpl) Start() {
-	server, err := socketio.NewServer(nil)
+	server, err := socketio.NewServer(&engineio.Options{
+		PingInterval: time.Second * 60,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
