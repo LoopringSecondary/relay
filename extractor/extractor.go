@@ -234,7 +234,7 @@ func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transact
 
 	var (
 		method MethodData
-		ok bool
+		ok     bool
 	)
 
 	// 过滤方法
