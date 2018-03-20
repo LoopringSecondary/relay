@@ -86,7 +86,6 @@ func (tx *Transaction) IsNull() bool {
 }
 
 func (tx *Transaction) IsPending() bool {
-	println("======== tx blocknumber", tx.BlockNumber.BigInt().String())
 	if tx.BlockNumber.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return true
 	} else {
