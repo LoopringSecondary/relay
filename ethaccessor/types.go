@@ -85,6 +85,14 @@ func (tx *Transaction) IsNull() bool {
 	return types.IsZeroHash(common.HexToHash(tx.Hash))
 }
 
+func (tx *Transaction) IsPending() bool {
+	if tx.BlockNumber.BigInt().Cmp(big.NewInt(0)) <= 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
 type Log struct {
 	LogIndex         types.Big `json:"logIndex"`
 	BlockNumber      types.Big `json:"blockNumber"`
@@ -124,11 +132,18 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
-func (tx *TransactionReceipt) IsFailed() bool {
-	if tx.Status.BigInt().Int64() == 0 {
+func (tx *TransactionReceipt) IsFailed(isDevNet bool) bool {
+	if isDevNet {
+		if len(tx.Logs) > 0 {
+			return false
+		}
 		return true
+	} else {
+		if tx.Status.BigInt().Int64() == 0 {
+			return true
+		}
+		return false
 	}
-	return false
 }
 
 type BlockIterator struct {

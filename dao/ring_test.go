@@ -38,6 +38,7 @@ func loadConfig() *config.GlobalConfig {
 
 	return c
 }
+
 func TestNewRing(t *testing.T) {
 
 	cfg := loadConfig()
@@ -48,7 +49,7 @@ func TestNewRing(t *testing.T) {
 	acc2 := accounts.Account{Address: common.HexToAddress("0x48ff2269e58a373120ffdbbdee3fbcea854ac30a")}
 	ks.Unlock(acc1, "1")
 	ks.Unlock(acc2, "1")
-	c := crypto.NewCrypto(false, ks)
+	c := crypto.NewKSCrypto(false, ks)
 	crypto.Initialize(c)
 	s := dao.NewRdsService(cfg.Mysql)
 	s.Prepare()
@@ -73,7 +74,7 @@ func TestGetRing(t *testing.T) {
 	acc2 := accounts.Account{Address: common.HexToAddress("0x48ff2269e58a373120ffdbbdee3fbcea854ac30a")}
 	ks.Unlock(acc1, "1")
 	ks.Unlock(acc2, "1")
-	c := crypto.NewCrypto(false, ks)
+	c := crypto.NewKSCrypto(false, ks)
 	crypto.Initialize(c)
 	s := dao.NewRdsService(cfg.Mysql)
 	s.Prepare()

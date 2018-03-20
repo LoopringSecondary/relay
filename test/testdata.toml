@@ -10,3 +10,7 @@ passphrase = "202"
 [creator]
 address = "0x4bad3053d574cd54513babe21db3f09bea1d387d"
 passphrase = "101"
+
+[auth]
+address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
+privkey = "0x5a12849ba30a17144288161d348094588ade48a3eeb3c80fcfecd8f43934f15b"

@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -81,12 +80,36 @@ func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
+func (accessor *ethNodeAccessor) GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+	var amount types.Big
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&amount, "cancelled", blockNumStr, orderhash); err != nil {
+		return nil, err
+	}
+
+	return amount.BigInt(), nil
+}
+
 func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
 	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
 	if err := callMethod(result, "cutoffs", blockNumStr, owner); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (accessor *ethNodeAccessor) GetCutoffPair(result interface{}, contractAddress, owner, token1, token2 common.Address, blockNumStr string) error {
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	if err := callMethod(result, "getTradingPairCutoffs", blockNumStr, owner, token1, token2); err != nil {
 		return err
 	}
 	return nil
@@ -225,7 +248,7 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 
 func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if nil == accessor.gasPriceEvaluator.gasPrice {
+	if nil == accessor.gasPriceEvaluator.gasPrice || accessor.gasPriceEvaluator.gasPrice.Cmp(big.NewInt(int64(0))) <= 0 {
 		if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
 			return
 		}
@@ -259,7 +282,7 @@ func (accessor *ethNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 	}
 }
 
-func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
+func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender common.Address, tx *ethTypes.Transaction) error {
 	var err error
 	if tx, err = crypto.SignTx(sender, tx, nil); nil != err {
 		return err
@@ -276,7 +299,7 @@ func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -284,10 +307,8 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
-	var nonce types.Big
-	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
-		return "", err
-	}
+	nonce := accessor.addressCurrentNonce(sender)
+	log.Infof("nonce:%s", nonce.String())
 	if value == nil {
 		value = big.NewInt(0)
 	}
@@ -300,15 +321,17 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+		log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
 		return "", err
 	} else {
+		accessor.addressNextNonce(sender)
 		return txHash, err
 	}
 }
 
 //gas, gasPrice can be set to nil
-func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
-	return func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
@@ -318,6 +341,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
+			log.Infof("sender:%s, %s", sender.Hex(), gasPrice.String())
 			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
 		}
 	}
@@ -478,4 +502,27 @@ func (ethAccessor *ethNodeAccessor) GetSenderAddress(protocol common.Address) (c
 	}
 
 	return impl.DelegateAddress, nil
+}
+
+func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *big.Int {
+	if _, exists := accessor.AddressNonce[address]; !exists {
+		var nonce types.Big
+		if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
+			nonce = *(types.NewBigWithInt(0))
+		}
+		accessor.AddressNonce[address] = nonce.BigInt()
+	}
+	nonce := new(big.Int)
+	nonce.Set(accessor.AddressNonce[address])
+	return nonce
+}
+
+func (accessor *ethNodeAccessor) addressNextNonce(address common.Address) *big.Int {
+	accessor.mtx.Lock()
+	defer accessor.mtx.Unlock()
+
+	nonce := accessor.addressCurrentNonce(address)
+	nonce.Add(nonce, big.NewInt(int64(1)))
+	accessor.AddressNonce[address].Set(nonce)
+	return nonce
 }

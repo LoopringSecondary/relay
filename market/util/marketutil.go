@@ -63,13 +63,14 @@ var (
 	AllMarkets            []string
 	AllTokenPairs         []TokenPair
 	ContractVersionConfig = map[string]string{}
+	SymbolTokenMap        map[common.Address]string
 )
 
 func StartRefreshCron(option config.MarketOptions) {
 	mktCron := cron.New()
 	mktCron.AddFunc("1 0/10 * * * *", func() {
 		log.Info("start market util refresh.....")
-		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(option.TokenFile)
+		SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs, SymbolTokenMap = getTokenAndMarketFromDB(option.TokenFile)
 	})
 	mktCron.Start()
 }
@@ -102,13 +103,15 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	supportMarkets map[string]types.Token,
 	allTokens map[string]types.Token,
 	allMarkets []string,
-	allTokenPairs []TokenPair) {
+	allTokenPairs []TokenPair,
+	symbolTokenMap map[common.Address]string) {
 
 	supportTokens = make(map[string]types.Token)
 	allTokens = make(map[string]types.Token)
 	supportMarkets = make(map[string]types.Token)
 	allMarkets = make([]string, 0)
 	allTokenPairs = make([]TokenPair, 0)
+	symbolTokenMap = make(map[common.Address]string)
 
 	var list []token
 	fn, err := os.Open(tokenfile)
@@ -138,9 +141,11 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	// set all tokens
 	for k, v := range supportTokens {
 		allTokens[k] = v
+		symbolTokenMap[v.Protocol] = v.Symbol
 	}
 	for k, v := range supportMarkets {
 		allTokens[k] = v
+		symbolTokenMap[v.Protocol] = v.Symbol
 	}
 
 	// set all markets
@@ -172,8 +177,9 @@ func Initialize(options config.MarketOptions, contracts map[string]string) {
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
 	AllTokens = make(map[string]types.Token)
+	SymbolTokenMap = make(map[common.Address]string)
 
-	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs = getTokenAndMarketFromDB(options.TokenFile)
+	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs, SymbolTokenMap = getTokenAndMarketFromDB(options.TokenFile)
 
 	ContractVersionConfig = contracts
 
@@ -193,7 +199,7 @@ func TokenRegister(input eventemitter.EventData) error {
 	token.Symbol = strings.ToUpper(evt.Symbol)
 	token.Deny = false
 	token.IsMarket = false
-	token.Time = evt.Time.Int64()
+	token.Time = evt.BlockTime
 
 	// todo: how to get source token.Source = ""
 	SupportTokens[token.Symbol] = token
@@ -322,11 +328,11 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	return price
 }
 
-func IsBuy(s string) bool {
-	if IsAddress(s) {
-		s = AddressToAlias(s)
+func IsBuy(tokenB string) bool {
+	if IsAddress(tokenB) {
+		tokenB = AddressToAlias(tokenB)
 	}
-	if _, ok := SupportTokens[s]; !ok {
+	if _, ok := SupportTokens[tokenB]; !ok {
 		return false
 	}
 	return true
@@ -347,4 +353,11 @@ func getContractVersion(address string) string {
 
 func IsSupportedContract(address string) bool {
 	return getContractVersion(address) != ""
+}
+
+func GetSymbolWithAddress(address common.Address) (string, error) {
+	if symbol, ok := SymbolTokenMap[address]; ok {
+		return symbol, nil
+	}
+	return "", fmt.Errorf("market util, unsupported address:%s", address.Hex())
 }

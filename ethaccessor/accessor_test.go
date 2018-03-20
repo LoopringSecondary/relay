@@ -35,6 +35,7 @@ var (
 	version              = test.Version
 	registerTokenAddress = "0x8b62ff4ddc9baeb73d0a3ea49d43e4fe8492935a"
 	registerTokenSymbol  = "wrdn"
+	miner                = test.Entity().Creator
 	account1             = test.Entity().Accounts[0].Address
 	account2             = test.Entity().Accounts[1].Address
 	lrcTokenAddress      = util.AllTokens["LRC"].Protocol
@@ -44,12 +45,12 @@ var (
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 	owner := account2
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
 	test.SetTokenBalance("LRC", owner, amount)
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
-	owner := account2
+	owner := account1
 	tokenAddress := lrcTokenAddress
 	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
@@ -60,14 +61,13 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := accounts.Account{Address: account2}
-
-	tokenAddress := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100000000000000000000", 0) // 100weth
+	account := accounts.Account{Address: account1}
+	tokenAddress := lrcTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
-	if result, err := callMethod(account, "approve", nil, nil, nil, spender, amount); nil != err {
+	if result, err := callMethod(account.Address, "approve", big.NewInt(1000000), big.NewInt(21000000000), nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -76,28 +76,25 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
 	owner := account2
-	tokenAddress := wethTokenAddress
+	tokenAddress := lrcTokenAddress
 	spender := delegateAddress
 
 	if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
 		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
 	} else {
-		t.Log(allowance.String())
+		t.Log(new(big.Rat).SetFrac(allowance, big.NewInt(1e18)).FloatString(2))
 	}
 }
 
 func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	var (
-		model           *dao.Order
-		state           types.OrderState
-		err             error
-		result          string
-		orderhash       = common.HexToHash("0x38a4ff508746feddb75e1652e2c430e23a179f949f331ebe81e624801b4b6f4d")
-		cancelAmount, _ = new(big.Int).SetString("1000000000000000000000", 0)
+		model        *dao.Order
+		state        types.OrderState
+		err          error
+		result       string
+		orderhash    = common.HexToHash("0xf9e4657a74b947edbc3028013640fa6cc052b3ba7432175b93c0906959042146")
+		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
-
-	// load config
-	c := test.Cfg()
 
 	// get order
 	rds := test.Rds()
@@ -111,8 +108,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	account := accounts.Account{Address: state.RawOrder.Owner}
 
 	// create cancel order contract function parameters
-	addresses := [3]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB}
-	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.Timestamp, state.RawOrder.Ttl, state.RawOrder.Salt, state.RawOrder.LrcFee, cancelAmount}
+	addresses := [4]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.AuthAddr}
+	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, state.RawOrder.WalletId, cancelAmount}
 	buyNoMoreThanB := state.RawOrder.BuyNoMoreThanAmountB
 	marginSplitPercentage := state.RawOrder.MarginSplitPercentage
 	v := state.RawOrder.V
@@ -120,9 +117,10 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	r := state.RawOrder.R
 
 	// call cancel order
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), protocol)
-	if result, err = callMethod(account, "cancelOrder", big.NewInt(200000), big.NewInt(21000000000), nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
+	if result, err = callMethod(account.Address, "cancelOrder", big.NewInt(200000), big.NewInt(21000000000), nil, addresses, values, buyNoMoreThanB, marginSplitPercentage, v, r, s); nil != err {
 		t.Fatalf("call method cancelOrder error:%s", err.Error())
 	} else {
 		t.Logf("cancelOrder result:%s", result)
@@ -130,11 +128,11 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
-	c := test.Cfg()
 	orderhash := common.HexToHash("0x77aecf96a71d260074ab6ad9352365f0e83cd87d4d3a424071e76cafc393f549")
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	if amount, err := ethaccessor.GetCancelledOrFilled(protocol, orderhash, "latest"); err != nil {
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	if amount, err := ethaccessor.GetCancelledOrFilled(implAddress, orderhash, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
 		t.Logf("cancelOrFilled amount:%s", amount.String())
@@ -142,39 +140,67 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 }
 
 // cutoff的值必须在两个块的timestamp之间
-func TestEthNodeAccessor_Cutoff(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: account2}
-	cutoff := big.NewInt(1518700280)
+func TestEthNodeAccessor_CutoffAll(t *testing.T) {
+	account := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+	cutoff := big.NewInt(1531107175)
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), protocol)
-	if result, err := callMethod(account, "setCutoff", nil, nil, nil, cutoff); nil != err {
-		t.Fatalf("call method setCutoff error:%s", err.Error())
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
+	if result, err := callMethod(account, "cancelAllOrders", big.NewInt(200000), big.NewInt(21000000000), nil, cutoff); nil != err {
+		t.Fatalf("call method cancelAllOrders error:%s", err.Error())
 	} else {
 		t.Logf("cutoff result:%s", result)
 	}
 }
 
-func TestEthNodeAccessor_GetCutoff(t *testing.T) {
-	c := test.Cfg()
+func TestEthNodeAccessor_GetCutoffAll(t *testing.T) {
 	owner := account1
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	if timestamp, err := ethaccessor.GetCutoff(protocol, owner, "latest"); err != nil {
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	if timestamp, err := ethaccessor.GetCutoff(implAddress, owner, "latest"); err != nil {
 		t.Fatal(err)
 	} else {
 		t.Logf("cutoff timestamp:%s", timestamp.String())
 	}
 }
 
-func TestEthNodeAccessor_TokenRegister(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+func TestEthNodeAccessor_CutoffPair(t *testing.T) {
+	account := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
+	cutoff := big.NewInt(1531107175)
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	address := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.TokenRegistryAbi(), address)
-	if result, err := callMethod(account, "registerToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.ProtocolImplAbi(), implAddress)
+	if result, err := callMethod(account, "cancelAllOrdersByTradingPair", big.NewInt(200000), big.NewInt(21000000000), nil, token1, token2, cutoff); nil != err {
+		t.Fatalf("call method cancelAllOrdersByTradingPair error:%s", err.Error())
+	} else {
+		t.Logf("cutoff result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_GetCutoffPair(t *testing.T) {
+	owner := accounts.Account{Address: account2}
+	token1 := lrcTokenAddress
+	token2 := wethTokenAddress
+	protocol := test.Protocol()
+	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
+	if timestamp, err := ethaccessor.GetCutoffPair(implAddress, owner.Address, token1, token2, "latest"); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("cutoffpair timestamp:%s", timestamp.String())
+	}
+}
+
+func TestEthNodeAccessor_TokenRegister(t *testing.T) {
+	account := accounts.Account{Address: test.Entity().Creator.Address}
+
+	protocol := test.Protocol()
+	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.TokenRegistryAbi(), tokenRegistryAddress)
+	if result, err := callMethod(account.Address, "registerToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
 		t.Fatalf("call method registerToken error:%s", err.Error())
 	} else {
 		t.Logf("registerToken result:%s", result)
@@ -182,13 +208,12 @@ func TestEthNodeAccessor_TokenRegister(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	address := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.TokenRegistryAbi(), address)
-	if result, err := callMethod(account, "unregisterToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
+	protocol := test.Protocol()
+	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.TokenRegistryAbi(), tokenRegistryAddress)
+	if result, err := callMethod(account.Address, "unregisterToken", nil, nil, nil, common.HexToAddress(registerTokenAddress), registerTokenSymbol); nil != err {
 		t.Fatalf("call method unregisterToken error:%s", err.Error())
 	} else {
 		t.Logf("unregisterToken result:%s", result)
@@ -196,25 +221,25 @@ func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
 }
 
 func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
-	c := test.Cfg()
 	var result string
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
+	protocol := test.Protocol()
+	symbol := "LRC"
 	callMethod := ethaccessor.ContractCallMethod(ethaccessor.TokenRegistryAbi(), ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress)
-	if err := callMethod(&result, "getAddressBySymbol", "latest", registerTokenSymbol); err != nil {
+	if err := callMethod(&result, "getAddressBySymbol", "latest", symbol); err != nil {
 		t.Fatal(err)
 	} else {
-		t.Logf("symbol map:%s->%s", registerTokenSymbol, common.HexToAddress(result).Hex())
+		t.Logf("symbol map:%s->%s", symbol, common.HexToAddress(result).Hex())
 	}
 }
 
 // 注册合约
 func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.DelegateAbi(), ethaccessor.ProtocolAddresses()[protocol].DelegateAddress)
-	if result, err := callMethod(account, "authorizeAddress", nil, nil, nil, protocol); nil != err {
+	protocol := test.Protocol()
+	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.DelegateAbi(), delegateAddress)
+	if result, err := callMethod(account.Address, "authorizeAddress", nil, nil, nil, protocol); nil != err {
 		t.Fatalf("call method authorizeAddress error:%s", err.Error())
 	} else {
 		t.Logf("authorizeAddress result:%s", result)
@@ -222,12 +247,12 @@ func TestEthNodeAccessor_AuthorizedAddress(t *testing.T) {
 }
 
 func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
-	c := test.Cfg()
-	account := accounts.Account{Address: common.HexToAddress(c.Miner.Miner)}
+	account := accounts.Account{Address: test.Entity().Creator.Address}
 
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.DelegateAbi(), ethaccessor.ProtocolAddresses()[protocol].DelegateAddress)
-	if result, err := callMethod(account, "deauthorizeAddress", nil, nil, nil, protocol); nil != err {
+	protocol := test.Protocol()
+	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.DelegateAbi(), delegateAddress)
+	if result, err := callMethod(account.Address, "deauthorizeAddress", nil, nil, nil, protocol); nil != err {
 		t.Fatalf("call method deauthorizeAddress error:%s", err.Error())
 	} else {
 		t.Logf("deauthorizeAddress result:%s", result)
@@ -235,12 +260,11 @@ func TestEthNodeAccessor_DeAuthorizedAddress(t *testing.T) {
 }
 
 func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
-	c := test.Cfg()
-
 	var result string
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractCallMethod(ethaccessor.DelegateAbi(), ethaccessor.ProtocolAddresses()[protocol].DelegateAddress)
-	if err := callMethod(&result, "isAddressAuthorized", "latest", protocol); err != nil {
+	protocol := test.Protocol()
+	delegateAddress := ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.DelegateAbi(), delegateAddress)
+	if err := callMethod(&result, "isAddressAuthorized", "latest", delegateAddress); err != nil {
 		t.Fatal(err)
 	} else {
 		t.Logf("symbol map:%s->%s", registerTokenSymbol, result)
@@ -248,12 +272,11 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := accounts.Account{Address: account1}
-
+	account := miner
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).SetInt64(1000000)
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
+	if result, err := callMethod(account.Address, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
 	} else {
 		t.Logf("weth-deposit result:%s", result)
@@ -261,12 +284,11 @@ func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
-	account := accounts.Account{Address: account1}
-
+	account := miner
 	wethAddr := wethTokenAddress
-	amount, _ := new(big.Int).SetString("100", 0)
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account, "withdraw", big.NewInt(200000), big.NewInt(21000000000), nil, amount); nil != err {
+	if result, err := callMethod(account.Address, "withdraw", big.NewInt(200000), big.NewInt(21000000000), nil, amount); nil != err {
 		t.Fatalf("call method weth-withdraw error:%s", err.Error())
 	} else {
 		t.Logf("weth-withdraw result:%s", result)
@@ -280,24 +302,47 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 	amount := new(big.Int).SetInt64(100)
 	to := account2
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account, "transfer", big.NewInt(200000), big.NewInt(21000000000), nil, to, amount); nil != err {
+	if result, err := callMethod(account.Address, "transfer", big.NewInt(200000), big.NewInt(21000000000), nil, to, amount); nil != err {
 		t.Fatalf("call method weth-transfer error:%s", err.Error())
 	} else {
 		t.Logf("weth-transfer result:%s", result)
 	}
 }
 
-func TestEthNodeAccessor_TokenAddress(t *testing.T) {
-	c := test.Cfg()
+func TestEthNodeAccessor_EthTransfer(t *testing.T) {
+	sender := miner
+	receiver := account1
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	if hash, err := ethaccessor.SignAndSendTransaction(sender.Address, receiver, big.NewInt(30000), big.NewInt(1), amount, []byte("test")); err != nil {
+		t.Errorf(err.Error())
+	} else {
+		t.Logf("txhash:%s", hash)
+	}
+}
 
+func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	symbol := "WETH"
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[version])
-	callMethod := ethaccessor.ContractCallMethod(ethaccessor.TokenRegistryAbi(), protocol)
+	protocol := test.Protocol()
+	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.TokenRegistryAbi(), tokenRegistryAddress)
 	var result string
 	if err := callMethod(&result, "getAddressBySymbol", "latest", symbol); nil != err {
 		t.Fatalf("call method tokenAddress error:%s", err.Error())
 	} else {
 		t.Logf("symbol:%s-> address:%s", symbol, result)
+	}
+}
+
+func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
+	protocol := test.Protocol()
+	miner := test.Entity().Creator.Address
+	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
+	var result string
+	if err := callMethod(&result, "nameMap", "latest", miner); nil != err {
+		t.Fatalf("call method nameMap error:%s", err.Error())
+	} else {
+		t.Logf("name:%s-> address:%s", result, miner.Hex())
 	}
 }
 
@@ -325,11 +370,14 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	}
 }
 
+//mainnet
 //0x8924ce3be0895775b30f6ea7512c6d8318dc0c84da7e1eb4d1930e5658c92d04
 //0x1cff70d0eecd86d008b633f62ef171bbe71516c132adea3ff73ed419d56232fd
+//priv net
+//0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0x68ce1331a561e5b693a4780458910fab302da2f52bea4cef05f9ec9d5860e632", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d", "latest"); err == nil {
 		t.Logf("tx gasUsed:%s status:%s", tx.GasUsed.BigInt().String(), tx.Status.BigInt().String())
 	} else {
 		t.Fatalf(err.Error())

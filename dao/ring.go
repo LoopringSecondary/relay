@@ -24,11 +24,6 @@ import (
 	"math/big"
 )
 
-type Ring struct {
-	ID   int    `gorm:"column:id;primary_key;"`
-	Hash string `gorm:"column:hash;type:varchar(82)"`
-}
-
 type FilledOrder struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
@@ -39,12 +34,12 @@ type FilledOrder struct {
 	AvailableAmountB string `gorm:"column:available_amount_b;type:varchar(82)"`
 	FillAmountS      string `gorm:"column:fill_amount_s;type:varchar(82)" json:"fillAmountS"`
 	FillAmountB      string `gorm:"column:fill_amount_b;type:varchar(82)" json:"fillAmountB"`
-	LrcReward        string `gorm:"column:lrc_reward;type:varchar(82)" json:"lrcReward"`
-	LrcFee           string `gorm:"column:lrc_fee;type:varchar(82)" json:"lrcFee"`
-	FeeS             string `gorm:"column:fee_s;type:varchar(82)" json:"feeS"`
-	LegalFee         string `gorm:"column:legal_fee;type:varchar(82)" json:"legalFee"`
-	SPrice           string `gorm:"column:s_price;type:varchar(82)" json:"sPrice"`
-	BPrice           string `gorm:"column:b_price;type:varchar(82)" json:"sPrice"`
+	LrcReward        string `gorm:"column:lrc_reward;type:text" json:"lrcReward"`
+	LrcFee           string `gorm:"column:lrc_fee;type:varchar(100)" json:"lrcFee"`
+	FeeS             string `gorm:"column:fee_s;type:varchar(100)" json:"feeS"`
+	LegalFee         string `gorm:"column:legal_fee;type:text" json:"legalFee"`
+	SPrice           string `gorm:"column:s_price;type:text" json:"sPrice"`
+	BPrice           string `gorm:"column:b_price;type:text" json:"sPrice"`
 }
 
 func getRatString(v *big.Rat) string {
@@ -119,13 +114,7 @@ type RingSubmitInfo struct {
 	ProtocolGasPrice string `gorm:"column:protocol_gas_price;type:varchar(50)"`
 	ProtocolUsedGas  string `gorm:"column:protocol_used_gas;type:varchar(50)"`
 
-	RegistryData     string `gorm:"column:registry_data;type:text"`
-	RegistryGas      string `gorm:"column:registry_gas;type:varchar(50)"`
-	RegistryGasPrice string `gorm:"column:registry_gas_price;type:varchar(50)"`
-	RegistryUsedGas  string `gorm:"column:registry_used_gas;type:varchar(50)"`
-
 	ProtocolTxHash string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
-	RegistryTxHash string `gorm:"column:registry_tx_hash;type:varchar(82)"`
 
 	Miner string `gorm:"column:miner;type:varchar(42)"`
 	Err   string `gorm:"column:err;type:text"`
@@ -147,10 +136,6 @@ func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
 	info.ProtocolGas = getBigIntString(typesInfo.ProtocolGas)
 	info.ProtocolUsedGas = getBigIntString(typesInfo.ProtocolUsedGas)
 	info.ProtocolGasPrice = getBigIntString(typesInfo.ProtocolGasPrice)
-	info.RegistryData = common.ToHex(typesInfo.RegistryData)
-	info.RegistryGas = getBigIntString(typesInfo.RegistryGas)
-	info.RegistryUsedGas = getBigIntString(typesInfo.RegistryUsedGas)
-	info.RegistryGasPrice = getBigIntString(typesInfo.RegistryGasPrice)
 	info.Miner = typesInfo.Miner.Hex()
 	return nil
 }
@@ -166,15 +151,7 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 	typesInfo.ProtocolUsedGas.SetString(info.ProtocolUsedGas, 0)
 	typesInfo.ProtocolGasPrice = new(big.Int)
 	typesInfo.ProtocolGasPrice.SetString(info.ProtocolGasPrice, 0)
-	typesInfo.RegistryData = common.FromHex(info.RegistryData)
-	typesInfo.RegistryGas = new(big.Int)
-	typesInfo.RegistryGas.SetString(info.RegistryGas, 0)
-	typesInfo.RegistryUsedGas = new(big.Int)
-	typesInfo.RegistryUsedGas.SetString(info.RegistryUsedGas, 0)
-	typesInfo.RegistryGasPrice = new(big.Int)
-	typesInfo.RegistryGasPrice.SetString(info.RegistryGasPrice, 0)
 	typesInfo.SubmitTxHash = common.HexToHash(info.ProtocolTxHash)
-	typesInfo.RegistryTxHash = common.HexToHash(info.RegistryTxHash)
 	typesInfo.Miner = common.HexToAddress(info.Miner)
 	return nil
 }

@@ -66,25 +66,12 @@ func MinerFlags() []cli.Flag {
 			Name:  "feeRecepient,r",
 			Usage: "the fee recepient address when mined a ring",
 		},
-		cli.BoolFlag{
-			Name:  "ifRegistryRingHash,reg",
-			Usage: "the submitter will registry ringhash first if it set ture",
-		},
 	}
 }
 
 func mergeMinerConfig(ctx *cli.Context, minerOpts *config.MinerOptions) {
 	if ctx.IsSet("ringMaxLength") {
 		minerOpts.RingMaxLength = ctx.Int("ringMaxLength")
-	}
-	if ctx.IsSet("miner") {
-		minerOpts.Miner = ctx.String("miner")
-	}
-	if ctx.IsSet("feeRecepient") {
-		minerOpts.FeeReceipt = ctx.String("feeRecepient")
-	}
-	if ctx.IsSet("ifRegistryRingHash") {
-		minerOpts.IfRegistryRingHash = ctx.Bool("ifRegistryRingHash")
 	}
 }
 

@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"sync"
 
+	"fmt"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
@@ -67,13 +68,24 @@ type Node struct {
 }
 
 type RelayNode struct {
-	trendManager   market.TrendManager
-	jsonRpcService gateway.JsonrpcServiceImpl
+	trendManager     market.TrendManager
+	tickerCollector  market.CollectorImpl
+	jsonRpcService   gateway.JsonrpcServiceImpl
+	websocketService gateway.WebsocketServiceImpl
+	socketIOService  gateway.SocketIOServiceImpl
+	walletService    gateway.WalletServiceImpl
 }
 
 func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
-	n.jsonRpcService.Start()
+	fmt.Println("step in relay node start")
+	n.tickerCollector.Start()
+	fmt.Print("start jsonrpc in node......")
+	go n.jsonRpcService.Start()
+	fmt.Print("end jsonrpc in node......")
+	//n.websocketService.Start()
+	go n.socketIOService.Start()
+
 }
 
 func (n *RelayNode) Stop() {
@@ -113,7 +125,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
-		n.registerCrypto(keystore.NewKeyStore("", 0, 0))
 	} else if "miner" == globalConfig.Mode {
 		n.registerMineNode()
 	} else {
@@ -127,7 +138,11 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
 	n.registerTrendManager()
+	n.registerTickerCollector()
+	n.registerWalletService()
 	n.registerJsonRpcService()
+	n.registerWebsocketService()
+	n.registerSocketIOService()
 }
 
 func (n *Node) registerMineNode() {
@@ -169,9 +184,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Stop()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 	} else {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 		n.mineNode.Stop()
 	}
 	n.extractorService.Stop()
@@ -188,9 +203,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Start()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 	} else {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 		n.mineNode.Start()
 	}
 
@@ -223,7 +238,7 @@ func (n *Node) Stop() {
 }
 
 func (n *Node) registerCrypto(ks *keystore.KeyStore) {
-	c := crypto.NewCrypto(true, ks)
+	c := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(c)
 }
 
@@ -240,7 +255,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService, &n.accountManager)
 }
 
 func (n *Node) registerIPFSSubService() {
@@ -259,13 +274,32 @@ func (n *Node) registerAccountManager() {
 	n.accountManager = market.NewAccountManager()
 }
 
-func (n *Node) registerJsonRpcService() {
+func (n *Node) registerTickerCollector() {
+	n.relayNode.tickerCollector = *market.NewCollector()
+}
+
+func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), n.relayNode.trendManager, n.orderManager, n.accountManager, &ethForwarder, n.marketCapProvider)
+	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService)
+}
+
+func (n *Node) registerJsonRpcService() {
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), &n.relayNode.walletService)
+}
+
+func (n *Node) registerWebsocketService() {
+	n.relayNode.websocketService = *gateway.NewWebsocketService(n.globalConfig.Websocket.Port, n.relayNode.trendManager, n.accountManager, n.marketCapProvider)
+}
+
+func (n *Node) registerSocketIOService() {
+	n.relayNode.socketIOService = *gateway.NewSocketIOService(n.globalConfig.Websocket.Port, n.relayNode.walletService)
 }
 
 func (n *Node) registerMiner() {
-	submitter := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
+	submitter, err := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
+	if nil != err {
+		log.Fatalf("failed to init submitter, error:%s", err.Error())
+	}
 	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold)
 	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
 	submitter.SetMatcher(matcher)

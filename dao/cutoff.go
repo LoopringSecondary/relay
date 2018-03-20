@@ -19,29 +19,42 @@
 package dao
 
 import (
+	"encoding/json"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
+// todo(fuk): rename table
 type CutOffEvent struct {
-	ID          int    `gorm:"column:id;primary_key;"`
-	Protocol    string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner       string `gorm:"column:owner;type:varchar(42)"`
-	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	BlockNumber int64  `gorm:"column:block_number"`
-	Cutoff      int64  `gorm:"column:cutoff"`
-	CreateTime  int64  `gorm:"column:create_time"`
+	ID            int    `gorm:"column:id;primary_key;"`
+	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	Owner         string `gorm:"column:owner;type:varchar(42)"`
+	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber   int64  `gorm:"column:block_number"`
+	Cutoff        int64  `gorm:"column:cutoff"`
+	LogIndex      int64  `gorm:"column:log_index"`
+	Fork          bool   `gorm:"column:fork"`
+	CreateTime    int64  `gorm:"column:create_time"`
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
 func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
-	e.Protocol = src.ContractAddress.Hex()
+	e.Protocol = src.Protocol.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Cutoff = src.Cutoff.Int64()
-	e.BlockNumber = src.Blocknumber.Int64()
-	e.CreateTime = src.Time.Int64()
+	e.LogIndex = src.LogIndex
+	e.BlockNumber = src.BlockNumber.Int64()
+	e.CreateTime = src.BlockTime
+
+	list := []string{}
+	for _, v := range src.OrderHashList {
+		list = append(list, v.Hex())
+	}
+	bs, _ := json.Marshal(list)
+	e.OrderHashList = string(bs)
 
 	return nil
 }
@@ -49,35 +62,41 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 // convert dao/cutoffEvent to types/cutoffEvent
 func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
-	dst.ContractAddress = common.HexToAddress(e.Protocol)
+	dst.Protocol = common.HexToAddress(e.Protocol)
 	dst.TxHash = common.HexToHash(e.TxHash)
-	dst.Blocknumber = big.NewInt(e.BlockNumber)
+	dst.BlockNumber = big.NewInt(e.BlockNumber)
+	dst.LogIndex = e.LogIndex
 	dst.Cutoff = big.NewInt(e.Cutoff)
-	dst.Time = big.NewInt(e.CreateTime)
+	dst.BlockTime = e.CreateTime
+	dst.OrderHashList = []common.Hash{}
 
+	list := []string{}
+	json.Unmarshal([]byte(e.OrderHashList), &list)
+	for _, v := range list {
+		dst.OrderHashList = append(dst.OrderHashList, common.HexToHash(v))
+	}
 	return nil
 }
 
-func (s *RdsServiceImpl) GetCutoffEvent(protocol, owner common.Address) (*CutOffEvent, error) {
-	var (
-		model CutOffEvent
-		err   error
-	)
-
-	err = s.db.Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).First(&model).Error
-
-	return &model, err
+func (s *RdsServiceImpl) GetCutoffEvent(txhash common.Hash) (CutOffEvent, error) {
+	var event CutOffEvent
+	err := s.db.Where("tx_hash=?").Where("fork=?", false).First(&event).Error
+	return event, err
 }
 
-func (s *RdsServiceImpl) DelCutoffEvent(protocol, owner common.Address) error {
-	return s.db.Delete(CutOffEvent{}, "contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Error
+func (s *RdsServiceImpl) GetCutoffForkEvents(from, to int64) ([]CutOffEvent, error) {
+	var (
+		list []CutOffEvent
+		err  error
+	)
+
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork=?", false).
+		Find(&list).Error
+
+	return list, err
 }
 
 func (s *RdsServiceImpl) RollBackCutoff(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&CutOffEvent{}).Error
-}
-
-func (s *RdsServiceImpl) UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error {
-	item := map[string]interface{}{"tx_hash": txhash.Hex(), "block_number": blockNumber.Int64(), "cutoff": cutoff.Int64(), "create_time": createTime}
-	return s.db.Model(&CutOffEvent{}).Where("contract_address = ? and owner = ?", protocol.Hex(), owner.Hex()).Update(item).Error
+	return s.db.Model(&CutOffEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

@@ -24,196 +24,133 @@ import (
 )
 
 type TokenRegisterEvent struct {
-	Token           common.Address
-	ContractAddress common.Address
-	Symbol          string
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Token  common.Address
+	Symbol string
 }
 
 type TokenUnRegisterEvent struct {
-	Token           common.Address
-	ContractAddress common.Address
-	Symbol          string
-	Blocknumber     *big.Int
-	Time            *big.Int
-}
-
-type RinghashSubmittedEvent struct {
-	RingHash        common.Hash
-	RingMiner       common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Token  common.Address
+	Symbol string
 }
 
 type AddressAuthorizedEvent struct {
-	Protocol        common.Address
-	ContractAddress common.Address
-	Number          int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Protocol common.Address
+	Number   int
 }
 
 type AddressDeAuthorizedEvent struct {
-	Protocol        common.Address
-	ContractAddress common.Address
-	Number          int
-	Blocknumber     *big.Int
-	Time            *big.Int
-}
-
-// todo: unpack transaction and create event
-type EtherBalanceUpdateEvent struct {
-	Owner common.Address
-}
-
-// todo: transfer change to
-type TokenBalanceUpdateEvent struct {
-	Owner       common.Address
-	Value       *big.Int
-	BlockNumber *big.Int
-	BlockHash   common.Hash
-}
-
-// todo: erc20 event
-type TokenAllowanceUpdateEvent struct {
-	Owner       common.Address
-	Spender     common.Address
-	Value       *big.Int
-	BlockNumber *big.Int
-	BlockHash   common.Hash
+	TxInfo
+	Protocol common.Address
+	Number   int
 }
 
 type TransferEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	Value           *big.Int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Sender   common.Address
+	Receiver common.Address
+	Value    *big.Int
 }
 
 type ApprovalEvent struct {
-	Owner           common.Address
-	Spender         common.Address
-	ContractAddress common.Address
-	Value           *big.Int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Owner   common.Address
+	Spender common.Address
+	Value   *big.Int
 }
 
 type OrderFilledEvent struct {
-	Ringhash        common.Hash
-	PreOrderHash    common.Hash
-	OrderHash       common.Hash
-	NextOrderHash   common.Hash
-	TxHash          common.Hash
-	ContractAddress common.Address
-	Owner           common.Address
-	TokenS          common.Address
-	TokenB          common.Address
-	RingIndex       *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
-	AmountS         *big.Int
-	AmountB         *big.Int
-	LrcReward       *big.Int
-	LrcFee          *big.Int
-	SplitS          *big.Int
-	SplitB          *big.Int
-	Market          string
-	FillIndex       *big.Int
+	TxInfo
+	Ringhash      common.Hash
+	PreOrderHash  common.Hash
+	OrderHash     common.Hash
+	NextOrderHash common.Hash
+	Owner         common.Address
+	TokenS        common.Address
+	TokenB        common.Address
+	RingIndex     *big.Int
+	AmountS       *big.Int
+	AmountB       *big.Int
+	LrcReward     *big.Int
+	LrcFee        *big.Int
+	SplitS        *big.Int
+	SplitB        *big.Int
+	Market        string
+	FillIndex     *big.Int
 }
 
 type OrderCancelledEvent struct {
+	TxInfo
 	OrderHash       common.Hash
-	TxHash          common.Hash
-	ContractAddress common.Address
-	Time            *big.Int
-	Blocknumber     *big.Int
 	AmountCancelled *big.Int
 }
 
 type CutoffEvent struct {
-	Owner           common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Time            *big.Int
-	Blocknumber     *big.Int
-	Cutoff          *big.Int
+	TxInfo
+	Owner         common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
+}
+
+type CutoffPairEvent struct {
+	TxInfo
+	Owner         common.Address
+	Token1        common.Address
+	Token2        common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int
-	Time               *big.Int
-	Blocknumber        *big.Int
-	TotalLrcFee        *big.Int
-	TradeAmount        int
-	Ringhash           common.Hash
-	TxHash             common.Hash
-	Miner              common.Address
-	FeeRecipient       common.Address
-	ContractAddress    common.Address
-	IsRinghashReserved bool
+	TxInfo
+	RingIndex    *big.Int
+	TotalLrcFee  *big.Int
+	TradeAmount  int
+	Ringhash     common.Hash
+	Miner        common.Address
+	FeeRecipient common.Address
 }
 
 type WethDepositMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
+	TxInfo
+	Owner common.Address
+	Value *big.Int
 }
 
 type WethWithdrawalMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
+	TxInfo
+	Owner common.Address
+	Value *big.Int
 }
 
 type ApproveMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Spender         common.Address
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
-	Owner           common.Address
-	Success         bool
+	TxInfo
+	Spender common.Address
+	Value   *big.Int
+	Owner   common.Address
 }
 
 type SubmitRingMethodEvent struct {
-	TxHash       common.Hash
+	TxInfo
 	UsedGas      *big.Int
 	UsedGasPrice *big.Int
 	Err          error
 }
 
-type RingHashSubmitMethodEvent struct {
-	RingMiner    common.Address
-	RingHash     common.Hash
-	TxHash       common.Hash
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
-	Err          error
+type CutoffMethodEvent struct {
+	TxInfo
+	Value *big.Int
+	Owner common.Address
 }
 
-type BatchSubmitRingHashMethodEvent struct {
-	RingHashMinerMap map[common.Hash]common.Address
-	TxHash           common.Hash
-	UsedGas          *big.Int
-	UsedGasPrice     *big.Int
-	Err              error
+type CutoffPairMethodEvent struct {
+	TxInfo
+	Value  *big.Int
+	Token1 common.Address
+	Token2 common.Address
+	Owner  common.Address
 }
 
 type RingSubmitFailedEvent struct {
@@ -231,4 +168,8 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
+}
+
+type TransactionEvent struct {
+	Tx Transaction
 }

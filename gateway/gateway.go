@@ -183,6 +183,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if o.Price.Cmp(new(big.Rat).SetFrac(f.MaxPrice, big.NewInt(1))) > 0 || o.Price.Cmp(new(big.Rat).SetFrac(big.NewInt(1), f.MaxPrice)) < 0 {
 		return false, fmt.Errorf("dao order convert down,price out of range")
 	}
+
 	return true, nil
 }
 
@@ -234,7 +235,7 @@ type CutoffFilter struct {
 
 // 如果订单接收在cutoff(cancel)事件之后，则该订单直接过滤
 func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
-	if f.om.IsOrderCutoff(o.Protocol, o.Owner, o.Timestamp) {
+	if f.om.IsOrderCutoff(o.Protocol, o.Owner, o.TokenS, o.TokenB, o.ValidSince) {
 		return false, fmt.Errorf("gateway,cutoff filter order:%s should be cutoff", o.Owner.Hex())
 	}
 

@@ -49,11 +49,13 @@ func TestSingleOrder(t *testing.T) {
 	tokenAddressA := util.AllTokens[TOKEN_SYMBOL].Protocol
 	tokenAddressB := util.AllTokens[WETH].Protocol
 	testAcc := entity.Accounts[0]
+	walletId := big.NewInt(1)
+	privkey := entity.PrivateKey
 
 	ks := keystore.NewKeyStore(c.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account := accounts.Account{Address: testAcc.Address}
 	ks.Unlock(account, testAcc.Passphrase)
-	cyp := crypto.NewCrypto(true, ks)
+	cyp := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(cyp)
 
 	// set order and marshal to json
@@ -63,6 +65,8 @@ func TestSingleOrder(t *testing.T) {
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order := test.CreateOrder(
+		privkey,
+		walletId,
 		tokenAddressA,
 		tokenAddressB,
 		protocol,
@@ -88,14 +92,19 @@ func TestRing(t *testing.T) {
 	account1 := entity.Accounts[0]
 	account2 := entity.Accounts[1]
 
+	walletId := big.NewInt(1)
+	privkey := entity.PrivateKey
+
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
 	// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
-	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("30000"+suffix, 0)
-	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)) // 20个lrc
+	amountS1, _ := new(big.Int).SetString("100"+suffix, 0)
+	amountB1, _ := new(big.Int).SetString("1900"+suffix, 0)
+	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20)) // 20个lrc
 	order1 := test.CreateOrder(
+		privkey,
+		walletId,
 		eth,
 		lrc,
 		protocol,
@@ -107,10 +116,12 @@ func TestRing(t *testing.T) {
 	bs1, _ := order1.MarshalJSON()
 
 	// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-	amountS2, _ := new(big.Int).SetString("100000"+suffix, 0)
-	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("1900"+suffix, 0)
+	amountB2, _ := new(big.Int).SetString("100"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10))
 	order2 := test.CreateOrder(
+		privkey,
+		walletId,
 		lrc,
 		eth,
 		protocol,
@@ -137,6 +148,9 @@ func TestBatchRing(t *testing.T) {
 	account1 := entity.Accounts[0]
 	account2 := entity.Accounts[1]
 
+	walletId := big.NewInt(1)
+	privkey := entity.PrivateKey
+
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 
@@ -145,6 +159,8 @@ func TestBatchRing(t *testing.T) {
 	amountB1, _ := new(big.Int).SetString("30000"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5)) // 20个lrc
 	order1 := test.CreateOrder(
+		privkey,
+		walletId,
 		eth,
 		lrc,
 		protocol,
@@ -160,6 +176,8 @@ func TestBatchRing(t *testing.T) {
 	amountB3, _ := new(big.Int).SetString("20000"+suffix, 0)
 	lrcFee3 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5)) // 20个lrc
 	order3 := test.CreateOrder(
+		privkey,
+		walletId,
 		eth,
 		lrc,
 		protocol,
@@ -175,6 +193,8 @@ func TestBatchRing(t *testing.T) {
 	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5))
 	order2 := test.CreateOrder(
+		privkey,
+		walletId,
 		lrc,
 		eth,
 		protocol,
@@ -229,7 +249,7 @@ func MatchTestPrepare() (*config.GlobalConfig, *test.TestEntity) {
 	ks.Unlock(acc1, password1)
 	ks.Unlock(acc2, password2)
 
-	cyp := crypto.NewCrypto(true, ks)
+	cyp := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(cyp)
 	return c, entity
 }
@@ -256,7 +276,12 @@ func TestMatcher_Case1(t *testing.T) {
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
+	walletId := big.NewInt(1)
+	privkey := entity.PrivateKey
+
 	order1 := test.CreateOrder(
+		privkey,
+		walletId,
 		tokenAddressA,
 		tokenAddressB,
 		protocol,
@@ -271,6 +296,8 @@ func TestMatcher_Case1(t *testing.T) {
 	amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order2 := test.CreateOrder(
+		privkey,
+		walletId,
 		tokenAddressB,
 		tokenAddressA,
 		protocol,
@@ -320,7 +347,12 @@ func TestMatcher_Case2(t *testing.T) {
 	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("100"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
+	walletId := big.NewInt(1)
+	privkey := entity.PrivateKey
+
 	order1 := test.CreateOrder(
+		privkey,
+		walletId,
 		tokenAddressA,
 		tokenAddressB,
 		protocol,
@@ -336,6 +368,8 @@ func TestMatcher_Case2(t *testing.T) {
 	amountB2, _ := new(big.Int).SetString("5"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
 	order2 := test.CreateOrder(
+		privkey,
+		walletId,
 		tokenAddressB,
 		tokenAddressA,
 		protocol,

@@ -68,12 +68,14 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})
+	tables = append(tables, &CutOffPairEvent{})
 	tables = append(tables, &Trend{})
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &Token{})
-	tables = append(tables, &EventLog{})
+	//tables = append(tables, &EventLog{})
 	tables = append(tables, &FilledOrder{})
+	tables = append(tables, &Transaction{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

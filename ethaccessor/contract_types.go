@@ -64,13 +64,12 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int       `fieldName:"_ringIndex"`
-	RingHash           common.Hash    `fieldName:"_ringhash"`
-	Miner              common.Address `fieldName:"_miner"`
-	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
-	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
-	OrderHashList      [][32]uint8    `fieldName:"_orderHashList"`
-	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
+	RingIndex     *big.Int       `fieldName:"_ringIndex"`
+	RingHash      common.Hash    `fieldName:"_ringhash"`
+	Miner         common.Address `fieldName:"_miner"`
+	FeeRecipient  common.Address `fieldName:"_feeRecipient"`
+	OrderHashList [][32]uint8    `fieldName:"_orderHashList"`
+	AmountsList   [][6]*big.Int  `fieldName:"_amountsList"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
@@ -85,7 +84,6 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt.Ringhash = e.RingHash
 	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
-	evt.IsRinghashReserved = e.IsRingHashReserved
 
 	var list []*types.OrderFilledEvent
 	lrcFee := big.NewInt(0)
@@ -144,14 +142,31 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
-type CutoffTimestampChangedEvent struct {
+type CutoffEvent struct {
 	Owner  common.Address `fieldName:"_address"`
 	Cutoff *big.Int       `fieldName:"_cutoff"`
 }
 
-func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
+func (e *CutoffEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
+	evt.Cutoff = e.Cutoff
+
+	return evt
+}
+
+type CutoffPairEvent struct {
+	Owner  common.Address `fieldName:"_address"`
+	Token1 common.Address `fieldName:"_token1"`
+	Token2 common.Address `fieldName:"_token2"`
+	Cutoff *big.Int       `fieldName:"_cutoff"`
+}
+
+func (e *CutoffPairEvent) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.Owner = e.Owner
+	evt.Token1 = e.Token1
+	evt.Token2 = e.Token2
 	evt.Cutoff = e.Cutoff
 
 	return evt
@@ -183,20 +198,6 @@ func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
 	return evt
 }
 
-type RingHashSubmittedEvent struct {
-	RingHash  common.Hash    `fieldName:"_ringhash"`
-	RingMiner common.Address `fieldName:"_ringminer"`
-}
-
-func (e *RingHashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
-	evt := &types.RinghashSubmittedEvent{}
-
-	evt.RingHash = e.RingHash
-	evt.RingMiner = e.RingMiner
-
-	return evt
-}
-
 type AddressAuthorizedEvent struct {
 	ContractAddress common.Address `fieldName:"addr"`
 	Number          int            `fieldName:"number"`
@@ -224,15 +225,15 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 }
 
 type SubmitRingMethod struct {
-	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
-	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
-	Uint8ArgsList      [][2]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList,feeSelectionList
+	AddressList        [][3]common.Address `fieldName:"addressList"`   // owner,tokenS,tokenB(authAddress)
+	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
+	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList
 	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList"`
 	VList              []uint8             `fieldName:"vList"`
 	RList              [][32]uint8         `fieldName:"rList"`
 	SList              [][32]uint8         `fieldName:"sList"`
-	RingMiner          common.Address      `fieldName:"ringminer"`
-	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
+	MinerId            *big.Int            `fieldName:"minerId"`
+	FeeSelections      uint16              `fieldName:"feeSelections"`
 	Protocol           common.Address
 }
 
@@ -240,9 +241,9 @@ type SubmitRingMethod struct {
 func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	var list []*types.Order
 	length := len(m.AddressList)
+	vsrLength := 2*length + 1
 
-	// length of v.s.r list = length  +  1, they contained ring'vsr
-	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || length != len(m.VList)-1 || length != len(m.SList)-1 || length != len(m.RList)-1 || length < 2 {
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
 		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
 	}
 
@@ -257,13 +258,15 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		} else {
 			order.TokenB = m.AddressList[i+1][1]
 		}
+		order.AuthAddr = m.AddressList[i][2]
 
 		order.AmountS = m.UintArgsList[i][0]
 		order.AmountB = m.UintArgsList[i][1]
-		order.Timestamp = m.UintArgsList[i][2]
-		order.Ttl = m.UintArgsList[i][3]
-		order.Salt = m.UintArgsList[i][4]
-		order.LrcFee = m.UintArgsList[i][5]
+		order.ValidSince = m.UintArgsList[i][2]
+		order.ValidUntil = m.UintArgsList[i][3]
+		order.LrcFee = m.UintArgsList[i][4]
+		// order.rateAmountS
+		order.WalletId = m.UintArgsList[i][6]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
@@ -280,8 +283,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 }
 
 type CancelOrderMethod struct {
-	AddressList    [3]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB
-	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
+	AddressList    [4]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB, authAddr
+	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, walletId, and cancelAmount
 	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB"`
 	MarginSplit    uint8             `fieldName:"marginSplitPercentage"`
 	V              uint8             `fieldName:"v"`
@@ -289,8 +292,8 @@ type CancelOrderMethod struct {
 	S              [32]byte          `fieldName:"s"`
 }
 
-// should add protocol
-func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
+// todo(fuk): modify internal cancelOrderMethod and implement related functions
+func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	var order types.Order
 
 	order.Owner = m.AddressList[0]
@@ -299,10 +302,11 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 
 	order.AmountS = m.OrderValues[0]
 	order.AmountB = m.OrderValues[1]
-	order.Timestamp = m.OrderValues[2]
-	order.Ttl = m.OrderValues[3]
-	order.Salt = m.OrderValues[4]
-	order.LrcFee = m.OrderValues[5]
+	order.ValidSince = m.OrderValues[2]
+	order.ValidUntil = m.OrderValues[3]
+	order.LrcFee = m.OrderValues[4]
+	order.WalletId = m.OrderValues[5]
+	cancelAmount := m.OrderValues[6]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit
@@ -311,44 +315,33 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.S = m.S
 	order.R = m.R
 
-	return &order, nil
+	return &order, cancelAmount, nil
 }
 
-type SubmitRingHashMethod struct {
-	RingMiner common.Address `fieldName:"ringminer"`
-	RingHash  common.Hash    `fieldName:"ringhash"`
+type CutoffMethod struct {
+	Cutoff *big.Int `fieldName:"cutoff"`
 }
 
-func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethodEvent, error) {
-	var dst types.RingHashSubmitMethodEvent
+func (method *CutoffMethod) ConvertDown() *types.CutoffMethodEvent {
+	evt := &types.CutoffMethodEvent{}
+	evt.Value = method.Cutoff
 
-	dst.RingMiner = m.RingMiner
-	dst.RingHash = m.RingHash
-
-	return &dst, nil
+	return evt
 }
 
-type BatchSubmitRingHashMethod struct {
-	RingMinerList []common.Address `fieldName:"ringminerList"`
-	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
+type CutoffPairMethod struct {
+	Token1 common.Address `fieldName:"token1"`
+	Token2 common.Address `fieldName:"token2"`
+	Cutoff *big.Int       `fieldName:"cutoff"`
 }
 
-func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethodEvent, error) {
-	var dst types.BatchSubmitRingHashMethodEvent
+func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
+	evt := &types.CutoffPairMethodEvent{}
+	evt.Value = method.Cutoff
+	evt.Token1 = method.Token1
+	evt.Token2 = method.Token2
 
-	length := len(m.RingMinerList)
-	if len(m.RingHashList) != length || length < 1 {
-		return nil, fmt.Errorf("batchSubmitRingHash method unpack error:orders length invalid")
-	}
-
-	dst.RingHashMinerMap = make(map[common.Hash]common.Address)
-	for i := 0; i < length; i++ {
-		ringhash := m.RingHashList[i]
-		ringminer := m.RingMinerList[i]
-		dst.RingHashMinerMap[ringhash] = ringminer
-	}
-
-	return &dst, nil
+	return evt
 }
 
 type WethWithdrawalMethod struct {
@@ -383,7 +376,7 @@ type ProtocolAddress struct {
 
 	TokenRegistryAddress common.Address
 
-	RinghashRegistryAddress common.Address
+	NameRegistryAddress common.Address
 
 	DelegateAddress common.Address
 }

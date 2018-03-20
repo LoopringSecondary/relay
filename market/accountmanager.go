@@ -20,6 +20,7 @@ package market
 
 import (
 	"errors"
+	rcache "github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -30,6 +31,11 @@ import (
 	"math/big"
 	"strings"
 )
+
+var RedisCachePlaceHolder = make([]byte, 0)
+
+const DefaultUnlockTtl = 3600 * 24 * 30
+const UnlockCachePreKey = "Unlocked_Address_"
 
 type Account struct {
 	Address    string
@@ -54,7 +60,7 @@ type AccountManager struct {
 }
 
 type Token struct {
-	Token     string `json:"token"`
+	Token     string `json:"symbol"`
 	Balance   string `json:"balance"`
 	Allowance string `json:"allowance"`
 }
@@ -89,7 +95,6 @@ func NewAccountManager() AccountManager {
 }
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
-
 	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
@@ -114,7 +119,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
 			if err != nil {
-				log.Infof("get allowance failed, token:%s", v.Symbol)
+				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
 			} else {
 				allowance.allowance = allowanceAmount
 				account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
@@ -127,13 +132,15 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 }
 
 func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token common.Address) (balance, allowance *big.Int, err error) {
+
 	tokenAlias := util.AddressToAlias(token.Hex())
 	if tokenAlias == "" {
 		err = errors.New("unsupported token address " + token.Hex())
 		return
 	}
 
-	account := a.GetBalance("v1.0", address.Hex())
+	//todo(xiaolu): 从配置文件中获取
+	account := a.GetBalance("v1.2", address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return
@@ -151,12 +158,12 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 
 	//log.Info("received transfer event...")
 
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
-		tokenAlias := util.AddressToAlias(event.ContractAddress.Hex())
+		tokenAlias := util.AddressToAlias(event.Protocol.Hex())
 		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.From.Hex())
 		if errFrom != nil {
 			return errFrom
@@ -172,8 +179,8 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error) {
 
 	event := input.(*types.ApprovalEvent)
-	log.Debugf("received approval event, %s, %s", event.ContractAddress.Hex(), event.Owner.Hex())
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	log.Debugf("received approval event, %s, %s", event.Protocol.Hex(), event.Owner.Hex())
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -187,7 +194,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethDepositMethodEvent)
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -201,7 +208,7 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethWithdrawalMethodEvent)
-	if event.Blocknumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
+	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
 		log.Info("the eth network may be forked. flush all cache")
 		a.c.Flush()
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
@@ -289,7 +296,7 @@ func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawa
 }
 
 func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
-	tokenAlias := util.AddressToAlias(event.ContractAddress.String())
+	tokenAlias := util.AddressToAlias(event.Protocol.String())
 	spender := event.Spender.String()
 	address := strings.ToLower(event.Owner.String())
 
@@ -329,4 +336,21 @@ func (account *Account) ToJsonObject(contractVersion string) AccountJson {
 		accountJson.Tokens = append(accountJson.Tokens, Token{v.Token, v.Balance.String(), allowance.allowance.String()})
 	}
 	return accountJson
+}
+
+func (a *AccountManager) UnlockedWallet(owner string) (err error) {
+	if len(owner) == 0 {
+		return errors.New("owner can't be null string")
+	}
+	return rcache.Set(UnlockCachePreKey+strings.ToLower(owner), RedisCachePlaceHolder, DefaultUnlockTtl)
+}
+
+func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
+	// todo(fuk): delete after test
+	// return true, nil
+
+	if len(owner) == 0 {
+		return false, errors.New("owner can't be null string")
+	}
+	return rcache.Exists(UnlockCachePreKey + strings.ToLower(owner))
 }

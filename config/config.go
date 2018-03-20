@@ -59,6 +59,8 @@ func LoadConfig(file string) *GlobalConfig {
 	//	}
 	//}
 
+	// extractor.IsDevNet default false
+
 	return c
 }
 
@@ -72,6 +74,7 @@ type GlobalConfig struct {
 	Redis          RedisOptions
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
+	Websocket      WebsocketOptions
 	GatewayFilters GatewayFiltersOptions
 	OrderManager   OrderManagerOptions
 	Gateway        GateWayOptions
@@ -88,6 +91,10 @@ type GlobalConfig struct {
 
 type JsonrpcOptions struct {
 	Port int
+}
+
+type WebsocketOptions struct {
+	Port string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -120,8 +127,8 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
+	IsDevNet                bool
 	Debug                   bool
-	SaveEventLog            bool
 	UseTestStartBlockNumber bool
 	ConfirmBlockNumber      uint64
 	StartBlockNumber        *big.Int
@@ -137,9 +144,9 @@ type KeyStoreOptions struct {
 type ProtocolOptions struct {
 	Address          map[string]string
 	ImplAbi          string
-	RegistryAbi      string
 	DelegateAbi      string
 	TokenRegistryAbi string
+	NameRegistryAbi  string
 }
 
 type CommonOptions struct {
@@ -175,10 +182,7 @@ type NormalMinerAddress struct {
 
 type MinerOptions struct {
 	RingMaxLength         int `required:"true"` //recommended value:4
-	FeeRecepient          string
-	Miner                 string
-	FeeReceipt            string //address the receipt of fee
-	IfRegistryRingHash    bool
+	Name                  string
 	NormalMiners          []NormalMinerAddress  //
 	PercentMiners         []PercentMinerAddress //
 	TimingMatcher         *TimingMatcher
