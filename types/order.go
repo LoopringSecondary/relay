@@ -36,6 +36,7 @@ const (
 	ORDER_CANCEL   OrderStatus = 4
 	ORDER_CUTOFF   OrderStatus = 5
 	ORDER_EXPIRE   OrderStatus = 6
+	ORDER_PENDING  OrderStatus = 7
 	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 )
@@ -292,10 +293,16 @@ func InUnchangeableStatus(status OrderStatus) bool {
 }
 
 func (ord *OrderState) IsExpired() bool {
-	if ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
+	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) && ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
 		return true
 	}
+	return false
+}
 
+func (ord *OrderState) IsEffective() bool {
+	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) && ord.RawOrder.ValidSince.Int64() >= time.Now().Unix() {
+		return true
+	}
 	return false
 }
 

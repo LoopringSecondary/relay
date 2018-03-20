@@ -694,7 +694,7 @@ Get cut off time of the address.
 
 ##### Parameters
 
-1. `address` - The ring hash, if is null, will query all rings.
+1. `address` - The address.
 2. `contractVersion` - contract version of loopring protocol.
 3. `blockNumber` - "earliest", "latest" or "pending", default is "latest".
 
