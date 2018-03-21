@@ -378,10 +378,14 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	if len(txNotify.TxHash) == 0 {
 		return "", errors.New("txHash can't be null string")
 	}
+	log.Info(">>>>>>>>>received tx notify " + txNotify.TxHash)
 	tx := &ethaccessor.Transaction{}
 	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
 	if err == nil {
 		eventemitter.Emit(eventemitter.PendingTransaction, tx)
+		log.Info("emit transaction info " + tx.Hash)
+	} else {
+		log.Error(">>>>>>>>getTransaction error : " + err.Error())
 	}
 	return
 }
