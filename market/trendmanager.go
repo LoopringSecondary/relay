@@ -616,9 +616,11 @@ func (t *TrendManager) GetTrends(market, interval string) (trends []Trend, err e
 		} else {
 			tc := trendCache.(map[string]Cache)[market]
 			trends = make([]Trend, 0)
-			trendInFills, aggErr := t.aggregate(tc.Fills, tc.Trends)
-			if aggErr == nil {
-				trends = append(trends, trendInFills)
+			if strings.ToLower(interval) == "1hr" {
+				trendInFills, aggErr := t.aggregate(tc.Fills, tc.Trends)
+				if aggErr == nil {
+					trends = append(trends, trendInFills)
+				}
 			}
 			for _, t := range tc.Trends {
 				trends = append(trends, t)
@@ -754,4 +756,5 @@ func (t *TrendManager) reCalTicker(market string) {
 	tickerInCache, _ := t.c.Get(tickerKey)
 	tickerMap := tickerInCache.(map[string]Ticker)
 	tickerMap[market] = ticker
+	t.c.Set(tickerKey, tickerMap, cache.NoExpiration)
 }
