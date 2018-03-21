@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"strconv"
 )
 
 // Event is an event potentially triggered by the EVM's LOG mechanism. The Event
@@ -91,10 +92,15 @@ func (e Event) tupleUnpack(v interface{}, output []byte) error {
 				field := typ.Field(j)
 				// TODO read tags: `abi:"fieldName"`
 				// if field.Name == strings.ToUpper(e.Inputs[i].Name[:1])+e.Inputs[i].Name[1:] {
-				if field.Tag.Get("fieldName") == e.Inputs[i].Name {
+				//if field.Tag.Get("fieldName") == e.Inputs[i].Name {
+
+				fieldIdStr := field.Tag.Get("fieldId")
+				fieldId, _ := strconv.Atoi(fieldIdStr)
+				if fieldId == i {
 					if err := set(value.Field(j), reflectValue, e.Inputs[i]); err != nil {
 						return err
 					}
+					break
 				}
 			}
 		case reflect.Slice, reflect.Array:
