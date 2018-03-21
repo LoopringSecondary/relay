@@ -98,7 +98,7 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 
 func (so *SocketIOServiceImpl) Start() {
 	server, err := socketio.NewServer(&engineio.Options{
-		PingInterval: time.Second * 60,
+		PingInterval: time.Second * 60 * 60,
 	})
 	if err != nil {
 		log.Fatal(err)
