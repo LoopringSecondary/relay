@@ -129,6 +129,8 @@ const (
 	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
 	TRANSFER_EVT_NAME            = "Transfer"
 	APPROVAL_EVT_NAME            = "Approval"
+	WETHDEPOSIT_EVT_NAME         = "Deposit"
+	WETHWITHDRAWAL_EVT_NAME      = "Withdrawal"
 
 	SUBMITRING_METHOD_NAME      = "submitRing"
 	CANCELORDER_METHOD_NAME     = "cancelOrder"
@@ -342,6 +344,28 @@ func (processor *AbiProcessor) loadWethContract() {
 		eventemitter.On(contract.Id, watcher)
 		processor.methods[contract.Id] = contract
 		log.Infof("extractor,contract method name:%s -> key:%s", contract.Name, contract.Id)
+	}
+
+	for name, event := range ethaccessor.WethAbi().Events {
+		if name != WETHDEPOSIT_EVT_NAME && name != WETHWITHDRAWAL_EVT_NAME {
+			continue
+		}
+
+		watcher := &eventemitter.Watcher{}
+		contract := newEventData(&event, ethaccessor.WethAbi())
+
+		switch contract.Name {
+		case WETHDEPOSIT_EVT_NAME:
+			contract.Event = &ethaccessor.WethDepositEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethDepositEvent}
+		case WETHWITHDRAWAL_EVT_NAME:
+			contract.Event = &ethaccessor.WethWithdrawalEvent{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethWithdrawalEvent}
+		}
+
+		eventemitter.On(contract.Id.Hex(), watcher)
+		processor.events[contract.Id] = contract
+		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 }
 
@@ -615,7 +639,10 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 
 	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
 
-	processor.saveWethDepositMethodAsTx(&deposit)
+	if deposit.Status == types.TX_STATUS_PENDING || deposit.Status == types.TX_STATUS_FAILED {
+		processor.saveWethDepositMethodAsTx(&deposit)
+	}
+
 	return nil
 }
 
@@ -660,7 +687,10 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 
 	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)
 
-	processor.saveWethWithdrawalMethodAsTx(withdrawal)
+	if withdrawal.Status == types.TX_STATUS_PENDING || withdrawal.Status == types.TX_STATUS_FAILED {
+		processor.saveWethWithdrawalMethodAsTx(withdrawal)
+	}
+
 	return nil
 }
 
@@ -1002,6 +1032,95 @@ func (processor *AbiProcessor) handleAddressDeAuthorizedEvent(input eventemitter
 	log.Debugf("extractor,tx:%s addressDeAuthorized event address:%s, number:%d", contractData.TxHash.Hex(), evt.Protocol.Hex(), evt.Number)
 
 	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventData) error {
+	contractData := input.(EventData)
+	if len(contractData.Topics) < 2 {
+		log.Errorf("extractor,tx:%s wethDeposit event indexed fields number error", contractData.TxHash.Hex())
+		return nil
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.WethDepositEvent)
+	evt := contractEvent.ConvertDown()
+	evt.Owner = common.HexToAddress(contractData.Topics[1])
+	evt.TxInfo = contractData.TxInfo
+
+	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+
+	eventemitter.Emit(eventemitter.WethDepositEvent, evt)
+
+	processor.saveWethDepositEventAsTx(evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) saveWethDepositEventAsTx(evt *types.WethDepositEvent) error {
+	var tx1, tx2 types.Transaction
+
+	log.Debugf("extractor:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
+
+	// save weth
+	tx1.FromWethDepositEvent(evt)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
+	if err := processor.saveTransaction(&tx1); err != nil {
+		return err
+	}
+
+	// save eth
+	tx2 = tx1
+	tx2.Protocol = types.NilAddress
+	tx2.Symbol = "ETH"
+	if err := processor.saveTransaction(&tx2); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.EventData) error {
+	contractData := input.(EventData)
+	if len(contractData.Topics) < 2 {
+		log.Errorf("extractor,tx:%s wethWithdrawal event indexed fields number error", contractData.TxHash.Hex())
+		return nil
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.WethWithdrawalEvent)
+
+	evt := contractEvent.ConvertDown()
+	evt.Owner = common.HexToAddress(contractData.Topics[1])
+	evt.TxInfo = contractData.TxInfo
+
+	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal from:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+
+	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
+
+	processor.saveWethWithdrawalEventAsTx(evt)
+
+	return nil
+}
+
+func (processor *AbiProcessor) saveWethWithdrawalEventAsTx(evt *types.WethWithdrawalEvent) error {
+	var tx1, tx2 types.Transaction
+
+	log.Debugf("extractor:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
+
+	// save weth
+	tx1.FromWethWithdrawalEvent(evt)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
+	if err := processor.saveTransaction(&tx1); err != nil {
+		return err
+	}
+
+	// save eth
+	tx2 = tx1
+	tx2.Protocol = types.NilAddress
+	tx2.Symbol = "ETH"
+	if err := processor.saveTransaction(&tx2); err != nil {
+		return err
+	}
 
 	return nil
 }

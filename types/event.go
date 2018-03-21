@@ -113,6 +113,18 @@ type RingMinedEvent struct {
 	FeeRecipient common.Address
 }
 
+type WethDepositEvent struct {
+	TxInfo
+	Owner common.Address
+	Value *big.Int
+}
+
+type WethWithdrawalEvent struct {
+	TxInfo
+	Owner common.Address
+	Value *big.Int
+}
+
 type WethDepositMethodEvent struct {
 	TxInfo
 	Owner common.Address

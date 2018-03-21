@@ -72,6 +72,8 @@ const (
 	// Methods
 	WethDepositMethod    = "WethDepositMethod"
 	WethWithdrawalMethod = "WethWithdrawalMethod"
+	WethDepositEvent     = "WethDepositEvent"
+	WethWithdrawalEvent  = "WethWithdrawalEvent"
 	ApproveMethod        = "ApproveMethod"
 
 	// Transaction

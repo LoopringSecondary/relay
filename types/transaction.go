@@ -258,6 +258,24 @@ func (tx *Transaction) GetCutoffPairContent() (*CutoffPairSalt, error) {
 	return &cutoffpair, nil
 }
 
+func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.Owner
+	tx.Value = src.Value
+	tx.Type = TX_TYPE_CONVERT
+
+	return nil
+}
+
+func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.Owner
+	tx.Value = src.Value
+	tx.Type = TX_TYPE_CONVERT
+
+	return nil
+}
+
 func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.From
