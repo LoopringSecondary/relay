@@ -105,12 +105,6 @@ type RdsService interface {
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
-	// token
-	FindUnDeniedTokens() ([]Token, error)
-	FindDeniedTokens() ([]Token, error)
-	FindUnDeniedMarkets() ([]Token, error)
-	FindDeniedMarkets() ([]Token, error)
-
 	// transactions
 	SaveTransaction(latest *Transaction) error
 }
