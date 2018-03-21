@@ -1176,9 +1176,6 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 
 	model.ConvertDown(tx)
 
-	// todo delete after test
-	//return processor.db.SaveTransaction(&model)
-
 	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
 		return processor.db.SaveTransaction(&model)
 	}
