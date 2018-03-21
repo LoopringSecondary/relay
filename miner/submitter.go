@@ -224,7 +224,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 							submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
 						}
 					}
-					if err := submitter.dbService.UpdateRingSubmitInfoSubmitUsedGas(event.TxHash.Hex(), event.UsedGas); nil != err {
+					if err := submitter.dbService.UpdateRingSubmitInfoSubmitUsedGas(event.TxHash.Hex(), event.GasUsed); nil != err {
 						log.Errorf("err:%s", err.Error())
 					}
 				}
