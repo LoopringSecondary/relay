@@ -216,8 +216,10 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	blockTime := big.NewInt(time.Now().Unix())
 
 	txStr, err := json.Marshal(*tx)
-	fmt.Println("........................>")
+	txStr2, _ := json.Marshal(tx)
+	fmt.Println("=====================================")
 	fmt.Println(txStr)
+	fmt.Println(txStr2)
 	fmt.Println(err)
 	fmt.Println()
 	exist2, ere := l.processor.accountmanager.HasUnlocked(tx.To)
