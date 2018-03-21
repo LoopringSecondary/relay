@@ -21,7 +21,6 @@ package market_test
 import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
@@ -29,6 +28,7 @@ import (
 	"math/big"
 	"testing"
 	"time"
+	"github.com/Loopring/relay/eventemiter"
 )
 
 var (
@@ -40,24 +40,26 @@ func prepare() {
 	globalConfig := test.LoadConfig()
 	fmt.Println("xxxxxxxxxxxxxxxskdfjskfj")
 	rdsService := dao.NewRdsService(globalConfig.Mysql)
-	rdsService.Prepare()
+	//rdsService.Prepare()
 	tm2 := market.NewTrendManager(rdsService)
+	fmt.Println("skjskdfjkjklAAAAAAAAAAAA")
 	tm = &tm2
 
 }
 
 func TestTrendManager_GetTicker(t *testing.T) {
-	t.Log("ZZZZZZZZZZZZZZZZZZZZZZZZZZ")
+	fmt.Println("ZZZZZZZZZZZZZZZZZZZZZZZZZZ")
 	prepare()
-	tm.GetTrends("RDN-WETH")
+	//tm.GetTrends("RDN-WETH", "1Hr")
+	//tm.GetTrends("LRC-WETH", "1Hr")
+	//tm.GetTrends("LRC-WETH", "2Hr")
 	fill := &types.OrderFilledEvent{}
 	fill.Market = "LRC-WETH"
-	fill.Time = big.NewInt(1513319197)
-	fill.ContractAddress = common.HexToAddress("0xC01172a87f6cC20E1E3b9aD13a9E715Fbc2D5AA9")
+	fill.TxInfo.Protocol = common.HexToAddress("0xC01172a87f6cC20E1E3b9aD13a9E715Fbc2D5AA9")
 	fill.Owner = common.HexToAddress("0x750aD4351bB728ceC7d639A9511F9D6488f1E259")
 	fill.RingIndex = big.NewInt(26)
-	fill.Blocknumber = big.NewInt(38811)
-	fill.TokenS = common.HexToAddress("0x7599aa3D5B9019cFae7c934f5d42d18891cb3CAf")
+	fill.TxInfo.BlockNumber = big.NewInt(38811)
+	fill.TokenS = common.HexToAddress("0xfe5aFA7BfF3394359af2D277aCc9f00065CdBe2f")
 	fill.TokenB = common.HexToAddress("0x88699e7FEE2Da0462981a08a15A3B940304CC516")
 	fill.SplitS = big.NewInt(0)
 	fill.SplitB = big.NewInt(0)
@@ -79,9 +81,8 @@ func TestTrendManager_GetTicker(t *testing.T) {
 	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, fill)
 	time.Sleep(3 * time.Second)
 	fmt.Println("xxxxxxxxxxx")
-	fmt.Println(tm.GetTrends("RDN-WETH", "1Hr"))
-
+	tds, _ := tm.GetTrends("LRC-WETH", "1Hr")
+	fmt.Println(tds)
 	fmt.Println(tm.GetTicker())
-	t.Error("fuckfuckfuck")
 
 }

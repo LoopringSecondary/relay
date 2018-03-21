@@ -138,15 +138,15 @@ func (t *TrendManager) refreshCacheByInterval(interval string) {
 		mktCache.Trends = make([]Trend, 0)
 
 		// default 100 records load first time
-		trends, err := t.rds.TrendPageQuery(dao.Trend{Market: mkt, Intervals: interval}, 1, 100)
+		trends, err := t.rds.TrendQueryLatest(dao.Trend{Market: mkt, Intervals: interval}, 1, 100)
 
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		for _, trend := range trends.Data {
-			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
+		for _, trend := range trends {
+			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend))
 		}
 		trendMap[mkt] = mktCache
 	}
@@ -164,7 +164,7 @@ func (t *TrendManager) updateCache() {
 
 func (t *TrendManager) refreshCache() {
 
-	log.Println("start refresh cache......")
+	log.Println("start refresh 1hr cache......")
 
 	trendMap := make(map[string]Cache)
 	tickerMap := make(map[string]Ticker)
@@ -174,15 +174,15 @@ func (t *TrendManager) refreshCache() {
 		mktCache.Fills = make([]dao.FillEvent, 0)
 
 		// default 100 records load first time
-		trends, err := t.rds.TrendPageQuery(dao.Trend{Market: mkt}, 1, 100)
+		trends, err := t.rds.TrendQueryLatest(dao.Trend{Market: mkt, Intervals: OneHour}, 1, 100)
 
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
-		for _, trend := range trends.Data {
-			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend.(dao.Trend)))
+		for _, trend := range trends {
+			mktCache.Trends = append(mktCache.Trends, ConvertUp(trend))
 		}
 
 		now := time.Now()
@@ -199,10 +199,13 @@ func (t *TrendManager) refreshCache() {
 
 		trendMap[mkt] = mktCache
 
+		fmt.Println("add trend data ")
+
 		ticker := calculateTicker(mkt, fills, mktCache.Trends, firstSecondThisHour)
 		tickerMap[mkt] = ticker
 	}
-	t.c.Set(trendKeyPre+OneHour, trendMap, cache.NoExpiration)
+
+	t.c.Set(trendKeyPre+strings.ToLower(OneHour), trendMap, cache.NoExpiration)
 	t.c.Set(tickerKey, tickerMap, cache.NoExpiration)
 
 }
@@ -611,6 +614,7 @@ func (t *TrendManager) GetTrends(market, interval string) (trends []Trend, err e
 	market = strings.ToUpper(market)
 
 	if t.cacheReady {
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>" + trendKeyPre + interval)
 		if trendCache, ok := t.c.Get(trendKeyPre + interval); !ok {
 			err = errors.New("can't found trends by key : " + interval)
 		} else {
@@ -726,18 +730,18 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 			return
 		}
 
-		if tickerInCache, ok := t.c.Get(trendKeyPre + OneHour); ok {
+		if tickerInCache, ok := t.c.Get(trendKeyPre + strings.ToLower(OneHour)); ok {
 			trendMap := tickerInCache.(map[string]Cache)
 			tc := trendMap[market]
 			tc.Fills = append(tc.Fills, *newFillModel)
 			trendMap[market] = tc
-			t.c.Set(trendKeyPre+OneHour, trendMap, cache.NoExpiration)
+			t.c.Set(trendKeyPre + strings.ToLower(OneHour), trendMap, cache.NoExpiration)
 			t.reCalTicker(market)
 		} else {
 			fills := make([]dao.FillEvent, 0)
 			fills = append(fills, *newFillModel)
 			newCache := Cache{make([]Trend, 0), fills}
-			t.c.Set(trendKeyPre+OneHour, newCache, cache.NoExpiration)
+			t.c.Set(trendKeyPre + strings.ToLower(OneHour), newCache, cache.NoExpiration)
 			t.reCalTicker(market)
 		}
 	} else {
@@ -748,7 +752,7 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 }
 
 func (t *TrendManager) reCalTicker(market string) {
-	trendInCache, _ := t.c.Get(trendKeyPre + OneHour)
+	trendInCache, _ := t.c.Get(trendKeyPre + strings.ToLower(OneHour))
 	mktCache := trendInCache.(map[string]Cache)[market]
 	now := time.Now()
 	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 1, 0, now.Location())
