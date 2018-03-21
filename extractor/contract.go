@@ -633,6 +633,7 @@ func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositM
 
 	// save eth
 	tx2 = tx1
+	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := processor.saveTransaction(&tx2); err != nil {
 		return err
@@ -675,6 +676,7 @@ func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithd
 	}
 
 	tx2 = tx1
+	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := processor.saveTransaction(&tx2); err != nil {
 		return err
@@ -1056,6 +1058,10 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 	tx.UpdateTime = tx.UpdateTime
 
 	model.ConvertDown(tx)
+
+	// todo delete after test
+	//return processor.db.SaveTransaction(&model)
+
 	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
 		return processor.db.SaveTransaction(&model)
 	}
