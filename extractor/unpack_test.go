@@ -196,6 +196,38 @@ func TestExtractorServiceImpl_UnpackWethDeposit(t *testing.T) {
 	}
 }
 
+func TestExtractorServiceImpl_UnpackTokenRegistry(t *testing.T) {
+	input := "0x000000000000000000000000f079e0612e869197c5f4c7d0a95df570b163232b0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000457455448"
+
+	tokenRegistry := &ethaccessor.TokenRegisteredEvent{}
+
+	data := hexutil.MustDecode(input)
+
+	println("====token registry", len(data))
+
+	if err := ethaccessor.WethAbi().Unpack(tokenRegistry, "TokenRegistered", data, abi.SEL_UNPACK_EVENT); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("TokenRegistered symbol:%s, address:%s", tokenRegistry.Symbol, tokenRegistry.Token.Hex())
+	}
+}
+
+func TestExtractorServiceImpl_UnpackTokenUnRegistry(t *testing.T) {
+	input := "0x000000000000000000000000529540ee6862158f47d647ae023098f6705210a90000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000457455448"
+
+	tokenUnRegistry := &ethaccessor.TokenUnRegisteredEvent{}
+
+	data := hexutil.MustDecode(input)
+
+	println("====token unregistry", len(data))
+
+	if err := ethaccessor.WethAbi().Unpack(tokenUnRegistry, "TokenUnregistered", data, abi.SEL_UNPACK_EVENT); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("TokenUnregistered symbol:%s, address:%s", tokenUnRegistry.Symbol, tokenUnRegistry.Token.Hex())
+	}
+}
+
 func TestExtractorServiceImpl_Compare(t *testing.T) {
 	str1 := "547722557505166136913"
 	str2 := "1000000000000000000000"

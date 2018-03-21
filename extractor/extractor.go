@@ -188,7 +188,9 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
+	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
+	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
+	if fromUnlocked || toUnlocked {
 		status := types.TX_STATUS_SUCCESS
 		if txIsFailed {
 			status = types.TX_STATUS_FAILED
@@ -215,22 +217,9 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
 
-	txStr, err := json.Marshal(*tx)
-	txStr2, _ := json.Marshal(tx)
-	fmt.Println("=====================================")
-	fmt.Println(txStr)
-	fmt.Println(tx.Hash)
-	fmt.Println(tx.From)
-	fmt.Println(tx.To)
-	fmt.Println(tx.Input)
-	fmt.Println(tx.Value)
-	fmt.Println(txStr2)
-	fmt.Println(err)
-	exist2, ere := l.processor.accountmanager.HasUnlocked(tx.To)
-	fmt.Println(exist2)
-	fmt.Println(ere)
-
-	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
+	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
+	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
+	if fromUnlocked || toUnlocked {
 		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
 	} else {
 		method, id, ok := l.getMethodFromTransaction(tx)

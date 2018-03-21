@@ -1157,8 +1157,6 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 		return err
 	}
 
-	dst.Sender = common.HexToAddress(tx.To)
-	dst.Receiver = common.HexToAddress(tx.From)
 	tx2.FromTransferEvent(&dst, types.TX_TYPE_RECEIVE)
 	if err := processor.saveTransaction(&tx2); err != nil {
 		return err
@@ -1175,9 +1173,6 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 	tx.UpdateTime = tx.UpdateTime
 
 	model.ConvertDown(tx)
-
-	// todo delete after test
-	//return processor.db.SaveTransaction(&model)
 
 	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
 		return processor.db.SaveTransaction(&model)
