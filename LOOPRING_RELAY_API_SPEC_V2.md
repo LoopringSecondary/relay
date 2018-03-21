@@ -661,7 +661,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCandleTicks","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getRingMined","params":{see above},"id":64}'
 
 // Result
 {
@@ -700,9 +700,9 @@ Get cut off time of the address.
 
 ```js
 params: [
-  "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "v1.0",
-  "latest"
+  "address": "0x8888f1f195afa192cfee860698584c030f4c9db1",
+  "contractVersion": "v1.0",
+  "blockNumber": "latest"
 ]
 ```
 
@@ -741,7 +741,7 @@ params: { "currency" : "CNY" }
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getCutoff","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getPriceQuote","params":{see above},"id":64}'
 
 // Result
 {
