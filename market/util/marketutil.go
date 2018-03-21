@@ -311,8 +311,14 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 
 	result := new(big.Rat).SetInt64(0)
 
-	tokenS := AllTokens[AddressToAlias(s)]
-	tokenB := AllTokens[AddressToAlias(b)]
+	tokenS, ok := AllTokens[AddressToAlias(s)]
+	if !ok {
+		return 0
+	}
+	tokenB, ok := AllTokens[AddressToAlias(b)]
+	if !ok {
+		return 0
+	}
 
 	if as.Cmp(big.NewInt(0)) == 0 || ab.Cmp(big.NewInt(0)) == 0 {
 		return 0
