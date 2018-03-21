@@ -424,11 +424,9 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	// emit to miner
 	var evt types.SubmitRingMethodEvent
 	evt.TxInfo = contract.TxInfo
-	evt.UsedGas = contract.GasUsed
-	evt.UsedGasPrice = contract.GasPrice
 	evt.Err = contract.IsValid()
 
-	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.UsedGas.String(), evt.UsedGasPrice.String())
+	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.GasUsed.String(), evt.GasPrice.String())
 
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
