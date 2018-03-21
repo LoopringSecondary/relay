@@ -72,8 +72,6 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &Trend{})
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
-	tables = append(tables, &Token{})
-	//tables = append(tables, &EventLog{})
 	tables = append(tables, &FilledOrder{})
 	tables = append(tables, &Transaction{})
 
