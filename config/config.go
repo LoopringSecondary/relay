@@ -193,6 +193,7 @@ type MinerOptions struct {
 
 type MarketOptions struct {
 	TokenFile string
+	OldVersionWethAddress string
 }
 
 type MarketCapOptions struct {

@@ -67,10 +67,10 @@ Get user's balance and token allowance info.
 - `contractVersion` - The loopring contract version you selected.
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "contractVersion" : "v1.0"
-}
+}]
 ```
 
 ##### Returns
@@ -132,7 +132,7 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `s` - ECDSA signature parameter s.
 
 ```js
-params: {
+params: [{
   "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "tokenS" : "Eth",
@@ -147,7 +147,7 @@ params: {
   "v" : 112,
   "r" : "239dskjfsn23ck34323434md93jchek3",
   "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
-}
+}]
 ```
 
 ##### Returns
@@ -185,7 +185,7 @@ Get loopring order list.
 - `pageSize` - The size per page, default is 50.
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
   "status" : "ORDER_CANCEL",
@@ -194,7 +194,7 @@ params: {
   "market" : "coss-weth",
   "pageIndex" : 2,
   "pageSize" : 40
-}
+}]
 ```
 
 ##### Returns
@@ -699,11 +699,11 @@ Get cut off time of the address.
 3. `blockNumber` - "earliest", "latest" or "pending", default is "latest".
 
 ```js
-params: [
+params: [{
   "address": "0x8888f1f195afa192cfee860698584c030f4c9db1",
   "contractVersion": "v1.0",
   "blockNumber": "latest"
-]
+}]
 ```
 
 ##### Returns
@@ -774,10 +774,10 @@ Get the total frozen amount of all unfinished orders
 2. `token` - The specify token which you want to get.
 
 ```js
-params: {
+params: [{
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
   "token" : "WETH"
-}
+}]
 ```
 
 ##### Returns

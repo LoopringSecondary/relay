@@ -226,10 +226,11 @@ type WalletServiceImpl struct {
 	ethForwarder    *EthForwarder
 	tickerCollector market.CollectorImpl
 	rds             dao.RdsService
+	oldWethAddress  string
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -238,7 +239,7 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	w.ethForwarder = ethForwarder
 	w.tickerCollector = collector
 	w.rds = rds
-
+	w.oldWethAddress = oldWethAddress
 	return w
 }
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
@@ -388,6 +389,15 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 		log.Error(">>>>>>>>getTransaction error : " + err.Error())
 	}
 	return
+}
+
+func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res string, err error) {
+	b, err := ethaccessor.Erc20Balance(common.HexToAddress(w.oldWethAddress), common.HexToAddress(owner.Owner), "latest")
+	if err != nil {
+		return
+	} else {
+		return types.BigintToHex(b), nil
+	}
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
