@@ -164,11 +164,11 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
 		tokenAlias := util.AddressToAlias(event.Protocol.Hex())
-		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.From.Hex())
+		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.Sender.Hex())
 		if errFrom != nil {
 			return errFrom
 		}
-		errTo := a.updateBalanceAndAllowance(tokenAlias, event.To.Hex())
+		errTo := a.updateBalanceAndAllowance(tokenAlias, event.Receiver.Hex())
 		if errTo != nil {
 			return errTo
 		}
