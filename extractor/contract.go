@@ -1157,8 +1157,6 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 		return err
 	}
 
-	dst.Sender = common.HexToAddress(tx.To)
-	dst.Receiver = common.HexToAddress(tx.From)
 	tx2.FromTransferEvent(&dst, types.TX_TYPE_RECEIVE)
 	if err := processor.saveTransaction(&tx2); err != nil {
 		return err

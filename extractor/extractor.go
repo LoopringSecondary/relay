@@ -186,7 +186,9 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
+	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
+	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
+	if fromUnlocked || toUnlocked {
 		status := types.TX_STATUS_SUCCESS
 		if txIsFailed {
 			status = types.TX_STATUS_FAILED
@@ -213,7 +215,9 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
 
-	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
+	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
+	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
+	if fromUnlocked || toUnlocked {
 		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
 	} else {
 		method, id, ok := l.getMethodFromTransaction(tx)

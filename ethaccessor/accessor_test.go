@@ -312,10 +312,10 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 }
 
 func TestEthNodeAccessor_EthTransfer(t *testing.T) {
-	sender := miner
-	receiver := account1
+	sender := account1
+	receiver := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
-	if hash, err := ethaccessor.SignAndSendTransaction(sender.Address, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
+	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
 		t.Errorf(err.Error())
 	} else {
 		t.Logf("txhash:%s", hash)
