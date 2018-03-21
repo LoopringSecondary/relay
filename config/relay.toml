@@ -61,8 +61,8 @@ name = "Loopring corporation"
     start_block_number = 339287
     end_block_number = 0
     confirm_block_number = 5
+    is_dev_net = false
     debug = false
-    save_event_log = true
     use_test_start_block_number = false
 
 [common]
@@ -93,6 +93,7 @@ name = "Loopring corporation"
 
 [market]
     token_file = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/tokens.json"
+    old_version_weth_address = "0x88699e7fee2da0462981a08a15a3b940304cc516"
 
 [market_cap]
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"

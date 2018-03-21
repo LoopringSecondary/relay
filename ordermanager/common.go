@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -40,11 +41,17 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	state.CancelledAmountB = big.NewInt(0)
 	state.CancelledAmountS = big.NewInt(0)
 
-	// get order cancelled or filled amount from chain
-	if cancelOrFilledAmount, err := ethaccessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {
-		return nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
+	cancelAmount, dealtAmount, getAmountErr := getCancelledAndDealtAmount(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr)
+	if getAmountErr != nil {
+		return nil, getAmountErr
+	}
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		state.DealtAmountB = dealtAmount
+		state.CancelledAmountB = cancelAmount
 	} else {
-		state.CancelledAmountS = cancelOrFilledAmount
+		state.DealtAmountS = dealtAmount
+		state.CancelledAmountS = cancelAmount
 	}
 
 	// check order finished status
@@ -125,4 +132,29 @@ func blockNumberToString(blockNumber *big.Int) string {
 	}
 
 	return blockNumberStr
+}
+
+func getCancelledAndDealtAmount(protocol common.Address, orderhash common.Hash, blockNumberStr string) (*big.Int, *big.Int, error) {
+	var (
+		cancelled, cancelOrFilled, dealt *big.Int
+		err                              error
+	)
+
+	// get order cancelled amount from chain
+	if cancelled, err = ethaccessor.GetCancelled(protocol, orderhash, blockNumberStr); err != nil {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelled error:%s", orderhash.Hex(), err.Error())
+	}
+
+	// get order cancelledOrFilled amount from chain
+	if cancelOrFilled, err = ethaccessor.GetCancelledOrFilled(protocol, orderhash, blockNumberStr); err != nil {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", orderhash.Hex(), err.Error())
+	}
+
+	if cancelOrFilled.Cmp(cancelled) < 0 {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s cancelOrFilledAmount:%s < cancelledAmount:%s", orderhash.Hex(), cancelOrFilled.String(), cancelled.String())
+	}
+
+	dealt = big.NewInt(0).Sub(cancelOrFilled, cancelled)
+
+	return cancelled, dealt, nil
 }

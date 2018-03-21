@@ -79,7 +79,7 @@ func TestTrendManager_GetTicker(t *testing.T) {
 	eventemitter.Emit(eventemitter.OrderManagerExtractorFill, fill)
 	time.Sleep(3 * time.Second)
 	fmt.Println("xxxxxxxxxxx")
-	fmt.Println(tm.GetTrends("RDN-WETH"))
+	fmt.Println(tm.GetTrends("RDN-WETH", "1Hr"))
 
 	fmt.Println(tm.GetTicker())
 	t.Error("fuckfuckfuck")

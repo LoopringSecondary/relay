@@ -81,10 +81,10 @@ func (n *RelayNode) Start() {
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
 	fmt.Print("start jsonrpc in node......")
-	n.jsonRpcService.Start()
+	go n.jsonRpcService.Start()
 	fmt.Print("end jsonrpc in node......")
 	//n.websocketService.Start()
-	n.socketIOService.Start()
+	go n.socketIOService.Start()
 
 }
 
@@ -184,9 +184,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Stop()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 	} else {
-		n.relayNode.Stop()
+		//n.relayNode.Stop()
 		n.mineNode.Stop()
 	}
 	n.extractorService.Stop()
@@ -203,9 +203,9 @@ func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
 	if n.globalConfig.Mode == MODEL_MINER {
 		n.mineNode.Start()
 	} else if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 	} else {
-		n.relayNode.Start()
+		//n.relayNode.Start()
 		n.mineNode.Start()
 	}
 
@@ -255,7 +255,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService)
+	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService, &n.accountManager)
 }
 
 func (n *Node) registerIPFSSubService() {
@@ -280,7 +280,8 @@ func (n *Node) registerTickerCollector() {
 
 func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
-	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager, n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService)
+	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
+		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress)
 }
 
 func (n *Node) registerJsonRpcService() {

@@ -95,7 +95,6 @@ func NewAccountManager() AccountManager {
 }
 
 func (a *AccountManager) GetBalance(contractVersion, address string) Account {
-
 	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
@@ -133,6 +132,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 }
 
 func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token common.Address) (balance, allowance *big.Int, err error) {
+
 	tokenAlias := util.AddressToAlias(token.Hex())
 	if tokenAlias == "" {
 		err = errors.New("unsupported token address " + token.Hex())
@@ -164,11 +164,11 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
 	} else {
 		tokenAlias := util.AddressToAlias(event.Protocol.Hex())
-		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.From.Hex())
+		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.Sender.Hex())
 		if errFrom != nil {
 			return errFrom
 		}
-		errTo := a.updateBalanceAndAllowance(tokenAlias, event.To.Hex())
+		errTo := a.updateBalanceAndAllowance(tokenAlias, event.Receiver.Hex())
 		if errTo != nil {
 			return errTo
 		}
@@ -346,6 +346,9 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 }
 
 func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
+	// todo(fuk): delete after test
+	// return true, nil
+
 	if len(owner) == 0 {
 		return false, errors.New("owner can't be null string")
 	}

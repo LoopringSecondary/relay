@@ -46,15 +46,15 @@ type RdsService interface {
 	MarkMinerOrders(filterOrderhashs []string, blockNumber int64) error
 	GetOrdersForMiner(protocol, tokenS, tokenB string, length int, filterStatus []types.OrderStatus, startBlockNumber, endBlockNumber int64) ([]*Order, error)
 	GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error)
-	GetCutoffOrders(cutoffTime int64) ([]Order, error)
-	SetCutOff(owner common.Address, cutoffTime *big.Int) error
-	SetCutoffPair(owner, token1, token2 common.Address, cutoffTime *big.Int) error
-	CheckOrderCutoff(orderhash string, cutoff int64) bool
+	GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error)
+	GetCutoffPairOrders(owner, token1, token2 common.Address, cutoffTime *big.Int) ([]Order, error)
+	SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
-	OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
+	OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error)
 	TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
+	UpdateOrderWhileRollbackCutoff(orderhash common.Hash, status types.OrderStatus, blockNumber *big.Int) error
 	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error
 	UpdateOrderWhileCancel(hash common.Hash, status types.OrderStatus, cancelledAmountS, cancelledAmountB, blockNumber *big.Int) error
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error)
@@ -70,24 +70,24 @@ type RdsService interface {
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
 	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
+	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// cancel event table
-	FindCancelEvent(orderhash, txhash common.Hash) (*CancelEvent, error)
+	GetCancelEvent(txhash, orderhash common.Hash) (CancelEvent, error)
 	RollBackCancel(from, to int64) error
+	GetCancelForkEvents(from, to int64) ([]CancelEvent, error)
 
 	// cutoff event table
-	GetCutoffEvent(protocol, owner common.Address) (*CutOffEvent, error)
-	DelCutoffEvent(protocol, owner common.Address) error
-	UpdateCutoffByProtocolAndOwner(protocol, owner common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
+	GetCutoffEvent(txhash common.Hash) (CutOffEvent, error)
+	GetCutoffForkEvents(from, to int64) ([]CutOffEvent, error)
 	RollBackCutoff(from, to int64) error
 
 	// cutoffpair event table
-	GetCutoffPairEvent(protocol, owner, token1, token2 common.Address) (*CutOffEvent, error)
-	DelCutoffPairEvent(protocol, owner, token1, token2 common.Address) error
+	GetCutoffPairEvent(txhash common.Hash) (CutOffPairEvent, error)
+	GetCutoffPairForkEvents(from, to int64) ([]CutOffPairEvent, error)
 	RollBackCutoffPair(from, to int64) error
-	UpdateCutoffPairEvent(protocol, owner, token1, token2 common.Address, txhash common.Hash, blockNumber, cutoff, createTime *big.Int) error
 
 	// trend table
 	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)

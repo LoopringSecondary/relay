@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
@@ -41,9 +42,9 @@ const DefaultContractVersion = "v1.2"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
-	Token      string
-	Amount     string
-	Percentage string
+	Token      string `json:"token"`
+	Amount     string `json:"amount"`
+	Percentage string `json:"percentage"`
 }
 
 type PageResult struct {
@@ -65,9 +66,9 @@ type AskBid struct {
 }
 
 type DepthElement struct {
-	Price  string
-	Size   *big.Rat
-	Amount *big.Rat
+	Price  string   `json:"price"`
+	Size   *big.Rat `json:"size"`
+	Amount *big.Rat `json:"amount"`
 }
 
 type CommonTokenRequest struct {
@@ -83,8 +84,17 @@ type SingleMarket struct {
 	Market string `json:"market"`
 }
 
+type TrendQuery struct {
+	Market   string `json:"market"`
+	Interval string `json:"interval"`
+}
+
 type SingleOwner struct {
 	Owner string `json:"owner"`
+}
+
+type TxNotify struct {
+	TxHash string `json:"txHash"`
 }
 
 type PriceQuoteQuery struct {
@@ -105,6 +115,9 @@ type EstimatedAllocatedAllowanceQuery struct {
 type TransactionQuery struct {
 	ThxHash   string   `json:"thxHash"`
 	Owner     string   `json:"owner"`
+	Symbol    string   `json: "symbol"`
+	Status    string   `json: "status"`
+	TxType    string   `json:"txType"`
 	TrxHashes []string `json:"trxHashes"`
 	PageIndex int      `json:"pageIndex"`
 	PageSize  int      `json:"pageSize"`
@@ -118,6 +131,7 @@ type OrderQuery struct {
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
+	Side            string `json:"side"`
 }
 
 type DepthQuery struct {
@@ -127,20 +141,21 @@ type DepthQuery struct {
 }
 
 type FillQuery struct {
-	ContractVersion string
-	Market          string
-	Owner           string
-	OrderHash       string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	Market          string `json:"market"`
+	Owner           string `json:"owner"`
+	OrderHash       string `json:"orderHash"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
+	Side            string `json:"side"`
 }
 
 type RingMinedQuery struct {
-	ContractVersion string
-	RingHash        string
-	PageIndex       int
-	PageSize        int
+	ContractVersion string `json:"contractVersion"`
+	RingHash        string `json:"ringHash"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -163,7 +178,8 @@ type RawOrderJsonResult struct {
 	WalletId              string `json:"walletId" gencodec:"required"`
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
-
+	Market                string `json:"market"`
+	Side                  string `json:"side"`
 }
 
 type OrderJsonResult struct {
@@ -173,6 +189,23 @@ type OrderJsonResult struct {
 	CancelledAmountS string             `json:"cancelledAmountS"`
 	CancelledAmountB string             `json:"cancelledAmountB"`
 	Status           string             `json:"status"`
+}
+
+type TransactionJsonResult struct {
+	Protocol    common.Address `json:"protocol"`
+	Owner       common.Address `json:"owner"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	TxHash      common.Hash    `json:"txHash"`
+	Symbol      string         `json:"symbol"`
+	Content     []byte         `json:"content"`
+	BlockNumber int64          `json:"blockNumber"`
+	Value       string         `json:"value"`
+	LogIndex    int64          `json:"logIndex"`
+	Type        string         `json:"type"`
+	Status      string         `json:"status"`
+	CreateTime  int64          `json:"createTime"`
+	UpdateTime  int64          `json:"updateTime"`
 }
 
 type PriceQuote struct {
@@ -193,10 +226,11 @@ type WalletServiceImpl struct {
 	ethForwarder    *EthForwarder
 	tickerCollector market.CollectorImpl
 	rds             dao.RdsService
+	oldWethAddress  string
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -205,7 +239,7 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	w.ethForwarder = ethForwarder
 	w.tickerCollector = collector
 	w.rds = rds
-
+	w.oldWethAddress = oldWethAddress
 	return w
 }
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
@@ -251,39 +285,37 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	priceQuoteMap := make(map[string]*big.Rat)
 	for _, pq := range priceQuote.Tokens {
 		priceQuoteMap[pq.Token] = new(big.Rat).SetFloat64(pq.Price)
-		fmt.Println("priceQuote key " + pq.Token)
-		fmt.Print("priceQuote value ")
-		fmt.Println(pq.Price)
 	}
 
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
-		fmt.Println("start handle asset handler.....")
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(totalAsset.Float64())
-		fmt.Println(asset)
 		totalAsset = totalAsset.Add(totalAsset, asset)
-		fmt.Println(totalAsset.Float64())
 	}
 
 	for k, v := range balances {
-		fmt.Println("start collect asset handler.....")
-		portfolio := Portfolio{Token: k, Amount: types.BigintToHex(v.Balance)}
-		asset := priceQuoteMap[k]
-		fmt.Println(asset)
+		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
+		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
-		fmt.Println(asset)
-		fmt.Println(v.Balance)
-		fmt.Println(totalAsset)
-		percentage, _ := asset.Quo(asset, totalAsset).Float64()
-		fmt.Println(percentage)
-		portfolio.Percentage = strconv.FormatFloat(percentage, 'f', 2, 64)
+		totalAssetFloat, _ := totalAsset.Float64()
+		var percentage float64
+		if totalAssetFloat == 0 {
+			percentage = 0
+		} else {
+			percentage, _ = asset.Quo(asset, totalAsset).Float64()
+		}
+		portfolio.Percentage = fmt.Sprintf("%.4f%%", 100*percentage)
 		res = append(res, portfolio)
 	}
+
+	sort.Slice(res, func(i, j int) bool {
+		percentStrLeft := strings.Replace(res[i].Percentage, "%", "", 1)
+		percentStrRight := strings.Replace(res[j].Percentage, "%", "", 1)
+		left, _ := strconv.ParseFloat(percentStrLeft, 64)
+		right, _ := strconv.ParseFloat(percentStrRight, 64)
+		return left > right
+	})
 
 	return
 }
@@ -292,7 +324,10 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 
 	rst := PriceQuote{query.Currency, make([]TokenPrice, 0)}
 	for k, v := range util.AllTokens {
-		price, _ := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		price, err := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
+		if err != nil {
+			return result, err
+		}
 		floatPrice, _ := price.Float64()
 		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
 		if k == "WETH" {
@@ -340,6 +375,31 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 	}
 }
 
+func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
+	if len(txNotify.TxHash) == 0 {
+		return "", errors.New("txHash can't be null string")
+	}
+	log.Info(">>>>>>>>>received tx notify " + txNotify.TxHash)
+	tx := &ethaccessor.Transaction{}
+	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
+	if err == nil {
+		eventemitter.Emit(eventemitter.PendingTransaction, tx)
+		log.Info("emit transaction info " + tx.Hash)
+	} else {
+		log.Error(">>>>>>>>getTransaction error : " + err.Error())
+	}
+	return
+}
+
+func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res string, err error) {
+	b, err := ethaccessor.Erc20Balance(common.HexToAddress(w.oldWethAddress), common.HexToAddress(owner.Owner), "latest")
+	if err != nil {
+		return
+	} else {
+		return types.BigintToHex(b), nil
+	}
+}
+
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
@@ -350,8 +410,8 @@ func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res stri
 }
 
 func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
-	orderQuery, pi, ps := convertFromQuery(query)
-	queryRst, err := w.orderManager.GetOrders(orderQuery, pi, ps)
+	orderQuery, statusList, pi, ps := convertFromQuery(query)
+	queryRst, err := w.orderManager.GetOrders(orderQuery, statusList, pi, ps)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -428,8 +488,14 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 
 	for _, f := range res.Data {
 		fill := f.(dao.FillEvent)
+		if util.IsBuy(fill.TokenB) {
+			fill.Side = "buy"
+		} else {
+			fill.Side = "sell"
+		}
 		fill.TokenS = util.AddressToAlias(fill.TokenS)
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
+
 		result.Data = append(result.Data, fill)
 	}
 	return result, nil
@@ -438,15 +504,15 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market.Ticker, err error) {
 	res, err = w.trendManager.GetTicker()
 
-	for i, t := range res {
-		w.fillBuyAndSell(&t, query.ContractVersion)
-		res[i] = t
-	}
+	//for i, t := range res {
+	//	w.fillBuyAndSell(&t, query.ContractVersion)
+	//	res[i] = t
+	//}
 	return
 }
 
-func (w *WalletServiceImpl) GetTrend(query SingleMarket) (res []market.Trend, err error) {
-	res, err = w.trendManager.GetTrends(query.Market)
+func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
+	res, err = w.trendManager.GetTrends(query.Market, query.Interval)
 	sort.Slice(res, func(i, j int) bool {
 		return res[i].Start < res[j].Start
 	})
@@ -458,6 +524,9 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
+	if len(balanceQuery.Owner) == 0 {
+		return res, errors.New("owner can't be null")
+	}
 	account := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
 	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
@@ -474,12 +543,12 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	return
 }
 
-func (w *WalletServiceImpl) GetCutoff(query CutoffRequest) (result string, err error) {
+func (w *WalletServiceImpl) GetCutoff(query CutoffRequest) (result int64, err error) {
 	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[query.ContractVersion]), common.HexToAddress(query.Address), query.BlockNumber)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	return cutoff.String(), nil
+	return cutoff.Int64(), nil
 }
 
 func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAllocatedAllowanceQuery) (frozenAmount string, err error) {
@@ -499,15 +568,22 @@ func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAlloca
 		return "", err
 	}
 
-	if token == "LRC" {
-		allLrcFee, err := w.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
-		if err != nil {
-			return "", err
-		}
-		amount.Add(amount, allLrcFee)
+	return types.BigintToHex(amount), err
+}
+
+func (w *WalletServiceImpl) GetFrozenLRCFee(query SingleOwner) (frozenAmount string, err error) {
+	statusSet := make([]types.OrderStatus, 0)
+	statusSet = append(statusSet, types.ORDER_NEW)
+	statusSet = append(statusSet, types.ORDER_PARTIAL)
+
+	owner := query.Owner
+
+	allLrcFee, err := w.orderManager.GetFrozenLRCFee(common.HexToAddress(owner), statusSet)
+	if err != nil {
+		return "", err
 	}
 
-	return types.BigintToHex(amount), err
+	return types.BigintToHex(allLrcFee), err
 }
 
 func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
@@ -517,6 +593,11 @@ func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
 
 	trxQuery := make(map[string]interface{})
+
+	if query.Symbol != "" {
+		trxQuery["symbol"] = query.Symbol
+	}
+
 	if query.Owner != "" {
 		trxQuery["owner"] = query.Owner
 	}
@@ -525,10 +606,22 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 		trxQuery["tx_hash"] = query.ThxHash
 	}
 
+	if txStatusToUint8(query.Status) > 0 {
+		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
+	}
+
+	if txTypeToUint8(query.TxType) > 0 {
+		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
+	}
+
 	pageIndex := query.PageIndex
 	pageSize := query.PageSize
 
 	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
+
+	fmt.Println("page query result is ...")
+	fmt.Println(daoPr)
+	fmt.Println(err)
 
 	if err != nil {
 		return pr, err
@@ -537,13 +630,15 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
 
 	for _, d := range daoPr.Data {
-		o := d.(types.Transaction)
-		rst.Data = append(rst.Data, o)
+		o := d.(dao.Transaction)
+		tr := types.Transaction{}
+		err = o.ConvertUp(&tr)
+		rst.Data = append(rst.Data, toTxJsonResult(tr))
 	}
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []types.Transaction, err error) {
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []TransactionJsonResult, err error) {
 
 	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
 
@@ -551,72 +646,95 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 		return nil, err
 	}
 
-	result = make([]types.Transaction, 0)
+	result = make([]TransactionJsonResult, 0)
 	for _, r := range rst {
 		tr := types.Transaction{}
 		err = r.ConvertUp(&tr)
 		if err != nil {
 			log.Error("convert error occurs..." + err.Error())
 		}
-		result = append(result, tr)
+		result = append(result, toTxJsonResult(tr))
 	}
 
 	return result, nil
 }
 
-func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, pageIndex int, pageSize int) {
+func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})
-	status := convertStatus(orderQuery.Status)
-	if uint8(status) != 0 {
-		query["status"] = uint8(status)
-	}
+	statusList = convertStatus(orderQuery.Status)
 	if orderQuery.Owner != "" {
 		query["owner"] = orderQuery.Owner
 	}
 	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
 		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
 	}
+
 	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
 	}
+
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
 	}
+	if strings.ToLower(orderQuery.Side) == "buy" {
+		query["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(orderQuery.Side) == "sell" {
+		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	}
+
 	pageIndex = orderQuery.PageIndex
 	pageSize = orderQuery.PageSize
 	return
 
 }
 
-func convertStatus(s string) types.OrderStatus {
+func convertStatus(s string) []types.OrderStatus {
 	switch s {
+	case "ORDER_OPENED":
+		return []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 	case "ORDER_NEW":
-		return types.ORDER_NEW
+		return []types.OrderStatus{types.ORDER_NEW}
 	case "ORDER_PARTIAL":
-		return types.ORDER_PARTIAL
+		return []types.OrderStatus{types.ORDER_PARTIAL}
 	case "ORDER_FINISHED":
-		return types.ORDER_FINISHED
+		return []types.OrderStatus{types.ORDER_FINISHED}
 	case "ORDER_CANCELED":
-		return types.ORDER_CANCEL
+		return []types.OrderStatus{types.ORDER_CANCEL}
 	case "ORDER_CUTOFF":
-		return types.ORDER_CUTOFF
+		return []types.OrderStatus{types.ORDER_CUTOFF}
+	case "ORDER_EXPIRE":
+		return []types.OrderStatus{types.ORDER_EXPIRE}
 	}
-	return types.ORDER_UNKNOWN
+	return []types.OrderStatus{}
 }
 
-func getStringStatus(s types.OrderStatus) string {
+func getStringStatus(order types.OrderState) string {
+	s := order.Status
+
+	if order.IsExpired() {
+		return "ORDER_EXPIRE"
+	}
+
+	if order.IsExpired() {
+		return "ORDER_PENDING"
+	}
+
 	switch s {
 	case types.ORDER_NEW:
-		return "ORDER_NEW"
+		return "ORDER_OPENED"
 	case types.ORDER_PARTIAL:
-		return "ORDER_PARTIAL"
+		return "ORDER_OPENED"
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
 		return "ORDER_CANCELED"
 	case types.ORDER_CUTOFF:
 		return "ORDER_CUTOFF"
+	case types.ORDER_PENDING:
+		return "ORDER_PENDING"
+	case types.ORDER_EXPIRE:
+		return "ORDER_EXPIRE"
 	}
 	return "ORDER_UNKNOWN"
 }
@@ -729,6 +847,12 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 		rst["ring_hash"] = q.RingHash
 	}
 
+	if strings.ToLower(q.Side) == "buy" {
+		rst["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
+	} else if strings.ToLower(q.Side) == "sell" {
+		rst["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	}
+
 	return rst, pi, ps
 }
 
@@ -774,7 +898,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)
 	rst.CancelledAmountB = types.BigintToHex(src.CancelledAmountB)
 	rst.CancelledAmountS = types.BigintToHex(src.CancelledAmountS)
-	rst.Status = getStringStatus(src.Status)
+	rst.Status = getStringStatus(src)
 	rawOrder := RawOrderJsonResult{}
 	rawOrder.Protocol = src.RawOrder.Protocol.String()
 	rawOrder.Owner = src.RawOrder.Owner.String()
@@ -793,6 +917,12 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.S = src.RawOrder.S.Hex()
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
+	rawOrder.Market = src.RawOrder.Market
+	if rawOrder.TokenB == "WETH" {
+		rawOrder.Side = "sell"
+	} else {
+		rawOrder.Side = "buy"
+	}
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rst.RawOrder = rawOrder
@@ -813,4 +943,65 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
 	}
+}
+
+func txStatusToUint8(txType string) int {
+	switch txType {
+	case "pending":
+		return 1
+	case "success":
+		return 2
+	case "failed":
+		return 3
+	default:
+		return -1
+	}
+}
+
+func txTypeToUint8(status string) int {
+	switch status {
+	case "approve":
+		return 1
+	case "send":
+		return 2
+	case "receive":
+		return 3
+	case "sell":
+		return 4
+	case "buy":
+		return 5
+	case "convert":
+		return 7
+	case "cancel_order":
+		return 8
+	case "cutoff":
+		return 9
+	case "cutoff_trading_pair":
+		return 10
+	default:
+		return -1
+	}
+}
+
+func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
+	dst := TransactionJsonResult{}
+	dst.Protocol = tx.Protocol
+	dst.Owner = tx.Owner
+	dst.From = tx.From
+	dst.To = tx.To
+	dst.TxHash = tx.TxHash
+	dst.Content = []byte(tx.Content)
+	dst.BlockNumber = tx.BlockNumber.Int64()
+	dst.LogIndex = tx.LogIndex
+	if tx.Value == nil {
+		dst.Value = "0"
+	} else {
+		dst.Value = tx.Value.String()
+	}
+	dst.Type = tx.TypeStr()
+	dst.Status = tx.StatusStr()
+	dst.CreateTime = tx.CreateTime
+	dst.UpdateTime = tx.UpdateTime
+	dst.Symbol = tx.Symbol
+	return dst
 }

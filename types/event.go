@@ -23,17 +23,6 @@ import (
 	"math/big"
 )
 
-type TxInfo struct {
-	Protocol    common.Address
-	From        common.Address
-	To          common.Address
-	TxHash      common.Hash
-	BlockHash   common.Hash
-	BlockNumber *big.Int
-	BlockTime   int64
-	TxFailed    bool
-}
-
 type TokenRegisterEvent struct {
 	TxInfo
 	Token  common.Address
@@ -98,18 +87,20 @@ type OrderCancelledEvent struct {
 	AmountCancelled *big.Int
 }
 
-type AllOrdersCancelledEvent struct {
+type CutoffEvent struct {
 	TxInfo
-	Owner  common.Address
-	Cutoff *big.Int
+	Owner         common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
-type OrdersCancelledEvent struct {
+type CutoffPairEvent struct {
 	TxInfo
-	Owner  common.Address
-	Token1 common.Address
-	Token2 common.Address
-	Cutoff *big.Int
+	Owner         common.Address
+	Token1        common.Address
+	Token2        common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type RingMinedEvent struct {
@@ -120,6 +111,18 @@ type RingMinedEvent struct {
 	Ringhash     common.Hash
 	Miner        common.Address
 	FeeRecipient common.Address
+}
+
+type WethDepositEvent struct {
+	TxInfo
+	Owner common.Address
+	Value *big.Int
+}
+
+type WethWithdrawalEvent struct {
+	TxInfo
+	Owner common.Address
+	Value *big.Int
 }
 
 type WethDepositMethodEvent struct {
@@ -143,9 +146,7 @@ type ApproveMethodEvent struct {
 
 type SubmitRingMethodEvent struct {
 	TxInfo
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
-	Err          error
+	Err error
 }
 
 type CutoffMethodEvent struct {

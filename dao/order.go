@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -134,7 +135,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.ValidSince = big.NewInt(o.ValidSince)
 	state.RawOrder.ValidUntil = big.NewInt(o.ValidUntil)
 
-	state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
+	if len(o.AuthAddress) > 0 {
+		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
+	}
 	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
 	state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
 
@@ -147,12 +150,16 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
 
 	if state.RawOrder.Hash != state.RawOrder.GenerateHash() {
+		log.Debug("different order hash found......")
+		log.Debug(state.RawOrder.Hash.Hex())
+		log.Debug(state.RawOrder.GenerateHash().Hex())
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
 
 	state.UpdatedBlock = big.NewInt(o.UpdatedBlock)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
+	state.RawOrder.Market = o.Market
 
 	return nil
 }
@@ -236,42 +243,45 @@ func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order,
 	return list, err
 }
 
-// todo useless
-func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
+func (s *RdsServiceImpl) GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
 
-	err = s.db.Where("valid_since < ?", cutoffTime).Find(&list).Error
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	err = s.db.Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Find(&list).Error
+	return list, err
+}
+
+func (s *RdsServiceImpl) GetCutoffPairOrders(owner, token1, token2 common.Address, cutoffTime *big.Int) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	tokens := []string{token1.Hex(), token2.Hex()}
+	err = s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
+		Where("token_s in (?)", tokens).
+		Where("token_b in (?)", tokens).
+		Find(&list).Error
 
 	return list, err
 }
 
-// todo useless
-func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
-	model := Order{}
-	err := s.db.Where("order_hash = ? and valid_since < ?").Find(&model).Error
-	if err != nil {
-		return false
+func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error {
+	var list []string
+
+	items := map[string]interface{}{
+		"status":        uint8(types.ORDER_CUTOFF),
+		"updated_block": blockNumber.Int64(),
 	}
 
-	return true
-}
-
-func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
-	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
-	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
-	return err
-}
-
-func (s *RdsServiceImpl) SetCutoffPair(owner, token1, token2 common.Address, cutoffTime *big.Int) error {
-	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
-	tokens := []string{token1.Hex(), token2.Hex()}
-	err := s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
-		Where("token_s in (?)", tokens).
-		Where("token_b in (?)", tokens).
-		Update("status", types.ORDER_CUTOFF).Error
+	for _, v := range orderHashList {
+		list = append(list, v.Hex())
+	}
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", list).Update(items).Error
 	return err
 }
 
@@ -295,12 +305,13 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 	return list, err
 }
 
-func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
+func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		orders     []Order
-		err        error
-		data       = make([]interface{}, 0)
-		pageResult PageResult
+		orders        []Order
+		err           error
+		data          = make([]interface{}, 0)
+		pageResult    PageResult
+		statusStrList = make([]string, 0)
 	)
 
 	if pageIndex <= 0 {
@@ -311,8 +322,22 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
-		return pageResult, err
+	if len(statusList) == 1 {
+		query["status"] = statusList[0]
+		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
+	} else if len(statusList) > 1 {
+		for _, s := range statusList {
+			statusStrList = append(statusStrList, strconv.Itoa(s))
+		}
+		if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
+	} else {
+		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
 	}
 
 	for _, v := range orders {
@@ -321,7 +346,11 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 
 	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+	if len(statusList) <= 1 {
+		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+	} else {
+		err = s.db.Model(&Order{}).Where(query).Where("status in (?)", statusStrList).Count(&pageResult.Total).Error
+	}
 	if err != nil {
 		return pageResult, err
 	}
@@ -353,6 +382,14 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 		"updated_block":      blockNumber.Int64(),
 	}
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
+}
+
+func (s *RdsServiceImpl) UpdateOrderWhileRollbackCutoff(orderhash common.Hash, status types.OrderStatus, blockNumber *big.Int) error {
+	items := map[string]interface{}{
+		"status":        uint8(status),
+		"updated_block": blockNumber.Int64(),
+	}
+	return s.db.Model(&Order{}).Where("order_hash = ?", orderhash.Hex()).Update(items).Error
 }
 
 func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {

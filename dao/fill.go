@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 )
 
 type FillEvent struct {
@@ -46,6 +47,9 @@ type FillEvent struct {
 	SplitS        string `gorm:"column:split_s;type:varchar(30)" json:"splitS"`
 	SplitB        string `gorm:"column:split_b;type:varchar(30)" json:"splitB"`
 	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
+	LogIndex      int64  `gorm:"column:log_index"`
+	Fork          bool   `gorm:"column:fork"`
+	Side          string `json:"side"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
@@ -69,7 +73,35 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.FillIndex = src.FillIndex.Int64()
+	f.LogIndex = src.LogIndex
 	f.Market = src.Market
+
+	return nil
+}
+
+// convert dao/fill to types/fill
+func (f *FillEvent) ConvertUp(dst *types.OrderFilledEvent) error {
+	dst.AmountS, _ = new(big.Int).SetString(f.AmountS, 0)
+	dst.AmountB, _ = new(big.Int).SetString(f.AmountB, 0)
+	dst.LrcReward, _ = new(big.Int).SetString(f.LrcReward, 0)
+	dst.LrcFee, _ = new(big.Int).SetString(f.LrcFee, 0)
+	dst.SplitS, _ = new(big.Int).SetString(f.SplitS, 0)
+	dst.SplitB, _ = new(big.Int).SetString(f.SplitB, 0)
+	dst.Protocol = common.HexToAddress(f.Protocol)
+	dst.RingIndex = big.NewInt(f.RingIndex)
+	dst.BlockNumber = big.NewInt(f.BlockNumber)
+	dst.BlockTime = f.CreateTime
+	dst.Ringhash = common.HexToHash(f.RingHash)
+	dst.TxHash = common.HexToHash(f.TxHash)
+	dst.PreOrderHash = common.HexToHash(f.PreOrderHash)
+	dst.NextOrderHash = common.HexToHash(f.NextOrderHash)
+	dst.OrderHash = common.HexToHash(f.OrderHash)
+	dst.TokenS = common.HexToAddress(f.TokenS)
+	dst.TokenB = common.HexToAddress(f.TokenB)
+	dst.Owner = common.HexToAddress(f.Owner)
+	dst.FillIndex = big.NewInt(f.FillIndex)
+	dst.LogIndex = f.LogIndex
+	dst.Market = f.Market
 
 	return nil
 }
@@ -136,6 +168,19 @@ func buildTimeQueryString(start, end int64) string {
 	return rst
 }
 
+func (s *RdsServiceImpl) GetFillForkEvents(from, to int64) ([]FillEvent, error) {
+	var (
+		list []FillEvent
+		err  error
+	)
+
+	err = s.db.Where("block_number > ? and block_number <= ?", from, to).
+		Where("fork=?", false).
+		Find(&list).Error
+
+	return list, err
+}
+
 func (s *RdsServiceImpl) RollBackFill(from, to int64) error {
-	return s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&FillEvent{}).Error
+	return s.db.Model(&FillEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

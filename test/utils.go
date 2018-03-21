@@ -25,8 +25,8 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
@@ -184,11 +184,6 @@ func Entity() *TestEntity       { return entity }
 func Protocol() common.Address  { return common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version]) }
 func Delegate() common.Address  { return ethaccessor.ProtocolAddresses()[protocol].DelegateAddress }
 
-func GenerateExtractor() *extractor.ExtractorServiceImpl {
-	l := extractor.NewExtractorService(cfg.Extractor, rds)
-	return l
-}
-
 func GenerateUserManager() *usermanager.UserManagerImpl {
 	um := usermanager.NewUserManager(&cfg.UserManager, rds)
 	return um
@@ -207,6 +202,10 @@ func GenerateDaoService() *dao.RdsServiceImpl {
 
 func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 	return marketcap.NewMarketCapProvider(cfg.MarketCap)
+}
+
+func GenerateAccountManager() market.AccountManager {
+	return market.NewAccountManager()
 }
 
 func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
@@ -268,7 +267,6 @@ func PrepareTestData() {
 	}
 
 	log.Infof("tokenregistry")
-
 	//tokenregistry
 	tokenRegisterAbi := ethaccessor.TokenRegistryAbi()
 	tokenRegisterAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
@@ -296,8 +294,8 @@ func PrepareTestData() {
 	for _, tokenAddr := range entity.Tokens {
 		erc20SendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddr)
 		for _, acc := range orderAccounts {
-			amount, _ := big.NewInt(0).SetString("100000000000000000000", 0) // 10^18 * 100
-			if hash, err := erc20SendMethod(acc.Address, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, amount); nil != err {
+			approval := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
+			if hash, err := erc20SendMethod(acc.Address, "approve", big.NewInt(106762), big.NewInt(21000000000), nil, delegateAddress, approval); nil != err {
 				log.Errorf("token approve error:%s", err.Error())
 			} else {
 				log.Infof("token approve hash:%s", hash)
@@ -351,7 +349,7 @@ func SetTokenBalances() {
 	dummyTokenAbi.UnmarshalJSON([]byte(dummyTokenAbiStr))
 
 	sender := accounts.Account{Address: entity.Creator.Address}
-	amount, _ := new(big.Int).SetString("10000000000000000000000", 0) // 10^18 * 10000
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
 	//wethAmount, _ := new(big.Int).SetString("79992767978000000000", 0)
 
 	// deposit weth

@@ -86,7 +86,7 @@ func (impl *RedisCacheImpl) Exists(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	} else {
-		exists := reply.(int)
+		exists := reply.(int64)
 		if exists == 1 {
 			return true, nil
 		} else {

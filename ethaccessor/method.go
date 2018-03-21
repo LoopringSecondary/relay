@@ -80,6 +80,19 @@ func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
+func (accessor *ethNodeAccessor) GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+	var amount types.Big
+	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	if err := callMethod(&amount, "cancelled", blockNumStr, orderhash); err != nil {
+		return nil, err
+	}
+
+	return amount.BigInt(), nil
+}
+
 func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
 	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
 		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())

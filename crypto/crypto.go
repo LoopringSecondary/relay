@@ -27,6 +27,7 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
+	"strings"
 )
 
 type EthCrypto struct {
@@ -77,7 +78,7 @@ func (c EthCrypto) SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 
 type EthKSCrypto struct {
 	EthCrypto
-	ks *keystore.KeyStore
+	ks               *keystore.KeyStore
 	unlockedAccounts map[common.Address]bool
 }
 
@@ -93,7 +94,7 @@ func (c EthKSCrypto) UnlockAccount(acc accounts.Account, passphrase string) erro
 }
 
 func (c EthKSCrypto) IsUnlocked(addr common.Address) bool {
-	_,exists := c.unlockedAccounts[addr]
+	_, exists := c.unlockedAccounts[addr]
 	return exists
 }
 
@@ -103,7 +104,7 @@ func (c EthKSCrypto) SignTx(addr common.Address, tx *types.Transaction, chainID 
 }
 
 func NewKSCrypto(homestead bool, ks *keystore.KeyStore) EthKSCrypto {
-	return EthKSCrypto{EthCrypto: EthCrypto{homestead: homestead}, ks: ks, unlockedAccounts:make(map[common.Address]bool)}
+	return EthKSCrypto{EthCrypto: EthCrypto{homestead: homestead}, ks: ks, unlockedAccounts: make(map[common.Address]bool)}
 }
 
 type EthPrivateKeyCrypto struct {
@@ -154,9 +155,7 @@ func (h *EthPrivateKeyCrypto) UnmarshalText(input []byte) error {
 }
 
 func toECDSA(privateKeyHex string) (*ecdsa.PrivateKey, error) {
-	if "0x" == privateKeyHex[0:2] {
-		privateKeyHex = privateKeyHex[2:]
-	}
+	privateKeyHex = strings.TrimLeft(privateKeyHex, "0x")
 	return ethCrypto.ToECDSA(common.Hex2Bytes(privateKeyHex))
 }
 

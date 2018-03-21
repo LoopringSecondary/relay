@@ -62,12 +62,12 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	signFilter := &SignFilter{}
 
 	// new cutoff filter
-	//cutoffFilter := &CutoffFilter{om: om}
+	cutoffFilter := &CutoffFilter{om: om}
 
 	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
-	//gateway.filters = append(gateway.filters, cutoffFilter)
+	gateway.filters = append(gateway.filters, cutoffFilter)
 }
 
 func HandleOrder(input eventemitter.EventData) error {
@@ -183,6 +183,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	if o.Price.Cmp(new(big.Rat).SetFrac(f.MaxPrice, big.NewInt(1))) > 0 || o.Price.Cmp(new(big.Rat).SetFrac(big.NewInt(1), f.MaxPrice)) < 0 {
 		return false, fmt.Errorf("dao order convert down,price out of range")
 	}
+
 	return true, nil
 }
 

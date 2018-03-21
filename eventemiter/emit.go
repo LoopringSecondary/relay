@@ -49,6 +49,7 @@ const (
 	OrderManagerExtractorCutoff     = "OrderManagerExtractorCutoff"
 	OrderManagerExtractorCutoffPair = "OrderManagerExtractorCutoffPair"
 	MinedOrderState                 = "MinedOrderState" //orderbook send orderstate to miner
+	WalletTransactionSubmitted      = "WalletTransactionSubmitted"
 
 	//Miner
 	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
@@ -71,10 +72,13 @@ const (
 	// Methods
 	WethDepositMethod    = "WethDepositMethod"
 	WethWithdrawalMethod = "WethWithdrawalMethod"
+	WethDepositEvent     = "WethDepositEvent"
+	WethWithdrawalEvent  = "WethWithdrawalEvent"
 	ApproveMethod        = "ApproveMethod"
 
 	// Transaction
-	TransactionEvent = "TransactionEvent"
+	TransactionEvent   = "TransactionEvent"
+	PendingTransaction = "PendingTransaction"
 )
 
 var watchers map[string][]*Watcher
