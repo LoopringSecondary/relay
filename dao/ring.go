@@ -198,11 +198,6 @@ func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]common.Has
 	return hashes, err
 }
 
-func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryUsedGas(txHash string, usedGas *big.Int) error {
-	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("registry_tx_hash = ?", txHash)
-	return dbForUpdate.Update("registry_used_gas", getBigIntString(usedGas)).Error
-}
-
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error {
 	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("protocol_tx_hash = ?", txHash)
 	return dbForUpdate.Update("protocol_used_gas", getBigIntString(usedGas)).Error
