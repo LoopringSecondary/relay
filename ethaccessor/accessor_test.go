@@ -50,7 +50,7 @@ func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
-	owner := account1
+	owner := account2
 	tokenAddress := wethTokenAddress
 	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
@@ -61,9 +61,9 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := accounts.Account{Address: account1}
-	tokenAddress := lrcTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
+	account := accounts.Account{Address: account2}
+	tokenAddress := wethTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(100))
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
@@ -76,7 +76,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
 	owner := account2
-	tokenAddress := lrcTokenAddress
+	tokenAddress := wethTokenAddress
 	spender := delegateAddress
 
 	if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
@@ -274,7 +274,7 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	account := account1
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(100))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account, "deposit", big.NewInt(200000), big.NewInt(21000000000), amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())

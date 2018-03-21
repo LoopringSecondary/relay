@@ -146,9 +146,7 @@ type ApproveMethodEvent struct {
 
 type SubmitRingMethodEvent struct {
 	TxInfo
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
-	Err          error
+	Err error
 }
 
 type CutoffMethodEvent struct {
