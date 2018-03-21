@@ -32,6 +32,8 @@ import (
 	"math/big"
 	"sync"
 	"time"
+	"encoding/json"
+	"fmt"
 )
 
 /**
@@ -212,6 +214,15 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.EventData) error {
 	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
+
+	txStr, err := json.Marshal(*tx)
+	fmt.Println("........................>")
+	fmt.Println(txStr)
+	fmt.Println(err)
+	fmt.Println()
+	exist2, ere := l.processor.accountmanager.HasUnlocked(tx.To)
+	fmt.Println(exist2)
+	fmt.Println(ere)
 
 	if exist, _ := l.processor.accountmanager.HasUnlocked(tx.To); exist == true {
 		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
