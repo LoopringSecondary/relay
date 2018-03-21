@@ -620,13 +620,26 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 }
 
 func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositMethodEvent) error {
-	var tx types.Transaction
+	var tx1, tx2 types.Transaction
 
 	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
 
-	tx.FromWethDepositMethod(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
-	return processor.saveTransaction(&tx)
+	// save weth
+	tx1.FromWethDepositMethod(evt)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
+	if err := processor.saveTransaction(&tx1); err != nil {
+		return err
+	}
+
+	// save eth
+	tx2 = tx1
+	tx2.Protocol = types.NilAddress
+	tx2.Symbol = "ETH"
+	if err := processor.saveTransaction(&tx2); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.EventData) error {
@@ -652,13 +665,24 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 }
 
 func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithdrawalMethodEvent) error {
-	var tx types.Transaction
+	var tx1, tx2 types.Transaction
 
 	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
-	tx.FromWethWithdrawalMethod(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
-	return processor.saveTransaction(&tx)
+	tx1.FromWethWithdrawalMethod(evt)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
+	if err := processor.saveTransaction(&tx1); err != nil {
+		return err
+	}
+
+	tx2 = tx1
+	tx2.Protocol = types.NilAddress
+	tx2.Symbol = "ETH"
+	if err := processor.saveTransaction(&tx2); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData) error {
@@ -1034,6 +1058,10 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 	tx.UpdateTime = tx.UpdateTime
 
 	model.ConvertDown(tx)
+
+	// todo delete after test
+	//return processor.db.SaveTransaction(&model)
+
 	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
 		return processor.db.SaveTransaction(&model)
 	}
