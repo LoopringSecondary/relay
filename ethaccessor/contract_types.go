@@ -224,6 +224,32 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
+// event  Deposit(address indexed dst, uint wad);
+type WethDepositEvent struct {
+	To    common.Address `fieldName:"dst" fieldId:"0"`
+	Value *big.Int       `fieldName:"wad" fieldId:"1"`
+}
+
+func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
+	evt := &types.WethDepositEvent{}
+	evt.Value = e.Value
+
+	return evt
+}
+
+// event  Withdrawal(address indexed src, uint wad);
+type WethWithdrawalEvent struct {
+	From  common.Address `fieldName:"src" fieldId:"0"`
+	Value *big.Int       `fieldName:"wad" fieldId:"1"`
+}
+
+func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
+	evt := &types.WethWithdrawalEvent{}
+	evt.Value = e.Value
+
+	return evt
+}
+
 type SubmitRingMethod struct {
 	AddressList        [][3]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
 	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
