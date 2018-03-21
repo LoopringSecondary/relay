@@ -183,6 +183,19 @@ func TestExtractorServiceImpl_UnpackRingMined(t *testing.T) {
 	}
 }
 
+func TestExtractorServiceImpl_UnpackWethDeposit(t *testing.T) {
+	input := "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+	deposit := &ethaccessor.WethDepositEvent{}
+
+	data := hexutil.MustDecode(input)
+
+	if err := ethaccessor.WethAbi().Unpack(deposit, "Deposit", data, abi.SEL_UNPACK_EVENT); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("deposit value:%s", deposit.Value.String())
+	}
+}
+
 func TestExtractorServiceImpl_Compare(t *testing.T) {
 	str1 := "547722557505166136913"
 	str2 := "1000000000000000000000"

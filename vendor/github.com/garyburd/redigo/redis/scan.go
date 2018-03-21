@@ -252,7 +252,7 @@ func convertAssign(d interface{}, s interface{}) (err error) {
 //
 // If a src element is nil, then the corresponding dest value is not modified.
 //
-// To enable easy use of Scan in a loop, Scan returns the slice of src
+// Owner enable easy use of Scan in a loop, Scan returns the slice of src
 // following the copied values.
 func Scan(src []interface{}, dest ...interface{}) ([]interface{}, error) {
 	if len(src) < len(dest) {

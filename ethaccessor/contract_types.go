@@ -226,7 +226,7 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 
 // event  Deposit(address indexed dst, uint wad);
 type WethDepositEvent struct {
-	To    common.Address `fieldName:"dst" fieldId:"0"`
+	Owner common.Address `fieldName:"dst" fieldId:"0"`
 	Value *big.Int       `fieldName:"wad" fieldId:"1"`
 }
 
@@ -239,7 +239,7 @@ func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
 
 // event  Withdrawal(address indexed src, uint wad);
 type WethWithdrawalEvent struct {
-	From  common.Address `fieldName:"src" fieldId:"0"`
+	Owner common.Address `fieldName:"src" fieldId:"0"`
 	Value *big.Int       `fieldName:"wad" fieldId:"1"`
 }
 

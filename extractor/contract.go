@@ -1044,12 +1044,11 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.WethDepositEvent)
-	contractEvent.To = common.HexToAddress(contractData.Topics[1])
-
 	evt := contractEvent.ConvertDown()
+	evt.Owner = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.WethDepositEvent, evt)
 
@@ -1061,7 +1060,7 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 func (processor *AbiProcessor) saveWethDepositEventAsTx(evt *types.WethDepositEvent) error {
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
+	log.Debugf("extractor:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
 
 	// save weth
 	tx1.FromWethDepositEvent(evt)
@@ -1089,12 +1088,12 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.WethWithdrawalEvent)
-	contractEvent.From = common.HexToAddress(contractData.Topics[1])
 
 	evt := contractEvent.ConvertDown()
+	evt.Owner = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal from:%s, number:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal from:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
 
@@ -1106,7 +1105,7 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 func (processor *AbiProcessor) saveWethWithdrawalEventAsTx(evt *types.WethWithdrawalEvent) error {
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
+	log.Debugf("extractor:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
 
 	// save weth
 	tx1.FromWethWithdrawalEvent(evt)

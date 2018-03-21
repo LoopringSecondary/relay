@@ -266,7 +266,7 @@ func pkgIndex(file, funcName string) int {
 	//    file[:idx] == /home/user/src/
 	//    file[idx:] == pkg/sub/file.go
 	//
-	// From this we can easily see that fn.Name() has one less path separator
+	// Owner this we can easily see that fn.Name() has one less path separator
 	// than our desired result for file[idx:]. We count separators from the
 	// end of the file path until it finds two more than in the function name
 	// and then move one character forward to preserve the initial path

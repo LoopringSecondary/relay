@@ -391,8 +391,8 @@ func unmarshal(msg []byte, payloadType byte, v interface{}) (err error) {
 
 /*
 Message is a codec to send/receive text/binary data in a frame on WebSocket connection.
-To send/receive text frame, use string type.
-To send/receive binary frame, use []byte type.
+Owner send/receive text frame, use string type.
+Owner send/receive binary frame, use []byte type.
 
 Trivial usage:
 
