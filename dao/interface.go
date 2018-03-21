@@ -98,9 +98,7 @@ type RdsService interface {
 	FindWhiteListUserByAddress(address common.Address) (*WhiteList, error)
 
 	//ringSubmitInfo
-	UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error
 	UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error
-	UpdateRingSubmitInfoRegistryUsedGas(txHash string, usedGas *big.Int) error
 	UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error
 	UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
