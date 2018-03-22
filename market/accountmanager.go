@@ -36,6 +36,7 @@ var RedisCachePlaceHolder = make([]byte, 0)
 
 const DefaultUnlockTtl = 3600 * 24 * 30
 const UnlockCachePreKey = "Unlocked_Address_"
+const DefaultContractVersion = "v1.2"
 
 type Account struct {
 	Address    string
@@ -256,7 +257,7 @@ func (a *AccountManager) updateBalanceAndAllowance(tokenAlias, address string) e
 		}
 		balance.Balance = amount
 		account.Balances[tokenAlias] = balance
-		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, "v1.0")
+		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, DefaultContractVersion)
 		if err != nil {
 			log.Error("get allowance failed from accessor")
 			return err
@@ -301,7 +302,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
-	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
+	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[DefaultContractVersion]))
 	if err != nil {
 		return errors.New("invalid spender address")
 	}
