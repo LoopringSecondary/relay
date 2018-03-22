@@ -299,7 +299,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 */5 * * * *", t.insertTrend)
+	t.cron.AddFunc("10 */5 * * * *", t.InsertTrend)
 	t.cron.Start()
 }
 
@@ -310,7 +310,7 @@ func (t *TrendManager) insertTrendByInterval(interval string) error {
 	}
 
 	if interval == OneHour {
-		t.insertTrend()
+		t.InsertTrend()
 		return nil
 	} else {
 		return t.insertByTrend(interval)
@@ -403,7 +403,7 @@ func isTimeToInsert(interval string) bool {
 	return time.Now().Unix()%getTsInterval(interval) < tsOneHour
 }
 
-func (t *TrendManager) insertTrend() {
+func (t *TrendManager) InsertTrend() {
 	// get latest 24 hour trend if not exist generate
 
 	fmt.Println("start insert trend cron job")
