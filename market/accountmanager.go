@@ -30,6 +30,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"math/big"
 	"strings"
+	"fmt"
 )
 
 var RedisCachePlaceHolder = make([]byte, 0)
@@ -227,6 +228,9 @@ func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
+	fmt.Println("--------------------->")
+	fmt.Println(util.AllTokens[token].Protocol.Hex())
+	fmt.Println(common.HexToAddress(owner).Hex())
 	return ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
 }
 
@@ -235,6 +239,10 @@ func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) 
 	if err != nil {
 		return big.NewInt(0), errors.New("invalid spender address")
 	}
+	fmt.Println("===--------------------->")
+	fmt.Println(util.AllTokens[token].Protocol.Hex())
+	fmt.Println(common.HexToAddress(owner).Hex())
+	fmt.Println(spenderAddress.Hex())
 	return ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
 }
 
