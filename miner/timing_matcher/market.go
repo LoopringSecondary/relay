@@ -271,7 +271,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 		if market.om.IsValueDusted(order.RawOrder.TokenS, tokenSBalance) {
 			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is not enough", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
 		}
-		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance))
+		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance, market.lrcAddress))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)

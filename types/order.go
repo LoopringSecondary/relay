@@ -237,7 +237,7 @@ type FilledOrder struct {
 	AvailableTokenSBalance *big.Rat
 }
 
-func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat) *FilledOrder {
+func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat, lrcAddress common.Address) *FilledOrder {
 	filledOrder := &FilledOrder{}
 	filledOrder.OrderState = orderState
 	filledOrder.AvailableLrcBalance = new(big.Rat).Set(lrcBalance)
@@ -257,6 +257,9 @@ func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBal
 		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountS, new(big.Rat).Inv(sellPrice))
 	}
 
+	if orderState.RawOrder.TokenB == lrcAddress && lrcBalance.Cmp(filledOrder.AvailableAmountB) < 0 {
+		filledOrder.AvailableLrcBalance.Set(filledOrder.AvailableAmountB)
+	}
 	return filledOrder
 }
 
