@@ -619,10 +619,6 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 
 	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
 
-	fmt.Println("page query result is ...")
-	fmt.Println(daoPr)
-	fmt.Println(err)
-
 	if err != nil {
 		return pr, err
 	}

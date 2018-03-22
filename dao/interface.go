@@ -90,7 +90,7 @@ type RdsService interface {
 	RollBackCutoffPair(from, to int64) error
 
 	// trend table
-	TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error)
+	TrendQueryLatest(query Trend, pageIndex, pageSize int) (trends []Trend, err error)
 	TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error)
 
 	// white list
@@ -104,12 +104,6 @@ type RdsService interface {
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
-
-	// token
-	FindUnDeniedTokens() ([]Token, error)
-	FindDeniedTokens() ([]Token, error)
-	FindUnDeniedMarkets() ([]Token, error)
-	FindDeniedMarkets() ([]Token, error)
 
 	// transactions
 	SaveTransaction(latest *Transaction) error

@@ -34,10 +34,8 @@ type Trend struct {
 	End        int64   `gorm:"column:end;type:bigint"`
 }
 
-func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (pageResult PageResult, err error) {
-	var result PageResult
-
-	trends := make([]Trend, 0)
+func (s *RdsServiceImpl) TrendQueryLatest(query Trend, pageIndex, pageSize int) (trends [] Trend, err error) {
+	trends = make([]Trend, 0)
 
 	if pageIndex <= 0 {
 		pageIndex = 1
@@ -47,18 +45,7 @@ func (s *RdsServiceImpl) TrendPageQuery(query Trend, pageIndex, pageSize int) (p
 		pageSize = 50
 	}
 
-	if err = s.db.Model(&Trend{}).Where(query).Order("start desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&trends).Error; err != nil {
-		return
-	}
-
-	for _, t := range trends {
-		pageResult.Data = append(pageResult.Data, t)
-	}
-
-	result.PageIndex = pageIndex
-	result.PageSize = pageSize
-
-	err = s.db.Model(&Trend{}).Where(query).Count(&result.Total).Error
+	err = s.db.Model(&Trend{}).Where(query).Order("start desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&trends).Error
 	return
 }
 
