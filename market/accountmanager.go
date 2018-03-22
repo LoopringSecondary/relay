@@ -30,7 +30,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"math/big"
 	"strings"
-	"fmt"
 	"sync"
 )
 
@@ -99,8 +98,6 @@ func NewAccountManager() AccountManager {
 }
 
 func (a *AccountManager) GetBalance(contractVersion, address string) (account Account, err error) {
-	fmt.Println("step in get balance........")
-
 	if len(contractVersion) == 0 {
 		return account, errors.New("contract version must be applied")
 	}
@@ -108,11 +105,9 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
-		fmt.Println("step in get cache....")
 		account := accountInCache.(Account)
 		return account, err
 	} else {
-		fmt.Println("step in get from eth access....")
 		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock:sync.Mutex{}}
 		for k, v := range util.AllTokens {
 			balance := Balance{Token: k}
