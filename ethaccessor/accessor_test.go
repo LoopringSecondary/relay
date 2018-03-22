@@ -301,7 +301,7 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 	account := accounts.Account{Address: account1}
 
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).SetInt64(100)
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	to := account2
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account.Address, "transfer", gas, gasPrice, nil, to, amount); nil != err {
