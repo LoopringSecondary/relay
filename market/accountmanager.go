@@ -30,6 +30,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"math/big"
 	"strings"
+	"sync"
 )
 
 var RedisCachePlaceHolder = make([]byte, 0)
@@ -43,6 +44,8 @@ type Account struct {
 	Balances   map[string]Balance
 	Allowances map[string]Allowance
 }
+
+var m *sync.Mutex
 
 type Balance struct {
 	Token   string
@@ -102,6 +105,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 		account := accountInCache.(Account)
 		return account
 	} else {
+		m.Lock()
 		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance)}
 		for k, v := range util.AllTokens {
 			balance := Balance{Token: k}
@@ -128,6 +132,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 		}
 		a.c.Set(address, account, cache.NoExpiration)
+		m.Unlock()
 		return account
 	}
 }
