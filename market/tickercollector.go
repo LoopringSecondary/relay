@@ -166,19 +166,11 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 			json.Unmarshal(byteRst, &unmarshalRst)
 			result = append(result, unmarshalRst)
 		} else {
-			log.Info("get ticker from redis error" + err.Error())
+			//log.Info("get ticker from redis error" + err.Error())
 		}
 	}
 	return result, nil
 }
-
-//func (c *CollectorImpl) getTickerFromRemote(exchange string) ([] Ticker , error) {
-//	return nil, nil
-//}
-//
-//func (c *CollectorImpl) getTickerByMarket(exchange string , market string) (Ticker, error) {
-//
-//}
 
 type HuobiTicker struct {
 	Timestamp int64            `json:"ts"`
