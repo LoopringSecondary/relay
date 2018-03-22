@@ -262,7 +262,7 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
+	account, _ := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
@@ -527,7 +527,10 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	if len(balanceQuery.Owner) == 0 {
 		return res, errors.New("owner can't be null")
 	}
-	account := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	if len(balanceQuery.ContractVersion) == 0 {
+		return res, errors.New("contract version can't be null")
+	}
+	account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
 	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {

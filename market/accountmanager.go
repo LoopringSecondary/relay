@@ -95,12 +95,17 @@ func NewAccountManager() AccountManager {
 	return accountManager
 }
 
-func (a *AccountManager) GetBalance(contractVersion, address string) Account {
+func (a *AccountManager) GetBalance(contractVersion, address string) (account Account, err error) {
+
+	if len(contractVersion) == 0 {
+		return account, errors.New("contract version must be applied")
+	}
+
 	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
 		account := accountInCache.(Account)
-		return account
+		return account, err
 	} else {
 		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance)}
 		for k, v := range util.AllTokens {
@@ -128,7 +133,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 		}
 		a.c.Set(address, account, cache.NoExpiration)
-		return account
+		return account, nil
 	}
 }
 
@@ -141,7 +146,7 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 	}
 
 	//todo(xiaolu): 从配置文件中获取
-	account := a.GetBalance("v1.2", address.Hex())
+	account, _ := a.GetBalance("v1.2", address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return
