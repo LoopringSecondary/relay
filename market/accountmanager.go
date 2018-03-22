@@ -231,7 +231,11 @@ func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*bi
 	fmt.Println("--------------------->")
 	fmt.Println(util.AllTokens[token].Protocol.Hex())
 	fmt.Println(common.HexToAddress(owner).Hex())
-	return ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	rst, err := ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	fmt.Println(rst.String())
+	fmt.Println(err)
+	return rst, err
+
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
@@ -243,7 +247,10 @@ func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) 
 	fmt.Println(util.AllTokens[token].Protocol.Hex())
 	fmt.Println(common.HexToAddress(owner).Hex())
 	fmt.Println(spenderAddress.Hex())
-	return ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	rst, err := ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	fmt.Println(rst.String())
+	fmt.Println(err)
+	return rst, err
 }
 
 func buildAllowanceKey(version, token string) string {
