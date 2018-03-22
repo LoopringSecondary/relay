@@ -735,13 +735,13 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 			tc := trendMap[market]
 			tc.Fills = append(tc.Fills, *newFillModel)
 			trendMap[market] = tc
-			t.c.Set(trendKeyPre + strings.ToLower(OneHour), trendMap, cache.NoExpiration)
+			t.c.Set(trendKeyPre+strings.ToLower(OneHour), trendMap, cache.NoExpiration)
 			t.reCalTicker(market)
 		} else {
 			fills := make([]dao.FillEvent, 0)
 			fills = append(fills, *newFillModel)
 			newCache := Cache{make([]Trend, 0), fills}
-			t.c.Set(trendKeyPre + strings.ToLower(OneHour), newCache, cache.NoExpiration)
+			t.c.Set(trendKeyPre+strings.ToLower(OneHour), newCache, cache.NoExpiration)
 			t.reCalTicker(market)
 		}
 	} else {

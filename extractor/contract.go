@@ -1180,3 +1180,26 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 
 	return nil
 }
+
+// 判断tx是否为普通的eth转账
+// 1.如果是extractor支持的合约 返回false
+// 2.如果是extractor不支持的合约 且value大于0 则统一视为eth转账
+// 3.eth转账用户from或者to必须已经被解锁
+// 4.这里weth的转账视为合约转账
+func (processor *AbiProcessor) IsValidEthTransaction(tx *ethaccessor.Transaction) bool {
+	if processor.HasContract(common.HexToAddress(tx.To)) {
+		return false
+	}
+
+	if tx.Value.BigInt().Cmp(big.NewInt(0)) <= 0 {
+		return false
+	}
+
+	fromUnlocked, _ := processor.accountmanager.HasUnlocked(tx.From)
+	toUnlocked, _ := processor.accountmanager.HasUnlocked(tx.To)
+	if !fromUnlocked && !toUnlocked {
+		return false
+	}
+
+	return true
+}
