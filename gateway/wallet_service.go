@@ -888,7 +888,6 @@ func buildOrderResult(src dao.PageResult) PageResult {
 
 func orderStateToJson(src types.OrderState) OrderJsonResult {
 
-	fmt.Println("json convet........step in.....")
 	rst := OrderJsonResult{}
 	rst.DealtAmountB = types.BigintToHex(src.DealtAmountB)
 	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)
