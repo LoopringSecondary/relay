@@ -74,7 +74,7 @@ func (rs *RoundState) dealtAmount(orderhash common.Hash) (amountS *big.Rat, amou
 	amountB = new(big.Rat).SetInt64(int64(0))
 
 	if order, exists := rs.orderStates[orderhash]; exists {
-		log.Debugf("state.orderStatesstate.orderStates", len(order.rings))
+		log.Debugf("state.orderStatesstate.orderStates :%d", len(order.rings))
 		for _, matched := range order.rings {
 			amountB.Add(amountB, matched.filledAmountB)
 			amountS.Add(amountS, matched.filledAmountS)
@@ -84,9 +84,6 @@ func (rs *RoundState) dealtAmount(orderhash common.Hash) (amountS *big.Rat, amou
 }
 
 func (rs *RoundState) removeMinedOrder(orderhash common.Hash) {
-	rs.mtx.Lock()
-	defer rs.mtx.Unlock()
-
 	if len(rs.orderStates[orderhash].rings) <= 0 {
 		delete(rs.orderStates, orderhash)
 		balancesMap := make(map[common.Address][]common.Hash)
@@ -111,7 +108,7 @@ func (rs *RoundState) removeMinedRing(ringhash common.Hash) {
 
 	orderhashes := []common.Hash{}
 	for orderhash, orderState := range rs.orderStates {
-		if _, exists := orderState.rings[ringhash]; !exists {
+		if _, exists := orderState.rings[ringhash]; exists {
 			orderhashes = append(orderhashes, orderhash)
 		}
 	}
