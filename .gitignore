@@ -15,3 +15,4 @@ startup.sh
 nameregistry.sh
 addparticipant.sh
 test_token.json
+nohup.out
