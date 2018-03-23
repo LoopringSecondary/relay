@@ -831,10 +831,10 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 		eventemitter.Emit(eventemitter.AccountApproval, evt)
 	}
 
+	eventemitter.Emit(eventemitter.TxManagerApproveEvent, evt)
+
 	return nil
 }
-
-// todo 解析approve event
 
 func (processor *AbiProcessor) handleTokenRegisteredEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)

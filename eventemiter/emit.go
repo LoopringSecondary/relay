@@ -87,6 +87,7 @@ const (
 	TxManagerApproveMethod        = "TxManagerApproveMethod"
 	TxManagerWethDepositMethod    = "TxManagerWethDepositMethod"
 	TxManagerWethWithdrawalMethod = "TxManagerWethWithdrawalMethod"
+	TxManagerApproveEvent         = "TxManagerApproveEvent"
 	TxManagerOrderFilledEvent     = "TxManagerOrderFilledEvent"
 	TxManagerOrderCancelledEvent  = "TxManagerOrderCancelledEvent"
 	TxManagerCutoffAllEvent       = "TxManagerCutoffAllEvent"
