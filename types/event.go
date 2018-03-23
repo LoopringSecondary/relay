@@ -70,6 +70,8 @@ type OrderFilledEvent struct {
 	Owner         common.Address
 	TokenS        common.Address
 	TokenB        common.Address
+	SellTo        common.Address
+	BuyFrom       common.Address
 	RingIndex     *big.Int
 	AmountS       *big.Int
 	AmountB       *big.Int

@@ -79,6 +79,22 @@ const (
 	// Transaction
 	TransactionEvent   = "TransactionEvent"
 	PendingTransaction = "PendingTransaction"
+
+	// transaction manager
+	TxManagerCancelOrderMethod    = "TxManagerCancelOrderMethod"
+	TxManagerCutoffAllMethod      = "TxManagerCutoffAllMethod"
+	TxManagerCutoffPairMethod     = "TxManagerCutoffPairMethod"
+	TxManagerApproveMethod        = "TxManagerApproveMethod"
+	TxManagerWethDepositMethod    = "TxManagerWethDepositMethod"
+	TxManagerWethWithdrawalMethod = "TxManagerWethWithdrawalMethod"
+	TxManagerOrderFilledEvent     = "TxManagerOrderFilledEvent"
+	TxManagerOrderCancelledEvent  = "TxManagerOrderCancelledEvent"
+	TxManagerCutoffAllEvent       = "TxManagerCutoffAllEvent"
+	TxManagerCutoffPairEvent      = "TxManagerCutoffPairEvent"
+	TxManagerTransferEvent        = "TxManagerTransferEvent"
+	TxManagerWethDepositEvent     = "TxManagerWethDepositEvent"
+	TxManagerWethWithdrawalEvent  = "TxManagerWethWithdrawalEvent"
+	TxManagerEthTransferEvent     = "TxManagerEthTransferEvent"
 )
 
 var watchers map[string][]*Watcher

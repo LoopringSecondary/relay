@@ -144,15 +144,17 @@ func (tx *Transaction) GetOrderContent() (common.Hash, error) {
 	}
 }
 
-func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, to common.Address, txtype uint8) error {
+func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype uint8) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = to
 	tx.Type = txtype
 	if txtype == TX_TYPE_SELL {
+		tx.From = src.BuyFrom
+		tx.To = src.SellTo
 		tx.Value = src.AmountS
 	} else {
+		tx.From = src.SellTo
+		tx.To = src.BuyFrom
 		tx.Value = src.AmountB
 	}
 	tx.Content = []byte(src.OrderHash.Hex())
@@ -168,11 +170,11 @@ func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	}
 }
 
-func (tx *Transaction) FromCancelMethod(txinfo TxInfo, value *big.Int) error {
-	tx.fullFilled(txinfo)
-	tx.Owner = txinfo.From
+func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.From
 	tx.Type = TX_TYPE_CANCEL_ORDER
-	tx.Value = value
+	tx.Value = src.AmountCancelled
 
 	return nil
 }

@@ -186,7 +186,7 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if l.processor.IsValidEthTransaction(tx) {
+	if l.processor.IsValidEthTransferTransaction(tx) {
 		status := types.TX_STATUS_SUCCESS
 		if txIsFailed {
 			status = types.TX_STATUS_FAILED
@@ -215,7 +215,7 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
 
-	if l.processor.IsValidEthTransaction(tx) {
+	if l.processor.IsValidEthTransferTransaction(tx) {
 		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
 	} else {
 		method, id, ok := l.getMethodFromTransaction(tx)
@@ -254,6 +254,11 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 	method, id, ok := l.getMethodFromTransaction(tx)
 	if !ok {
 		l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
+		return nil
+	}
+
+	// tx成功则processEvent
+	if !txIsFailed {
 		return nil
 	}
 

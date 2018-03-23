@@ -88,6 +88,14 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethac
 	method.Status = status
 }
 
+func (method *MethodData) processNeeded() bool {
+	if method.Status == types.TX_STATUS_FAILED || method.Status == types.TX_STATUS_PENDING {
+		return true
+	} else {
+		return false
+	}
+}
+
 func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) types.TxInfo {
 	var txinfo types.TxInfo
 
@@ -499,37 +507,29 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
-	cancel := contract.Method.(*ethaccessor.CancelOrderMethod)
+	contractEvent := contract.Method.(*ethaccessor.CancelOrderMethod)
 
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(cancel, contract.Name, data); err != nil {
+	if err := contract.CAbi.UnpackMethodInput(contractEvent, contract.Name, data); err != nil {
 		log.Errorf("extractor,tx:%s cancelOrder method unpack error:%s", contract.TxHash.Hex(), err.Error())
 		return nil
 	}
 
-	order, cancelAmount, _ := cancel.ConvertDown()
-	txinfo := contract.TxInfo
-
+	order, cancelAmount, _ := contractEvent.ConvertDown()
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
-	order.Protocol = contract.Protocol
-
 	// 不再存储取消的订单
-	//eventemitter.Emit(eventemitter.Gateway, order)
+	// order.Protocol = contract.Protocol
+	// eventemitter.Emit(eventemitter.Gateway, order)
 
-	// save transactions while cancel order failed,other save transactions while process cancelOrderEvent
-	if contract.Status == types.TX_STATUS_FAILED || contract.Status == types.TX_STATUS_PENDING {
-		processor.saveCancelOrderMethodAsTx(txinfo, cancelAmount)
-	}
+	// 发送到txmanager
+	tmCancelEvent := &types.OrderCancelledEvent{}
+	tmCancelEvent.TxInfo = contract.TxInfo
+	tmCancelEvent.OrderHash = order.Hash
+	tmCancelEvent.AmountCancelled = cancelAmount
+	eventemitter.Emit(eventemitter.OrderCanceled, tmCancelEvent)
 
 	return nil
-}
-
-func (processor *AbiProcessor) saveCancelOrderMethodAsTx(txinfo types.TxInfo, amount *big.Int) error {
-	log.Debugf("extractor,tx:%s saveCancelOrderMethodAsTx status:%d", txinfo.TxHash.Hex(), txinfo.Status)
-	var tx types.Transaction
-	tx.FromCancelMethod(txinfo, amount)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) error {
@@ -547,18 +547,9 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	cutoff.Owner = cutoff.From
 	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64(), cutoff.Status)
 
-	if cutoff.Status == types.TX_STATUS_PENDING || cutoff.Status == types.TX_STATUS_FAILED {
-		processor.saveCutoffMethodAsTx(cutoff)
-	}
+	eventemitter.Emit(eventemitter.TxManagerCutoffAllMethod, cutoff)
 
 	return nil
-}
-
-func (processor *AbiProcessor) saveCutoffMethodAsTx(evt *types.CutoffMethodEvent) error {
-	var tx types.Transaction
-
-	tx.FromCutoffMethodEvent(evt)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventData) error {
@@ -577,17 +568,9 @@ func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventDa
 
 	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Value.Int64())
 
-	if cutoffpair.Status == types.TX_STATUS_PENDING || cutoffpair.Status == types.TX_STATUS_FAILED {
-		processor.saveCutoffPairMethodAsTx(cutoffpair)
-	}
+	eventemitter.Emit(eventemitter.TxManagerCutoffPairMethod, cutoffpair)
 
 	return nil
-}
-
-func (processor *AbiProcessor) saveCutoffPairMethodAsTx(evt *types.CutoffPairMethodEvent) error {
-	var tx types.Transaction
-	tx.FromCutoffPairMethod(evt)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData) error {
@@ -610,19 +593,8 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 		eventemitter.Emit(eventemitter.ApproveMethod, approve)
 	}
 
-	processor.saveApproveMethodAsTx(approve)
+	eventemitter.Emit(eventemitter.TxManagerApproveMethod, approve)
 	return nil
-}
-
-func (processor *AbiProcessor) saveApproveMethodAsTx(evt *types.ApproveMethodEvent) error {
-	var tx types.Transaction
-
-	log.Debugf("extractor:tx:%s saveApproveMethodAsTx, status:%d", evt.TxHash.Hex(), evt.Status)
-
-	tx.FromApproveMethod(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
-
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventData) error {
@@ -636,33 +608,7 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
 
 	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
-
-	if deposit.Status == types.TX_STATUS_PENDING || deposit.Status == types.TX_STATUS_FAILED {
-		processor.saveWethDepositMethodAsTx(&deposit)
-	}
-
-	return nil
-}
-
-func (processor *AbiProcessor) saveWethDepositMethodAsTx(evt *types.WethDepositMethodEvent) error {
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("extractor:tx:%s saveWethDepositMethodAsTx", evt.TxHash.Hex())
-
-	// save weth
-	tx1.FromWethDepositMethod(evt)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	// save eth
-	tx2 = tx1
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	eventemitter.Emit(eventemitter.TxManagerWethDepositMethod, &deposit)
 
 	return nil
 }
@@ -684,31 +630,7 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)
-
-	if withdrawal.Status == types.TX_STATUS_PENDING || withdrawal.Status == types.TX_STATUS_FAILED {
-		processor.saveWethWithdrawalMethodAsTx(withdrawal)
-	}
-
-	return nil
-}
-
-func (processor *AbiProcessor) saveWethWithdrawalMethodAsTx(evt *types.WethWithdrawalMethodEvent) error {
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
-
-	tx1.FromWethWithdrawalMethod(evt)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	tx2 = tx1
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	eventemitter.Emit(eventemitter.TxManagerWethWithdrawalMethod, withdrawal)
 
 	return nil
 }
@@ -782,39 +704,23 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 		}
 	}
 
-	// 只存储跟订单相关的fill
-	processor.saveFillListAsTxs(saveFillList, &contractData)
-	return nil
-}
-
-func (processor *AbiProcessor) saveFillListAsTxs(fillList []*types.OrderFilledEvent, contract *EventData) {
 	length := len(fillList)
-
-	log.Debugf("extractor,tx:%s saveFillListAsTxs:length %d and tx status:%d", contract.TxHash.Hex(), length, contract.Status)
-
 	for i := 0; i < length; i++ {
-		var (
-			tx1, tx2        types.Transaction
-			sellto, buyfrom common.Address
-		)
 		fill := fillList[i]
 		if i == length-1 {
-			sellto = fillList[0].Owner
+			fill.SellTo = fillList[0].Owner
 		} else {
-			sellto = fillList[i+1].Owner
+			fill.SellTo = fillList[i+1].Owner
 		}
 		if i == 0 {
-			buyfrom = fillList[length-1].Owner
+			fill.BuyFrom = fillList[length-1].Owner
 		} else {
-			buyfrom = fillList[i-1].Owner
+			fill.BuyFrom = fillList[i-1].Owner
 		}
 
-		tx1.FromFillEvent(fill, sellto, types.TX_TYPE_SELL)
-		processor.saveTransaction(&tx1)
-
-		tx2.FromFillEvent(fill, buyfrom, types.TX_TYPE_BUY)
-		processor.saveTransaction(&tx2)
+		eventemitter.Emit(eventemitter.TxManagerOrderFilledEvent, fill)
 	}
+	return nil
 }
 
 func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.EventData) error {
@@ -833,15 +739,9 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 	log.Debugf("extractor,tx:%s orderCancelled event orderhash:%s, cancelAmount:%s", contractData.TxHash.Hex(), evt.OrderHash.Hex(), evt.AmountCancelled.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCancel, evt)
+	eventemitter.Emit(eventemitter.TxManagerOrderCancelledEvent, evt)
 
-	processor.saveCancelOrderEventAsTx(evt)
 	return nil
-}
-
-func (processor *AbiProcessor) saveCancelOrderEventAsTx(evt *types.OrderCancelledEvent) error {
-	var tx types.Transaction
-	tx.FromCancelEvent(evt, evt.From)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) error {
@@ -860,15 +760,9 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
+	eventemitter.Emit(eventemitter.TxManagerCutoffAllEvent, evt)
 
-	processor.saveCutoffEventAsTx(evt)
 	return nil
-}
-
-func (processor *AbiProcessor) saveCutoffEventAsTx(evt *types.CutoffEvent) error {
-	var tx types.Transaction
-	tx.FromCutoffEvent(evt)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventData) error {
@@ -887,16 +781,9 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
-
-	processor.saveCutoffPairEventAsTx(evt)
+	eventemitter.Emit(eventemitter.TxManagerCutoffPairEvent, evt)
 
 	return nil
-}
-
-func (processor *AbiProcessor) saveCutoffPairEventAsTx(evt *types.CutoffPairEvent) error {
-	var tx types.Transaction
-	tx.FromCutoffPairEvent(evt)
-	return processor.saveTransaction(&tx)
 }
 
 func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData) error {
@@ -919,26 +806,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.From.Hex(), transfer.To.Hex(), transfer.Value.String())
 
 	eventemitter.Emit(eventemitter.AccountTransfer, transfer)
-
-	processor.saveTransferEventsAsTxs(transfer)
-	return nil
-}
-
-func (processor *AbiProcessor) saveTransferEventsAsTxs(evt *types.TransferEvent) error {
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
-
-	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
-	tx2.Symbol = tx1.Symbol
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	eventemitter.Emit(eventemitter.TxManagerTransferEvent, transfer)
 
 	return nil
 }
@@ -965,6 +833,8 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 
 	return nil
 }
+
+// todo 解析approve event
 
 func (processor *AbiProcessor) handleTokenRegisteredEvent(input eventemitter.EventData) error {
 	contractData := input.(EventData)
@@ -1049,31 +919,7 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.WethDepositEvent, evt)
-
-	processor.saveWethDepositEventAsTx(evt)
-
-	return nil
-}
-
-func (processor *AbiProcessor) saveWethDepositEventAsTx(evt *types.WethDepositEvent) error {
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("extractor:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
-
-	// save weth
-	tx1.FromWethDepositEvent(evt)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	// save eth
-	tx2 = tx1
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	eventemitter.Emit(eventemitter.TxManagerWethDepositEvent, evt)
 
 	return nil
 }
@@ -1093,40 +939,15 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 
 	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal from:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
 
-	eventemitter.Emit(eventemitter.AddressAuthorized, evt)
-
-	processor.saveWethWithdrawalEventAsTx(evt)
-
-	return nil
-}
-
-func (processor *AbiProcessor) saveWethWithdrawalEventAsTx(evt *types.WethWithdrawalEvent) error {
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("extractor:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
-
-	// save weth
-	tx1.FromWethWithdrawalEvent(evt)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	// save eth
-	tx2 = tx1
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	eventemitter.Emit(eventemitter.WethWithdrawalEvent, evt)
+	eventemitter.Emit(eventemitter.TxManagerWethWithdrawalEvent, evt)
 
 	return nil
 }
 
 func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int, status uint8) error {
 	var (
-		dst      types.TransferEvent
-		tx1, tx2 types.Transaction
+		dst types.TransferEvent
 	)
 
 	dst.From = common.HexToAddress(tx.From)
@@ -1152,31 +973,8 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
-	tx1.FromTransferEvent(&dst, types.TX_TYPE_SEND)
-	if err := processor.saveTransaction(&tx1); err != nil {
-		return err
-	}
 
-	tx2.FromTransferEvent(&dst, types.TX_TYPE_RECEIVE)
-	if err := processor.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	// todo(fuk): emit to account manager
-	return nil
-}
-
-func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
-	var model dao.Transaction
-
-	tx.CreateTime = tx.BlockTime
-	tx.UpdateTime = tx.UpdateTime
-
-	model.ConvertDown(tx)
-
-	if unlocked, _ := processor.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
-		return processor.db.SaveTransaction(&model)
-	}
+	eventemitter.Emit(eventemitter.TxManagerEthTransferEvent, dst)
 
 	return nil
 }
@@ -1186,7 +984,8 @@ func (processor *AbiProcessor) saveTransaction(tx *types.Transaction) error {
 // 2.如果是extractor不支持的合约 且value大于0 则统一视为eth转账
 // 3.eth转账用户from或者to必须已经被解锁
 // 4.这里weth的转账视为合约转账
-func (processor *AbiProcessor) IsValidEthTransaction(tx *ethaccessor.Transaction) bool {
+// 5.todo 这里存在一个逻辑上绕不开的bug 如果新增一种代币，在relay/miner支持这种代币之前，tx会被判断为普通的eth转账
+func (processor *AbiProcessor) IsValidEthTransferTransaction(tx *ethaccessor.Transaction) bool {
 	if processor.HasContract(common.HexToAddress(tx.To)) {
 		return false
 	}
