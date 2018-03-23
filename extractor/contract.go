@@ -147,6 +147,7 @@ const (
 	WETH_DEPOSIT_METHOD_NAME    = "deposit"
 	WETH_WITHDRAWAL_METHOD_NAME = "withdraw"
 	APPROVAL_METHOD_NAME        = "approve"
+	TRANSFER_METHOD_NAME        = "transfer"
 )
 
 type AbiProcessor struct {
@@ -294,7 +295,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 
 func (processor *AbiProcessor) loadErc20Contract() {
 	for name, event := range ethaccessor.Erc20Abi().Events {
-		if name != TRANSFER_EVT_NAME {
+		if name != TRANSFER_EVT_NAME && name != APPROVAL_EVT_NAME {
 			continue
 		}
 
@@ -316,17 +317,24 @@ func (processor *AbiProcessor) loadErc20Contract() {
 	}
 
 	for name, method := range ethaccessor.Erc20Abi().Methods {
-		if name != APPROVAL_METHOD_NAME {
+		if name != TRANSFER_METHOD_NAME && name != APPROVAL_METHOD_NAME {
 			continue
 		}
 
+		watcher := &eventemitter.Watcher{}
 		contract := newMethodData(&method, ethaccessor.Erc20Abi())
-		contract.Method = &ethaccessor.ApproveMethod{}
-		watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApproveMethod}
+
+		switch contract.Name {
+		case TRANSFER_METHOD_NAME:
+			contract.Method = &ethaccessor.TransferMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleTransferMethod}
+		case APPROVAL_METHOD_NAME:
+			contract.Method = &ethaccessor.ApproveMethod{}
+			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApproveMethod}
+		}
+
 		eventemitter.On(contract.Id, watcher)
-
 		processor.methods[contract.Id] = contract
-
 		log.Infof("extractor,contract method name:%s -> key:%s", contract.Name, contract.Id)
 	}
 }
@@ -594,6 +602,27 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 	}
 
 	eventemitter.Emit(eventemitter.TxManagerApproveMethod, approve)
+	return nil
+}
+
+func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData) error {
+	contractData := input.(MethodData)
+	contractMethod := contractData.Method.(*ethaccessor.TransferMethod)
+
+	data := hexutil.MustDecode("0x" + contractData.Input[10:])
+	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s transfer method unpack error:%s", contractData.TxHash.Hex(), err.Error())
+		return nil
+	}
+
+	transfer := contractMethod.ConvertDown()
+	transfer.Sender = contractData.From
+	transfer.Receiver = transfer.To
+	transfer.TxInfo = contractData.TxInfo
+
+	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
+
+	eventemitter.Emit(eventemitter.TxManagerTransferMethod, transfer)
 	return nil
 }
 

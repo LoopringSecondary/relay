@@ -394,6 +394,20 @@ func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
 	return evt
 }
 
+// function transfer(address to, uint256 value) public returns (bool);
+type TransferMethod struct {
+	To    common.Address `fieldName:"to" fieldId:"0"`
+	Value *big.Int       `fieldName:"value" fieldId:"1"`
+}
+
+func (e *TransferMethod) ConvertDown() *types.TransferMethodEvent {
+	evt := &types.TransferMethodEvent{}
+	evt.To = e.To
+	evt.Value = e.Value
+
+	return evt
+}
+
 type ProtocolAddress struct {
 	Version         string
 	ContractAddress common.Address

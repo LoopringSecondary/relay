@@ -85,6 +85,7 @@ const (
 	TxManagerCutoffAllMethod      = "TxManagerCutoffAllMethod"
 	TxManagerCutoffPairMethod     = "TxManagerCutoffPairMethod"
 	TxManagerApproveMethod        = "TxManagerApproveMethod"
+	TxManagerTransferMethod       = "TxManagerTransferMethod"
 	TxManagerWethDepositMethod    = "TxManagerWethDepositMethod"
 	TxManagerWethWithdrawalMethod = "TxManagerWethWithdrawalMethod"
 	TxManagerApproveEvent         = "TxManagerApproveEvent"

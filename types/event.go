@@ -146,6 +146,13 @@ type ApproveMethodEvent struct {
 	Owner   common.Address
 }
 
+type TransferMethodEvent struct {
+	TxInfo
+	Sender   common.Address
+	Receiver common.Address
+	Value    *big.Int
+}
+
 type SubmitRingMethodEvent struct {
 	TxInfo
 	Err error
