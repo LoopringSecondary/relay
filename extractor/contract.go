@@ -56,7 +56,7 @@ func (event *EventData) FullFilled(evtLog *ethaccessor.Log, tx *ethaccessor.Tran
 	event.TxInfo = setTxInfo(tx, receipt, blockTime)
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
-	event.LogIndex = evtLog.LogIndex.Int64() + 1
+	event.LogIndex = evtLog.LogIndex.Int64()
 	event.Status = types.TX_STATUS_SUCCESS
 }
 
@@ -466,7 +466,7 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	tmCancelEvent.TxInfo = contract.TxInfo
 	tmCancelEvent.OrderHash = order.Hash
 	tmCancelEvent.AmountCancelled = cancelAmount
-	eventemitter.Emit(eventemitter.OrderCanceled, tmCancelEvent)
+	eventemitter.Emit(eventemitter.TxManagerCancelOrderMethod, tmCancelEvent)
 
 	return nil
 }
@@ -548,7 +548,6 @@ func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData
 
 	transfer := contractMethod.ConvertDown()
 	transfer.Sender = contractData.From
-	transfer.Receiver = transfer.To
 	transfer.TxInfo = contractData.TxInfo
 
 	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())

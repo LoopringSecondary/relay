@@ -187,10 +187,8 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
 	if l.processor.IsValidEthTransferTransaction(tx) {
+		// 普通的eth转账 只要打到块里都算成功
 		status := types.TX_STATUS_SUCCESS
-		if txIsFailed {
-			status = types.TX_STATUS_FAILED
-		}
 		return l.processor.handleEthTransfer(tx, receipt, blockTime, uint8(status))
 	} else {
 		if len(receipt.Logs) > 0 {

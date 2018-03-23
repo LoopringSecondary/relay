@@ -34,6 +34,7 @@ type TransactionManager struct {
 	cutoffAllMethodWatcher      *eventemitter.Watcher
 	cutoffPairMethodWatcher     *eventemitter.Watcher
 	approveMethodWatcher        *eventemitter.Watcher
+	transferMethodWatcher       *eventemitter.Watcher
 	wethDepositMethodWatcher    *eventemitter.Watcher
 	wethWithdrawalMethodWatcher *eventemitter.Watcher
 	approveEventWatcher         *eventemitter.Watcher
@@ -58,6 +59,9 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 func (tm *TransactionManager) Start() {
 	tm.approveMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveMethod}
 	eventemitter.On(eventemitter.TxManagerApproveMethod, tm.approveMethodWatcher)
+
+	tm.transferMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveTransferMethod}
+	eventemitter.On(eventemitter.TxManagerTransferMethod, tm.transferMethodWatcher)
 
 	tm.cancelOrderMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCancelOrderMethod}
 	eventemitter.On(eventemitter.TxManagerCancelOrderMethod, tm.cancelOrderMethodWatcher)
@@ -104,6 +108,7 @@ func (tm *TransactionManager) Start() {
 
 func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.TxManagerApproveMethod, tm.approveMethodWatcher)
+	eventemitter.Un(eventemitter.TxManagerTransferMethod, tm.transferMethodWatcher)
 	eventemitter.Un(eventemitter.TxManagerCancelOrderMethod, tm.cancelOrderMethodWatcher)
 	eventemitter.Un(eventemitter.TxManagerCutoffAllMethod, tm.cutoffAllMethodWatcher)
 	eventemitter.Un(eventemitter.TxManagerCutoffPairMethod, tm.cutoffPairMethodWatcher)
@@ -126,6 +131,24 @@ func (tm *TransactionManager) SaveApproveMethod(input eventemitter.EventData) er
 	tx.FromApproveMethod(evt)
 	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
 	return tm.saveTransaction(&tx)
+}
+
+func (tm *TransactionManager) SaveTransferMethod(input eventemitter.EventData) error {
+	evt := input.(*types.TransferMethodEvent)
+	var tx1, tx2 types.Transaction
+
+	tx1.FromTransferMethodEvent(evt, types.TX_TYPE_SEND)
+	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
+	tx2.FromTransferMethodEvent(evt, types.TX_TYPE_RECEIVE)
+	tx2.Symbol = tx1.Symbol
+	if err := tm.saveTransaction(&tx1); err != nil {
+		return err
+	}
+	if err := tm.saveTransaction(&tx2); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (tm *TransactionManager) SaveCancelOrderMethod(input eventemitter.EventData) error {

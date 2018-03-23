@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/txmanager"
 	"testing"
 )
 
@@ -35,13 +36,15 @@ func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
 func TestExtractorServiceImpl_PendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xba9a4880c3a71330865789ba91c8892849ec03a10d96450118c9e3dc458bee90", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0x7237c9f9cb63473f439253d3d6c061bef7d90b5ee1691b10040342169a10f9be", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
 	}
 
 	accmanager := test.GenerateAccountManager()
+	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
+	tm.Start()
 	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
 	processor.ProcessPendingTransaction(&tx)
 }

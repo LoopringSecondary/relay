@@ -309,6 +309,21 @@ func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	return nil
 }
 
+func (tx *Transaction) FromTransferMethodEvent(src *TransferMethodEvent, sendOrReceive uint8) error {
+	tx.fullFilled(src.TxInfo)
+	if sendOrReceive == TX_TYPE_SEND {
+		tx.Owner = src.Sender
+	} else {
+		tx.Owner = src.Receiver
+	}
+	tx.From = src.Sender
+	tx.To = src.Receiver
+	tx.Value = src.Value
+	tx.Type = sendOrReceive
+
+	return nil
+}
+
 func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8) error {
 	tx.fullFilled(src.TxInfo)
 	if sendOrReceive == TX_TYPE_SEND {
