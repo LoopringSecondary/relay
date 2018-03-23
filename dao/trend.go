@@ -34,7 +34,7 @@ type Trend struct {
 	End        int64   `gorm:"column:end;type:bigint"`
 }
 
-func (s *RdsServiceImpl) TrendQueryLatest(query Trend, pageIndex, pageSize int) (trends [] Trend, err error) {
+func (s *RdsServiceImpl) TrendQueryLatest(query Trend, pageIndex, pageSize int) (trends []Trend, err error) {
 	trends = make([]Trend, 0)
 
 	if pageIndex <= 0 {

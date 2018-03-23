@@ -15,9 +15,9 @@ import (
 type BusinessType int
 
 const (
-	EventPostfixReq = "_req"
-	EventPostfixRes = "_res"
-	EventPostfixEnd = "_end"
+	EventPostfixReq        = "_req"
+	EventPostfixRes        = "_res"
+	EventPostfixEnd        = "_end"
 	DefaultCronSpec3Second = "0/3 * * * * *"
 	DefaultCronSpec5Minute = "0 */5 * * * *"
 )
@@ -55,8 +55,8 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type InvokeInfo struct {
-	MethodName string
-	Query      interface{}
+	MethodName  string
+	Query       interface{}
 	IsBroadcast bool
 	spec        string
 }
@@ -99,7 +99,7 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 func (so *SocketIOServiceImpl) Start() {
 	server, err := socketio.NewServer(&engineio.Options{
 		PingInterval: time.Second * 60 * 60,
-		PingTimeout: time.Second * 60 * 60,
+		PingTimeout:  time.Second * 60 * 60,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -147,7 +147,8 @@ func (so *SocketIOServiceImpl) Start() {
 					continue
 				} else {
 					businesses := v.Context().(map[string]string)
-					eventContext, ok := businesses[copyOfK]; if ok {
+					eventContext, ok := businesses[copyOfK]
+					if ok {
 						so.EmitNowByEventType(copyOfK, v, eventContext)
 					}
 				}

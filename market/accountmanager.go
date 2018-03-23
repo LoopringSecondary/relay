@@ -43,7 +43,7 @@ type Account struct {
 	Address    string
 	Balances   map[string]Balance
 	Allowances map[string]Allowance
-	Lock 	   sync.Mutex
+	Lock       sync.Mutex
 }
 
 type Balance struct {
@@ -108,7 +108,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 		account := accountInCache.(Account)
 		return account, err
 	} else {
-		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock:sync.Mutex{}}
+		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock: sync.Mutex{}}
 		for k, v := range util.AllTokens {
 			balance := Balance{Token: k}
 

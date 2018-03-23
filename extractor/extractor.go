@@ -181,19 +181,15 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
+func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	txIsFailed := receipt.IsFailed(l.options.IsDevNet)
 
 	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
-	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
-	if fromUnlocked || toUnlocked {
+	if l.processor.IsValidEthTransferTransaction(tx) {
+		// 普通的eth转账 只要打到块里都算成功
 		status := types.TX_STATUS_SUCCESS
-		if txIsFailed {
-			status = types.TX_STATUS_FAILED
-		}
-		l.processor.handleEthTransfer(tx, receipt, blockTime, uint8(status))
+		return l.processor.handleEthTransfer(tx, receipt, blockTime, uint8(status))
 	} else {
 		if len(receipt.Logs) > 0 {
 			if err := l.ProcessEvent(tx, receipt, blockTime); err != nil {
@@ -208,6 +204,8 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 		} else {
 			l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
 		}
+
+		return nil
 	}
 }
 
@@ -215,9 +213,7 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 	tx := input.(*ethaccessor.Transaction)
 	blockTime := big.NewInt(time.Now().Unix())
 
-	fromUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.From)
-	toUnlocked, _ := l.processor.accountmanager.HasUnlocked(tx.To)
-	if fromUnlocked || toUnlocked {
+	if l.processor.IsValidEthTransferTransaction(tx) {
 		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
 	} else {
 		method, id, ok := l.getMethodFromTransaction(tx)
@@ -228,7 +224,6 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.Even
 
 		method.FullFilled(tx, nil, blockTime, types.TX_STATUS_PENDING)
 		eventemitter.Emit(method.Id, method)
-
 		return nil
 	}
 }
@@ -257,6 +252,11 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 	method, id, ok := l.getMethodFromTransaction(tx)
 	if !ok {
 		l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
+		return nil
+	}
+
+	// tx成功则processEvent
+	if !txIsFailed {
 		return nil
 	}
 

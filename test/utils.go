@@ -79,7 +79,6 @@ func init() {
 	entity = loadTestData()
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()
-
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
 }
 

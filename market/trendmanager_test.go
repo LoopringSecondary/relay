@@ -21,6 +21,7 @@ package market_test
 import (
 	"fmt"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
@@ -28,7 +29,6 @@ import (
 	"math/big"
 	"testing"
 	"time"
-	"github.com/Loopring/relay/eventemiter"
 )
 
 var (

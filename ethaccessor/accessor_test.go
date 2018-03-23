@@ -94,7 +94,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0xf9e4657a74b947edbc3028013640fa6cc052b3ba7432175b93c0906959042146")
+		orderhash    = common.HexToHash("0xca3464556aacee43b03eb65dd2fd17159d07f8b4c314f7fb6ed761931663da2a")
 		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
@@ -144,7 +144,7 @@ func TestEthNodeAccessor_GetCancelledOrFilled(t *testing.T) {
 // cutoff的值必须在两个块的timestamp之间
 func TestEthNodeAccessor_CutoffAll(t *testing.T) {
 	account := common.HexToAddress("0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead")
-	cutoff := big.NewInt(1581107175)
+	cutoff := big.NewInt(1531808145)
 
 	protocol := test.Protocol()
 	implAddress := ethaccessor.ProtocolAddresses()[protocol].ContractAddress
@@ -276,7 +276,7 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	account := account1
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(100))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account, "deposit", gas, gasPrice, amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -298,13 +298,13 @@ func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethTransfer(t *testing.T) {
-	account := accounts.Account{Address: account1}
-
-	wethAddr := wethTokenAddress
-	amount := new(big.Int).SetInt64(100)
+	from := account1
 	to := account2
+	wethAddr := wethTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account.Address, "transfer", gas, gasPrice, nil, to, amount); nil != err {
+	if result, err := callMethod(from, "transfer", gas, gasPrice, nil, to, amount); nil != err {
 		t.Fatalf("call method weth-transfer error:%s", err.Error())
 	} else {
 		t.Logf("weth-transfer result:%s", result)
