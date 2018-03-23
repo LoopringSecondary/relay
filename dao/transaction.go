@@ -121,7 +121,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
 
 	case types.TX_TYPE_SEND, types.TX_TYPE_RECEIVE:
-		query = "tx_hash=? and tx_log_index and tx_type=?"
+		query = "tx_hash=? and tx_log_index=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.LogIndex, latest.Type)
 
 	case types.TX_TYPE_CUTOFF:
