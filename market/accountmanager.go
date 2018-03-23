@@ -30,17 +30,20 @@ import (
 	"github.com/patrickmn/go-cache"
 	"math/big"
 	"strings"
+	"sync"
 )
 
 var RedisCachePlaceHolder = make([]byte, 0)
 
 const DefaultUnlockTtl = 3600 * 24 * 30
 const UnlockCachePreKey = "Unlocked_Address_"
+const DefaultContractVersion = "v1.2"
 
 type Account struct {
 	Address    string
 	Balances   map[string]Balance
 	Allowances map[string]Allowance
+	Lock 	   sync.Mutex
 }
 
 type Balance struct {
@@ -94,14 +97,18 @@ func NewAccountManager() AccountManager {
 	return accountManager
 }
 
-func (a *AccountManager) GetBalance(contractVersion, address string) Account {
+func (a *AccountManager) GetBalance(contractVersion, address string) (account Account, err error) {
+	if len(contractVersion) == 0 {
+		return account, errors.New("contract version must be applied")
+	}
+
 	address = strings.ToLower(address)
 	accountInCache, ok := a.c.Get(address)
 	if ok {
 		account := accountInCache.(Account)
-		return account
+		return account, err
 	} else {
-		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance)}
+		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock:sync.Mutex{}}
 		for k, v := range util.AllTokens {
 			balance := Balance{Token: k}
 
@@ -127,7 +134,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) Account {
 
 		}
 		a.c.Set(address, account, cache.NoExpiration)
-		return account
+		return account, nil
 	}
 }
 
@@ -140,7 +147,7 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 	}
 
 	//todo(xiaolu): 从配置文件中获取
-	account := a.GetBalance("v1.2", address.Hex())
+	account, _ := a.GetBalance("v1.2", address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return
@@ -221,7 +228,9 @@ func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err
 }
 
 func (a *AccountManager) GetBalanceFromAccessor(token string, owner string) (*big.Int, error) {
-	return ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	rst, err := ethaccessor.Erc20Balance(util.AllTokens[token].Protocol, common.HexToAddress(owner), "latest")
+	return rst, err
+
 }
 
 func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) (*big.Int, error) {
@@ -229,7 +238,8 @@ func (a *AccountManager) GetAllowanceFromAccessor(token, owner, spender string) 
 	if err != nil {
 		return big.NewInt(0), errors.New("invalid spender address")
 	}
-	return ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	rst, err := ethaccessor.Erc20Allowance(util.AllTokens[token].Protocol, common.HexToAddress(owner), spenderAddress, "latest")
+	return rst, err
 }
 
 func buildAllowanceKey(version, token string) string {
@@ -256,7 +266,7 @@ func (a *AccountManager) updateBalanceAndAllowance(tokenAlias, address string) e
 		}
 		balance.Balance = amount
 		account.Balances[tokenAlias] = balance
-		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, "v1.0")
+		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, DefaultContractVersion)
 		if err != nil {
 			log.Error("get allowance failed from accessor")
 			return err
@@ -301,7 +311,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
-	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig["v1.0"]))
+	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[DefaultContractVersion]))
 	if err != nil {
 		return errors.New("invalid spender address")
 	}
@@ -325,7 +335,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	return nil
 }
 
-func (account *Account) ToJsonObject(contractVersion string) AccountJson {
+func (account *Account) ToJsonObject(contractVersion string, ethBalance Balance) AccountJson {
 
 	var accountJson AccountJson
 	accountJson.Address = account.Address
@@ -335,6 +345,7 @@ func (account *Account) ToJsonObject(contractVersion string) AccountJson {
 		allowance := account.Allowances[buildAllowanceKey(contractVersion, v.Token)]
 		accountJson.Tokens = append(accountJson.Tokens, Token{v.Token, v.Balance.String(), allowance.allowance.String()})
 	}
+	accountJson.Tokens = append(accountJson.Tokens, Token{ethBalance.Token, ethBalance.Balance.String(), "0"})
 	return accountJson
 }
 

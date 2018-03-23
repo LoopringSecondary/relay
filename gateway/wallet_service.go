@@ -262,17 +262,23 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
+	account, _ := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
+	}
+
+	balancesCopy := make(map[string]market.Balance)
+
+	for k, v := range balances {
+		balancesCopy[k] = v
 	}
 
 	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)
-		balances["ETH"] = ethBalance
+		balancesCopy["ETH"] = ethBalance
 	} else {
 		return res, bErr
 	}
@@ -288,13 +294,13 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	}
 
 	totalAsset := big.NewRat(0, 1)
-	for k, v := range balances {
+	for k, v := range balancesCopy {
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
-	for k, v := range balances {
+	for k, v := range balancesCopy {
 		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
@@ -527,19 +533,16 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	if len(balanceQuery.Owner) == 0 {
 		return res, errors.New("owner can't be null")
 	}
-	account := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	if len(balanceQuery.ContractVersion) == 0 {
+		return res, errors.New("contract version can't be null")
+	}
+	account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
 	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
 	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
 	if bErr == nil {
 		ethBalance.Balance = types.HexToBigint(b)
-		newBalances := make(map[string]market.Balance)
-		for k, v := range account.Balances {
-			newBalances[k] = v
-		}
-		newBalances["ETH"] = ethBalance
-		account.Balances = newBalances
 	}
-	res = account.ToJsonObject(balanceQuery.ContractVersion)
+	res = account.ToJsonObject(balanceQuery.ContractVersion, ethBalance)
 	return
 }
 
@@ -888,7 +891,6 @@ func buildOrderResult(src dao.PageResult) PageResult {
 
 func orderStateToJson(src types.OrderState) OrderJsonResult {
 
-	fmt.Println("json convet........step in.....")
 	rst := OrderJsonResult{}
 	rst.DealtAmountB = types.BigintToHex(src.DealtAmountB)
 	rst.DealtAmountS = types.BigintToHex(src.DealtAmountS)

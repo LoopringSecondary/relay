@@ -7,7 +7,7 @@ Wallets can host their own relay nodes to facility trading using Loopring, but c
 
 This document describes relay's public APIs V2.0 (JSON_RPC and WebSocket), but doesn't articulate how order-books nor trading history are maintained.
 
-Against v1.0 supporting array and json request format, v2.0 unifies the request params to only support json format, and add websocket support.
+Against v1.2 supporting array and json request format, v2.0 unifies the request params to only support json format, and add websocket support.
 
 This document contains the following sections:
 - Endport
@@ -69,7 +69,7 @@ Get user's balance and token allowance info.
 ```js
 params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.0"
+  "contractVersion" : "v1.2"
 }]
 ```
 
@@ -90,7 +90,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getBalance","params":{s
   "id":64,
   "jsonrpc": "2.0",
   "result": {
-    "contractVersion":"v1.0",
+    "contractVersion":"v1.2",
     "tokens": [
       {
           "token": "LRC",
@@ -269,7 +269,7 @@ Get depth and accuracy by token pair
 ```js
 params: {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.0",
+  "contractVersion": "v1.2",
   "length" : 10 // defalut is 50
 }
 ```
@@ -299,7 +299,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
       ]
     },
     "market" : "LRC-WETH",
-    "contractVersion": "v1.0",
+    "contractVersion": "v1.2",
   }
 }
 ```
@@ -317,7 +317,7 @@ Get loopring 24hr merged tickers info from loopring relay.
 
 ```js
 params: {
-    "contractVersion" : "v1.0"
+    "contractVersion" : "v1.2"
 }
 ```
 
@@ -494,7 +494,7 @@ Get order fill history. This history consists of OrderFilled events.
 ```js
 params: {
   "market" : "LRC-WETH",
-  "contractVersion" : "v1.0",
+  "contractVersion" : "v1.2",
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
   "orderHash" : "0xee0b482d9b704070c970df1e69297392a8bb73f4ed91213ae5c1725d4d1923fd",
   "ringHash" : "0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
@@ -637,7 +637,7 @@ Get all mined rings.
 ```js
 params: {
   "ringHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-  "contractVersion" : "v1.0"
+  "contractVersion" : "v1.2"
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
 }
@@ -701,7 +701,7 @@ Get cut off time of the address.
 ```js
 params: [{
   "address": "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "contractVersion": "v1.0",
+  "contractVersion": "v1.2",
   "blockNumber": "latest"
 }]
 ```
@@ -1076,7 +1076,7 @@ Get user's balance and token allowance info.
 ```js
 params: {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.0"
+  "contractVersion" : "v1.2"
 }
 ```
 
@@ -1094,12 +1094,12 @@ send message in websocket channel
 
 {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.0"
+  "contractVersion" : "v1.2"
 }
 
 // Result
 {
-    "contractVersion":"v1.0",
+    "contractVersion":"v1.2",
     "tokens": [
       {
           "token": "LRC",
@@ -1128,7 +1128,7 @@ Get 24hr merged tickers info from loopring relay.
 
 ```js
 params: {
-    "contractVersion" : "v1.0"
+    "contractVersion" : "v1.2"
 }
 ```
 
@@ -1148,7 +1148,7 @@ params: {
 // Request
 send message in websocket channel
 
-{"contractVersion" : "v1.0"}
+{"contractVersion" : "v1.2"}
 
 // Result
 {
@@ -1323,7 +1323,7 @@ Get depth and accuracy by token pair.
 ```js
 params: {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.0",
+  "contractVersion": "v1.2",
   "length" : 10 // defalut is 50
 }
 ```
@@ -1341,7 +1341,7 @@ send message in websocket channel
 
 {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.0",
+  "contractVersion": "v1.2",
   "length" : 10 // defalut is 50
 }
 
@@ -1356,7 +1356,7 @@ send message in websocket channel
       ]
     },
     "market" : "LRC-WETH",
-    "contractVersion": "v1.0",
+    "contractVersion": "v1.2",
   }
 }
 ```
