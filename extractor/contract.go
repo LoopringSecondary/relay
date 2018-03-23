@@ -761,7 +761,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	transfer := contractEvent.ConvertDown()
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.From.Hex(), transfer.To.Hex(), transfer.Value.String())
+	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
 
 	eventemitter.Emit(eventemitter.AccountTransfer, transfer)
 	eventemitter.Emit(eventemitter.TxManagerTransferEvent, transfer)
