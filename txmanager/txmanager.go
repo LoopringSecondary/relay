@@ -132,6 +132,7 @@ func (tm *TransactionManager) SaveCancelOrderMethod(input eventemitter.EventData
 	evt := input.(*types.OrderCancelledEvent)
 	var tx types.Transaction
 	tx.FromCancelMethod(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -139,6 +140,7 @@ func (tm *TransactionManager) SaveCutoffAllMethod(input eventemitter.EventData) 
 	evt := input.(*types.CutoffMethodEvent)
 	var tx types.Transaction
 	tx.FromCutoffMethodEvent(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -146,6 +148,7 @@ func (tm *TransactionManager) SaveCutoffPairMethod(input eventemitter.EventData)
 	evt := input.(*types.CutoffPairMethodEvent)
 	var tx types.Transaction
 	tx.FromCutoffPairMethod(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -197,6 +200,7 @@ func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) err
 	evt := input.(*types.ApprovalEvent)
 	var tx types.Transaction
 	tx.FromApproveEvent(evt)
+	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
 	tm.saveTransaction(&tx)
 
 	return nil
@@ -207,9 +211,11 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 	var tx1, tx2 types.Transaction
 
 	tx1.FromFillEvent(evt, types.TX_TYPE_BUY)
+	tx1.Symbol = ""
 	tm.saveTransaction(&tx1)
 
 	tx2.FromFillEvent(evt, types.TX_TYPE_SELL)
+	tx1.Symbol = ""
 	tm.saveTransaction(&tx2)
 
 	return nil
@@ -218,7 +224,8 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
 	evt := input.(*types.OrderCancelledEvent)
 	var tx types.Transaction
-	tx.FromCancelEvent(evt, evt.From)
+	tx.FromCancelEvent(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -226,6 +233,7 @@ func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) e
 	evt := input.(*types.CutoffEvent)
 	var tx types.Transaction
 	tx.FromCutoffEvent(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -233,6 +241,7 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 	evt := input.(*types.CutoffPairEvent)
 	var tx types.Transaction
 	tx.FromCutoffPairEvent(evt)
+	tx.Symbol = ""
 	return tm.saveTransaction(&tx)
 }
 
@@ -309,11 +318,15 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 	var tx1, tx2 types.Transaction
 
 	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
+	tx1.Protocol = types.NilAddress
+	tx1.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx1); err != nil {
 		return err
 	}
 
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
+	tx2.Protocol = types.NilAddress
+	tx2.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx2); err != nil {
 		return err
 	}

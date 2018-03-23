@@ -114,7 +114,6 @@ func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionRece
 	}
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
-	txinfo.Symbol = ""
 
 	return txinfo
 }
@@ -446,72 +445,8 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
-	//ring := contract.Method.(*ethaccessor.SubmitRingMethod)
-	//ring.Protocol = evt.Protocol
-	//
-	//data := hexutil.MustDecode("0x" + contract.Input[10:])
-	//if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
-	//	log.Errorf("extractor,tx:%s submitRing method, unpack error:%s", evt.TxHash.Hex(), err.Error())
-	//	return nil
-	//}
-
-	//orderList, err := ring.ConvertDown()
-	//if err != nil {
-	//	log.Errorf("extractor,tx:%s submitRing method convert order data error:%s", evt.TxHash.Hex(), err.Error())
-	//	return nil
-	//}
-	//
-	//// save order
-	//for _, v := range orderList {
-	//	v.Protocol = common.HexToAddress(contract.Protocol)
-	//	v.Hash = v.GenerateHash()
-	//	log.Debugf("extractor,tx:%s submitRing method orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", evt.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
-	//	eventemitter.Emit(eventemitter.Gateway, v)
-	//}
-	//
-	//// save transactions while submitRing failed，otherwise save transactions while process ringmined event
-	//if evt.TxFailed {
-	//	processor.saveOrderListAsTxs(evt.TxHash, orderList, &contract)
-	//}
-
 	return nil
 }
-
-//func (processor *AbiProcessor) saveOrderListAsTxs(txhash common.Hash, orderList []*types.Order, contract *MethodData) {
-//	length := len(orderList)
-//
-//	log.Debugf("extractor,tx:%s saveOrderListAsTxs:length %d and tx isFailed:%t", txhash.Hex(), length, contract.IsFailed)
-//
-//	nowtime := time.Now().Unix()
-//
-//	for i := 0; i < length; i++ {
-//		var (
-//			tx              types.Transaction
-//			model1, model2  dao.Transaction
-//			sellto, buyfrom common.Address
-//		)
-//		ord := orderList[i]
-//		if i == length-1 {
-//			sellto = orderList[0].Owner
-//		} else {
-//			sellto = orderList[i+1].Owner
-//		}
-//		if i == 0 {
-//			buyfrom = orderList[length-1].Owner
-//		} else {
-//			buyfrom = orderList[i-1].Owner
-//		}
-//
-//		// todo(fuk):emit as event,saved by wallet/relay but not extractor
-//		tx.FromOrder(ord, txhash, sellto, types.TX_TYPE_SELL, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
-//		model1.ConvertDown(&tx)
-//		processor.db.SaveTransaction(&model1)
-//
-//		tx.FromOrder(ord, txhash, buyfrom, types.TX_TYPE_BUY, types.TX_STATUS_FAILED, contract.BlockNumber, nowtime)
-//		model2.ConvertDown(&tx)
-//		processor.db.SaveTransaction(&model2)
-//	}
-//}
 
 func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
@@ -525,10 +460,6 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 
 	order, cancelAmount, _ := contractEvent.ConvertDown()
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
-
-	// 不再存储取消的订单
-	// order.Protocol = contract.Protocol
-	// eventemitter.Emit(eventemitter.Gateway, order)
 
 	// 发送到txmanager
 	tmCancelEvent := &types.OrderCancelledEvent{}
@@ -630,7 +561,7 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 	contractData := input.(MethodData)
 
 	var deposit types.WethDepositMethodEvent
-	deposit.Owner = contractData.From
+	deposit.Dst = contractData.From
 	deposit.Value = contractData.Value
 	deposit.TxInfo = contractData.TxInfo
 
@@ -653,7 +584,7 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 	}
 
 	withdrawal := contractMethod.ConvertDown()
-	withdrawal.Owner = contractData.From
+	withdrawal.Src = contractData.From
 	withdrawal.TxInfo = contractData.TxInfo
 
 	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
@@ -824,12 +755,10 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	}
 
 	contractEvent := contractData.Event.(*ethaccessor.TransferEvent)
-	contractEvent.From = common.HexToAddress(contractData.Topics[1])
-	contractEvent.To = common.HexToAddress(contractData.Topics[2])
+	contractEvent.Sender = common.HexToAddress(contractData.Topics[1])
+	contractEvent.Receiver = common.HexToAddress(contractData.Topics[2])
 
 	transfer := contractEvent.ConvertDown()
-	transfer.Sender = contractEvent.From
-	transfer.Receiver = contractEvent.To
 	transfer.TxInfo = contractData.TxInfo
 
 	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.From.Hex(), transfer.To.Hex(), transfer.Value.String())
@@ -851,16 +780,16 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
 	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
 
-	evt := contractEvent.ConvertDown()
-	evt.TxInfo = contractData.TxInfo
+	approve := contractEvent.ConvertDown()
+	approve.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Spender.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
 
-	if processor.HasSpender(evt.Spender) {
-		eventemitter.Emit(eventemitter.AccountApproval, evt)
+	if processor.HasSpender(approve.Spender) {
+		eventemitter.Emit(eventemitter.AccountApproval, approve)
 	}
 
-	eventemitter.Emit(eventemitter.TxManagerApproveEvent, evt)
+	eventemitter.Emit(eventemitter.TxManagerApproveEvent, approve)
 
 	return nil
 }
@@ -942,10 +871,10 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 
 	contractEvent := contractData.Event.(*ethaccessor.WethDepositEvent)
 	evt := contractEvent.ConvertDown()
-	evt.Owner = common.HexToAddress(contractData.Topics[1])
+	evt.Dst = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Dst.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.WethDepositEvent, evt)
 	eventemitter.Emit(eventemitter.TxManagerWethDepositEvent, evt)
@@ -963,10 +892,10 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	contractEvent := contractData.Event.(*ethaccessor.WethWithdrawalEvent)
 
 	evt := contractEvent.ConvertDown()
-	evt.Owner = common.HexToAddress(contractData.Topics[1])
+	evt.Src = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal from:%s, number:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal to:%s, number:%s", contractData.TxHash.Hex(), evt.Src.Hex(), evt.Value.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawalEvent, evt)
 	eventemitter.Emit(eventemitter.TxManagerWethWithdrawalEvent, evt)
@@ -984,8 +913,6 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
 	dst.LogIndex = 0
-	dst.Protocol = types.NilAddress
-	dst.Symbol = "ETH"
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
 	dst.Status = status
@@ -1003,7 +930,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
 
-	eventemitter.Emit(eventemitter.TxManagerEthTransferEvent, dst)
+	eventemitter.Emit(eventemitter.TxManagerEthTransferEvent, &dst)
 
 	return nil
 }
