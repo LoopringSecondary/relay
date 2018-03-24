@@ -379,6 +379,23 @@ func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remain
 	return remainedAmountS, remainedAmountB
 }
 
+func (state *OrderState) DealtAndSplitAmount() (totalAmountS *big.Rat, totalAmountB *big.Rat) {
+	totalAmountS = new(big.Rat)
+	totalAmountB = new(big.Rat)
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		totalAmountB.SetInt(new(big.Int).Add(state.DealtAmountB, state.SplitAmountB))
+		sellPrice := new(big.Rat).SetFrac(state.RawOrder.AmountS, state.RawOrder.AmountB)
+		totalAmountS.Mul(totalAmountB, sellPrice)
+	} else {
+		totalAmountS.SetInt(new(big.Int).Add(state.DealtAmountS, state.SplitAmountS))
+		buyPrice := new(big.Rat).SetFrac(state.RawOrder.AmountB, state.RawOrder.AmountS)
+		totalAmountB.Mul(totalAmountS, buyPrice)
+	}
+
+	return totalAmountS, totalAmountB
+}
+
 func ToOrder(request *OrderJsonRequest) *Order {
 	order := &Order{}
 	order.Protocol = request.Protocol

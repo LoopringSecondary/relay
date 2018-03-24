@@ -403,7 +403,7 @@ func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address
 		if err := v.ConvertUp(&state); err != nil {
 			continue
 		}
-		om.SetOrderCancelledOrFinished(&state)
+		om.SetOrderCancelled(&state)
 		list = append(list, state)
 	}
 
@@ -434,7 +434,7 @@ func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, statusList [
 			log.Debug("convertUp error occurs " + err.Error())
 			continue
 		}
-		om.SetOrderCancelledOrFinished(&state)
+		om.SetOrderCancelled(&state)
 		pageRes.Data = append(pageRes.Data, state)
 	}
 	return pageRes, nil
@@ -451,7 +451,7 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 		return nil, err
 	}
 
-	om.SetOrderCancelledOrFinished(&result)
+	om.SetOrderCancelled(&result)
 
 	return &result, nil
 }
@@ -472,7 +472,7 @@ func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner, token1, token2 common
 	return om.cutoffCache.IsOrderCutoff(protocol, owner, token1, token2, validsince)
 }
 
-func (om *OrderManagerImpl) SetOrderCancelledOrFinished(state *types.OrderState) {
+func (om *OrderManagerImpl) SetOrderCancelled(state *types.OrderState) {
 	if isOrderCancelled(state, om.mc) {
 		state.Status = types.ORDER_CANCEL
 	}
