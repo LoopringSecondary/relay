@@ -299,7 +299,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 */5 * * * *", t.InsertTrend)
+	t.cron.AddFunc("10 */30 * * * *", t.InsertTrend)
 	t.cron.Start()
 }
 

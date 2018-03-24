@@ -593,6 +593,14 @@ func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {
 	return util.AllMarkets, err
 }
 
+func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err error) {
+	markets = make([]types.Token, 0)
+	for _, v := range util.AllTokens {
+		markets = append(markets, v)
+	}
+	return markets, err
+}
+
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
 
 	trxQuery := make(map[string]interface{})
