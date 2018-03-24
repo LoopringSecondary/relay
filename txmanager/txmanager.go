@@ -180,14 +180,14 @@ func (tm *TransactionManager) SaveWethDepositMethod(input eventemitter.EventData
 	var tx1, tx2 types.Transaction
 
 	// save weth
-	tx1.FromWethDepositMethod(evt)
+	tx1.FromWethDepositMethod(evt, true)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	if err := tm.saveTransaction(&tx1); err != nil {
 		return err
 	}
 
 	// save eth
-	tx2 = tx1
+	tx2.FromWethDepositMethod(evt, false)
 	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx2); err != nil {
@@ -203,13 +203,13 @@ func (tm *TransactionManager) SaveWethWithdrawalMethod(input eventemitter.EventD
 
 	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
-	tx1.FromWethWithdrawalMethod(evt)
+	tx1.FromWethWithdrawalMethod(evt, false)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	if err := tm.saveTransaction(&tx1); err != nil {
 		return err
 	}
 
-	tx2 = tx1
+	tx2.FromWethWithdrawalMethod(evt, true)
 	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx2); err != nil {
@@ -295,14 +295,14 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 	log.Debugf("extractor:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
 
 	// save weth
-	tx1.FromWethDepositEvent(evt)
+	tx1.FromWethDepositEvent(evt, true)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	if err := tm.saveTransaction(&tx1); err != nil {
 		return err
 	}
 
 	// save eth
-	tx2 = tx1
+	tx2.FromWethDepositEvent(evt, false)
 	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx2); err != nil {
@@ -319,14 +319,14 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 	log.Debugf("extractor:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
 
 	// save weth
-	tx1.FromWethWithdrawalEvent(evt)
+	tx1.FromWethWithdrawalEvent(evt, false)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	if err := tm.saveTransaction(&tx1); err != nil {
 		return err
 	}
 
 	// save eth
-	tx2 = tx1
+	tx2.FromWethWithdrawalEvent(evt, true)
 	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
 	if err := tm.saveTransaction(&tx2); err != nil {
