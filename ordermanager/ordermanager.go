@@ -44,6 +44,7 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	IsValueDusted(tokenAddress common.Address, value *big.Rat) bool
+	SetOrderCancelledOrFinished(state *types.OrderState)
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
@@ -402,6 +403,7 @@ func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address
 		if err := v.ConvertUp(&state); err != nil {
 			continue
 		}
+		om.SetOrderCancelledOrFinished(&state)
 		list = append(list, state)
 	}
 
@@ -432,6 +434,7 @@ func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, statusList [
 			log.Debug("convertUp error occurs " + err.Error())
 			continue
 		}
+		om.SetOrderCancelledOrFinished(&state)
 		pageRes.Data = append(pageRes.Data, state)
 	}
 	return pageRes, nil
@@ -447,6 +450,8 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 	if err := order.ConvertUp(&result); err != nil {
 		return nil, err
 	}
+
+	om.SetOrderCancelledOrFinished(&result)
 
 	return &result, nil
 }
@@ -465,6 +470,12 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 
 func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool {
 	return om.cutoffCache.IsOrderCutoff(protocol, owner, token1, token2, validsince)
+}
+
+func (om *OrderManagerImpl) SetOrderCancelledOrFinished(state *types.OrderState) {
+	if isOrderCancelled(state, om.mc) {
+		state.Status = types.ORDER_CANCEL
+	}
 }
 
 func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error) {

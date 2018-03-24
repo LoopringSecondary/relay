@@ -113,6 +113,33 @@ func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider
 	return isValueDusted(valueOfRemainAmount)
 }
 
+// 订单需求量减去撮合量剩余价值是否为灰尘量，如果是则为finish，如果不是则为cancelled
+func isOrderCancelled(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
+	if state.Status != types.ORDER_CANCEL && state.Status != types.ORDER_FINISHED {
+		return false
+	}
+
+	var valueOfRemainAmount *big.Rat
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		dealtAndSplitAmountB := new(big.Int).Add(state.DealtAmountB, state.SplitAmountB)
+		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, dealtAndSplitAmountB)
+		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
+		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenB, ratRemainAmountB)
+	} else {
+		dealtAndSplitAmountS := new(big.Int).Add(state.DealtAmountS, state.SplitAmountS)
+		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, dealtAndSplitAmountS)
+		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
+		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
+	}
+
+	if isValueDusted(valueOfRemainAmount) {
+		return false
+	} else {
+		return true
+	}
+}
+
 // todo: if valueOfRemainAmount is nil procedure of this may have problem
 func isValueDusted(value *big.Rat) bool {
 	minValue := big.NewInt(dustOrderValue)
