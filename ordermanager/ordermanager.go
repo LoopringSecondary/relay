@@ -44,7 +44,7 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	IsValueDusted(tokenAddress common.Address, value *big.Rat) bool
-	SetOrderCancelledOrFinished(state *types.OrderState)
+	SetOrderCancelled(state *types.OrderState)
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
