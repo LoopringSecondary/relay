@@ -374,7 +374,7 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0x12a627365c3db2f3eb9491cdc91406174182735fb877d6a060a5c6af845115af", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0x27fc6722af71e9df4b50e2b8a2c202b1f617af202230bb6dd56bfd10b51b7a72", "latest"); err == nil {
 		t.Logf("tx gasUsed:%s status:%s logs:%d", tx.GasUsed.BigInt().String(), tx.Status.BigInt().String(), len(tx.Logs))
 	} else {
 		t.Fatalf(err.Error())

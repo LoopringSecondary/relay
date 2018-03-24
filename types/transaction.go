@@ -38,10 +38,11 @@ const (
 	TX_TYPE_SELL    = 4 // SELL
 	TX_TYPE_BUY     = 5
 	//TX_TYPE_WRAP         = 6 // WETH DEPOSIT
-	TX_TYPE_CONVERT      = 7 // WETH WITHDRAWAL
-	TX_TYPE_CANCEL_ORDER = 8
-	TX_TYPE_CUTOFF       = 9
-	TX_TYPE_CUTOFF_PAIR  = 10
+	TX_TYPE_CONVERT_INCOME  = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT_OUTCOME = 8
+	TX_TYPE_CANCEL_ORDER    = 9
+	TX_TYPE_CUTOFF          = 10
+	TX_TYPE_CUTOFF_PAIR     = 11
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -102,8 +103,10 @@ func (tx *Transaction) TypeStr() string {
 		ret = "sell"
 	case TX_TYPE_BUY:
 		ret = "buy"
-	case TX_TYPE_CONVERT:
-		ret = "convert"
+	case TX_TYPE_CONVERT_INCOME:
+		ret = "convert_income"
+	case TX_TYPE_CONVERT_OUTCOME:
+		ret = "convert_outcome"
 	case TX_TYPE_CANCEL_ORDER:
 		ret = "cancel_order"
 	case TX_TYPE_CUTOFF:
@@ -243,46 +246,63 @@ func (tx *Transaction) GetCutoffPairContent() (*CutoffPairSalt, error) {
 	return &cutoffpair, nil
 }
 
-func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent) error {
+// 充值和提现from和to都是用户钱包自己的地址，因为合约限制了发送方msg.sender
+func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent, isIncome bool) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.Dst
+	tx.From = src.Dst
+	tx.To = src.Dst
+	tx.Value = src.Value
+	if isIncome {
+		tx.Type = TX_TYPE_CONVERT_INCOME
+	} else {
+		tx.Type = TX_TYPE_CONVERT_OUTCOME
+	}
+
+	return nil
+}
+
+func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, isIncome bool) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Dst
 	tx.From = src.From
 	tx.To = src.To
 	tx.Value = src.Value
-	tx.Type = TX_TYPE_CONVERT
+	if isIncome {
+		tx.Type = TX_TYPE_CONVERT_INCOME
+	} else {
+		tx.Type = TX_TYPE_CONVERT_OUTCOME
+	}
 
 	return nil
 }
 
-func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent) error {
+func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent, isIncome bool) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Src
-	tx.From = src.From
-	tx.To = src.To
+	tx.From = src.Src
+	tx.To = src.Src
 	tx.Value = src.Value
-	tx.Type = TX_TYPE_CONVERT
+	if isIncome {
+		tx.Type = TX_TYPE_CONVERT_INCOME
+	} else {
+		tx.Type = TX_TYPE_CONVERT_OUTCOME
+	}
 
 	return nil
 }
 
-func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Dst
-	tx.From = src.From
-	tx.To = src.To
-	tx.Value = src.Value
-	tx.Type = TX_TYPE_CONVERT
-
-	return nil
-}
-
-func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent) error {
+func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, isIncome bool) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Src
-	tx.From = tx.From
-	tx.To = tx.To
+	tx.From = src.Src
+	tx.To = src.Src
 	tx.Value = src.Value
-	tx.Type = TX_TYPE_CONVERT
+	if isIncome {
+		tx.Type = TX_TYPE_CONVERT_INCOME
+	} else {
+		tx.Type = TX_TYPE_CONVERT_OUTCOME
+	}
 
 	return nil
 }
