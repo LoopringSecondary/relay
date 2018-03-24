@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
+	"math/big"
 	"testing"
 )
 
@@ -33,7 +34,8 @@ func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
 	manager.UnlockedWallet(account)
 }
 
-func TestExtractorServiceImpl_PendingTransaction(t *testing.T) {
+// test save transaction
+func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
 	if err := ethaccessor.GetTransactionByHash(&tx, "0x7237c9f9cb63473f439253d3d6c061bef7d90b5ee1691b10040342169a10f9be", "latest"); err != nil {
@@ -47,4 +49,24 @@ func TestExtractorServiceImpl_PendingTransaction(t *testing.T) {
 	tm.Start()
 	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
 	processor.ProcessPendingTransaction(&tx)
+}
+
+// test save transaction
+func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
+	txhash := "0x12a627365c3db2f3eb9491cdc91406174182735fb877d6a060a5c6af845115af"
+
+	tx := &ethaccessor.Transaction{}
+	receipt := &ethaccessor.TransactionReceipt{}
+	if err := ethaccessor.GetTransactionByHash(tx, txhash, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	}
+	if err := ethaccessor.GetTransactionReceipt(receipt, txhash, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	accmanager := test.GenerateAccountManager()
+	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
+	tm.Start()
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
 }

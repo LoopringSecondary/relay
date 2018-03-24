@@ -372,15 +372,10 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	}
 }
 
-//mainnet
-//0x8924ce3be0895775b30f6ea7512c6d8318dc0c84da7e1eb4d1930e5658c92d04
-//0x1cff70d0eecd86d008b633f62ef171bbe71516c132adea3ff73ed419d56232fd
-//priv net
-//0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0xebe2694d678ee784861268be37f73905415c118ab10523b075a8989636f6297d", "latest"); err == nil {
-		t.Logf("tx gasUsed:%s status:%s", tx.GasUsed.BigInt().String(), tx.Status.BigInt().String())
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0x12a627365c3db2f3eb9491cdc91406174182735fb877d6a060a5c6af845115af", "latest"); err == nil {
+		t.Logf("tx gasUsed:%s status:%s logs:%d", tx.GasUsed.BigInt().String(), tx.Status.BigInt().String(), len(tx.Logs))
 	} else {
 		t.Fatalf(err.Error())
 	}
