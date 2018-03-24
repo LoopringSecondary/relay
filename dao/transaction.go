@@ -35,7 +35,7 @@ type Transaction struct {
 	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	LogIndex    int64  `gorm:"column:tx_log_index"`
-	Value       string `gorm:"column:amount;type:varchar(30)"`
+	Value       string `gorm:"column:amount;type:varchar(64)"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
 	GasLimit    string `gorm:"column:gas_limit;type:varchar(30)"`
