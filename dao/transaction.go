@@ -112,9 +112,9 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		query = "tx_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.Type)
 
-	case types.TX_TYPE_CONVERT:
-		query = "protocol=? and tx_hash=? and tx_type=?"
-		args = append(args, latest.Protocol, latest.TxHash, latest.Type)
+	case types.TX_TYPE_CONVERT_INCOME, types.TX_TYPE_CONVERT_OUTCOME:
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 
 	case types.TX_TYPE_APPROVE:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"

@@ -53,7 +53,7 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 // test save transaction
 func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
-	txhash := "0x12a627365c3db2f3eb9491cdc91406174182735fb877d6a060a5c6af845115af"
+	txhash := "0x5c5d814db630f049e2939df9e53023a4f4fd8d9a2440eb828c72ddcc6077e135"
 
 	tx := &ethaccessor.Transaction{}
 	receipt := &ethaccessor.TransactionReceipt{}
