@@ -94,23 +94,22 @@ func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) 
 }
 
 func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
-	var valueOfRemainAmount *big.Rat
+	remainedAmountS, _ := state.RemainedAmount()
+	remainedValue, _ := mc.LegalCurrencyValue(state.RawOrder.TokenS, remainedAmountS)
 
-	if state.RawOrder.BuyNoMoreThanAmountB {
-		dealtAndSplitAmountB := new(big.Int).Add(state.DealtAmountB, state.SplitAmountB)
-		cancelOrFilledAmountB := new(big.Int).Add(dealtAndSplitAmountB, state.CancelledAmountB)
-		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
-		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenB, ratRemainAmountB)
-	} else {
-		dealtAndSplitAmountS := new(big.Int).Add(state.DealtAmountS, state.SplitAmountS)
-		cancelOrFilledAmountS := new(big.Int).Add(dealtAndSplitAmountS, state.CancelledAmountS)
-		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
-		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
+	return isValueDusted(remainedValue)
+}
+
+// 订单需求量减去撮合量剩余价值是否为灰尘量，如果是则为finish，如果不是则为cancelled
+func isOrderCancelled(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
+	if state.Status != types.ORDER_CANCEL && state.Status != types.ORDER_FINISHED {
+		return false
 	}
 
-	return isValueDusted(valueOfRemainAmount)
+	totalAmountS, _ := state.DealtAndSplitAmount()
+	totalValue, _ := mc.LegalCurrencyValue(state.RawOrder.TokenS, totalAmountS)
+
+	return !isValueDusted(totalValue)
 }
 
 // todo: if valueOfRemainAmount is nil procedure of this may have problem
