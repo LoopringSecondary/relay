@@ -59,7 +59,6 @@ type Node struct {
 	userManager       usermanager.UserManager
 	marketCapProvider marketcap.MarketCapProvider
 	accountManager    market.AccountManager
-	txManager         txmanager.TransactionManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
 
@@ -75,9 +74,12 @@ type RelayNode struct {
 	websocketService gateway.WebsocketServiceImpl
 	socketIOService  gateway.SocketIOServiceImpl
 	walletService    gateway.WalletServiceImpl
+	txManager         txmanager.TransactionManager
 }
 
 func (n *RelayNode) Start() {
+	n.txManager.Start()
+
 	//gateway.NewJsonrpcService("8080").Start()
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
@@ -88,7 +90,7 @@ func (n *RelayNode) Start() {
 }
 
 func (n *RelayNode) Stop() {
-	//
+	n.txManager.Stop()
 }
 
 type MineNode struct {
@@ -122,9 +124,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerCrypto(nil)
 	n.registerAccountManager()
 
-	// todo(fuk): move txmanager to relay
-	n.registerTransactionManager()
-
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
 	} else if "miner" == globalConfig.Mode {
@@ -139,6 +138,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
+	n.registerTransactionManager()
 	n.registerTrendManager()
 	n.registerTickerCollector()
 	n.registerWalletService()
@@ -158,10 +158,8 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 
-	// todo(fuk): mv transaction manager to relay
-	n.txManager.Start()
-
 	ethaccessor.IncludeGasPriceEvaluator()
+
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
 
@@ -281,7 +279,7 @@ func (n *Node) registerAccountManager() {
 }
 
 func (n *Node) registerTransactionManager() {
-	n.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager)
+	n.relayNode.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager)
 }
 
 func (n *Node) registerTickerCollector() {
