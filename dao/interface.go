@@ -92,6 +92,7 @@ type RdsService interface {
 	// trend table
 	TrendQueryLatest(query Trend, pageIndex, pageSize int) (trends []Trend, err error)
 	TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error)
+	TrendQueryForProof(mkt string, interval string, start int64) (trends []Trend, err error)
 
 	// white list
 	GetWhiteList() ([]WhiteList, error)
@@ -107,4 +108,7 @@ type RdsService interface {
 
 	// transactions
 	SaveTransaction(latest *Transaction) error
+
+	// checkpoint
+	QueryCheckPointByType(businessType string) (point CheckPoint , err error)
 }

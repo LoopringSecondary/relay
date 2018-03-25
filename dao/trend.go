@@ -50,6 +50,12 @@ func (s *RdsServiceImpl) TrendQueryLatest(query Trend, pageIndex, pageSize int) 
 }
 
 func (s *RdsServiceImpl) TrendQueryByTime(intervals, market string, start, end int64) (trends []Trend, err error) {
-	err = s.db.Where("intervals = ? and market = ? and start = ? and end = ?", intervals, market, start, end).Order("start desc").Find(&trends).Error
+	err = s.db.Model(&Trend{}).Where("intervals = ? and market = ? and start = ? and end = ?", intervals, market, start, end).Order("start desc").Find(&trends).Error
+	return
+}
+
+func (s *RdsServiceImpl) TrendQueryForProof(mkt, interval string, start int64) (trends []Trend, err error) {
+	trends = make([]Trend, 0)
+	err = s.db.Model(&Trend{}).Where("intervals = ? and market = ? and start >= ?", interval, mkt, start).Find(&trends).Error
 	return
 }
