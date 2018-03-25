@@ -111,7 +111,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager = TrendManager{rds: dao, cron: cron.New()}
 		trendManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 		trendManager.ProofRead()
-		//trendManager.LoadCache()
+		trendManager.LoadCache()
 		//trendManager.startScheduleUpdate()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
 		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
