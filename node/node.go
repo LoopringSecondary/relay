@@ -81,9 +81,7 @@ func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
-	fmt.Print("start jsonrpc in node......")
 	go n.jsonRpcService.Start()
-	fmt.Print("end jsonrpc in node......")
 	//n.websocketService.Start()
 	go n.socketIOService.Start()
 
