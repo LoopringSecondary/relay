@@ -186,36 +186,30 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if l.processor.IsValidEthTransferTransaction(tx) {
-		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
-	} else {
+	if l.processor.HasContract(common.HexToAddress(tx.To)) {
 		l.ProcessEvent(tx, receipt, blockTime)
 		if receipt.IsFailed() {
 			l.ProcessMethod(tx, receipt, blockTime)
 		}
 		return nil
+	} else {
+		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
 	}
 }
 
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
-	log.Debugf("extractor,process pending transaction,tx:%s status :%s,logs:%d", tx.Hash)
+	log.Debugf("extractor,process pending transaction %s", tx.Hash)
 
 	blockTime := big.NewInt(time.Now().Unix())
 
-	if l.processor.IsValidEthTransferTransaction(tx) {
-		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
-	} else {
+	if l.processor.HasContract(common.HexToAddress(tx.To)) {
 		return l.ProcessMethod(tx, nil, blockTime)
+	} else {
+		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
 	}
 }
 
 func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	// filter contract
-	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
-		return nil
-	}
-
 	// filter method input
 	input := common.FromHex(tx.Input)
 	if len(input) < 4 || len(tx.Input) < 10 {
