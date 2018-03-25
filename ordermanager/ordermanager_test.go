@@ -20,6 +20,7 @@ package ordermanager_test
 
 import (
 	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
@@ -60,5 +61,25 @@ func TestOrderManagerImpl_GetOrderBook(t *testing.T) {
 
 	for _, v := range list {
 		t.Logf("orderhash", v.RawOrder.Hash.Hex())
+	}
+}
+
+func TestOrderManagerImpl_GetOrders(t *testing.T) {
+	om := test.GenerateOrderManager()
+
+	query := map[string]interface{}{"order_hash": "0xf5b657335c4044e11170be3b35cda21b0819e396da0b7d258422f7203887aaf3"}
+	status := []types.OrderStatus{}
+	pageRes, err := om.GetOrders(query, status, 0, 20)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	for _, v := range pageRes.Data {
+		state := v.(types.OrderState)
+		t.Logf("dealtAmounts:%s, dealtAmountB:%s, cancelAmountS:%s, cancelAmountB:%s, status:%d",
+			state.DealtAmountS.String(),
+			state.DealtAmountB.String(),
+			state.CancelledAmountS.String(),
+			state.CancelledAmountB.String(),
+			state.Status)
 	}
 }

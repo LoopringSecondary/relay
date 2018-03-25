@@ -384,13 +384,13 @@ func (state *OrderState) DealtAndSplitAmount() (totalAmountS *big.Rat, totalAmou
 	totalAmountB = new(big.Rat)
 
 	if state.RawOrder.BuyNoMoreThanAmountB {
-		totalAmountB.SetInt(new(big.Int).Add(state.DealtAmountB, state.SplitAmountB))
+		totalAmountB = totalAmountB.SetInt(new(big.Int).Add(state.DealtAmountB, state.SplitAmountB))
 		sellPrice := new(big.Rat).SetFrac(state.RawOrder.AmountS, state.RawOrder.AmountB)
-		totalAmountS.Mul(totalAmountB, sellPrice)
+		totalAmountS = totalAmountS.Mul(totalAmountB, sellPrice)
 	} else {
-		totalAmountS.SetInt(new(big.Int).Add(state.DealtAmountS, state.SplitAmountS))
+		totalAmountS = totalAmountS.SetInt(new(big.Int).Add(state.DealtAmountS, state.SplitAmountS))
 		buyPrice := new(big.Rat).SetFrac(state.RawOrder.AmountB, state.RawOrder.AmountS)
-		totalAmountB.Mul(totalAmountS, buyPrice)
+		totalAmountB = totalAmountB.Mul(totalAmountS, buyPrice)
 	}
 
 	return totalAmountS, totalAmountB
