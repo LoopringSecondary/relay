@@ -38,10 +38,10 @@ type Transaction struct {
 	Value       string `gorm:"column:amount;type:varchar(64)"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
-	GasLimit    string `gorm:"column:gas_limit;type:varchar(30)"`
-	GasUsed     string `gorm:"column:gas_used;type:varchar(30)"`
-	GasPrice    string `gorm:"column:gas_price;type:varchar(30)"`
-	Nonce       string `gorm:"column:nonce;type:varchar(30)"`
+	GasLimit    string `gorm:"column:gas_limit;type:varchar(40)"`
+	GasUsed     string `gorm:"column:gas_used;type:varchar(40)"`
+	GasPrice    string `gorm:"column:gas_price;type:varchar(40)"`
+	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
 	CreateTime  int64  `gorm:"column:create_time"`
 	UpdateTime  int64  `gorm:"column:update_time"`
 }

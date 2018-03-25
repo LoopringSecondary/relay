@@ -39,16 +39,16 @@ type Order struct {
 	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
 	AuthAddress           string  `gorm:"column:auth_address;type:varchar(42)"`
 	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
-	WalletId              string  `gorm:"column:wallet_id;varchar(30)"`
+	WalletId              string  `gorm:"column:wallet_id;varchar(40)"`
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
-	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
+	AmountS               string  `gorm:"column:amount_s;type:varchar(40)"`
+	AmountB               string  `gorm:"column:amount_b;type:varchar(40)"`
 	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
 	ValidSince            int64   `gorm:"column:valid_since;type:bigint"`
 	ValidUntil            int64   `gorm:"column:valid_until;type:bigint"`
-	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
+	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(40)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
@@ -56,12 +56,12 @@ type Order struct {
 	S                     string  `gorm:"column:s;type:varchar(66)"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	UpdatedBlock          int64   `gorm:"column:updated_block;type:bigint"`
-	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
-	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
-	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
-	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
-	SplitAmountS          string  `gorm:"column:split_amount_s;type:varchar(30)"`
-	SplitAmountB          string  `gorm:"column:split_amount_b;type:varchar(30)"`
+	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(40)"`
+	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(40)"`
+	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(40)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(40)"`
+	SplitAmountS          string  `gorm:"column:split_amount_s;type:varchar(40)"`
+	SplitAmountB          string  `gorm:"column:split_amount_b;type:varchar(40)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
