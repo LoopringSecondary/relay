@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
+	"math/big"
 )
 
 type TransactionManager struct {
@@ -346,22 +347,34 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 	return nil
 }
 
+// 普通的transaction
+// 当value大于0时认为是eth转账
+// 当value等于0时认为是调用系统不支持的合约,默认使用fromTransferEvent/send type为unsupported_contract
 func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData) error {
 	evt := input.(*types.TransferEvent)
-	var tx1, tx2 types.Transaction
 
-	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
-	tx1.Protocol = types.NilAddress
-	tx1.Symbol = ETH_SYMBOL
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
-	}
+	if evt.Value.Cmp(big.NewInt(0)) > 0 {
+		var tx1, tx2 types.Transaction
 
-	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = ETH_SYMBOL
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
+		tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
+		tx1.Protocol = types.NilAddress
+		tx1.Symbol = ETH_SYMBOL
+		if err := tm.saveTransaction(&tx1); err != nil {
+			return err
+		}
+
+		tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
+		tx2.Protocol = types.NilAddress
+		tx2.Symbol = ETH_SYMBOL
+		if err := tm.saveTransaction(&tx2); err != nil {
+			return err
+		}
+	} else {
+		var tx types.Transaction
+		tx.FromTransferEvent(evt, types.TX_TYPE_SEND)
+		tx.Type = types.TX_TYPE_UNSUPPORTED_CONTRACT
+		tx.Protocol = types.NilAddress
+		tx.Symbol = ETH_SYMBOL
 	}
 
 	return nil
