@@ -710,7 +710,7 @@ func convertStatus(s string) []types.OrderStatus {
 		return []types.OrderStatus{types.ORDER_PARTIAL}
 	case "ORDER_FINISHED":
 		return []types.OrderStatus{types.ORDER_FINISHED}
-	case "ORDER_CANCELED":
+	case "ORDER_CANCELLED":
 		return []types.OrderStatus{types.ORDER_CANCEL}
 	case "ORDER_CUTOFF":
 		return []types.OrderStatus{types.ORDER_CUTOFF}
@@ -739,7 +739,7 @@ func getStringStatus(order types.OrderState) string {
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
-		return "ORDER_CANCEL"
+		return "ORDER_CANCELLED"
 	case types.ORDER_CUTOFF:
 		return "ORDER_CUTOFF"
 	case types.ORDER_PENDING:
