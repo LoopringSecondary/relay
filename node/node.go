@@ -297,7 +297,7 @@ func (n *Node) registerWalletService() {
 }
 
 func (n *Node) registerJsonRpcService() {
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), &n.relayNode.walletService)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(n.globalConfig.Jsonrpc.Port, &n.relayNode.walletService)
 }
 
 func (n *Node) registerWebsocketService() {

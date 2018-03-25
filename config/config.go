@@ -90,7 +90,7 @@ type GlobalConfig struct {
 }
 
 type JsonrpcOptions struct {
-	Port int
+	Port string
 }
 
 type WebsocketOptions struct {

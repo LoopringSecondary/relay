@@ -60,11 +60,11 @@ func (j *JsonrpcServiceImpl) Start() {
 		err      error
 	)
 
-	if listener, err = net.Listen("tcp", ":8083"); err != nil {
+	if listener, err = net.Listen("tcp", ":" + j.port); err != nil {
 		return
 	}
 	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
-	log.Info(fmt.Sprintf("HTTP endpoint opened on 8083"))
+	log.Info(fmt.Sprintf("HTTP endpoint opened on " + j.port))
 
 	return
 }
