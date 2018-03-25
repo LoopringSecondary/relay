@@ -198,7 +198,7 @@ type TransactionJsonResult struct {
 	To          common.Address `json:"to"`
 	TxHash      common.Hash    `json:"txHash"`
 	Symbol      string         `json:"symbol"`
-	Content     []byte         `json:"content"`
+	Content     TransactionContent         `json:"content"`
 	BlockNumber int64          `json:"blockNumber"`
 	Value       string         `json:"value"`
 	LogIndex    int64          `json:"logIndex"`
@@ -206,6 +206,10 @@ type TransactionJsonResult struct {
 	Status      string         `json:"status"`
 	CreateTime  int64          `json:"createTime"`
 	UpdateTime  int64          `json:"updateTime"`
+}
+
+type TransactionContent struct {
+	Market     string         `json:"market"`
 }
 
 type PriceQuote struct {
@@ -735,7 +739,7 @@ func getStringStatus(order types.OrderState) string {
 	case types.ORDER_FINISHED:
 		return "ORDER_FINISHED"
 	case types.ORDER_CANCEL:
-		return "ORDER_CANCELED"
+		return "ORDER_CANCEL"
 	case types.ORDER_CUTOFF:
 		return "ORDER_CUTOFF"
 	case types.ORDER_PENDING:
@@ -996,7 +1000,13 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.From = tx.From
 	dst.To = tx.To
 	dst.TxHash = tx.TxHash
-	dst.Content = []byte(tx.Content)
+	ctx, err := tx.GetCutoffPairContent()
+	if err == nil && ctx != nil {
+		mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
+		if err == nil {
+			dst.Content = TransactionContent{Market:mkt}
+		}
+	}
 	dst.BlockNumber = tx.BlockNumber.Int64()
 	dst.LogIndex = tx.LogIndex
 	if tx.Value == nil {

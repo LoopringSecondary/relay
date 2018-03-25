@@ -90,7 +90,7 @@ type GlobalConfig struct {
 }
 
 type JsonrpcOptions struct {
-	Port int
+	Port string
 }
 
 type WebsocketOptions struct {
@@ -179,7 +179,7 @@ type NormalMinerAddress struct {
 }
 
 type MinerOptions struct {
-	RingMaxLength         int `required:"true"` //recommended value:4
+	RingMaxLength         int `` //recommended value:4
 	Name                  string
 	NormalMiners          []NormalMinerAddress  //
 	PercentMiners         []PercentMinerAddress //

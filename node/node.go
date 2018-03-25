@@ -19,7 +19,6 @@
 package node
 
 import (
-	"strconv"
 	"sync"
 
 	"fmt"
@@ -84,9 +83,7 @@ func (n *RelayNode) Start() {
 	//gateway.NewJsonrpcService("8080").Start()
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
-	fmt.Print("start jsonrpc in node......")
 	go n.jsonRpcService.Start()
-	fmt.Print("end jsonrpc in node......")
 	//n.websocketService.Start()
 	go n.socketIOService.Start()
 
@@ -160,6 +157,8 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
+
+	ethaccessor.IncludeGasPriceEvaluator()
 
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
@@ -294,7 +293,7 @@ func (n *Node) registerWalletService() {
 }
 
 func (n *Node) registerJsonRpcService() {
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), &n.relayNode.walletService)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(n.globalConfig.Jsonrpc.Port, &n.relayNode.walletService)
 }
 
 func (n *Node) registerWebsocketService() {
