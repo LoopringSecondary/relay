@@ -54,8 +54,8 @@ const (
 	tsOneWeek  = 7 * tsOneDay
 )
 
-//var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
-var allInterval = []string{OneHour, TwoHour}
+var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
+//var allInterval = []string{OneHour, TwoHour}
 
 type Ticker struct {
 	Market    string  `json:"market"`
@@ -167,8 +167,6 @@ func (t *TrendManager) proofByInterval(mkt string, interval string, checkPoint i
 		firstStart = firstStart + tsInterval
 	}
 
-	fmt.Println(starts)
-
 	trends, err := t.rds.TrendQueryForProof(mkt, interval, checkPoint)
 	if err != nil {
 		log.Println(err.Error())
@@ -180,7 +178,6 @@ func (t *TrendManager) proofByInterval(mkt string, interval string, checkPoint i
 		trendMap[v.Start] = v
 	}
 
-	fmt.Println(starts)
 	for _, start := range starts {
 		_, ok := trendMap[start]; if !ok {
 			if interval == OneHour {
@@ -461,8 +458,6 @@ func (t *TrendManager) insertByTrend(interval string) error {
 
 func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt string) (err error) {
 
-	fmt.Println("start insert trend ..........." + interval + "  " + mkt + " " + strconv.FormatInt(start,10))
-
 	end := start + getTsInterval(interval) - 1
 
 	trends, _ := t.rds.TrendQueryByTime(interval, mkt, start, end)
@@ -496,8 +491,8 @@ func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt 
 		var (
 			vol    float64
 			amount float64
-			open   float64
-			low    float64
+			//open   float64
+			//low    float64
 		)
 
 		if len(lastTrends) == 0 {
@@ -528,24 +523,21 @@ func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt 
 
 			price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
 
-			if open == 0 && price != 0 {
-				open = price
+			if toInsert.Open == 0 && price != 0 {
+				toInsert.Open = price
 			}
 
 			if toInsert.High == 0 || toInsert.High < price {
 				toInsert.High = price
 			}
-			if low == 0 || low > price {
-				low = price
+			if toInsert.Low == 0 || (toInsert.Low > price && price > 0) {
+				toInsert.Low = price
 			}
-			toInsert.Close = price
+			if price > 0 {
+				toInsert.Close = price
+			}
 		}
 
-		if toInsert.Open != 0 && open != 0 {
-			toInsert.Open = open
-		}
-
-		toInsert.Low = low
 		toInsert.Vol = vol
 		toInsert.Amount = amount
 
@@ -561,7 +553,13 @@ func (t *TrendManager) insertByTrendV2(interval string, start int64, mkt string)
 
 	end := start + getTsInterval(interval) - 1
 
-		trends, err := t.rds.TrendQueryByTime(OneHour, mkt, start, end)
+	exists, _ := t.rds.TrendQueryByTime(interval, mkt, start, end)
+	if len(exists) > 0 {
+		log.Println("current interval trend exsit")
+		return nil
+	}
+
+	trends, err := t.rds.TrendQueryByInterval(OneHour, mkt, start, end)
 
 		if err != nil {
 			return err
@@ -602,6 +600,7 @@ func (t *TrendManager) insertByTrendV2(interval string, start int64, mkt string)
 		toInsert.End = end
 		toInsert.Market = mkt
 		toInsert.Intervals = interval
+		toInsert.CreateTime = time.Now().Unix()
 
 		if err := t.rds.Add(toInsert); err != nil {
 			log.Println(err)
