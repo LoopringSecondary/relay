@@ -19,6 +19,7 @@
 package ethaccessor
 
 import (
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"math/big"
 	"sort"
@@ -55,6 +56,7 @@ func (e *GasPriceEvaluator) start() {
 				default:
 					blockInterface, err := iterator.Next()
 					if nil == err {
+						log.Debugf("gasPriceEvaluator, blockNumber:%s", blockNumber.BigInt().String())
 						blockWithTxAndReceipt := blockInterface.(*BlockWithTxAndReceipt)
 						e.Blocks = append(e.Blocks, blockWithTxAndReceipt)
 						if len(e.Blocks) > 5 {
