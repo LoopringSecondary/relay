@@ -1001,9 +1001,9 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.To = tx.To
 	dst.TxHash = tx.TxHash
 	ctx, err := tx.GetCutoffPairContent()
-	if err != nil {
+	if err == nil && ctx != nil {
 		mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
-		if err != nil {
+		if err == nil {
 			dst.Content = TransactionContent{Market:mkt}
 		}
 	}
