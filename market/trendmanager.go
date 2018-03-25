@@ -55,6 +55,7 @@ const (
 )
 
 var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
+
 //var allInterval = []string{OneHour, TwoHour}
 
 type Ticker struct {
@@ -160,7 +161,7 @@ func (t *TrendManager) proofByInterval(mkt string, interval string, checkPoint i
 	starts := make([]int64, 0)
 	tsInterval := getTsInterval(interval)
 
-	firstStart := (checkPoint / tsInterval) * tsInterval + 1
+	firstStart := (checkPoint/tsInterval)*tsInterval + 1
 
 	for firstStart < now {
 		starts = append(starts, firstStart)
@@ -179,7 +180,8 @@ func (t *TrendManager) proofByInterval(mkt string, interval string, checkPoint i
 	}
 
 	for _, start := range starts {
-		_, ok := trendMap[start]; if !ok {
+		_, ok := trendMap[start]
+		if !ok {
 			if interval == OneHour {
 				err = t.insertMinIntervalTrend(OneHour, start, mkt)
 			} else {
@@ -192,7 +194,6 @@ func (t *TrendManager) proofByInterval(mkt string, interval string, checkPoint i
 	}
 	return nil
 }
-
 
 // ======> init cache steps
 // step.1 init all market
@@ -466,7 +467,7 @@ func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt 
 		return
 	}
 
-	lastTrends, _ := t.rds.TrendQueryByTime(interval, mkt, start - getTsInterval(interval), end - getTsInterval(interval))
+	lastTrends, _ := t.rds.TrendQueryByTime(interval, mkt, start-getTsInterval(interval), end-getTsInterval(interval))
 	if len(lastTrends) > 1 {
 		log.Println("found more than one last trend!")
 		return errors.New("found more than one last trend")
@@ -561,51 +562,51 @@ func (t *TrendManager) insertByTrendV2(interval string, start int64, mkt string)
 
 	trends, err := t.rds.TrendQueryByInterval(OneHour, mkt, start, end)
 
-		if err != nil {
-			return err
+	if err != nil {
+		return err
+	}
+
+	toInsert := &dao.Trend{}
+
+	var (
+		vol    float64 = 0
+		amount float64 = 0
+		high   float64 = 0
+		low    float64 = 0
+	)
+
+	for _, t := range trends {
+		vol += t.Vol
+		amount += t.Amount
+		if low == 0 || low > t.Low {
+			low = t.Low
 		}
-
-		toInsert := &dao.Trend{}
-
-		var (
-			vol    float64 = 0
-			amount float64 = 0
-			high   float64 = 0
-			low    float64 = 0
-		)
-
-		for _, t := range trends {
-			vol += t.Vol
-			amount += t.Amount
-			if low == 0 || low > t.Low {
-				low = t.Low
-			}
-			if high == 0 || high < t.High {
-				high = t.High
-			}
+		if high == 0 || high < t.High {
+			high = t.High
 		}
+	}
 
-		if len(trends) == 0 {
-			toInsert.Open = 0
-			toInsert.Close = 0
-		} else {
-			toInsert.Open = trends[0].Open
-			toInsert.Close = trends[len(trends)-1].Close
-		}
-		toInsert.Vol = vol
-		toInsert.Amount = amount
-		toInsert.High = high
-		toInsert.Low = low
-		toInsert.Start = start
-		toInsert.End = end
-		toInsert.Market = mkt
-		toInsert.Intervals = interval
-		toInsert.CreateTime = time.Now().Unix()
+	if len(trends) == 0 {
+		toInsert.Open = 0
+		toInsert.Close = 0
+	} else {
+		toInsert.Open = trends[0].Open
+		toInsert.Close = trends[len(trends)-1].Close
+	}
+	toInsert.Vol = vol
+	toInsert.Amount = amount
+	toInsert.High = high
+	toInsert.Low = low
+	toInsert.Start = start
+	toInsert.End = end
+	toInsert.Market = mkt
+	toInsert.Intervals = interval
+	toInsert.CreateTime = time.Now().Unix()
 
-		if err := t.rds.Add(toInsert); err != nil {
-			log.Println(err)
-			return err
-		}
+	if err := t.rds.Add(toInsert); err != nil {
+		log.Println(err)
+		return err
+	}
 
 	return nil
 }

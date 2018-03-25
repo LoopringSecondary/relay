@@ -60,7 +60,7 @@ func (j *JsonrpcServiceImpl) Start() {
 		err      error
 	)
 
-	if listener, err = net.Listen("tcp", ":" + j.port); err != nil {
+	if listener, err = net.Listen("tcp", ":"+j.port); err != nil {
 		return
 	}
 	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)

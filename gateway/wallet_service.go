@@ -192,24 +192,24 @@ type OrderJsonResult struct {
 }
 
 type TransactionJsonResult struct {
-	Protocol    common.Address `json:"protocol"`
-	Owner       common.Address `json:"owner"`
-	From        common.Address `json:"from"`
-	To          common.Address `json:"to"`
-	TxHash      common.Hash    `json:"txHash"`
-	Symbol      string         `json:"symbol"`
-	Content     TransactionContent         `json:"content"`
-	BlockNumber int64          `json:"blockNumber"`
-	Value       string         `json:"value"`
-	LogIndex    int64          `json:"logIndex"`
-	Type        string         `json:"type"`
-	Status      string         `json:"status"`
-	CreateTime  int64          `json:"createTime"`
-	UpdateTime  int64          `json:"updateTime"`
+	Protocol    common.Address     `json:"protocol"`
+	Owner       common.Address     `json:"owner"`
+	From        common.Address     `json:"from"`
+	To          common.Address     `json:"to"`
+	TxHash      common.Hash        `json:"txHash"`
+	Symbol      string             `json:"symbol"`
+	Content     TransactionContent `json:"content"`
+	BlockNumber int64              `json:"blockNumber"`
+	Value       string             `json:"value"`
+	LogIndex    int64              `json:"logIndex"`
+	Type        string             `json:"type"`
+	Status      string             `json:"status"`
+	CreateTime  int64              `json:"createTime"`
+	UpdateTime  int64              `json:"updateTime"`
 }
 
 type TransactionContent struct {
-	Market     string         `json:"market"`
+	Market string `json:"market"`
 }
 
 type PriceQuote struct {
@@ -1004,7 +1004,7 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	if err == nil && ctx != nil {
 		mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
 		if err == nil {
-			dst.Content = TransactionContent{Market:mkt}
+			dst.Content = TransactionContent{Market: mkt}
 		}
 	}
 	dst.BlockNumber = tx.BlockNumber.Int64()

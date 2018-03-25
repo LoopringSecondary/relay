@@ -58,21 +58,26 @@ func (p *ForkProcessor) Fork(event *types.ForkedEvent) error {
 
 	list, _ := p.GetForkEvents(from, to)
 	if list.Len() == 0 {
-		return fmt.Errorf("order manager fork error: non fork events")
+		log.Debugf("order manager fork:non fork events")
+		return nil
 	}
 
 	sort.Sort(list)
 
+	var err error
 	for _, v := range list {
 		switch v.Type {
 		case FORK_EVT_TYPE_FILL:
-			p.RollBackSingleFill(v.Event.(*types.OrderFilledEvent))
+			err = p.RollBackSingleFill(v.Event.(*types.OrderFilledEvent))
 		case FORK_EVT_TYPE_CANCEL:
-			p.RollBackSingleCancel(v.Event.(*types.OrderCancelledEvent))
+			err = p.RollBackSingleCancel(v.Event.(*types.OrderCancelledEvent))
 		case FORK_EVT_TYPE_CUTOFF:
-			p.RollBackSingleCutoff(v.Event.(*types.CutoffEvent))
+			err = p.RollBackSingleCutoff(v.Event.(*types.CutoffEvent))
 		case FORK_EVT_TYPE_CUTOFF_PAIR:
-			p.RollBackSingleCutoffPair(v.Event.(*types.CutoffPairEvent))
+			err = p.RollBackSingleCutoffPair(v.Event.(*types.CutoffPairEvent))
+		}
+		if err != nil {
+			return err
 		}
 	}
 
@@ -102,10 +107,7 @@ func (p *ForkProcessor) RollBackSingleFill(evt *types.OrderFilledEvent) error {
 	settleOrderStatus(state, p.mc)
 
 	// update rds.Order
-	if err := model.ConvertDown(state); err != nil {
-		log.Errorf(err.Error())
-		return err
-	}
+	model.ConvertDown(state)
 	if err := p.db.UpdateOrderWhileFill(state.RawOrder.Hash, state.Status, state.DealtAmountS, state.DealtAmountB, state.SplitAmountS, state.SplitAmountB, state.UpdatedBlock); err != nil {
 		return err
 	}
