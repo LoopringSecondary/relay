@@ -281,7 +281,10 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	}
 	accessor.MutilClient.startSyncStatus()
 
+	return nil
+}
+
+func IncludeGasPriceEvaluator() {
 	accessor.gasPriceEvaluator = &GasPriceEvaluator{}
 	accessor.gasPriceEvaluator.start()
-	return nil
 }
