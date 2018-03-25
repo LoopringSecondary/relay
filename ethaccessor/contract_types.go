@@ -34,15 +34,15 @@ func NewAbi(abiStr string) (*abi.ABI, error) {
 }
 
 type TransferEvent struct {
-	From  common.Address `fieldName:"from" fieldId:"0"`
-	To    common.Address `fieldName:"to" fieldId:"1"`
-	Value *big.Int       `fieldName:"value" fieldId:"2"`
+	Sender   common.Address `fieldName:"from" fieldId:"0"`
+	Receiver common.Address `fieldName:"to" fieldId:"1"`
+	Value    *big.Int       `fieldName:"value" fieldId:"2"`
 }
 
 func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
-	evt.From = e.From
-	evt.To = e.To
+	evt.Sender = e.Sender
+	evt.Receiver = e.Receiver
 	evt.Value = e.Value
 
 	return evt
@@ -226,8 +226,8 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 
 // event  Deposit(address indexed dst, uint wad);
 type WethDepositEvent struct {
-	Owner common.Address `fieldName:"dst" fieldId:"0"`
-	Value *big.Int       `fieldName:"wad" fieldId:"1"`
+	DstAddress common.Address `fieldName:"dst" fieldId:"0"` // 充值到哪个地址
+	Value      *big.Int       `fieldName:"wad" fieldId:"1"`
 }
 
 func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
@@ -239,8 +239,8 @@ func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
 
 // event  Withdrawal(address indexed src, uint wad);
 type WethWithdrawalEvent struct {
-	Owner common.Address `fieldName:"src" fieldId:"0"`
-	Value *big.Int       `fieldName:"wad" fieldId:"1"`
+	SrcAddress common.Address `fieldName:"src" fieldId:"0"`
+	Value      *big.Int       `fieldName:"wad" fieldId:"1"`
 }
 
 func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
@@ -389,6 +389,20 @@ type ApproveMethod struct {
 func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
 	evt := &types.ApproveMethodEvent{}
 	evt.Spender = e.Spender
+	evt.Value = e.Value
+
+	return evt
+}
+
+// function transfer(address to, uint256 value) public returns (bool);
+type TransferMethod struct {
+	Receiver common.Address `fieldName:"to" fieldId:"0"`
+	Value    *big.Int       `fieldName:"value" fieldId:"1"`
+}
+
+func (e *TransferMethod) ConvertDown() *types.TransferMethodEvent {
+	evt := &types.TransferMethodEvent{}
+	evt.Receiver = e.Receiver
 	evt.Value = e.Value
 
 	return evt

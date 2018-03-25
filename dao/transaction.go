@@ -35,7 +35,7 @@ type Transaction struct {
 	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
 	LogIndex    int64  `gorm:"column:tx_log_index"`
-	Value       string `gorm:"column:amount;type:varchar(30)"`
+	Value       string `gorm:"column:amount;type:varchar(64)"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
 	GasLimit    string `gorm:"column:gas_limit;type:varchar(30)"`
@@ -112,9 +112,9 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		query = "tx_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.Type)
 
-	case types.TX_TYPE_CONVERT:
-		query = "protocol=? and tx_hash=? and tx_type=?"
-		args = append(args, latest.Protocol, latest.TxHash, latest.Type)
+	case types.TX_TYPE_CONVERT_INCOME, types.TX_TYPE_CONVERT_OUTCOME:
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 
 	case types.TX_TYPE_APPROVE:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"

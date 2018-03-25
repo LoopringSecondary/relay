@@ -14,3 +14,5 @@ test/*.toml
 startup.sh
 nameregistry.sh
 addparticipant.sh
+config/test_tokens.json
+nohup.out

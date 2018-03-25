@@ -19,7 +19,6 @@
 package node
 
 import (
-	"strconv"
 	"sync"
 
 	"fmt"
@@ -38,6 +37,7 @@ import (
 	"github.com/Loopring/relay/miner"
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/txmanager"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -59,6 +59,7 @@ type Node struct {
 	userManager       usermanager.UserManager
 	marketCapProvider marketcap.MarketCapProvider
 	accountManager    market.AccountManager
+	txManager         txmanager.TransactionManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
 
@@ -123,6 +124,9 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerCrypto(nil)
 	n.registerAccountManager()
 
+	// todo(fuk): move txmanager to relay
+	n.registerTransactionManager()
+
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
 	} else if "miner" == globalConfig.Mode {
@@ -155,6 +159,10 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
+
+	// todo(fuk): mv transaction manager to relay
+	n.txManager.Start()
+
 	ethaccessor.IncludeGasPriceEvaluator()
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
@@ -274,6 +282,10 @@ func (n *Node) registerAccountManager() {
 	n.accountManager = market.NewAccountManager()
 }
 
+func (n *Node) registerTransactionManager() {
+	n.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager)
+}
+
 func (n *Node) registerTickerCollector() {
 	n.relayNode.tickerCollector = *market.NewCollector()
 }
@@ -285,7 +297,7 @@ func (n *Node) registerWalletService() {
 }
 
 func (n *Node) registerJsonRpcService() {
-	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(strconv.Itoa(n.globalConfig.Jsonrpc.Port), &n.relayNode.walletService)
+	n.relayNode.jsonRpcService = *gateway.NewJsonrpcService(n.globalConfig.Jsonrpc.Port, &n.relayNode.walletService)
 }
 
 func (n *Node) registerWebsocketService() {

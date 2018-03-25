@@ -70,6 +70,8 @@ type OrderFilledEvent struct {
 	Owner         common.Address
 	TokenS        common.Address
 	TokenB        common.Address
+	SellTo        common.Address
+	BuyFrom       common.Address
 	RingIndex     *big.Int
 	AmountS       *big.Int
 	AmountB       *big.Int
@@ -115,25 +117,25 @@ type RingMinedEvent struct {
 
 type WethDepositEvent struct {
 	TxInfo
-	Owner common.Address
+	Dst   common.Address
 	Value *big.Int
 }
 
 type WethWithdrawalEvent struct {
 	TxInfo
-	Owner common.Address
+	Src   common.Address
 	Value *big.Int
 }
 
 type WethDepositMethodEvent struct {
 	TxInfo
-	Owner common.Address
+	Dst   common.Address
 	Value *big.Int
 }
 
 type WethWithdrawalMethodEvent struct {
 	TxInfo
-	Owner common.Address
+	Src   common.Address
 	Value *big.Int
 }
 
@@ -142,6 +144,13 @@ type ApproveMethodEvent struct {
 	Spender common.Address
 	Value   *big.Int
 	Owner   common.Address
+}
+
+type TransferMethodEvent struct {
+	TxInfo
+	Sender   common.Address
+	Receiver common.Address
+	Value    *big.Int
 }
 
 type SubmitRingMethodEvent struct {

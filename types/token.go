@@ -26,13 +26,13 @@ import (
 )
 
 type Token struct {
-	Protocol common.Address
-	Symbol   string
-	Source   string
-	Time     int64
-	Deny     bool
-	Decimals *big.Int
-	IsMarket bool
+	Protocol common.Address `json:"protocol"`
+	Symbol   string         `json:"symbol"`
+	Source   string         `json:"source"`
+	Time     int64          `json:"time"`
+	Deny     bool           `json:"deny"`
+	Decimals *big.Int       `json:"decimals"`
+	IsMarket bool           `json:"isMarket"`
 }
 
 type CurrencyMarketCap struct {

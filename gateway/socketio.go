@@ -10,14 +10,17 @@ import (
 	"net/http"
 	"reflect"
 	"time"
+	"sync"
 )
 
 type BusinessType int
 
 const (
-	EventPostfixReq = "_req"
-	EventPostfixRes = "_res"
-	EventPostfixEnd = "_end"
+	EventPostfixReq        = "_req"
+	EventPostfixRes        = "_res"
+	EventPostfixEnd        = "_end"
+	DefaultCronSpec3Second = "0/3 * * * * *"
+	DefaultCronSpec5Minute = "0 */5 * * * *"
 )
 
 var EventPostfixs = []string{EventPostfixReq, EventPostfixRes, EventPostfixEnd}
@@ -53,20 +56,22 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type InvokeInfo struct {
-	MethodName string
-	Query      interface{}
+	MethodName  string
+	Query       interface{}
+	IsBroadcast bool
+	spec        string
 }
 
 var EventTypeRoute = map[string]InvokeInfo{
-	"tickers":         {"GetTickers", SingleMarket{}},
-	"loopringTickers": {"GetAllMarketTickers", nil},
-	"trends":          {"GetTrend", TrendQuery{}},
-	"portfolio":       {"GetPortfolio", SingleOwner{}},
-	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}},
-	"balance":         {"GetBalance", CommonTokenRequest{}},
-	"transaction":     {"GetTransactions", TransactionQuery{}},
-	"trxByHashes":     {"GetTransactionsByHash", TransactionQuery{}},
-	"depth":           {"GetDepth", DepthQuery{}},
+	"tickers":         {"GetTickers", SingleMarket{}, true, DefaultCronSpec3Second},
+	"loopringTickers": {"GetAllMarketTickers", nil, true, DefaultCronSpec3Second},
+	"trends":          {"GetTrend", TrendQuery{}, true, DefaultCronSpec3Second},
+	"portfolio":       {"GetPortfolio", SingleOwner{}, false, DefaultCronSpec3Second},
+	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}, true, DefaultCronSpec5Minute},
+	"balance":         {"GetBalance", CommonTokenRequest{}, false, DefaultCronSpec3Second},
+	"transaction":     {"GetTransactions", TransactionQuery{}, false, DefaultCronSpec3Second},
+	"trxByHashes":     {"GetTransactionsByHash", TransactionQuery{}, false, DefaultCronSpec3Second},
+	"depth":           {"GetDepth", DepthQuery{}, true, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
@@ -77,7 +82,7 @@ type SocketIOService interface {
 type SocketIOServiceImpl struct {
 	port               string
 	walletService      WalletServiceImpl
-	connIdMap          map[string]socketio.Conn
+	connIdMap          sync.Map
 	connBusinessKeyMap map[string]socketio.Conn
 	cron               *cron.Cron
 }
@@ -87,20 +92,21 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	so.port = port
 	so.walletService = walletService
 	so.connBusinessKeyMap = make(map[string]socketio.Conn)
-	so.connIdMap = make(map[string]socketio.Conn)
+	so.connIdMap = sync.Map{}
 	so.cron = cron.New()
 	return so
 }
 
 func (so *SocketIOServiceImpl) Start() {
 	server, err := socketio.NewServer(&engineio.Options{
-		PingInterval: time.Second * 60,
+		PingInterval: time.Second * 60 * 60,
+		PingTimeout:  time.Second * 60 * 60,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 	server.OnConnect("/", func(s socketio.Conn) error {
-		so.connIdMap[s.ID()] = s
+		so.connIdMap.Store(s.ID(), s)
 		return nil
 	})
 	server.OnEvent("/", "test", func(s socketio.Conn, msg string) {
@@ -120,7 +126,7 @@ func (so *SocketIOServiceImpl) Start() {
 			}
 			context[aliasOfV] = msg
 			s.SetContext(context)
-			so.connIdMap[s.ID()] = s
+			so.connIdMap.Store(s.ID(), s)
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
@@ -133,21 +139,40 @@ func (so *SocketIOServiceImpl) Start() {
 		})
 	}
 
-	so.cron.AddFunc("0/10 * * * * *", func() {
+	for k, events := range EventTypeRoute {
+		copyOfK := k
+		spec := events.spec
+		so.cron.AddFunc(spec, func() {
 
-		for _, v := range so.connIdMap {
-			if v.Context() == nil {
-				continue
-			} else {
-				businesses := v.Context().(map[string]string)
-				if businesses != nil {
-					for bk, bv := range businesses {
-						so.EmitNowByEventType(bk, v, bv)
+			so.connIdMap.Range(func(key, value interface{}) bool {
+				v := value.(socketio.Conn)
+				if v.Context() != nil {
+					businesses := v.Context().(map[string]string)
+					eventContext, ok := businesses[copyOfK]
+					if ok {
+						so.EmitNowByEventType(copyOfK, v, eventContext)
 					}
 				}
-			}
-		}
-	})
+				return true
+			})
+		})
+	}
+
+	//so.cron.AddFunc("0/10 * * * * *", func() {
+	//
+	//	for _, v := range so.connIdMap {
+	//		if v.Context() == nil {
+	//			continue
+	//		} else {
+	//			businesses := v.Context().(map[string]string)
+	//			if businesses != nil {
+	//				for bk, bv := range businesses {
+	//					so.EmitNowByEventType(bk, v, bv)
+	//				}
+	//			}
+	//		}
+	//	}
+	//})
 	so.cron.Start()
 
 	server.OnError("/", func(e error) {
@@ -169,11 +194,11 @@ func (so *SocketIOServiceImpl) Start() {
 
 func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv string) {
 	if invokeInfo, ok := EventTypeRoute[bk]; ok {
-		so.handleWith(bk, invokeInfo.Query, invokeInfo.MethodName, v, bv)
+		so.handleAfterEmit(bk, invokeInfo.Query, invokeInfo.MethodName, v, bv)
 	}
 }
 
-func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) {
+func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) string {
 
 	results := make([]reflect.Value, 0)
 	var err error
@@ -187,13 +212,14 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 		if err != nil {
 			log.Println("unmarshal error " + err.Error())
 			errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
-			conn.Emit(eventType+EventPostfixRes, string(errJson[:]))
-			if conn != nil && conn.Context() != nil {
-				context := conn.Context().(map[string]string)
-				delete(context, eventType)
-				conn.SetContext(context)
-				so.connIdMap[conn.ID()] = conn
-			}
+			//if conn != nil && conn.Context() != nil {
+			//	context := conn.Context().(map[string]string)
+			//	delete(context, eventType)
+			//	conn.SetContext(context)
+			//	so.connIdMap[conn.ID()] = conn
+			//}
+			return string(errJson[:])
+
 		}
 		params := make([]reflect.Value, 1)
 		params[0] = queryClone.Elem()
@@ -208,10 +234,15 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 	}
 	if err != nil {
 		errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
-		conn.Emit(eventType+EventPostfixRes, string(errJson[:]))
+		return string(errJson[:])
 	} else {
 		rst := SocketIOJsonResp{Data: res.Interface()}
 		b, _ := json.Marshal(rst)
-		conn.Emit(eventType+EventPostfixRes, string(b[:]))
+		return string(b[:])
 	}
+}
+
+func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) {
+	result := so.handleWith(eventType, query, methodName, conn, ctx)
+	conn.Emit(eventType+EventPostfixRes, result)
 }
