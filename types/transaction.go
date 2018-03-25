@@ -43,6 +43,8 @@ const (
 	TX_TYPE_CANCEL_ORDER    = 9
 	TX_TYPE_CUTOFF          = 10
 	TX_TYPE_CUTOFF_PAIR     = 11
+
+	TX_TYPE_UNSUPPORTED_CONTRACT = 12
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -113,6 +115,8 @@ func (tx *Transaction) TypeStr() string {
 		ret = "cutoff"
 	case TX_TYPE_CUTOFF_PAIR:
 		ret = "cutoff_trading_pair"
+	case TX_TYPE_UNSUPPORTED_CONTRACT:
+		ret = "unsupported_contract"
 	}
 
 	return ret
