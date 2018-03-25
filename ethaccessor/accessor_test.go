@@ -46,14 +46,14 @@ var (
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	owner := account2
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2000000))
-	test.SetTokenBalance("LRC", owner, amount)
+	owner := miner.Address
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
+	test.SetTokenBalance(owner, lrcTokenAddress, amount)
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
-	owner := account2
-	tokenAddress := wethTokenAddress
+	owner := miner.Address
+	tokenAddress := lrcTokenAddress
 	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
 	if err != nil {
 		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
@@ -66,6 +66,7 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 	account := accounts.Account{Address: account2}
 	tokenAddress := wethTokenAddress
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(100))
+	//amount,_ := big.NewInt(0).SetString("9223372036854775806000000000000000000", 0)
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
@@ -77,8 +78,8 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
-	owner := account2
-	tokenAddress := wethTokenAddress
+	owner := account1
+	tokenAddress := lrcTokenAddress
 	spender := delegateAddress
 
 	if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
@@ -365,8 +366,8 @@ func TestEthNodeAccessor_BlockTransactions(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	tx := &ethaccessor.Transaction{}
-	if err := ethaccessor.GetTransactionByHash(tx, "0x1cff70d0eecd86d008b633f62ef171bbe71516c132adea3ff73ed419d56232fd", "latest"); err == nil {
-		t.Logf("tx gas:%s", tx.Gas.BigInt().String())
+	if err := ethaccessor.GetTransactionByHash(tx, "0xf8e6256395e23fcf27bf7f32ba283ef7c46002ef6cfe5c8e2294ae7edf79ec07", "latest"); err == nil {
+		t.Logf("tx gas:%s value:%s", tx.Gas.BigInt().String(), tx.Value.BigInt().String())
 	} else {
 		t.Fatalf(err.Error())
 	}
@@ -374,7 +375,7 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0x5c5d814db630f049e2939df9e53023a4f4fd8d9a2440eb828c72ddcc6077e135", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0xf8e6256395e23fcf27bf7f32ba283ef7c46002ef6cfe5c8e2294ae7edf79ec07", "latest"); err == nil {
 		t.Logf("tx blockNumber:%s gasUsed:%s status:%s logs:%d", tx.BlockNumber.BigInt().String(), tx.GasUsed.BigInt().String(), tx.Status.BigInt().String(), len(tx.Logs))
 	} else {
 		t.Fatalf(err.Error())
