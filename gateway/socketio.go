@@ -81,7 +81,7 @@ type SocketIOService interface {
 type SocketIOServiceImpl struct {
 	port               string
 	walletService      WalletServiceImpl
-	connIdMap          map[string]socketio.Conn
+	connIdMap          sync.Map
 	connBusinessKeyMap map[string]socketio.Conn
 	cron               *cron.Cron
 }
@@ -91,7 +91,7 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	so.port = port
 	so.walletService = walletService
 	so.connBusinessKeyMap = make(map[string]socketio.Conn)
-	so.connIdMap = make(map[string]socketio.Conn)
+	so.connIdMap = sync.Map{}
 	so.cron = cron.New()
 	return so
 }
@@ -105,7 +105,7 @@ func (so *SocketIOServiceImpl) Start() {
 		log.Fatal(err)
 	}
 	server.OnConnect("/", func(s socketio.Conn) error {
-		so.connIdMap[s.ID()] = s
+		so.connIdMap.Store(s.ID(), s)
 		return nil
 	})
 	server.OnEvent("/", "test", func(s socketio.Conn, msg string) {
@@ -125,7 +125,7 @@ func (so *SocketIOServiceImpl) Start() {
 			}
 			context[aliasOfV] = msg
 			s.SetContext(context)
-			so.connIdMap[s.ID()] = s
+			so.connIdMap.Store(s.ID(), s)
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
@@ -142,17 +142,18 @@ func (so *SocketIOServiceImpl) Start() {
 		copyOfK := k
 		spec := events.spec
 		so.cron.AddFunc(spec, func() {
-			for _, v := range so.connIdMap {
-				if v.Context() == nil {
-					continue
-				} else {
+
+			so.connIdMap.Range(func(key, value interface{}) bool {
+				v := value.(socketio.Conn)
+				if v.Context() != nil {
 					businesses := v.Context().(map[string]string)
 					eventContext, ok := businesses[copyOfK]
 					if ok {
 						so.EmitNowByEventType(copyOfK, v, eventContext)
 					}
 				}
-			}
+				return true
+			})
 		})
 	}
 
