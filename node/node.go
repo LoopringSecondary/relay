@@ -74,7 +74,7 @@ type RelayNode struct {
 	websocketService gateway.WebsocketServiceImpl
 	socketIOService  gateway.SocketIOServiceImpl
 	walletService    gateway.WalletServiceImpl
-	txManager         txmanager.TransactionManager
+	txManager        txmanager.TransactionManager
 }
 
 func (n *RelayNode) Start() {

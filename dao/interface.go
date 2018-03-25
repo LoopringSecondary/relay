@@ -111,5 +111,5 @@ type RdsService interface {
 	SaveTransaction(latest *Transaction) error
 
 	// checkpoint
-	QueryCheckPointByType(businessType string) (point CheckPoint , err error)
+	QueryCheckPointByType(businessType string) (point CheckPoint, err error)
 }

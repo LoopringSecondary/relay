@@ -73,10 +73,6 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder
 
 	o.Price, _ = src.Price.Float64()
-	if o.Price > 1e12 || o.Price < 0.0000000000000001 {
-		return fmt.Errorf("dao order convert down,price out of range")
-	}
-
 	o.AmountS = src.AmountS.String()
 	o.AmountB = src.AmountB.String()
 	o.DealtAmountS = state.DealtAmountS.String()

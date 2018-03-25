@@ -26,14 +26,14 @@ const (
 
 // common check point table
 type CheckPoint struct {
-	ID         int     `gorm:"column:id;primary_key;"`
-	BusinessType     string  `gorm:"column:business_type;type:varchar(42);unique_index"`
-	CheckPoint  int64  `gorm:"column:check_point;type:bigint"`
-	CreateTime int64   `gorm:"column:create_time;type:bigint"`
-	ModifyTime int64   `gorm:"column:modify_time;type:bigint"`
+	ID           int    `gorm:"column:id;primary_key;"`
+	BusinessType string `gorm:"column:business_type;type:varchar(42);unique_index"`
+	CheckPoint   int64  `gorm:"column:check_point;type:bigint"`
+	CreateTime   int64  `gorm:"column:create_time;type:bigint"`
+	ModifyTime   int64  `gorm:"column:modify_time;type:bigint"`
 }
 
-func (s *RdsServiceImpl) QueryCheckPointByType(businessType string) (point CheckPoint , err error) {
+func (s *RdsServiceImpl) QueryCheckPointByType(businessType string) (point CheckPoint, err error) {
 	points := make([]CheckPoint, 0)
 
 	err = s.db.Model(&CheckPoint{}).Where("business_type = ? ", businessType).Find(&points).Error
