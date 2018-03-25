@@ -229,7 +229,7 @@ func (t *TrendManager) refreshCacheByInterval(interval string) {
 }
 
 func (t *TrendManager) LoadCache() {
-	t.refreshCache()
+	t.refreshMinIntervalCache()
 	intervals := append(allInterval[:0], allInterval[1:]...)
 	for _, i := range intervals {
 		t.refreshCacheByInterval(i)
@@ -237,7 +237,7 @@ func (t *TrendManager) LoadCache() {
 	t.cacheReady = true
 }
 
-func (t *TrendManager) refreshCache() {
+func (t *TrendManager) refreshMinIntervalCache() {
 
 	log.Println("start refresh 1hr cache......")
 
@@ -374,7 +374,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 */30 * * * *", t.InsertTrend)
+	t.cron.AddFunc("10 1 * * * *", t.InsertTrend)
 	t.cron.Start()
 }
 
@@ -407,10 +407,6 @@ func (t *TrendManager) insertByTrend(interval string) error {
 		if err != nil {
 			return err
 		}
-
-		//if len(trends) != int(multiple) {
-		//	return errors.New("one hour trend record number not enough " + string(len(trends)) + " " + interval)
-		//}
 
 		toInsert := &dao.Trend{}
 
