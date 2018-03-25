@@ -158,6 +158,10 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 
+	// todo delete after test
+	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
+	//txManager.Start()
+
 	ethaccessor.IncludeGasPriceEvaluator()
 
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}

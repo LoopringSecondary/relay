@@ -366,8 +366,8 @@ func TestEthNodeAccessor_BlockTransactions(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	tx := &ethaccessor.Transaction{}
-	if err := ethaccessor.GetTransactionByHash(tx, "0xf8e6256395e23fcf27bf7f32ba283ef7c46002ef6cfe5c8e2294ae7edf79ec07", "latest"); err == nil {
-		t.Logf("tx gas:%s value:%s", tx.Gas.BigInt().String(), tx.Value.BigInt().String())
+	if err := ethaccessor.GetTransactionByHash(tx, "0x23fb21eba23c93b151e72d10d49876250c5ff80ea2967c0375621c1375c31154", "latest"); err == nil {
+		t.Logf("tx blockNumber:%s, from:%s, to:%s, gas:%s value:%s", tx.BlockNumber.BigInt().String(), tx.From, tx.To, tx.Gas.BigInt().String(), tx.Value.BigInt().String())
 	} else {
 		t.Fatalf(err.Error())
 	}
@@ -375,7 +375,7 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0xf8e6256395e23fcf27bf7f32ba283ef7c46002ef6cfe5c8e2294ae7edf79ec07", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0x23fb21eba23c93b151e72d10d49876250c5ff80ea2967c0375621c1375c31154", "latest"); err == nil {
 		t.Logf("tx blockNumber:%s gasUsed:%s status:%s logs:%d", tx.BlockNumber.BigInt().String(), tx.GasUsed.BigInt().String(), tx.Status.BigInt().String(), len(tx.Logs))
 	} else {
 		t.Fatalf(err.Error())

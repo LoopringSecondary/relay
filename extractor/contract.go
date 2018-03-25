@@ -908,7 +908,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, ga
 	dst.Receiver = common.HexToAddress(tx.To)
 
 	log.Debugf("extractor,tx:%s handleEthTransfer from:%s, to:%s, value:%s", tx.Hash, tx.From, tx.To, tx.Value.BigInt().String())
-	
+
 	eventemitter.Emit(eventemitter.TxManagerEthTransferEvent, &dst)
 
 	return nil
