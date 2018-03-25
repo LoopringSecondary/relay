@@ -375,6 +375,9 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 		tx.Type = types.TX_TYPE_UNSUPPORTED_CONTRACT
 		tx.Protocol = types.NilAddress
 		tx.Symbol = ETH_SYMBOL
+		if err := tm.saveTransaction(&tx); err != nil {
+			return err
+		}
 	}
 
 	return nil
