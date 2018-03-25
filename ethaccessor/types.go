@@ -132,18 +132,19 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
-func (tx *TransactionReceipt) IsFailed(isDevNet bool) bool {
-	if isDevNet {
-		if len(tx.Logs) > 0 {
-			return false
-		}
-		return true
-	} else {
-		if tx.Status.BigInt().Int64() == 0 {
-			return true
-		}
-		return false
+func (receipt *TransactionReceipt) IsFailed() bool {
+	txIsFailed := false
+	byzantiumBlock := big.NewInt(4370000)
+
+	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
+	hasNoLogs := len(receipt.Logs) <= 0
+	failedStatus := receipt.Status.BigInt().Int64() == 0
+
+	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
+		txIsFailed = true
 	}
+
+	return txIsFailed
 }
 
 type BlockIterator struct {

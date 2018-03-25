@@ -52,8 +52,8 @@ func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
 	return c
 }
 
-func (event *EventData) FullFilled(evtLog *ethaccessor.Log, tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) {
-	event.TxInfo = setTxInfo(tx, receipt, blockTime)
+func (event *EventData) FullFilled(tx *ethaccessor.Transaction, evtLog *ethaccessor.Log, gasUsed, blockTime *big.Int) {
+	event.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
 	event.LogIndex = evtLog.LogIndex.Int64()
@@ -80,23 +80,15 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, status uint8) {
-	method.TxInfo = setTxInfo(tx, receipt, blockTime)
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status uint8) {
+	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
 	method.LogIndex = 0
 	method.Status = status
 }
 
-func (method *MethodData) processNeeded() bool {
-	if method.Status == types.TX_STATUS_FAILED || method.Status == types.TX_STATUS_PENDING {
-		return true
-	} else {
-		return false
-	}
-}
-
-func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) types.TxInfo {
+func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.TxInfo {
 	var txinfo types.TxInfo
 
 	txinfo.BlockNumber = tx.BlockNumber.BigInt()
@@ -107,22 +99,11 @@ func setTxInfo(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionRece
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
 	txinfo.GasLimit = tx.Gas.BigInt()
-	if receipt != nil {
-		txinfo.GasUsed = receipt.GasUsed.BigInt()
-	} else {
-		txinfo.GasUsed = big.NewInt(0)
-	}
+	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
 
 	return txinfo
-}
-
-func (m *MethodData) IsValid() error {
-	if m.Status == types.TX_STATUS_FAILED {
-		return fmt.Errorf("method %s transaction failed", m.Name)
-	}
-	return nil
 }
 
 const (
@@ -439,7 +420,11 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	// emit to miner
 	var evt types.SubmitRingMethodEvent
 	evt.TxInfo = contract.TxInfo
-	evt.Err = contract.IsValid()
+	if evt.Status == types.TX_STATUS_FAILED {
+		evt.Err = fmt.Errorf("method %s transaction failed", contract.Name)
+	} else {
+		evt.Err = nil
+	}
 
 	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.GasUsed.String(), evt.GasPrice.String())
 
@@ -902,10 +887,8 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	return nil
 }
 
-func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int, status uint8) error {
-	var (
-		dst types.TransferEvent
-	)
+func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, gasUsed, time *big.Int, status uint8) error {
+	var dst types.TransferEvent
 
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
@@ -919,12 +902,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	dst.GasLimit = tx.Gas.BigInt()
 	dst.GasPrice = tx.GasPrice.BigInt()
 	dst.Nonce = tx.Nonce.BigInt()
-
-	if receipt == nil {
-		dst.GasUsed = big.NewInt(0)
-	} else {
-		dst.GasUsed = receipt.GasUsed.BigInt()
-	}
+	dst.GasUsed = gasUsed
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
