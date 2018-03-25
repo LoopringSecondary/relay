@@ -167,17 +167,6 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = src.To
-	tx.Type = TX_TYPE_CUTOFF
-	tx.Value = src.Cutoff
-
-	return nil
-}
-
 func (tx *Transaction) FromCutoffMethodEvent(src *CutoffMethodEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
@@ -189,18 +178,29 @@ func (tx *Transaction) FromCutoffMethodEvent(src *CutoffMethodEvent) error {
 	return nil
 }
 
+func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.Owner
+	tx.From = src.Owner
+	tx.To = src.To
+	tx.Type = TX_TYPE_CUTOFF
+	tx.Value = src.Cutoff
+
+	return nil
+}
+
 type CutoffPairSalt struct {
 	Token1 common.Address `json:"token1"`
 	Token2 common.Address `json:"token2"`
 }
 
-func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
+func (tx *Transaction) FromCutoffPairMethod(src *CutoffPairMethodEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
-	tx.Value = src.Cutoff
+	tx.Value = src.Value
 
 	var salt CutoffPairSalt
 	salt.Token1 = src.Token1
@@ -214,13 +214,13 @@ func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromCutoffPairMethod(src *CutoffPairMethodEvent) error {
+func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
-	tx.Value = src.Value
+	tx.Value = src.Cutoff
 
 	var salt CutoffPairSalt
 	salt.Token1 = src.Token1

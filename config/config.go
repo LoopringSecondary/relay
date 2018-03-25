@@ -127,12 +127,10 @@ type AccessorOptions struct {
 }
 
 type ExtractorOptions struct {
-	IsDevNet                bool
-	Debug                   bool
-	UseTestStartBlockNumber bool
-	ConfirmBlockNumber      uint64
-	StartBlockNumber        *big.Int
-	EndBlockNumber          *big.Int
+	StartBlockNumber   *big.Int
+	EndBlockNumber     *big.Int
+	ConfirmBlockNumber uint64
+	Debug              bool
 }
 
 type KeyStoreOptions struct {

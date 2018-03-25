@@ -64,14 +64,14 @@ type ExtractorServiceImpl struct {
 }
 
 func NewExtractorService(options config.ExtractorOptions,
-	rds dao.RdsService,
-	accountmanager *market.AccountManager) *ExtractorServiceImpl {
+	db dao.RdsService,
+	ac *market.AccountManager) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	l.options = options
-	l.dao = rds
-	l.processor = newAbiProcessor(rds, accountmanager)
-	l.detector = newForkDetector(rds)
+	l.dao = db
+	l.processor = newAbiProcessor(db, ac)
+	l.detector = newForkDetector(db)
 	l.stop = make(chan bool, 1)
 
 	l.setBlockNumberRange()
@@ -82,7 +82,7 @@ func (l *ExtractorServiceImpl) Start() {
 	log.Info("extractor start...")
 	l.syncComplete = false
 
-	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.ProcessPendingTransaction}
+	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
 	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
@@ -123,6 +123,11 @@ func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
 	}
 }
 
+func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.EventData) error {
+	tx := input.(*ethaccessor.Transaction)
+	return l.ProcessPendingTransaction(tx)
+}
+
 func (l *ExtractorServiceImpl) ProcessBlock() {
 	inter, err := l.iterator.Next()
 	if err != nil {
@@ -149,11 +154,8 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 
 	// convert block to dao entity
 	var entity dao.Block
-	if err := entity.ConvertDown(currentBlock); err != nil {
-		l.debug("extractor,convert block to dao/entity error:%s", err.Error())
-	} else {
-		l.dao.Add(&entity)
-	}
+	entity.ConvertDown(currentBlock)
+	l.dao.Add(&entity)
 
 	// emit new block
 	blockEvent := &types.BlockEvent{}
@@ -182,97 +184,82 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 }
 
 func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	txIsFailed := receipt.IsFailed(l.options.IsDevNet)
-
-	l.debug("extractor,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
+	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
 	if l.processor.IsValidEthTransferTransaction(tx) {
-		// 普通的eth转账 只要打到块里都算成功
-		status := types.TX_STATUS_SUCCESS
-		return l.processor.handleEthTransfer(tx, receipt, blockTime, uint8(status))
+		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
 	} else {
-		if len(receipt.Logs) > 0 {
-			if err := l.ProcessEvent(tx, receipt, blockTime); err != nil {
-				log.Errorf(err.Error())
-			}
+		l.ProcessEvent(tx, receipt, blockTime)
+		if receipt.IsFailed() {
+			l.ProcessMethod(tx, receipt, blockTime)
 		}
-
-		if l.processor.HasContract(common.HexToAddress(tx.To)) {
-			if err := l.ProcessMethod(tx, receipt, blockTime, txIsFailed); err != nil {
-				log.Errorf(err.Error())
-			}
-		} else {
-			l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
-		}
-
 		return nil
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessPendingTransaction(input eventemitter.EventData) error {
-	tx := input.(*ethaccessor.Transaction)
+func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
+	log.Debugf("extractor,process pending transaction,tx:%s status :%s,logs:%d", tx.Hash)
+
 	blockTime := big.NewInt(time.Now().Unix())
 
 	if l.processor.IsValidEthTransferTransaction(tx) {
-		return l.processor.handleEthTransfer(tx, nil, blockTime, types.TX_STATUS_PENDING)
+		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
 	} else {
-		method, id, ok := l.getMethodFromTransaction(tx)
-		if !ok {
-			l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
-			return nil
-		}
+		return l.ProcessMethod(tx, nil, blockTime)
+	}
+}
 
-		method.FullFilled(tx, nil, blockTime, types.TX_STATUS_PENDING)
-		eventemitter.Emit(method.Id, method)
+func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
+	// filter contract
+	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
+		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
 		return nil
 	}
-}
 
-func (l *ExtractorServiceImpl) getMethodFromTransaction(tx *ethaccessor.Transaction) (MethodData, string, bool) {
+	// filter method input
 	input := common.FromHex(tx.Input)
-
-	var (
-		method MethodData
-		ok     bool
-	)
-
-	// 过滤方法
 	if len(input) < 4 || len(tx.Input) < 10 {
 		l.debug("extractor,tx:%s contract method id %s length invalid", tx.Hash, tx.Input)
-		return method, "", false
+		return nil
 	}
 
+	// filter method id
 	id := common.ToHex(input[0:4])
-	method, ok = l.processor.GetMethod(id)
-
-	return method, id, ok
-}
-
-func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int, txIsFailed bool) error {
-	method, id, ok := l.getMethodFromTransaction(tx)
+	method, ok := l.processor.GetMethod(id)
 	if !ok {
 		l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
 		return nil
 	}
 
-	// tx成功则processEvent
-	if !txIsFailed {
-		return nil
-	}
-
-	status := types.TX_STATUS_SUCCESS
-	if txIsFailed {
+	var (
+		status  uint
+		gasUsed *big.Int
+	)
+	if receipt == nil {
+		status = types.TX_STATUS_PENDING
+		gasUsed = big.NewInt(0)
+	} else if receipt.IsFailed() {
 		status = types.TX_STATUS_FAILED
+		gasUsed = receipt.GasUsed.BigInt()
+	} else {
+		status = types.TX_STATUS_SUCCESS
+		gasUsed = receipt.GasUsed.BigInt()
 	}
-	method.FullFilled(tx, receipt, blockTime, uint8(status))
 
+	method.FullFilled(tx, gasUsed, blockTime, uint8(status))
 	eventemitter.Emit(method.Id, method)
+
 	return nil
 }
 
 func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	txhash := receipt.TransactionHash
+	// filter logs
+	if len(receipt.Logs) <= 0 {
+		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
+		return nil
+	}
 
+	txhash := receipt.TransactionHash
 	for _, evtLog := range receipt.Logs {
 		var (
 			event EventData
@@ -303,7 +290,7 @@ func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt
 		}
 
 		// full filled event and emit to abi processor
-		event.FullFilled(&evtLog, tx, receipt, blockTime)
+		event.FullFilled(tx, &evtLog, receipt.GasUsed.BigInt(), blockTime)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 
@@ -315,10 +302,6 @@ func (l *ExtractorServiceImpl) setBlockNumberRange() {
 	l.endBlockNumber = l.options.EndBlockNumber
 	if l.endBlockNumber.Cmp(big.NewInt(0)) == 0 {
 		l.endBlockNumber = big.NewInt(defaultEndBlockNumber)
-	}
-
-	if l.options.UseTestStartBlockNumber {
-		return
 	}
 
 	// 寻找最新块
