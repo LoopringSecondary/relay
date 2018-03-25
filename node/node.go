@@ -163,6 +163,7 @@ func (n *Node) Start() {
 	// todo(fuk): mv transaction manager to relay
 	n.txManager.Start()
 
+	ethaccessor.IncludeGasPriceEvaluator()
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
 
