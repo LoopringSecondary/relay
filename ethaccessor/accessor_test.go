@@ -52,20 +52,26 @@ func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
-	owner := miner.Address
-	tokenAddress := lrcTokenAddress
-	balance, err := ethaccessor.Erc20Balance(tokenAddress, owner, "latest")
-	if err != nil {
-		t.Fatalf("accessor get erc20 balance error:%s", err.Error())
-	}
+	accounts := []common.Address{account1, account2, miner.Address}
+	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
 
-	t.Log(new(big.Rat).SetFrac(balance, big.NewInt(1e18)).FloatString(2))
+	for _, tokenAddress := range tokens {
+		for _, account := range accounts {
+			balance, err := ethaccessor.Erc20Balance(tokenAddress, account, "latest")
+			if err != nil {
+				t.Fatalf("accessor get erc20 balance error:%s", err.Error())
+			}
+			amount := new(big.Rat).SetFrac(balance, big.NewInt(1e18)).FloatString(2)
+			symbol, _ := util.GetSymbolWithAddress(tokenAddress)
+			t.Logf("token:%s account:%s amount:%s", symbol, account.Hex(), amount)
+		}
+	}
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := accounts.Account{Address: account2}
+	account := accounts.Account{Address: account1}
 	tokenAddress := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(100))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
 	//amount,_ := big.NewInt(0).SetString("9223372036854775806000000000000000000", 0)
 	spender := delegateAddress
 
@@ -78,14 +84,20 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Allowance(t *testing.T) {
-	owner := account1
-	tokenAddress := lrcTokenAddress
+	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
+	accounts := []common.Address{account1, account2}
 	spender := delegateAddress
 
-	if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, owner, spender, "latest"); err != nil {
-		t.Fatalf("accessor get erc20 approval error:%s", err.Error())
-	} else {
-		t.Log(new(big.Rat).SetFrac(allowance, big.NewInt(1e18)).FloatString(2))
+	for _, tokenAddress := range tokens {
+		for _, account := range accounts {
+			if allowance, err := ethaccessor.Erc20Allowance(tokenAddress, account, spender, "latest"); err != nil {
+				t.Fatalf("accessor get erc20 approval error:%s", err.Error())
+			} else {
+				amount := new(big.Rat).SetFrac(allowance, big.NewInt(1e18)).FloatString(2)
+				symbol, _ := util.GetSymbolWithAddress(tokenAddress)
+				t.Logf("token:%s, account:%s, amount:%s", symbol, account.Hex(), amount)
+			}
+		}
 	}
 }
 
@@ -275,9 +287,9 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 }
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := account1
+	account := account2
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account, "deposit", gas, gasPrice, amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -313,7 +325,7 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 }
 
 func TestEthNodeAccessor_EthTransfer(t *testing.T) {
-	sender := account1
+	sender := miner.Address
 	receiver := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
