@@ -321,12 +321,25 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
-		log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
-		return "", err
-	} else {
-		accessor.addressNextNonce(sender)
-		return txHash, err
+		//if err.Error() == "nonce too low" {
+			accessor.resetAddressNonce(sender)
+			nonce = accessor.addressCurrentNonce(sender)
+			transaction = ethTypes.NewTransaction(nonce.Uint64(),
+				common.HexToAddress(to.Hex()),
+				value,
+				gas,
+				gasPrice,
+				callData)
+			if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+				log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
+				return "", err
+			}
+		//} else {
+		//
+		//}
 	}
+	accessor.addressNextNonce(sender)
+	return txHash, nil
 }
 
 //gas, gasPrice can be set to nil
@@ -515,6 +528,14 @@ func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *bi
 	nonce := new(big.Int)
 	nonce.Set(accessor.AddressNonce[address])
 	return nonce
+}
+
+func (accessor *ethNodeAccessor) resetAddressNonce(address common.Address) {
+	var nonce types.Big
+	if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
+		nonce = *(types.NewBigWithInt(0))
+	}
+	accessor.AddressNonce[address] = nonce.BigInt()
 }
 
 func (accessor *ethNodeAccessor) addressNextNonce(address common.Address) *big.Int {
