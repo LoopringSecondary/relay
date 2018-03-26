@@ -56,7 +56,7 @@ type TxInfo struct {
 	TxHash      common.Hash    `json:"txHash"`
 	BlockHash   common.Hash    `json:"symbol"`
 	LogIndex    int64          `json:"logIndex"`
-	BlockNumber *big.Int       `json:"blockNumber`
+	BlockNumber *big.Int       `json:"blockNumber"`
 	BlockTime   int64          `json:"block_time"`
 	Status      uint8          `json:"status"`
 	GasLimit    *big.Int       `json:"gas_limit"`

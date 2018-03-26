@@ -322,18 +322,18 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
 		//if err.Error() == "nonce too low" {
-			accessor.resetAddressNonce(sender)
-			nonce = accessor.addressCurrentNonce(sender)
-			transaction = ethTypes.NewTransaction(nonce.Uint64(),
-				common.HexToAddress(to.Hex()),
-				value,
-				gas,
-				gasPrice,
-				callData)
-			if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
-				log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
-				return "", err
-			}
+		accessor.resetAddressNonce(sender)
+		nonce = accessor.addressCurrentNonce(sender)
+		transaction = ethTypes.NewTransaction(nonce.Uint64(),
+			common.HexToAddress(to.Hex()),
+			value,
+			gas,
+			gasPrice,
+			callData)
+		if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+			log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
+			return "", err
+		}
 		//} else {
 		//
 		//}

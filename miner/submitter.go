@@ -22,6 +22,7 @@ import (
 	"errors"
 	"math/big"
 
+	"encoding/json"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -154,24 +155,23 @@ func (submitter *RingSubmitter) listenNewRings() {
 			select {
 			case ringInfos := <-ringSubmitInfoChan:
 				if nil != ringInfos {
-					for _, info := range ringInfos {
+					for _, ringState := range ringInfos {
+						txHash, err := submitter.submitRing(ringState)
+						ringState.SubmitTxHash = txHash
+
 						daoInfo := &dao.RingSubmitInfo{}
-						daoInfo.ConvertDown(info)
+						daoInfo.ConvertDown(ringState, err)
 						if err := submitter.dbService.Add(daoInfo); nil != err {
 							log.Errorf("Miner submitter,insert new ring err:%s", err.Error())
 						} else {
-							for _, filledOrder := range info.RawRing.Orders {
+							for _, filledOrder := range ringState.RawRing.Orders {
 								daoOrder := &dao.FilledOrder{}
-								daoOrder.ConvertDown(filledOrder, info.Ringhash)
+								daoOrder.ConvertDown(filledOrder, ringState.Ringhash)
 								if err1 := submitter.dbService.Add(daoOrder); nil != err1 {
 									log.Errorf("Miner submitter,insert filled Order err:%s", err1.Error())
 								}
 							}
 						}
-					}
-
-					for _, ringState := range ringInfos {
-						submitter.submitRing(ringState)
 					}
 				}
 			}
@@ -199,15 +199,19 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 	return errors.New("had been processed")
 }
 
-func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) error {
-	if txHash, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
-		submitter.submitFailed([]common.Hash{ringSubmitInfo.Ringhash}, err)
-		return err
-	} else {
-		ringSubmitInfo.SubmitTxHash = common.HexToHash(txHash)
-		submitter.dbService.UpdateRingSubmitInfoProtocolTxHash(ringSubmitInfo.Ringhash, txHash)
+func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, error) {
+	status := types.TX_STATUS_SUCCESS
+	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
+	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
+
+	txHashStr, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
+	if nil != err {
+		log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+		status = types.TX_STATUS_FAILED
 	}
-	return nil
+	txHash := common.HexToHash(txHashStr)
+	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, uint8(status), big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
+	return txHash, err
 }
 
 func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
@@ -217,22 +221,22 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 			select {
 			case event := <-submitRingMethodChan:
 				if nil != event {
-					if event.Status == types.TX_STATUS_FAILED {
-						if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
-							log.Errorf("err:%s", err.Error())
+					//if event.Status == types.TX_STATUS_FAILED {
+					if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
+						log.Errorf("err:%s", err.Error())
+					} else {
+						var err1 error
+						if nil != event.Err {
+							err1 = errors.New("failed to execute ring:" + event.Err.Error())
 						} else {
-							var err1 error
-							if nil != event.Err {
-								err1 = errors.New("failed to execute ring:" + event.Err.Error())
-							} else {
-								err1 = errors.New("failed to execute ring")
-							}
-							submitter.submitFailed(ringhashes, err1)
+							err1 = errors.New("failed to execute ring")
+						}
+
+						for _, ringhash := range ringhashes {
+							submitter.submitResult(ringhash, event.TxHash, event.Status, big.NewInt(0), event.BlockNumber, event.GasUsed, err1)
 						}
 					}
-					if err := submitter.dbService.UpdateRingSubmitInfoSubmitUsedGas(event.TxHash.Hex(), event.GasUsed); nil != err {
-						log.Errorf("err:%s", err.Error())
-					}
+					//}
 				}
 			}
 		}
@@ -253,17 +257,33 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 	})
 }
 
-//提交错误，执行错误
-func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error) {
-	if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
-		log.Errorf("err:%s", err.Error())
-	} else {
-		for _, ringhash := range ringhashes {
-			failedEvent := &types.RingSubmitFailedEvent{RingHash: ringhash}
-			eventemitter.Emit(eventemitter.Miner_RingSubmitFailed, failedEvent)
-		}
+func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, status uint8, ringIndex, blockNumber, usedGas *big.Int, err error) {
+	resultEvt := &types.RingSubmitResultEvent{
+		RingHash:    ringhash,
+		TxHash:      txhash,
+		Status:      status,
+		Err:         err,
+		RingIndex:   ringIndex,
+		BlockNumber: blockNumber,
+		UsedGas:     usedGas,
 	}
+	if err := submitter.dbService.UpdateRingSubmitInfoResult(resultEvt); nil != err {
+		log.Errorf("err:%s", err.Error())
+	}
+	eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
 }
+
+////提交错误，执行错误
+//func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error) {
+//	if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
+//		log.Errorf("err:%s", err.Error())
+//	} else {
+//		for _, ringhash := range ringhashes {
+//			failedEvent := &types.RingSubmitResultEvent{RingHash: ringhash, Status:types.TX_STATUS_FAILED}
+//			eventemitter.Emit(eventemitter.Miner_RingSubmitResult, failedEvent)
+//		}
+//	}
+//}
 
 func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*types.RingSubmitInfo, error) {
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
