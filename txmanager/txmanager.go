@@ -373,7 +373,7 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 		var tx types.Transaction
 		tx.FromTransferEvent(evt, types.TX_TYPE_SEND)
 		tx.Type = types.TX_TYPE_UNSUPPORTED_CONTRACT
-		tx.Protocol = types.NilAddress
+		tx.Protocol = tx.To
 		tx.Symbol = ETH_SYMBOL
 		if err := tm.saveTransaction(&tx); err != nil {
 			return err
@@ -391,7 +391,7 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 
 	model.ConvertDown(tx)
 
-	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked == true {
+	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
 		return tm.db.SaveTransaction(&model)
 	}
 
