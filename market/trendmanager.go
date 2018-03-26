@@ -113,7 +113,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 		trendManager.ProofRead()
 		trendManager.LoadCache()
-		//trendManager.startScheduleUpdate()
+		trendManager.startScheduleUpdate()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
 		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
 
@@ -374,7 +374,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 }
 
 func (t *TrendManager) startScheduleUpdate() {
-	t.cron.AddFunc("10 1 * * * *", t.InsertTrend)
+	t.cron.AddFunc("10 1 * * * *", t.ScheduleUpdate)
 	t.cron.Start()
 }
 
@@ -628,7 +628,7 @@ func isTimeToInsert(interval string) bool {
 	return time.Now().Unix()%getTsInterval(interval) < tsOneHour
 }
 
-func (t *TrendManager) InsertTrend() {
+func (t *TrendManager) ScheduleUpdate() {
 	// get latest 24 hour trend if not exist generate
 
 	fmt.Println("start insert trend cron job")
