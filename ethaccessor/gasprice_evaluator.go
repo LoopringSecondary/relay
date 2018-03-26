@@ -56,8 +56,8 @@ func (e *GasPriceEvaluator) start() {
 				default:
 					blockInterface, err := iterator.Next()
 					if nil == err {
-						log.Debugf("gasPriceEvaluator, blockNumber:%s", blockNumber.BigInt().String())
 						blockWithTxAndReceipt := blockInterface.(*BlockWithTxAndReceipt)
+						log.Debugf("gasPriceEvaluator, blockNumber:%s", blockWithTxAndReceipt.Number.BigInt().String())
 						e.Blocks = append(e.Blocks, blockWithTxAndReceipt)
 						if len(e.Blocks) > 5 {
 							e.Blocks = e.Blocks[1:]
