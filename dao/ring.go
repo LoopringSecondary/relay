@@ -29,14 +29,14 @@ type FilledOrder struct {
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
 	OrderHash        string `gorm:"column:orderhash;type:varchar(82)"`
 	FeeSelection     uint8  `gorm:"column:fee_selection" json:"feeSelection"`
-	RateAmountS      string `gorm:"column:rate_amount_s;type:varchar(82)" json:"rateAmountS"`
-	AvailableAmountS string `gorm:"column:available_amount_s;type:varchar(82)"json:"availableAmountS"`
-	AvailableAmountB string `gorm:"column:available_amount_b;type:varchar(82)"`
-	FillAmountS      string `gorm:"column:fill_amount_s;type:varchar(82)" json:"fillAmountS"`
-	FillAmountB      string `gorm:"column:fill_amount_b;type:varchar(82)" json:"fillAmountB"`
+	RateAmountS      string `gorm:"column:rate_amount_s;type:text" json:"rateAmountS"`
+	AvailableAmountS string `gorm:"column:available_amount_s;type:text"json:"availableAmountS"`
+	AvailableAmountB string `gorm:"column:available_amount_b;type:text"`
+	FillAmountS      string `gorm:"column:fill_amount_s;type:text" json:"fillAmountS"`
+	FillAmountB      string `gorm:"column:fill_amount_b;type:text" json:"fillAmountB"`
 	LrcReward        string `gorm:"column:lrc_reward;type:text" json:"lrcReward"`
-	LrcFee           string `gorm:"column:lrc_fee;type:varchar(100)" json:"lrcFee"`
-	FeeS             string `gorm:"column:fee_s;type:varchar(100)" json:"feeS"`
+	LrcFee           string `gorm:"column:lrc_fee;type:text" json:"lrcFee"`
+	FeeS             string `gorm:"column:fee_s;type:text" json:"feeS"`
 	LegalFee         string `gorm:"column:legal_fee;type:text" json:"legalFee"`
 	SPrice           string `gorm:"column:s_price;type:text" json:"sPrice"`
 	BPrice           string `gorm:"column:b_price;type:text" json:"sPrice"`

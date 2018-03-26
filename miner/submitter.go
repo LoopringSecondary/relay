@@ -217,11 +217,17 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 			select {
 			case event := <-submitRingMethodChan:
 				if nil != event {
-					if nil != event.Err {
+					if event.Status == types.TX_STATUS_FAILED {
 						if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 							log.Errorf("err:%s", err.Error())
 						} else {
-							submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
+							var err1 error
+							if nil != event.Err {
+								err1 = errors.New("failed to execute ring:" + event.Err.Error())
+							} else {
+								err1 = errors.New("failed to execute ring")
+							}
+							submitter.submitFailed(ringhashes, err1)
 						}
 					}
 					if err := submitter.dbService.UpdateRingSubmitInfoSubmitUsedGas(event.TxHash.Hex(), event.GasUsed); nil != err {

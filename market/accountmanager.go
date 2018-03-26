@@ -58,8 +58,7 @@ type Allowance struct {
 }
 
 type AccountManager struct {
-	c                 *cache.Cache
-	newestBlockNumber types.Big
+	c *cache.Cache
 }
 
 type Token struct {
@@ -77,22 +76,17 @@ type AccountJson struct {
 func NewAccountManager() AccountManager {
 
 	accountManager := AccountManager{}
-	var blockNumber types.Big
-	err := ethaccessor.BlockNumber(&blockNumber)
-	if err != nil {
-		log.Fatal("init account manager failed, can't get newest block number")
-		return accountManager
-	}
-	accountManager.newestBlockNumber = blockNumber
 	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
 	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleTokenTransfer}
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
 	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
 	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
+	blockForkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.BlockForkHandler}
 	eventemitter.On(eventemitter.TransferEvent, transferWatcher)
 	eventemitter.On(eventemitter.ApprovalEvent, approveWatcher)
 	eventemitter.On(eventemitter.WethDepositEvent, wethDepositWatcher)
 	eventemitter.On(eventemitter.WethWithdrawalEvent, wethWithdrawalWatcher)
+	eventemitter.On(eventemitter.ChainForkDetected, blockForkWatcher)
 
 	return accountManager
 }
@@ -165,20 +159,19 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 
 	//log.Info("received transfer event...")
 
-	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
-		log.Info("the eth network may be forked. flush all cache")
-		a.c.Flush()
-		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
-	} else {
-		tokenAlias := util.AddressToAlias(event.Protocol.Hex())
-		errFrom := a.updateBalanceAndAllowance(tokenAlias, event.Sender.Hex())
-		if errFrom != nil {
-			return errFrom
-		}
-		errTo := a.updateBalanceAndAllowance(tokenAlias, event.Receiver.Hex())
-		if errTo != nil {
-			return errTo
-		}
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
+		log.Info("received wrong status event, drop it")
+		return nil
+	}
+
+	tokenAlias := util.AddressToAlias(event.Protocol.Hex())
+	errFrom := a.updateBalanceAndAllowance(tokenAlias, event.Sender.Hex())
+	if errFrom != nil {
+		return errFrom
+	}
+	errTo := a.updateBalanceAndAllowance(tokenAlias, event.Receiver.Hex())
+	if errTo != nil {
+		return errTo
 	}
 	return nil
 }
@@ -187,42 +180,36 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 
 	event := input.(*types.ApprovalEvent)
 	log.Debugf("received approval event, %s, %s", event.Protocol.Hex(), event.Owner.Hex())
-	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
-		log.Info("the eth network may be forked. flush all cache")
-		a.c.Flush()
-		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
-	} else {
-		if err = a.updateAllowance(*event); nil != err {
-			log.Error(err.Error())
-		}
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
+		log.Info("received wrong status event, drop it")
+		return nil
+	}
+	if err = a.updateAllowance(*event); nil != err {
+		log.Error(err.Error())
 	}
 	return
 }
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethDepositEvent)
-	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
-		log.Info("the eth network may be forked. flush all cache")
-		a.c.Flush()
-		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
-	} else {
-		if err = a.updateWethBalanceByDeposit(*event); nil != err {
-			log.Error(err.Error())
-		}
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
+		log.Info("received wrong status event, drop it")
+		return nil
+	}
+	if err = a.updateWethBalanceByDeposit(*event); nil != err {
+		log.Error(err.Error())
 	}
 	return
 }
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethWithdrawalEvent)
-	if event.BlockNumber.Cmp(a.newestBlockNumber.BigInt()) < 0 {
-		log.Info("the eth network may be forked. flush all cache")
-		a.c.Flush()
-		a.newestBlockNumber = *types.NewBigPtr(big.NewInt(-1))
-	} else {
-		if err = a.updateWethBalanceByWithdrawal(*event); nil != err {
-			log.Error(err.Error())
-		}
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
+		log.Info("received wrong status event, drop it")
+		return nil
+	}
+	if err = a.updateWethBalanceByWithdrawal(*event); nil != err {
+		log.Error(err.Error())
 	}
 	return
 }
@@ -364,4 +351,10 @@ func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 		return false, errors.New("owner can't be null string")
 	}
 	return rcache.Exists(UnlockCachePreKey + strings.ToLower(owner))
+}
+
+func (a *AccountManager) BlockForkHandler(event eventemitter.EventData) (err error) {
+	log.Info("the eth network may be forked. flush all cache")
+	a.c.Flush()
+	return nil
 }
