@@ -131,6 +131,10 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	case types.TX_TYPE_CUTOFF_PAIR:
 		query = "tx_hash=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.Type)
+
+	case types.TX_TYPE_UNSUPPORTED_CONTRACT:
+		query = "tx_hash=? and tx_type=?"
+		args = append(args, latest.TxHash, latest.Type)
 	}
 
 	if len(query) == 0 || len(args) == 0 {
