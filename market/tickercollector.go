@@ -350,6 +350,7 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 			}
 			ticker.Exchange = "okex"
 			ticker.Amount, _ = strconv.ParseFloat(okexTicker.Vol, 64)
+			ticker.Vol = ticker.Amount * ticker.Last
 			ticker.High, _ = strconv.ParseFloat(okexTicker.High, 64)
 			ticker.Low, _ = strconv.ParseFloat(okexTicker.Low, 64)
 			return ticker, nil
