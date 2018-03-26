@@ -89,10 +89,10 @@ func NewAccountManager() AccountManager {
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleApprove}
 	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
 	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
-	eventemitter.On(eventemitter.AccountTransfer, transferWatcher)
-	eventemitter.On(eventemitter.AccountApproval, approveWatcher)
-	eventemitter.On(eventemitter.WethDepositMethod, wethDepositWatcher)
-	eventemitter.On(eventemitter.WethWithdrawalMethod, wethWithdrawalWatcher)
+	eventemitter.On(eventemitter.TransferEvent, transferWatcher)
+	eventemitter.On(eventemitter.ApprovalEvent, approveWatcher)
+	eventemitter.On(eventemitter.WethDepositEvent, wethDepositWatcher)
+	eventemitter.On(eventemitter.WethWithdrawalEvent, wethWithdrawalWatcher)
 
 	return accountManager
 }

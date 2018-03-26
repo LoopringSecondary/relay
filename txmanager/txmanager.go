@@ -52,51 +52,51 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 // Start start orderbook as a service
 func (tm *TransactionManager) Start() {
 	tm.approveEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveEvent}
-	eventemitter.On(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
+	eventemitter.On(eventemitter.ApprovalEvent, tm.approveEventWatcher)
 
 	tm.orderCancelledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderCancelledEvent}
-	eventemitter.On(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
+	eventemitter.On(eventemitter.OrderCancelledEvent, tm.orderCancelledEventWatcher)
 
 	tm.cutoffAllEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffAllEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
+	eventemitter.On(eventemitter.CutoffAllEvent, tm.cutoffAllEventWatcher)
 
 	tm.cutoffPairEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffPairEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
+	eventemitter.On(eventemitter.CutoffPairEvent, tm.cutoffPairEventWatcher)
 
 	tm.wethDepositEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethDepositEvent}
-	eventemitter.On(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
+	eventemitter.On(eventemitter.WethDepositEvent, tm.wethDepositEventWatcher)
 
 	tm.wethWithdrawalEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethWithdrawalEvent}
-	eventemitter.On(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
+	eventemitter.On(eventemitter.WethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
 
 	tm.transferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveTransferEvent}
-	eventemitter.On(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
+	eventemitter.On(eventemitter.TransferEvent, tm.transferEventWatcher)
 
 	tm.orderFilledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderFilledEvent}
-	eventemitter.On(eventemitter.TxManagerOrderFilledEvent, tm.orderFilledEventWatcher)
+	eventemitter.On(eventemitter.OrderFilledEvent, tm.orderFilledEventWatcher)
 
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
-	eventemitter.On(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.On(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 }
 
 func (tm *TransactionManager) Stop() {
-	eventemitter.Un(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
+	eventemitter.Un(eventemitter.ApprovalEvent, tm.approveEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
+	eventemitter.Un(eventemitter.OrderCancelledEvent, tm.orderCancelledEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
+	eventemitter.Un(eventemitter.CutoffAllEvent, tm.cutoffAllEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
+	eventemitter.Un(eventemitter.CutoffPairEvent, tm.cutoffPairEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
+	eventemitter.Un(eventemitter.WethDepositEvent, tm.wethDepositEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
+	eventemitter.Un(eventemitter.WethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
+	eventemitter.Un(eventemitter.TransferEvent, tm.transferEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerOrderFilledEvent, tm.orderFilledEventWatcher)
+	eventemitter.Un(eventemitter.OrderFilledEvent, tm.orderFilledEventWatcher)
 
-	eventemitter.Un(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 }
 
 const ETH_SYMBOL = "ETH"

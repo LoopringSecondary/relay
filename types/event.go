@@ -86,11 +86,6 @@ type CutoffPairEvent struct {
 	OrderHashList []common.Hash
 }
 
-type SubmitRingMethodEvent struct {
-	TxInfo
-	Err error
-}
-
 type RingSubmitFailedEvent struct {
 	RingHash common.Hash
 	Err      error

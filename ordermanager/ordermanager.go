@@ -60,7 +60,7 @@ type OrderManagerImpl struct {
 	ringMinedWatcher   *eventemitter.Watcher
 	fillOrderWatcher   *eventemitter.Watcher
 	cancelOrderWatcher *eventemitter.Watcher
-	cutoffOrderWatcher *eventemitter.Watcher
+	cutoffAllWatcher   *eventemitter.Watcher
 	cutoffPairWatcher  *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
 }
@@ -90,25 +90,26 @@ func (om *OrderManagerImpl) Start() {
 	om.ringMinedWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
 	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
-	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoff}
+	om.cutoffAllWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffAll}
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
-	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
+	eventemitter.On(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.On(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.On(eventemitter.OrderFilledEvent, om.fillOrderWatcher)
+	eventemitter.On(eventemitter.OrderCancelledEvent, om.cancelOrderWatcher)
+	eventemitter.On(eventemitter.CutoffAllEvent, om.cutoffAllWatcher)
+	eventemitter.On(eventemitter.CutoffPairEvent, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
-	eventemitter.Un(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.Un(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.Un(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.Un(eventemitter.OrderFilledEvent, om.fillOrderWatcher)
+	eventemitter.Un(eventemitter.OrderCancelledEvent, om.cancelOrderWatcher)
+	eventemitter.Un(eventemitter.CutoffAllEvent, om.cutoffAllWatcher)
+	eventemitter.Un(eventemitter.CutoffPairEvent, om.cutoffPairWatcher)
 	eventemitter.Un(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
@@ -264,7 +265,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 // 所有cutoff event都应该存起来,但不是所有event都会影响订单
-func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
+func (om *OrderManagerImpl) handleCutoffAll(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffEvent)
 
 	// check tx exist
