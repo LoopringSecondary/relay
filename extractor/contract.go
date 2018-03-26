@@ -413,6 +413,55 @@ func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 	}
 }
 
+func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData) error {
+	contractData := input.(MethodData)
+	contractMethod := contractData.Method.(*ethaccessor.ApproveMethod)
+
+	data := hexutil.MustDecode("0x" + contractData.Input[10:])
+	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s approve method unpack error:%s", contractData.TxHash.Hex(), err.Error())
+		return nil
+	}
+
+	approve := contractMethod.ConvertDown()
+	approve.Owner = contractData.From
+	approve.TxInfo = contractData.TxInfo
+
+	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+
+	if processor.HasSpender(approve.Spender) {
+		eventemitter.Emit(eventemitter.ApproveMethod, approve)
+	}
+
+	eventemitter.Emit(eventemitter.TxManagerApproveMethod, approve)
+	return nil
+}
+
+func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData) error {
+	contractData := input.(EventData)
+	if len(contractData.Topics) < 3 {
+		log.Errorf("extractor,tx:%s approval event indexed fields number error", contractData.TxHash.Hex())
+		return nil
+	}
+
+	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
+	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
+	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
+
+	approve := contractEvent.ConvertDown()
+	approve.TxInfo = contractData.TxInfo
+
+	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+
+	if processor.HasSpender(approve.Spender) {
+		eventemitter.Emit(eventemitter.AccountApproval, approve)
+	}
+
+	eventemitter.Emit(eventemitter.TxManagerApproveEvent, approve)
+
+	return nil
+}
+
 // 只需要解析submitRing,cancel，cutoff这些方法在event里，如果方法不成功也不用执行后续逻辑
 func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
@@ -443,15 +492,13 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 		return nil
 	}
 
-	order, cancelAmount, _ := contractEvent.ConvertDown()
+	order, cancel, _ := contractEvent.ConvertDown()
+	cancel.TxInfo = contract.TxInfo
+
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
 	// 发送到txmanager
-	tmCancelEvent := &types.OrderCancelledEvent{}
-	tmCancelEvent.TxInfo = contract.TxInfo
-	tmCancelEvent.OrderHash = order.Hash
-	tmCancelEvent.AmountCancelled = cancelAmount
-	eventemitter.Emit(eventemitter.TxManagerCancelOrderMethod, tmCancelEvent)
+	eventemitter.Emit(eventemitter.TxManagerCancelOrderMethod, cancel)
 
 	return nil
 }
@@ -469,7 +516,7 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	cutoff := contractMethod.ConvertDown()
 	cutoff.TxInfo = contract.TxInfo
 	cutoff.Owner = cutoff.From
-	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64(), cutoff.Status)
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.CutoffTime.Int64(), cutoff.Status)
 
 	eventemitter.Emit(eventemitter.TxManagerCutoffAllMethod, cutoff)
 
@@ -490,34 +537,10 @@ func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventDa
 	cutoffpair.TxInfo = contract.TxInfo
 	cutoffpair.Owner = cutoffpair.From
 
-	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Value.Int64())
+	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.CutoffTime.Int64())
 
 	eventemitter.Emit(eventemitter.TxManagerCutoffPairMethod, cutoffpair)
 
-	return nil
-}
-
-func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData) error {
-	contractData := input.(MethodData)
-	contractMethod := contractData.Method.(*ethaccessor.ApproveMethod)
-
-	data := hexutil.MustDecode("0x" + contractData.Input[10:])
-	if err := contractData.CAbi.UnpackMethodInput(contractMethod, contractData.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s approve method unpack error:%s", contractData.TxHash.Hex(), err.Error())
-		return nil
-	}
-
-	approve := contractMethod.ConvertDown()
-	approve.Owner = contractData.From
-	approve.TxInfo = contractData.TxInfo
-
-	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
-
-	if processor.HasSpender(approve.Spender) {
-		eventemitter.Emit(eventemitter.ApproveMethod, approve)
-	}
-
-	eventemitter.Emit(eventemitter.TxManagerApproveMethod, approve)
 	return nil
 }
 
@@ -535,7 +558,7 @@ func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData
 	transfer.Sender = contractData.From
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
+	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.TxManagerTransferMethod, transfer)
 	return nil
@@ -544,12 +567,12 @@ func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData
 func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 
-	var deposit types.WethDepositMethodEvent
+	var deposit types.WethDepositEvent
 	deposit.Dst = contractData.From
-	deposit.Value = contractData.Value
+	deposit.Amount = contractData.Value
 	deposit.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), deposit.From.Hex(), deposit.To.Hex(), deposit.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethDepositMethod, &deposit)
 	eventemitter.Emit(eventemitter.TxManagerWethDepositMethod, &deposit)
@@ -571,7 +594,7 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 	withdrawal.Src = contractData.From
 	withdrawal.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawalMethod, withdrawal)
 	eventemitter.Emit(eventemitter.TxManagerWethWithdrawalMethod, withdrawal)
@@ -701,7 +724,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
+	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.CutoffTime.String(), evt.Status)
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoff, evt)
 	eventemitter.Emit(eventemitter.TxManagerCutoffAllEvent, evt)
@@ -722,7 +745,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.CutoffTime.String())
 
 	eventemitter.Emit(eventemitter.OrderManagerExtractorCutoffPair, evt)
 	eventemitter.Emit(eventemitter.TxManagerCutoffPairEvent, evt)
@@ -745,35 +768,10 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	transfer := contractEvent.ConvertDown()
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
+	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.AccountTransfer, transfer)
 	eventemitter.Emit(eventemitter.TxManagerTransferEvent, transfer)
-
-	return nil
-}
-
-func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData) error {
-	contractData := input.(EventData)
-	if len(contractData.Topics) < 3 {
-		log.Errorf("extractor,tx:%s approval event indexed fields number error", contractData.TxHash.Hex())
-		return nil
-	}
-
-	contractEvent := contractData.Event.(*ethaccessor.ApprovalEvent)
-	contractEvent.Owner = common.HexToAddress(contractData.Topics[1])
-	contractEvent.Spender = common.HexToAddress(contractData.Topics[2])
-
-	approve := contractEvent.ConvertDown()
-	approve.TxInfo = contractData.TxInfo
-
-	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
-
-	if processor.HasSpender(approve.Spender) {
-		eventemitter.Emit(eventemitter.AccountApproval, approve)
-	}
-
-	eventemitter.Emit(eventemitter.TxManagerApproveEvent, approve)
 
 	return nil
 }
@@ -858,7 +856,7 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 	evt.Dst = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Dst.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Dst.Hex(), evt.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethDepositEvent, evt)
 	eventemitter.Emit(eventemitter.TxManagerWethDepositEvent, evt)
@@ -879,7 +877,7 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	evt.Src = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal to:%s, number:%s", contractData.TxHash.Hex(), evt.Src.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal to:%s, number:%s", contractData.TxHash.Hex(), evt.Src.Hex(), evt.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawalEvent, evt)
 	eventemitter.Emit(eventemitter.TxManagerWethWithdrawalEvent, evt)
@@ -893,7 +891,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, ga
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
-	dst.Value = tx.Value.BigInt()
+	dst.Amount = tx.Value.BigInt()
 	dst.LogIndex = 0
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()

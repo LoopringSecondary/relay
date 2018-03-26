@@ -279,11 +279,11 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 	var orderHashList []common.Hash
 
 	// 首次存储到缓存，lastCutoff == currentCutoff
-	if evt.Cutoff.Cmp(lastCutoff) < 0 {
-		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoff.String(), evt.Cutoff.String())
+	if evt.CutoffTime.Cmp(lastCutoff) < 0 {
+		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoff.String(), evt.CutoffTime.String())
 	} else {
-		om.cutoffCache.UpdateCutoff(evt.Protocol, evt.Owner, evt.Cutoff)
-		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.Cutoff); len(orders) > 0 {
+		om.cutoffCache.UpdateCutoff(evt.Protocol, evt.Owner, evt.CutoffTime)
+		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.CutoffTime); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
 				v.ConvertUp(&state)
@@ -291,7 +291,7 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
-		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Cutoff.String())
+		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.CutoffTime.String())
 	}
 
 	// save cutoff event
@@ -317,11 +317,11 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 
 	var orderHashList []common.Hash
 	// 首次存储到缓存，lastCutoffPair == currentCutoffPair
-	if evt.Cutoff.Cmp(lastCutoffPair) < 0 {
-		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoffPair.String(), evt.Cutoff.String())
+	if evt.CutoffTime.Cmp(lastCutoffPair) < 0 {
+		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoffPair.String(), evt.CutoffTime.String())
 	} else {
-		om.cutoffCache.UpdateCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2, evt.Cutoff)
-		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.Cutoff); len(orders) > 0 {
+		om.cutoffCache.UpdateCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2, evt.CutoffTime)
+		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.CutoffTime); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
 				v.ConvertUp(&state)
@@ -329,7 +329,7 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
-		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.CutoffTime.String())
 	}
 
 	// save transaction

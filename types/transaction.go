@@ -148,17 +148,6 @@ func (tx *Transaction) GetFillContent() (common.Hash, error) {
 	}
 }
 
-func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.From
-	tx.From = src.From
-	tx.To = src.To
-	tx.Type = TX_TYPE_CANCEL_ORDER
-	tx.Value = src.AmountCancelled
-
-	return nil
-}
-
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.From
@@ -166,18 +155,9 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Value = src.AmountCancelled
-	tx.Content = []byte(src.OrderHash.Hex())
-
-	return nil
-}
-
-func (tx *Transaction) FromCutoffMethodEvent(src *CutoffMethodEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = src.To
-	tx.Type = TX_TYPE_CUTOFF
-	tx.Value = src.Value
+	if !common.EmptyHash(src.OrderHash) {
+		tx.Content = []byte(src.OrderHash.Hex())
+	}
 
 	return nil
 }
@@ -188,7 +168,7 @@ func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF
-	tx.Value = src.Cutoff
+	tx.Value = src.CutoffTime
 
 	return nil
 }
@@ -198,33 +178,13 @@ type CutoffPairSalt struct {
 	Token2 common.Address `json:"token2"`
 }
 
-func (tx *Transaction) FromCutoffPairMethod(src *CutoffPairMethodEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = src.To
-	tx.Type = TX_TYPE_CUTOFF_PAIR
-	tx.Value = src.Value
-
-	var salt CutoffPairSalt
-	salt.Token1 = src.Token1
-	salt.Token2 = src.Token2
-	if bs, err := json.Marshal(salt); err != nil {
-		return err
-	} else {
-		tx.Content = bs
-	}
-
-	return nil
-}
-
 func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
-	tx.Value = src.Cutoff
+	tx.Value = src.CutoffTime
 
 	var salt CutoffPairSalt
 	salt.Token1 = src.Token1
@@ -256,22 +216,7 @@ func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent, isIncome bool
 	tx.Owner = src.Dst
 	tx.From = src.Dst
 	tx.To = src.Dst
-	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
-
-	return nil
-}
-
-func (tx *Transaction) FromWethDepositMethod(src *WethDepositMethodEvent, isIncome bool) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Dst
-	tx.From = src.From
-	tx.To = src.To
-	tx.Value = src.Value
+	tx.Value = src.Amount
 	if isIncome {
 		tx.Type = TX_TYPE_CONVERT_INCOME
 	} else {
@@ -286,38 +231,12 @@ func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent, isIncom
 	tx.Owner = src.Src
 	tx.From = src.Src
 	tx.To = src.Src
-	tx.Value = src.Value
+	tx.Value = src.Amount
 	if isIncome {
 		tx.Type = TX_TYPE_CONVERT_INCOME
 	} else {
 		tx.Type = TX_TYPE_CONVERT_OUTCOME
 	}
-
-	return nil
-}
-
-func (tx *Transaction) FromWethWithdrawalMethod(src *WethWithdrawalMethodEvent, isIncome bool) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Src
-	tx.From = src.Src
-	tx.To = src.Src
-	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
-
-	return nil
-}
-
-func (tx *Transaction) FromApproveMethod(src *ApproveMethodEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.From = src.Owner
-	tx.To = src.Spender
-	tx.Value = src.Value
-	tx.Type = TX_TYPE_APPROVE
 
 	return nil
 }
@@ -333,21 +252,6 @@ func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromTransferMethodEvent(src *TransferMethodEvent, sendOrReceive uint8) error {
-	tx.fullFilled(src.TxInfo)
-	if sendOrReceive == TX_TYPE_SEND {
-		tx.Owner = src.Sender
-	} else {
-		tx.Owner = src.Receiver
-	}
-	tx.From = src.Sender
-	tx.To = src.Receiver
-	tx.Value = src.Value
-	tx.Type = sendOrReceive
-
-	return nil
-}
-
 func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8) error {
 	tx.fullFilled(src.TxInfo)
 	if sendOrReceive == TX_TYPE_SEND {
@@ -357,7 +261,7 @@ func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8
 	}
 	tx.From = src.Sender
 	tx.To = src.Receiver
-	tx.Value = src.Value
+	tx.Value = src.Amount
 	tx.Type = sendOrReceive
 
 	return nil
