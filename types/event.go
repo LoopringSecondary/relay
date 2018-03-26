@@ -191,4 +191,5 @@ type BlockEvent struct {
 
 type TransactionEvent struct {
 	Tx Transaction
+	test string
 }
