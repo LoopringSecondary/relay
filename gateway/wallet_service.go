@@ -711,7 +711,7 @@ func convertStatus(s string) []types.OrderStatus {
 	case "ORDER_FINISHED":
 		return []types.OrderStatus{types.ORDER_FINISHED}
 	case "ORDER_CANCELLED":
-		return []types.OrderStatus{types.ORDER_CANCEL}
+		return []types.OrderStatus{types.ORDER_CANCEL, types.ORDER_CUTOFF}
 	case "ORDER_CUTOFF":
 		return []types.OrderStatus{types.ORDER_CUTOFF}
 	case "ORDER_EXPIRE":

@@ -1373,9 +1373,9 @@ Get trend info per market.
 ##### Parameters
 
 1. `market` - The market type.
-2. `interval` - The interval like 1hr, 2hr, 4hr, 1d, default is 1hr.
+2. `interval` - The interval like 1Hr, 2Hr, 4Hr, 1Day, 1Week default is 1Hr.
 ```js
-params: {"market" : "LRC-WETH", "interval" : "1hr"}
+params: {"market" : "LRC-WETH", "interval" : "1Hr"}
 
 ```
 

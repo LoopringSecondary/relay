@@ -56,7 +56,7 @@ const (
 	Miner_NewOrderState              = "Miner_NewOrderState"
 	Miner_NewRing                    = "Miner_NewRing"
 	Miner_RingMined                  = "Miner_RingMined"
-	Miner_RingSubmitFailed           = "Miner_RingSubmitFailed"
+	Miner_RingSubmitResult           = "Miner_RingSubmitResult"
 	Miner_SubmitRing_Method          = "Miner_SubmitRing_Method"
 	Miner_SubmitRingHash_Method      = "Miner_SubmitRingHash_Method"
 	Miner_BatchSubmitRingHash_Method = "Miner_BatchSubmitRingHash_Method"

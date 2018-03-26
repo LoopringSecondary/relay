@@ -100,9 +100,11 @@ type RdsService interface {
 	FindWhiteListUserByAddress(address common.Address) (*WhiteList, error)
 
 	//ringSubmitInfo
-	UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error
-	UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error
-	UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
+	//UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error
+	//UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error
+	//UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error
+
+	UpdateRingSubmitInfoResult(submitResult *types.RingSubmitResultEvent) error
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
