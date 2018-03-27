@@ -116,6 +116,15 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 	return &fill, err
 }
 
+func (s *RdsServiceImpl) FindFillsByRingHash(ringHash common.Hash) ([]FillEvent, error) {
+	var (
+		fills []FillEvent
+		err  error
+	)
+	err = s.db.Where("ring_hash = ?", ringHash.Hex()).First(&fills).Error
+	return fills, err
+}
+
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}

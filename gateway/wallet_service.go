@@ -222,6 +222,27 @@ type TokenPrice struct {
 	Price float64 `json:"price"`
 }
 
+type RingMinedDetail struct {
+	RingInfo RingMinedInfo	`json:"ringInfo"`
+	Fills [] dao.FillEvent  `json:"fills"`
+}
+
+type RingMinedInfo struct {
+	ID                 int    `json:"id"`
+	Protocol           string `json:"protocol"`
+	RingIndex          string `json:"ringIndex"`
+	RingHash           string `json:"ringHash"`
+	TxHash             string `json:"txHash"`
+	Miner              string `json:"miner"`
+	FeeRecipient       string `json:"feeRecipient"`
+	IsRinghashReserved bool   `json:"isRinghashReserved"`
+	BlockNumber        int64  `json:"blockNumber"`
+	TotalLrcFee        string `json:"totalLrcFee"`
+	TotalSplitFee      map[string]*big.Int `json:"totalSplitFee"`
+	TradeAmount        int    `json:"tradeAmount"`
+	Time               int64  `json:"timestamp"`
+}
+
 type WalletServiceImpl struct {
 	trendManager    market.TrendManager
 	orderManager    ordermanager.OrderManager
@@ -531,6 +552,30 @@ func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err 
 
 func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResult, err error) {
 	return w.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
+}
+
+func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMinedDetail, err error) {
+	if len(query.RingHash) == 0 {
+		return res, errors.New("ring hash can't be null")
+	}
+
+	rings, err := w.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
+
+	if err != nil || rings.Total > 1 {
+		log.Errorf("query ring error, %s, %d", err.Error(), rings.Total)
+		return res, errors.New("query ring error occurs")
+	}
+
+	if rings.Total == 0 {
+		return res, errors.New("no ring found by hash")
+	}
+
+
+	fills, err := w.orderManager.FindFillsByRingHash(common.HexToHash(query.RingHash))
+	if err != nil {
+		return res, err
+	}
+	return fillDetail(rings.Data[0].(dao.RingMinedEvent), fills)
 }
 
 func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
@@ -1020,4 +1065,50 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.UpdateTime = tx.UpdateTime
 	dst.Symbol = tx.Symbol
 	return dst
+}
+
+func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDetail, err error) {
+	rst = RingMinedDetail{Fills:fills}
+	ringInfo := RingMinedInfo{}
+	ringInfo.ID = ring.ID
+	ringInfo.RingHash = ring.RingHash
+	ringInfo.BlockNumber = ring.BlockNumber
+	ringInfo.Protocol = ring.Protocol
+	ringInfo.TxHash = ring.TxHash
+	ringInfo.Time = ring.Time
+	ringInfo.RingIndex = ring.RingIndex
+	ringInfo.Miner = ring.Miner
+	ringInfo.FeeRecipient = ring.FeeRecipient
+	ringInfo.IsRinghashReserved = ring.IsRinghashReserved
+	ringInfo.TradeAmount = ring.TradeAmount
+	ringInfo.TotalLrcFee = ring.TotalLrcFee
+	ringInfo.TotalSplitFee = make(map[string]*big.Int)
+
+	for _, f := range fills {
+		if len(f.SplitS) > 0 && f.SplitS != "0" {
+			symbol := util.AddressToAlias(f.TokenS)
+			if len(symbol) > 0 {
+				splitS, _ := new(big.Int).SetString(f.SplitS, 0)
+				totalSplitS, ok := ringInfo.TotalSplitFee[symbol]; if ok {
+					ringInfo.TotalSplitFee[symbol] = totalSplitS.Add(splitS, totalSplitS)
+				} else {
+					ringInfo.TotalSplitFee[symbol] = splitS
+				}
+			}
+		}
+		if len(f.SplitB) > 0 && f.SplitB != "0" {
+			symbol := util.AddressToAlias(f.TokenB)
+			if len(symbol) > 0 {
+				splitB, _ := new(big.Int).SetString(f.SplitB, 0)
+				totalSplitB, ok := ringInfo.TotalSplitFee[symbol]; if ok {
+					ringInfo.TotalSplitFee[symbol] = totalSplitB.Add(splitB, totalSplitB)
+				} else {
+					ringInfo.TotalSplitFee[symbol] = splitB
+				}
+			}
+		}
+	}
+
+	rst.RingInfo = ringInfo
+	return rst, nil
 }
