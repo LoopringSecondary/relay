@@ -302,7 +302,7 @@ func (l *ExtractorServiceImpl) setBlockNumberRange() {
 	var ret types.Block
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
-		log.Errorf("extractor,get latest block number error:%s", err.Error())
+		log.Debugf("extractor,get latest block number error:%s", err.Error())
 		return
 	}
 	latestBlock.ConvertUp(&ret)
