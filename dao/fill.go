@@ -121,7 +121,7 @@ func (s *RdsServiceImpl) FindFillsByRingHash(ringHash common.Hash) ([]FillEvent,
 		fills []FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ?", ringHash.Hex()).First(&fills).Error
+	err = s.db.Where("ring_hash = ?", ringHash.Hex()).Find(&fills).Error
 	return fills, err
 }
 
