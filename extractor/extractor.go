@@ -240,6 +240,12 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 		gasUsed = receipt.GasUsed.BigInt()
 	}
 
+	data := hexutil.MustDecode("0x" + method.Input[10:])
+	if err := method.CAbi.UnpackMethodInput(&method.Method, contract.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash.Hex(), err.Error())
+		return nil
+	}
+
 	method.FullFilled(tx, gasUsed, blockTime, uint8(status))
 	eventemitter.Emit(method.Id, method)
 

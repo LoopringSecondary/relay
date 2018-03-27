@@ -605,12 +605,6 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	contract := input.(MethodData)
 	contractMethod := contract.Method.(*ethaccessor.CutoffMethod)
 
-	data := hexutil.MustDecode("0x" + contract.Input[10:])
-	if err := contract.CAbi.UnpackMethodInput(&contractMethod.Cutoff, contract.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash.Hex(), err.Error())
-		return nil
-	}
-
 	cutoff := contractMethod.ConvertDown()
 	cutoff.TxInfo = contract.TxInfo
 	cutoff.Owner = cutoff.From
