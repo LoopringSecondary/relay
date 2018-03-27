@@ -20,6 +20,7 @@ package timing_matcher
 
 import (
 	"fmt"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/miner"
@@ -55,19 +56,12 @@ func (market *Market) match() {
 	for _, a2BOrder := range market.AtoBOrders {
 		for _, b2AOrder := range market.BtoAOrders {
 			if miner.PriceValid(a2BOrder, b2AOrder) {
-				if ringForSubmit, err := market.generateRingSubmitInfo(a2BOrder, b2AOrder); nil != err {
+				if candidateRing, err := market.GenerateCandidateRing(a2BOrder, b2AOrder); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				} else {
-					log.Debugf("ringForSubmit: %s , Received: %s , protocolGas: %s , protocolGasPrice: %s, LegalCost:%s", ringForSubmit.Ringhash.Hex(), ringForSubmit.Received.String(), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String(), ringForSubmit.LegalCost.String())
-					//todo:for test, release this limit
 					//if ringForSubmit.Received.Sign() > 0 {
-					candidateRing := CandidateRing{cost: ringForSubmit.LegalCost, received: ringForSubmit.Received, filledOrders: make(map[common.Hash]*big.Rat)}
-					for _, filledOrder := range ringForSubmit.RawRing.Orders {
-						log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
-						candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
-					}
-					candidateRingList = append(candidateRingList, candidateRing)
+					candidateRingList = append(candidateRingList, *candidateRing)
 					//} else {
 					//	log.Debugf("timing_matchher, market ringForSubmit received not enough, received:%s, gas:%s, gasPrice:%s ", ringForSubmit.Received.FloatString(0), ringForSubmit.ProtocolGas.String(), ringForSubmit.ProtocolGasPrice.String())
 					//}
@@ -252,34 +246,86 @@ func (market *Market) reduceAmountAfterFilled(filledOrder *types.FilledOrder) *t
 	return orderState
 }
 
-func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*types.RingSubmitInfo, error) {
+func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*CandidateRing, error) {
 	filledOrders := []*types.FilledOrder{}
 	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
 	for _, order := range orders {
-		lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
-		if nil != err {
-			return nil, err
+
+		if filledOrder, err := market.generateFilledOrder(order); nil != err {
+
+		} else {
+			filledOrders = append(filledOrders, filledOrder)
 		}
-		tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
-		if nil != err {
-			return nil, err
-		}
-		if tokenSBalance.Sign() <= 0 {
-			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
-		}
-		//todo:
-		if market.om.IsValueDusted(order.RawOrder.TokenS, tokenSBalance) {
-			return nil, fmt.Errorf("owner:%s token:%s balance or allowance is not enough", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
-		}
-		filledOrders = append(filledOrders, types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance, market.lrcAddress))
 	}
 
 	ringTmp := miner.NewRing(filledOrders)
 	if err := market.matcher.evaluator.ComputeRing(ringTmp); nil != err {
 		return nil, err
 	} else {
-		return market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
+		_, _, costLegal, received := market.matcher.evaluator.EvaluateReceived(ringTmp)
+		candidateRing := &CandidateRing{cost: costLegal, received: received, filledOrders: make(map[common.Hash]*big.Rat)}
+		for _, filledOrder := range ringTmp.Orders {
+			log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
+			candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
+		}
+		return candidateRing, nil
 	}
+}
+
+func (market *Market) generateFilledOrder(order *types.OrderState) (*types.FilledOrder, error) {
+
+	lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
+	if nil != err {
+		return nil, err
+	}
+
+	tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
+	if nil != err {
+		return nil, err
+	}
+	if tokenSBalance.Sign() <= 0 {
+		return nil, fmt.Errorf("owner:%s token:%s balance or allowance is zero", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
+	}
+	//todo:
+	if market.om.IsValueDusted(order.RawOrder.TokenS, tokenSBalance) {
+		return nil, fmt.Errorf("owner:%s token:%s balance or allowance is not enough", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
+	}
+	return types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance, market.lrcAddress), nil
+}
+
+func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*types.RingSubmitInfo, error) {
+	filledOrders := []*types.FilledOrder{}
+	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
+	for _, order := range orders {
+		if filledOrder, err := market.generateFilledOrder(order); nil != err {
+
+		} else {
+			filledOrders = append(filledOrders, filledOrder)
+		}
+	}
+
+	ringTmp := miner.NewRing(filledOrders)
+	if err := market.matcher.evaluator.ComputeRing(ringTmp); nil != err {
+		return nil, err
+	} else {
+		gas, gasPrice, _, received := market.matcher.evaluator.EvaluateReceived(ringTmp)
+		res, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp, gas, gasPrice, received)
+		return res, err
+	}
+}
+
+func NewMarket(protocolAddress *ethaccessor.ProtocolAddress, tokenS, tokenB common.Address, matcher *TimingMatcher, om ordermanager.OrderManager) *Market {
+
+	m := &Market{}
+	m.om = om
+	m.protocolAddress = protocolAddress.ContractAddress
+	m.lrcAddress = protocolAddress.LrcTokenAddress
+	m.matcher = matcher
+	m.TokenA = tokenS
+	m.TokenB = tokenB
+	m.AtoBOrderHashesExcludeNextRound = []common.Hash{}
+	m.BtoAOrderHashesExcludeNextRound = []common.Hash{}
+	return m
 }
 
 func ratToInt(rat *big.Rat) *big.Int {
