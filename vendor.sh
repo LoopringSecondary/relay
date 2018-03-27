@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 # vendor init
 # rm -rf $GOPATH/src/github.com/Loopring/relay/vendor
