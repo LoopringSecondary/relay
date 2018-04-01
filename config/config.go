@@ -204,6 +204,11 @@ type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee int64
 		MaxPrice  int64
+		MinSplitPercentage float64
+		MaxSplitPercentage float64
+		MinTokeSAmount map[string]string
+		MinTokenSUsdAmount float64
+		MaxValidSinceInterval int64
 	}
 }
 

@@ -58,7 +58,21 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.marketCap = marketCap
 
 	// new base filter
-	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee), MaxPrice: big.NewInt(filterOptions.BaseFilter.MaxPrice)}
+	baseFilter := &BaseFilter{
+		MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee),
+		MaxPrice: big.NewInt(filterOptions.BaseFilter.MaxPrice),
+		MinSplitPercentage : filterOptions.BaseFilter.MinSplitPercentage,
+		MaxSplitPercentage: filterOptions.BaseFilter.MaxSplitPercentage,
+		MinTokeSAmount: make(map[string]*big.Int),
+		MinTokenSUsdAmount: filterOptions.BaseFilter.MinTokenSUsdAmount,
+		MaxValidSinceInterval: filterOptions.BaseFilter.MaxValidSinceInterval,
+	}
+	for k, v := range filterOptions.BaseFilter.MinTokeSAmount {
+		minAmount := big.NewInt(0)
+		amount, succ := minAmount.SetString(v, 10); if succ {
+			baseFilter.MinTokeSAmount[k] = amount
+		}
+	}
 
 	// new token filter
 	tokenFilter := &TokenFilter{}
@@ -69,7 +83,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// new cutoff filter
 	cutoffFilter := &CutoffFilter{om: om}
 
-	gateway.filters = append(gateway.filters, baseFilter)
+	//gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
 	gateway.filters = append(gateway.filters, cutoffFilter)
@@ -166,7 +180,7 @@ type BaseFilter struct {
 	MaxValidSinceInterval int64
 }
 
-func (f *BaseFilter) filter(o *types.Order) (bool, error) {
+func (f *BaseFilter) Filter(o *types.Order) (bool, error) {
 	const (
 		addrLength = 20
 		hashLength = 32
@@ -197,12 +211,12 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	now := time.Now().Unix()
 
 	// validSince check
-	if o.ValidSince.Int64() + f.MaxValidSinceInterval < now {
+	if o.ValidSince.Int64() - f.MaxValidSinceInterval > now {
 		return false, fmt.Errorf("valid since is too small, order must be valid before %d second timestamp", now - f.MaxValidSinceInterval)
 	}
 
 	// validUntil check
-	if o.ValidUntil.Int64() > now {
+	if o.ValidUntil.Int64() < now {
 		return false, fmt.Errorf("order expired, please check validUntil")
 	}
 
@@ -222,7 +236,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	}
 
 	// USD min amount check
-	tokenSPrice, err := gateway.marketCap.GetMarketCap(o.TokenS)
+	tokenSPrice, err := gateway.marketCap.GetMarketCapByCurrency(o.TokenS, "USD")
 	if err != nil || tokenSPrice == nil {
 		return false, fmt.Errorf("get price error. please retry later")
 	}
@@ -231,14 +245,11 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 		return false, fmt.Errorf("get zero token s price. symbol : " + tokenS.Symbol)
 	}
 
-	usdAmount := float64(o.AmountS.Quo(o.AmountS, tokenS.Decimals).Int64()) * tokenSFloatPrice
-
+	amountDivDecimal, _ := big.NewRat(o.AmountS.Int64(), tokenS.Decimals.Int64()).Float64()
+	usdAmount := amountDivDecimal * tokenSFloatPrice
 	if usdAmount < f.MinTokenSUsdAmount {
 		return false, fmt.Errorf("tokenS usd amount is too small")
 	}
-
-
-
 
 	return true, nil
 }
