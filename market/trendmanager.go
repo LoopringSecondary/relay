@@ -96,6 +96,7 @@ type Trend struct {
 type TrendManager struct {
 	c          *cache.Cache
 	cacheReady bool
+	proofReady bool
 	rds        dao.RdsService
 	cron       *cron.Cron
 }
