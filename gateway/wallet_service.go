@@ -180,6 +180,7 @@ type RawOrderJsonResult struct {
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
 	Market                string `json:"market"`
 	Side                  string `json:"side"`
+	CreateTime            int64  `json:"createTime"`
 }
 
 type OrderJsonResult struct {
@@ -980,6 +981,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	}
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
+	rawOrder.CreateTime = src.RawOrder.CreateTime
 	rst.RawOrder = rawOrder
 	return rst
 }

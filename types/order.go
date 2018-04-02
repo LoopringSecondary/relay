@@ -79,6 +79,7 @@ type Order struct {
 	Owner                 common.Address             `json:"owner"`
 	Hash                  common.Hash                `json:"hash"`
 	Market                string                     `json:"market"`
+	CreateTime            int64                      `json:"createTime"`
 }
 
 type orderMarshaling struct {
@@ -112,6 +113,7 @@ type OrderJsonRequest struct {
 	Price                 *big.Rat       `json:"price"`
 	Owner                 common.Address `json:"owner"`
 	Hash                  common.Hash    `json:"hash"`
+	CreateTime            int64                      `json:"createTime"`
 }
 
 type orderJsonRequestMarshaling struct {

@@ -156,6 +156,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
 	state.RawOrder.Market = o.Market
+	state.RawOrder.CreateTime = o.CreateTime
 
 	return nil
 }
