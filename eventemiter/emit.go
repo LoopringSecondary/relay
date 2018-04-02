@@ -38,6 +38,9 @@ const (
 	NewBlock = "NewBlock"
 
 	// gateway
+	GateWay = "GateWay"
+
+	// order manager
 	NewOrder = "NewOrder"
 
 	// loopring
@@ -65,7 +68,8 @@ const (
 	EthTransferEvent        = "EthTransferEvent"
 
 	// miner
-	Miner_NewRing = "Miner_NewRing"
+	Miner_NewRing          = "Miner_NewRing"
+	Miner_RingSubmitResult = "Miner_RingSubmitResult"
 )
 
 var watchers map[string][]*Watcher

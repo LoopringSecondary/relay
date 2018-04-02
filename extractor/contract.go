@@ -19,7 +19,6 @@
 package extractor
 
 import (
-	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -475,12 +474,6 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 		log.Errorf("extractor,tx:%s ringMined event indexed fields number error", contractData.TxHash.Hex())
 		return nil
 	}
-
-	// emit to miner
-	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = contractData.TxInfo
-	evt.Err = nil
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	// process ringmined to fills
 	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)

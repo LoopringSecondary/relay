@@ -41,7 +41,7 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 	if err := ethaccessor.GetTransactionByHash(&tx, "0x23fb21eba23c93b151e72d10d49876250c5ff80ea2967c0375621c1375c31154", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
-		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
+		eventemitter.Emit(eventemitter.PendingTransactionEvent, &tx)
 	}
 
 	accmanager := test.GenerateAccountManager()

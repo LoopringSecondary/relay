@@ -24,10 +24,12 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
 
 type Gateway struct {
@@ -36,6 +38,7 @@ type Gateway struct {
 	isBroadcast      bool
 	maxBroadcastTime int
 	ipfsPubService   IPFSPubService
+	marketCap        marketcap.MarketCapProvider
 }
 
 var gateway Gateway
@@ -44,16 +47,33 @@ type Filter interface {
 	filter(o *types.Order) (bool, error)
 }
 
-func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager) {
+func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager, marketCap marketcap.MarketCapProvider) {
 	// add gateway watcher
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
-	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
+	eventemitter.On(eventemitter.GateWay, gatewayWatcher)
 
 	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
+	gateway.marketCap = marketCap
+
 	// new base filter
-	baseFilter := &BaseFilter{MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee), MaxPrice: big.NewInt(filterOptions.BaseFilter.MaxPrice)}
+	baseFilter := &BaseFilter{
+		MinLrcFee:             big.NewInt(filterOptions.BaseFilter.MinLrcFee),
+		MaxPrice:              big.NewInt(filterOptions.BaseFilter.MaxPrice),
+		MinSplitPercentage:    filterOptions.BaseFilter.MinSplitPercentage,
+		MaxSplitPercentage:    filterOptions.BaseFilter.MaxSplitPercentage,
+		MinTokeSAmount:        make(map[string]*big.Int),
+		MinTokenSUsdAmount:    filterOptions.BaseFilter.MinTokenSUsdAmount,
+		MaxValidSinceInterval: filterOptions.BaseFilter.MaxValidSinceInterval,
+	}
+	for k, v := range filterOptions.BaseFilter.MinTokeSAmount {
+		minAmount := big.NewInt(0)
+		amount, succ := minAmount.SetString(v, 10)
+		if succ {
+			baseFilter.MinTokeSAmount[k] = amount
+		}
+	}
 
 	// new token filter
 	tokenFilter := &TokenFilter{}
@@ -64,7 +84,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// new cutoff filter
 	cutoffFilter := &CutoffFilter{om: om}
 
-	gateway.filters = append(gateway.filters, baseFilter)
+	//gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
 	gateway.filters = append(gateway.filters, cutoffFilter)
@@ -97,7 +117,7 @@ func HandleOrder(input eventemitter.EventData) error {
 		state = &types.OrderState{}
 		state.RawOrder = *order
 		broadcastTime = 0
-		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
+		eventemitter.Emit(eventemitter.NewOrder, state)
 	} else {
 		broadcastTime = state.BroadcastTime
 		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
@@ -152,11 +172,16 @@ func generatePrice(order *types.Order) error {
 }
 
 type BaseFilter struct {
-	MinLrcFee *big.Int
-	MaxPrice  *big.Int
+	MinLrcFee             *big.Int
+	MinSplitPercentage    float64
+	MaxSplitPercentage    float64
+	MaxPrice              *big.Int
+	MinTokeSAmount        map[string]*big.Int
+	MinTokenSUsdAmount    float64
+	MaxValidSinceInterval int64
 }
 
-func (f *BaseFilter) filter(o *types.Order) (bool, error) {
+func (f *BaseFilter) Filter(o *types.Order) (bool, error) {
 	const (
 		addrLength = 20
 		hashLength = 32
@@ -182,6 +207,49 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	}
 	if o.Price.Cmp(new(big.Rat).SetFrac(f.MaxPrice, big.NewInt(1))) > 0 || o.Price.Cmp(new(big.Rat).SetFrac(big.NewInt(1), f.MaxPrice)) < 0 {
 		return false, fmt.Errorf("dao order convert down,price out of range")
+	}
+
+	now := time.Now().Unix()
+
+	// validSince check
+	if o.ValidSince.Int64()-f.MaxValidSinceInterval > now {
+		return false, fmt.Errorf("valid since is too small, order must be valid before %d second timestamp", now-f.MaxValidSinceInterval)
+	}
+
+	// validUntil check
+	if o.ValidUntil.Int64() < now {
+		return false, fmt.Errorf("order expired, please check validUntil")
+	}
+
+	// MarginSplitPercentage range check
+	if float64(o.MarginSplitPercentage)/100.0 < f.MinSplitPercentage || float64(o.MarginSplitPercentage)/100.0 > f.MaxSplitPercentage {
+		return false, fmt.Errorf("margin split percentage out of range")
+	}
+
+	// tokenS min amount check
+	tokenS, err := util.AddressToToken(o.TokenS)
+	if err != nil {
+		return false, fmt.Errorf("tokenS is not support now")
+	}
+
+	if minAmount, ok := f.MinTokeSAmount[tokenS.Symbol]; ok && o.AmountS.Cmp(minAmount) < 0 {
+		return false, fmt.Errorf("tokenS amount is too small")
+	}
+
+	// USD min amount check
+	tokenSPrice, err := gateway.marketCap.GetMarketCapByCurrency(o.TokenS, "USD")
+	if err != nil || tokenSPrice == nil {
+		return false, fmt.Errorf("get price error. please retry later")
+	}
+	tokenSFloatPrice, _ := tokenSPrice.Float64()
+	if tokenSFloatPrice <= 0 {
+		return false, fmt.Errorf("get zero token s price. symbol : " + tokenS.Symbol)
+	}
+
+	amountDivDecimal, _ := big.NewRat(o.AmountS.Int64(), tokenS.Decimals.Int64()).Float64()
+	usdAmount := amountDivDecimal * tokenSFloatPrice
+	if usdAmount < f.MinTokenSUsdAmount {
+		return false, fmt.Errorf("tokenS usd amount is too small")
 	}
 
 	return true, nil

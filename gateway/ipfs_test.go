@@ -86,56 +86,59 @@ func TestRing(t *testing.T) {
 	c := test.Cfg()
 	entity := test.Entity()
 
+	// get ipfs shell and sub order
+	sh := shell.NewShell(c.Ipfs.Url())
 	lrc := util.SupportTokens[TOKEN_SYMBOL].Protocol
+
 	eth := util.SupportMarkets[WETH].Protocol
 
 	account1 := entity.Accounts[0]
 	account2 := entity.Accounts[1]
 
-	walletId := big.NewInt(1)
 	privkey := entity.PrivateKey
 
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
+	for i := 0; i < 1000; i++ {
+		walletId := big.NewInt(int64(i))
 
-	// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
-	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
-	amountB1, _ := new(big.Int).SetString("30000"+suffix, 0)
-	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)) // 20个lrc
-	order1 := test.CreateOrder(
-		privkey,
-		walletId,
-		eth,
-		lrc,
-		protocol,
-		account1.Address,
-		amountS1,
-		amountB1,
-		lrcFee1,
-	)
-	bs1, _ := order1.MarshalJSON()
+		// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
+		amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
+		amountB1, _ := new(big.Int).SetString("1000"+suffix, 0)
+		lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)) // 20个lrc
+		order1 := test.CreateOrder(
+			privkey,
+			walletId,
+			eth,
+			lrc,
+			protocol,
+			account1.Address,
+			amountS1,
+			amountB1,
+			lrcFee1,
+		)
+		bs1, _ := order1.MarshalJSON()
 
-	// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-	amountS2, _ := new(big.Int).SetString("100000"+suffix, 0)
-	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
-	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5))
-	order2 := test.CreateOrder(
-		privkey,
-		walletId,
-		lrc,
-		eth,
-		protocol,
-		account2.Address,
-		amountS2,
-		amountB2,
-		lrcFee2,
-	)
-	bs2, _ := order2.MarshalJSON()
+		// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
+		amountS2, _ := new(big.Int).SetString("1000"+suffix, 0)
+		amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
+		lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5))
+		order2 := test.CreateOrder(
+			privkey,
+			walletId,
+			lrc,
+			eth,
+			protocol,
+			account2.Address,
+			amountS2,
+			amountB2,
+			lrcFee2,
+		)
+		bs2, _ := order2.MarshalJSON()
 
-	// get ipfs shell and sub order
-	sh := shell.NewShell(c.Ipfs.Url())
-	pubMessage(sh, string(bs1))
-	pubMessage(sh, string(bs2))
+		pubMessage(sh, string(bs1))
+		pubMessage(sh, string(bs2))
+	}
 }
 
 func TestBatchRing(t *testing.T) {

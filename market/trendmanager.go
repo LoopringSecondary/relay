@@ -96,6 +96,7 @@ type Trend struct {
 type TrendManager struct {
 	c          *cache.Cache
 	cacheReady bool
+	proofReady bool
 	rds        dao.RdsService
 	cron       *cron.Cron
 }
@@ -115,7 +116,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager.LoadCache()
 		trendManager.startScheduleUpdate()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
-		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
+		eventemitter.On(eventemitter.OrderFilledEvent, fillOrderWatcher)
 
 	})
 

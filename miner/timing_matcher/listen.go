@@ -66,10 +66,10 @@ func (matcher *TimingMatcher) listenNewBlock() {
 			return nil
 		},
 	}
-	eventemitter.On(eventemitter.Block_New, watcher)
+	eventemitter.On(eventemitter.NewBlock, watcher)
 	matcher.stopFuncs = append(matcher.stopFuncs, func() {
 		close(newBlockChan)
-		eventemitter.Un(eventemitter.Block_New, watcher)
+		eventemitter.Un(eventemitter.NewBlock, watcher)
 	})
 
 }
@@ -80,35 +80,35 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 		for {
 			select {
 			case ringhash := <-submitEventChan:
-				log.Debugf("received mined event, this round will be removed, ringhash:%s", ringhash.Hex())
+				log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s", ringhash.Hex())
 				matcher.rounds.removeMinedRing(ringhash)
 			}
 		}
 	}()
 
-	submitWatcher := &eventemitter.Watcher{
-		Concurrent: false,
-		Handle: func(eventData eventemitter.EventData) error {
-			minedEvent := eventData.(*types.RingMinedEvent)
-			submitEventChan <- minedEvent.Ringhash
-			return nil
-		},
-	}
+	//submitWatcher := &eventemitter.Watcher{
+	//	Concurrent: false,
+	//	Handle: func(eventData eventemitter.EventData) error {
+	//		minedEvent := eventData.(*types.RingMinedEvent)
+	//		submitEventChan <- minedEvent.Ringhash
+	//		return nil
+	//	},
+	//}
 
-	submitFailedWatcher := &eventemitter.Watcher{
+	submitResultWatcher := &eventemitter.Watcher{
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
-			minedEvent := eventData.(*types.RingSubmitFailedEvent)
+			minedEvent := eventData.(*types.RingSubmitResultEvent)
 			submitEventChan <- minedEvent.RingHash
 			return nil
 		},
 	}
 
-	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, submitWatcher)
-	eventemitter.On(eventemitter.Miner_RingSubmitFailed, submitFailedWatcher)
+	//eventemitter.On(eventemitter.OrderManagerExtractorRingMined, submitWatcher)
+	eventemitter.On(eventemitter.Miner_RingSubmitResult, submitResultWatcher)
 	matcher.stopFuncs = append(matcher.stopFuncs, func() {
+		//eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, submitWatcher)
+		eventemitter.Un(eventemitter.Miner_RingSubmitResult, submitResultWatcher)
 		close(submitEventChan)
-		eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, submitWatcher)
-		eventemitter.Un(eventemitter.Miner_RingSubmitFailed, submitWatcher)
 	})
 }

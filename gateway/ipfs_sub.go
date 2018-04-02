@@ -173,7 +173,7 @@ func (p *subProxy) listen() {
 					continue
 				}
 				log.Debugf("ipfs sub,accept data from topic %s and data is %s", p.topic, string(record.Data()))
-				eventemitter.Emit(eventemitter.Gateway, ord)
+				eventemitter.Emit(eventemitter.GateWay, ord)
 			}
 		}
 	}()

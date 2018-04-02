@@ -320,7 +320,7 @@ func (n *Node) registerMiner() {
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager, n.marketCapProvider)
 }
 
 func (n *Node) registerUserManager() {

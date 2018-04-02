@@ -99,7 +99,10 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 }
 
-const ETH_SYMBOL = "ETH"
+const (
+	ETH_SYMBOL = "ETH"
+	NIL_SYMBOL = ""
+)
 
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	evt := input.(*types.ApprovalEvent)
@@ -171,7 +174,7 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 	// save eth
 	tx2.FromWethWithdrawalEvent(evt, true)
 	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
+	tx2.Symbol = ETH_SYMBOL
 	if err := tm.saveTransaction(&tx2); err != nil {
 		return err
 	}
@@ -204,11 +207,11 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 	var tx1, tx2 types.Transaction
 
 	tx1.FromFillEvent(evt, types.TX_TYPE_BUY)
-	tx1.Symbol = ""
+	tx1.Symbol = NIL_SYMBOL
 	tm.saveTransaction(&tx1)
 
 	tx2.FromFillEvent(evt, types.TX_TYPE_SELL)
-	tx1.Symbol = ""
+	tx1.Symbol = NIL_SYMBOL
 	tm.saveTransaction(&tx2)
 
 	return nil

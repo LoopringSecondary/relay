@@ -241,8 +241,8 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 	}
 
 	data := hexutil.MustDecode("0x" + method.Input[10:])
-	if err := method.CAbi.UnpackMethodInput(&method.Method, contract.Name, data); err != nil {
-		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", contract.TxHash.Hex(), err.Error())
+	if err := method.CAbi.UnpackMethodInput(&method.Method, method.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", method.TxHash.Hex(), err.Error())
 		return nil
 	}
 
@@ -308,7 +308,7 @@ func (l *ExtractorServiceImpl) setBlockNumberRange() {
 	var ret types.Block
 	latestBlock, err := l.dao.FindLatestBlock()
 	if err != nil {
-		log.Errorf("extractor,get latest block number error:%s", err.Error())
+		log.Debugf("extractor,get latest block number error:%s", err.Error())
 		return
 	}
 	latestBlock.ConvertUp(&ret)

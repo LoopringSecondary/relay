@@ -138,6 +138,16 @@ type TransactionEvent struct {
 	Tx Transaction
 }
 
+type RingSubmitResultEvent struct {
+	RingHash    common.Hash
+	TxHash      common.Hash
+	Status      uint8
+	RingIndex   *big.Int
+	BlockNumber *big.Int
+	UsedGas     *big.Int
+	Err         error
+}
+
 type ForkedEvent struct {
 	DetectedBlock *big.Int
 	DetectedHash  common.Hash
