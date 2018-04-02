@@ -61,7 +61,7 @@ type OrderManagerImpl struct {
 	ringMinedWatcher   *eventemitter.Watcher
 	fillOrderWatcher   *eventemitter.Watcher
 	cancelOrderWatcher *eventemitter.Watcher
-	cutoffOrderWatcher *eventemitter.Watcher
+	cutoffAllWatcher   *eventemitter.Watcher
 	cutoffPairWatcher  *eventemitter.Watcher
 	forkWatcher        *eventemitter.Watcher
 }
@@ -91,25 +91,26 @@ func (om *OrderManagerImpl) Start() {
 	om.ringMinedWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleRingMined}
 	om.fillOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderFilled}
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
-	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoff}
+	om.cutoffAllWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffAll}
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
-	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
+	eventemitter.On(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.On(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.On(eventemitter.OrderFilledEvent, om.fillOrderWatcher)
+	eventemitter.On(eventemitter.OrderCancelledEvent, om.cancelOrderWatcher)
+	eventemitter.On(eventemitter.CutoffAllEvent, om.cutoffAllWatcher)
+	eventemitter.On(eventemitter.CutoffPairEvent, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
-	eventemitter.Un(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.Un(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.Un(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.Un(eventemitter.OrderFilledEvent, om.fillOrderWatcher)
+	eventemitter.Un(eventemitter.OrderCancelledEvent, om.cancelOrderWatcher)
+	eventemitter.Un(eventemitter.CutoffAllEvent, om.cutoffAllWatcher)
+	eventemitter.Un(eventemitter.CutoffPairEvent, om.cutoffPairWatcher)
 	eventemitter.Un(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
@@ -265,7 +266,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 }
 
 // 所有cutoff event都应该存起来,但不是所有event都会影响订单
-func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
+func (om *OrderManagerImpl) handleCutoffAll(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffEvent)
 
 	// check tx exist
@@ -280,11 +281,11 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 	var orderHashList []common.Hash
 
 	// 首次存储到缓存，lastCutoff == currentCutoff
-	if evt.Cutoff.Cmp(lastCutoff) < 0 {
-		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoff.String(), evt.Cutoff.String())
+	if evt.CutoffTime.Cmp(lastCutoff) < 0 {
+		log.Debugf("order manager,handle cutoff event, protocol:%s - owner:%s lastCutofftime:%s > currentCutoffTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoff.String(), evt.CutoffTime.String())
 	} else {
-		om.cutoffCache.UpdateCutoff(evt.Protocol, evt.Owner, evt.Cutoff)
-		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.Cutoff); len(orders) > 0 {
+		om.cutoffCache.UpdateCutoff(evt.Protocol, evt.Owner, evt.CutoffTime)
+		if orders, _ := om.rds.GetCutoffOrders(evt.Owner, evt.CutoffTime); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
 				v.ConvertUp(&state)
@@ -292,7 +293,7 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
-		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Cutoff.String())
+		log.Debugf("order manager,handle cutoff event, owner:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.CutoffTime.String())
 	}
 
 	// save cutoff event
@@ -318,11 +319,11 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 
 	var orderHashList []common.Hash
 	// 首次存储到缓存，lastCutoffPair == currentCutoffPair
-	if evt.Cutoff.Cmp(lastCutoffPair) < 0 {
-		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoffPair.String(), evt.Cutoff.String())
+	if evt.CutoffTime.Cmp(lastCutoffPair) < 0 {
+		log.Debugf("order manager,handle cutoffPair event, protocol:%s - owner:%s lastCutoffPairtime:%s > currentCutoffPairTime:%s", evt.Protocol.Hex(), evt.Owner.Hex(), lastCutoffPair.String(), evt.CutoffTime.String())
 	} else {
-		om.cutoffCache.UpdateCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2, evt.Cutoff)
-		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.Cutoff); len(orders) > 0 {
+		om.cutoffCache.UpdateCutoffPair(evt.Protocol, evt.Owner, evt.Token1, evt.Token2, evt.CutoffTime)
+		if orders, _ := om.rds.GetCutoffPairOrders(evt.Owner, evt.Token1, evt.Token2, evt.CutoffTime); len(orders) > 0 {
 			for _, v := range orders {
 				var state types.OrderState
 				v.ConvertUp(&state)
@@ -330,7 +331,7 @@ func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error
 			}
 			om.rds.SetCutOffOrders(orderHashList, evt.BlockNumber)
 		}
-		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+		log.Debugf("order manager,handle cutoffPair event, owner:%s, token1:%s, token2:%s, cutoffTimestamp:%s", evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.CutoffTime.String())
 	}
 
 	// save transaction

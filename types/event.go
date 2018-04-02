@@ -23,42 +23,21 @@ import (
 	"math/big"
 )
 
-type TokenRegisterEvent struct {
-	TxInfo
-	Token  common.Address
-	Symbol string
-}
-
-type TokenUnRegisterEvent struct {
-	TxInfo
-	Token  common.Address
-	Symbol string
-}
-
-type AddressAuthorizedEvent struct {
-	TxInfo
-	Protocol common.Address
-	Number   int
-}
-
-type AddressDeAuthorizedEvent struct {
-	TxInfo
-	Protocol common.Address
-	Number   int
-}
-
-type TransferEvent struct {
-	TxInfo
-	Sender   common.Address
-	Receiver common.Address
-	Value    *big.Int
-}
-
 type ApprovalEvent struct {
 	TxInfo
 	Owner   common.Address
 	Spender common.Address
 	Value   *big.Int
+}
+
+type RingMinedEvent struct {
+	TxInfo
+	RingIndex    *big.Int
+	TotalLrcFee  *big.Int
+	TradeAmount  int
+	Ringhash     common.Hash
+	Miner        common.Address
+	FeeRecipient common.Address
 }
 
 type OrderFilledEvent struct {
@@ -91,85 +70,72 @@ type OrderCancelledEvent struct {
 
 type CutoffEvent struct {
 	TxInfo
-	Owner         common.Address
-	Cutoff        *big.Int
+	Owner      common.Address
+	CutoffTime *big.Int
+	//todo(fuk): delete orderHash list
 	OrderHashList []common.Hash
 }
 
 type CutoffPairEvent struct {
 	TxInfo
-	Owner         common.Address
-	Token1        common.Address
-	Token2        common.Address
-	Cutoff        *big.Int
+	Owner      common.Address
+	Token1     common.Address
+	Token2     common.Address
+	CutoffTime *big.Int
+	//todo(fuk): delete orderHash list
 	OrderHashList []common.Hash
 }
 
-type RingMinedEvent struct {
+type RingSubmitFailedEvent struct {
+	RingHash common.Hash
+	Err      error
+}
+
+type TokenRegisterEvent struct {
 	TxInfo
-	RingIndex    *big.Int
-	TotalLrcFee  *big.Int
-	TradeAmount  int
-	Ringhash     common.Hash
-	Miner        common.Address
-	FeeRecipient common.Address
+	Token  common.Address
+	Symbol string
+}
+
+type TokenUnRegisterEvent struct {
+	TxInfo
+	Token  common.Address
+	Symbol string
+}
+
+type AddressAuthorizedEvent struct {
+	TxInfo
+	Protocol common.Address
+	Number   int
+}
+
+type AddressDeAuthorizedEvent struct {
+	TxInfo
+	Protocol common.Address
+	Number   int
+}
+
+type TransferEvent struct {
+	TxInfo
+	Sender   common.Address
+	Receiver common.Address
+	Amount   *big.Int
 }
 
 type WethDepositEvent struct {
 	TxInfo
-	Dst   common.Address
-	Value *big.Int
+	Dst    common.Address
+	Amount *big.Int
 }
 
 type WethWithdrawalEvent struct {
 	TxInfo
-	Src   common.Address
-	Value *big.Int
+	Src    common.Address
+	Amount *big.Int
 }
 
-type WethDepositMethodEvent struct {
-	TxInfo
-	Dst   common.Address
-	Value *big.Int
-}
-
-type WethWithdrawalMethodEvent struct {
-	TxInfo
-	Src   common.Address
-	Value *big.Int
-}
-
-type ApproveMethodEvent struct {
-	TxInfo
-	Spender common.Address
-	Value   *big.Int
-	Owner   common.Address
-}
-
-type TransferMethodEvent struct {
-	TxInfo
-	Sender   common.Address
-	Receiver common.Address
-	Value    *big.Int
-}
-
-type SubmitRingMethodEvent struct {
-	TxInfo
-	Err error
-}
-
-type CutoffMethodEvent struct {
-	TxInfo
-	Value *big.Int
-	Owner common.Address
-}
-
-type CutoffPairMethodEvent struct {
-	TxInfo
-	Value  *big.Int
-	Token1 common.Address
-	Token2 common.Address
-	Owner  common.Address
+type TransactionEvent struct {
+	Tx Transaction
 }
 
 type RingSubmitResultEvent struct {
@@ -192,8 +158,4 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
-}
-
-type TransactionEvent struct {
-	Tx Transaction
 }

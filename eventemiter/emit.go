@@ -28,75 +28,48 @@ import (
 type Topic string
 
 const (
-	OrderCanceled                   = "OrderCanceled"
-	OrderFilled                     = "OrderFilled"
-	ExtractorFork                   = "ExtractorFork" //chain forked
-	OrderManagerFork                = "OrderManagerFork"
-	RingSubmitFailed                = "RingSubmitFailed" //submit ring failed
-	Transaction                     = "Transaction"
-	Gateway                         = "Gateway"
-	AccountTransfer                 = "AccountTransfer"
-	AccountApproval                 = "AccountApproval"
-	TokenRegistered                 = "TokenRegistered"
-	TokenUnRegistered               = "TokenUnRegistered"
-	RingHashSubmitted               = "RingHashSubmitted"
-	AddressAuthorized               = "AddressAuthorized"
-	AddressDeAuthorized             = "AddressDeAuthorized"
-	OrderManagerGatewayNewOrder     = "OrderManagerGatewayNewOrder"
-	OrderManagerExtractorRingMined  = "OrderManagerRingMined"
-	OrderManagerExtractorFill       = "OrderManagerExtractorFill"
-	OrderManagerExtractorCancel     = "OrderManagerExtractorCancel"
-	OrderManagerExtractorCutoff     = "OrderManagerExtractorCutoff"
-	OrderManagerExtractorCutoffPair = "OrderManagerExtractorCutoffPair"
-	MinedOrderState                 = "MinedOrderState" //orderbook send orderstate to miner
-	WalletTransactionSubmitted      = "WalletTransactionSubmitted"
-
-	//Miner
-	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
-	Miner_NewOrderState              = "Miner_NewOrderState"
-	Miner_NewRing                    = "Miner_NewRing"
-	Miner_RingMined                  = "Miner_RingMined"
-	Miner_RingSubmitResult           = "Miner_RingSubmitResult"
-	Miner_SubmitRing_Method          = "Miner_SubmitRing_Method"
-	Miner_SubmitRingHash_Method      = "Miner_SubmitRingHash_Method"
-	Miner_BatchSubmitRingHash_Method = "Miner_BatchSubmitRingHash_Method"
-
-	// Block
-	Block_New = "Block_New"
-
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
 	ChainForkDetected = "ChainForkDetected"
 	ChainForkProcess  = "ChainForkProcess"
+	ExtractorFork     = "ExtractorFork" //chain forked
 
-	// Methods
-	WethDepositMethod    = "WethDepositMethod"
-	WethWithdrawalMethod = "WethWithdrawalMethod"
-	WethDepositEvent     = "WethDepositEvent"
-	WethWithdrawalEvent  = "WethWithdrawalEvent"
-	ApproveMethod        = "ApproveMethod"
+	// Block
+	NewBlock = "NewBlock"
+
+	// gateway
+	GateWay = "GateWay"
+
+	// order manager
+	NewOrder = "NewOrder"
+
+	// loopring
+	RingMined           = "RingMined"
+	OrderFilledEvent    = "OrderFilledEvent"
+	OrderCancelledEvent = "OrderCancelledEvent"
+	CutoffAllEvent      = "CutoffAllEvent"
+	CutoffPairEvent     = "CutoffPairEvent"
+	TokenRegistered     = "TokenRegistered"
+	TokenUnRegistered   = "TokenUnRegistered"
+	AddressAuthorized   = "AddressAuthorized"
+	AddressDeAuthorized = "AddressDeAuthorized"
+
+	// erc20
+	ApprovalEvent = "ApprovalEvent"
+	TransferEvent = "TransferEvent"
+
+	// weth
+	WethDepositEvent    = "WethDepositEvent"
+	WethWithdrawalEvent = "WethWithdrawalEvent"
 
 	// Transaction
-	TransactionEvent   = "TransactionEvent"
-	PendingTransaction = "PendingTransaction"
+	MinedTransactionEvent   = "MinedTransactionEvent"
+	PendingTransactionEvent = "PendingTransactionEvent"
+	EthTransferEvent        = "EthTransferEvent"
 
-	// transaction manager
-	TxManagerCancelOrderMethod    = "TxManagerCancelOrderMethod"
-	TxManagerCutoffAllMethod      = "TxManagerCutoffAllMethod"
-	TxManagerCutoffPairMethod     = "TxManagerCutoffPairMethod"
-	TxManagerApproveMethod        = "TxManagerApproveMethod"
-	TxManagerTransferMethod       = "TxManagerTransferMethod"
-	TxManagerWethDepositMethod    = "TxManagerWethDepositMethod"
-	TxManagerWethWithdrawalMethod = "TxManagerWethWithdrawalMethod"
-	TxManagerApproveEvent         = "TxManagerApproveEvent"
-	TxManagerOrderFilledEvent     = "TxManagerOrderFilledEvent"
-	TxManagerOrderCancelledEvent  = "TxManagerOrderCancelledEvent"
-	TxManagerCutoffAllEvent       = "TxManagerCutoffAllEvent"
-	TxManagerCutoffPairEvent      = "TxManagerCutoffPairEvent"
-	TxManagerTransferEvent        = "TxManagerTransferEvent"
-	TxManagerWethDepositEvent     = "TxManagerWethDepositEvent"
-	TxManagerWethWithdrawalEvent  = "TxManagerWethWithdrawalEvent"
-	TxManagerEthTransferEvent     = "TxManagerEthTransferEvent"
+	// miner
+	Miner_NewRing          = "Miner_NewRing"
+	Miner_RingSubmitResult = "Miner_RingSubmitResult"
 )
 
 var watchers map[string][]*Watcher

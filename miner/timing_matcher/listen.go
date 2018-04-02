@@ -66,10 +66,10 @@ func (matcher *TimingMatcher) listenNewBlock() {
 			return nil
 		},
 	}
-	eventemitter.On(eventemitter.Block_New, watcher)
+	eventemitter.On(eventemitter.NewBlock, watcher)
 	matcher.stopFuncs = append(matcher.stopFuncs, func() {
 		close(newBlockChan)
-		eventemitter.Un(eventemitter.Block_New, watcher)
+		eventemitter.Un(eventemitter.NewBlock, watcher)
 	})
 
 }

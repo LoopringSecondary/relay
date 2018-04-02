@@ -215,21 +215,21 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 }
 
 func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
-	submitRingMethodChan := make(chan *types.SubmitRingMethodEvent)
+	submitRingMethodChan := make(chan *types.RingMinedEvent)
 	go func() {
 		for {
 			select {
 			case event := <-submitRingMethodChan:
 				if nil != event {
-					//if event.Status == types.TX_STATUS_FAILED {
+
 					if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
 						log.Errorf("err:%s", err.Error())
 					} else {
 						var err1 error
-						if nil != event.Err {
-							err1 = errors.New("failed to execute ring:" + event.Err.Error())
-						} else {
+						if event.Status == types.TX_STATUS_FAILED {
 							err1 = errors.New("failed to execute ring")
+						} else {
+							err1 = errors.New("")
 						}
 
 						for _, ringhash := range ringhashes {
@@ -245,15 +245,15 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 	watcher := &eventemitter.Watcher{
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
-			e := eventData.(*types.SubmitRingMethodEvent)
+			e := eventData.(*types.RingMinedEvent)
 			submitRingMethodChan <- e
 			return nil
 		},
 	}
-	eventemitter.On(eventemitter.Miner_SubmitRing_Method, watcher)
+	eventemitter.On(eventemitter.RingMined, watcher)
 	submitter.stopFuncs = append(submitter.stopFuncs, func() {
 		close(submitRingMethodChan)
-		eventemitter.Un(eventemitter.Miner_SubmitRing_Method, watcher)
+		eventemitter.Un(eventemitter.RingMined, watcher)
 	})
 }
 

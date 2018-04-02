@@ -32,12 +32,12 @@ import (
 	"time"
 	//"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/gateway"
-	"github.com/Loopring/relay/ordermanager"
-	"github.com/Loopring/relay/marketcap"
-	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/relay/types"
-	"math/big"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
+	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
+	"math/big"
 )
 
 var (
@@ -56,17 +56,18 @@ func prepare() {
 	orderManager := ordermanager.NewOrderManager(&globalConfig.OrderManager, rdsService, userManager, marketCapProvider)
 	gateway.Initialize(&globalConfig.GatewayFilters, &globalConfig.Gateway, &globalConfig.Ipfs, orderManager, marketCapProvider)
 	baseFilter := &gateway.BaseFilter{
-		MinLrcFee: big.NewInt(globalConfig.GatewayFilters.BaseFilter.MinLrcFee),
-		MaxPrice: big.NewInt(globalConfig.GatewayFilters.BaseFilter.MaxPrice),
-		MinSplitPercentage : globalConfig.GatewayFilters.BaseFilter.MinSplitPercentage,
-		MaxSplitPercentage: globalConfig.GatewayFilters.BaseFilter.MaxSplitPercentage,
-		MinTokeSAmount: make(map[string]*big.Int),
-		MinTokenSUsdAmount: globalConfig.GatewayFilters.BaseFilter.MinTokenSUsdAmount,
+		MinLrcFee:             big.NewInt(globalConfig.GatewayFilters.BaseFilter.MinLrcFee),
+		MaxPrice:              big.NewInt(globalConfig.GatewayFilters.BaseFilter.MaxPrice),
+		MinSplitPercentage:    globalConfig.GatewayFilters.BaseFilter.MinSplitPercentage,
+		MaxSplitPercentage:    globalConfig.GatewayFilters.BaseFilter.MaxSplitPercentage,
+		MinTokeSAmount:        make(map[string]*big.Int),
+		MinTokenSUsdAmount:    globalConfig.GatewayFilters.BaseFilter.MinTokenSUsdAmount,
 		MaxValidSinceInterval: globalConfig.GatewayFilters.BaseFilter.MaxValidSinceInterval,
 	}
 	for k, v := range globalConfig.GatewayFilters.BaseFilter.MinTokeSAmount {
 		minAmount := big.NewInt(0)
-		amount, succ := minAmount.SetString(v, 10); if succ {
+		amount, succ := minAmount.SetString(v, 10)
+		if succ {
 			baseFilter.MinTokeSAmount[k] = amount
 		}
 	}
@@ -134,7 +135,6 @@ func TestTrendManager_GetTicker(t *testing.T) {
 	//tds, _ := tm.GetTrends("LRC-WETH", "2Hr")
 	//fmt.Println(tds)
 	//fmt.Println(tm.GetTicker())
-
 
 	fmt.Println("------------------------------------------> check finished")
 	time.Sleep(60 * 60 * time.Second)

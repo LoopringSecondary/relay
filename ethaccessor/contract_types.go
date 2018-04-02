@@ -33,6 +33,20 @@ func NewAbi(abiStr string) (*abi.ABI, error) {
 	return a, err
 }
 
+// function transfer(address to, uint256 value) public returns (bool);
+type TransferMethod struct {
+	Receiver common.Address `fieldName:"to" fieldId:"0"`
+	Value    *big.Int       `fieldName:"value" fieldId:"1"`
+}
+
+func (e *TransferMethod) ConvertDown() *types.TransferEvent {
+	evt := &types.TransferEvent{}
+	evt.Receiver = e.Receiver
+	evt.Amount = e.Value
+
+	return evt
+}
+
 type TransferEvent struct {
 	Sender   common.Address `fieldName:"from" fieldId:"0"`
 	Receiver common.Address `fieldName:"to" fieldId:"1"`
@@ -43,6 +57,19 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
 	evt.Sender = e.Sender
 	evt.Receiver = e.Receiver
+	evt.Amount = e.Value
+
+	return evt
+}
+
+type ApproveMethod struct {
+	Spender common.Address `fieldName:"spender" fieldId:"0"`
+	Value   *big.Int       `fieldName:"value" fieldId:"1"`
+}
+
+func (e *ApproveMethod) ConvertDown() *types.ApprovalEvent {
+	evt := &types.ApprovalEvent{}
+	evt.Spender = e.Spender
 	evt.Value = e.Value
 
 	return evt
@@ -61,6 +88,64 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	evt.Value = e.Value
 
 	return evt
+}
+
+type SubmitRingMethod struct {
+	AddressList        [][3]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
+	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
+	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
+	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
+	VList              []uint8             `fieldName:"vList" fieldId:"4"`
+	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
+	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
+	MinerId            *big.Int            `fieldName:"minerId" fieldId:"7"`
+	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
+	Protocol           common.Address
+}
+
+// should add protocol, miner, feeRecipient
+func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
+	var list []*types.Order
+	length := len(m.AddressList)
+	vsrLength := 2*length + 1
+
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
+		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
+	}
+
+	for i := 0; i < length; i++ {
+		var order types.Order
+
+		order.Protocol = m.Protocol
+		order.Owner = m.AddressList[i][0]
+		order.TokenS = m.AddressList[i][1]
+		if i == length-1 {
+			order.TokenB = m.AddressList[0][1]
+		} else {
+			order.TokenB = m.AddressList[i+1][1]
+		}
+		order.AuthAddr = m.AddressList[i][2]
+
+		order.AmountS = m.UintArgsList[i][0]
+		order.AmountB = m.UintArgsList[i][1]
+		order.ValidSince = m.UintArgsList[i][2]
+		order.ValidUntil = m.UintArgsList[i][3]
+		order.LrcFee = m.UintArgsList[i][4]
+		// order.rateAmountS
+		order.WalletId = m.UintArgsList[i][6]
+
+		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
+
+		order.BuyNoMoreThanAmountB = m.BuyNoMoreThanBList[i]
+
+		order.V = m.VList[i]
+		order.R = m.RList[i]
+		order.S = m.SList[i]
+
+		list = append(list, &order)
+	}
+
+	return list, nil
 }
 
 type RingMinedEvent struct {
@@ -129,6 +214,42 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	return evt, list, nil
 }
 
+type CancelOrderMethod struct {
+	AddressList    [4]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
+	OrderValues    [7]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, walletId, and cancelAmount
+	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB" fieldId:"2"`
+	MarginSplit    uint8             `fieldName:"marginSplitPercentage" fieldId:"3"`
+	V              uint8             `fieldName:"v" fieldId:"4"`
+	R              [32]byte          `fieldName:"r" fieldId:"5"`
+	S              [32]byte          `fieldName:"s" fieldId:"6"`
+}
+
+// todo(fuk): modify internal cancelOrderMethod and implement related functions
+func (m *CancelOrderMethod) ConvertDown() (order *types.Order, evt *types.OrderCancelledEvent, err error) {
+	order.Owner = m.AddressList[0]
+	order.TokenS = m.AddressList[1]
+	order.TokenB = m.AddressList[2]
+
+	order.AmountS = m.OrderValues[0]
+	order.AmountB = m.OrderValues[1]
+	order.ValidSince = m.OrderValues[2]
+	order.ValidUntil = m.OrderValues[3]
+	order.LrcFee = m.OrderValues[4]
+	order.WalletId = m.OrderValues[5]
+
+	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
+	order.MarginSplitPercentage = m.MarginSplit
+
+	order.V = m.V
+	order.S = m.S
+	order.R = m.R
+
+	evt.AmountCancelled = m.OrderValues[6]
+	evt.OrderHash = order.GenerateHash()
+
+	return
+}
+
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash `fieldName:"_orderHash" fieldId:"0"`
 	AmountCancelled *big.Int    `fieldName:"_amountCancelled" fieldId:"1"` // amountCancelled为多次取消累加总量，根据orderhash以及amountCancelled可以确定其唯一性
@@ -142,6 +263,17 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
+type CutoffMethod struct {
+	Cutoff *big.Int `fieldName:"cutoff" fieldId:"0"`
+}
+
+func (method *CutoffMethod) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	evt.CutoffTime = method.Cutoff
+
+	return evt
+}
+
 type CutoffEvent struct {
 	Owner  common.Address `fieldName:"_address" fieldId:"0"`
 	Cutoff *big.Int       `fieldName:"_cutoff" fieldId:"1"`
@@ -150,7 +282,7 @@ type CutoffEvent struct {
 func (e *CutoffEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
-	evt.Cutoff = e.Cutoff
+	evt.CutoffTime = e.Cutoff
 
 	return evt
 }
@@ -167,7 +299,22 @@ func (e *CutoffPairEvent) ConvertDown() *types.CutoffPairEvent {
 	evt.Owner = e.Owner
 	evt.Token1 = e.Token1
 	evt.Token2 = e.Token2
-	evt.Cutoff = e.Cutoff
+	evt.CutoffTime = e.Cutoff
+
+	return evt
+}
+
+type CutoffPairMethod struct {
+	Token1 common.Address `fieldName:"token1" fieldId:"0"`
+	Token2 common.Address `fieldName:"token2" fieldId:"1"`
+	Cutoff *big.Int       `fieldName:"cutoff" fieldId:"2"`
+}
+
+func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.CutoffTime = method.Cutoff
+	evt.Token1 = method.Token1
+	evt.Token2 = method.Token2
 
 	return evt
 }
@@ -224,6 +371,8 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
+// deposit method used tx.value and msg.sender
+
 // event  Deposit(address indexed dst, uint wad);
 type WethDepositEvent struct {
 	DstAddress common.Address `fieldName:"dst" fieldId:"0"` // 充值到哪个地址
@@ -232,7 +381,18 @@ type WethDepositEvent struct {
 
 func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
 	evt := &types.WethDepositEvent{}
-	evt.Value = e.Value
+	evt.Amount = e.Value
+
+	return evt
+}
+
+type WethWithdrawalMethod struct {
+	Value *big.Int `fieldName:"wad" fieldId:"0"`
+}
+
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalEvent {
+	evt := &types.WethWithdrawalEvent{}
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -245,165 +405,7 @@ type WethWithdrawalEvent struct {
 
 func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
 	evt := &types.WethWithdrawalEvent{}
-	evt.Value = e.Value
-
-	return evt
-}
-
-type SubmitRingMethod struct {
-	AddressList        [][3]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
-	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
-	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
-	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
-	VList              []uint8             `fieldName:"vList" fieldId:"4"`
-	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
-	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
-	MinerId            *big.Int            `fieldName:"minerId" fieldId:"7"`
-	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
-	Protocol           common.Address
-}
-
-// should add protocol, miner, feeRecipient
-func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
-	var list []*types.Order
-	length := len(m.AddressList)
-	vsrLength := 2*length + 1
-
-	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
-		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
-	}
-
-	for i := 0; i < length; i++ {
-		var order types.Order
-
-		order.Protocol = m.Protocol
-		order.Owner = m.AddressList[i][0]
-		order.TokenS = m.AddressList[i][1]
-		if i == length-1 {
-			order.TokenB = m.AddressList[0][1]
-		} else {
-			order.TokenB = m.AddressList[i+1][1]
-		}
-		order.AuthAddr = m.AddressList[i][2]
-
-		order.AmountS = m.UintArgsList[i][0]
-		order.AmountB = m.UintArgsList[i][1]
-		order.ValidSince = m.UintArgsList[i][2]
-		order.ValidUntil = m.UintArgsList[i][3]
-		order.LrcFee = m.UintArgsList[i][4]
-		// order.rateAmountS
-		order.WalletId = m.UintArgsList[i][6]
-
-		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
-
-		order.BuyNoMoreThanAmountB = m.BuyNoMoreThanBList[i]
-
-		order.V = m.VList[i]
-		order.R = m.RList[i]
-		order.S = m.SList[i]
-
-		list = append(list, &order)
-	}
-
-	return list, nil
-}
-
-type CancelOrderMethod struct {
-	AddressList    [4]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
-	OrderValues    [7]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, walletId, and cancelAmount
-	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB" fieldId:"2"`
-	MarginSplit    uint8             `fieldName:"marginSplitPercentage" fieldId:"3"`
-	V              uint8             `fieldName:"v" fieldId:"4"`
-	R              [32]byte          `fieldName:"r" fieldId:"5"`
-	S              [32]byte          `fieldName:"s" fieldId:"6"`
-}
-
-// todo(fuk): modify internal cancelOrderMethod and implement related functions
-func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
-	var order types.Order
-
-	order.Owner = m.AddressList[0]
-	order.TokenS = m.AddressList[1]
-	order.TokenB = m.AddressList[2]
-
-	order.AmountS = m.OrderValues[0]
-	order.AmountB = m.OrderValues[1]
-	order.ValidSince = m.OrderValues[2]
-	order.ValidUntil = m.OrderValues[3]
-	order.LrcFee = m.OrderValues[4]
-	order.WalletId = m.OrderValues[5]
-	cancelAmount := m.OrderValues[6]
-
-	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
-	order.MarginSplitPercentage = m.MarginSplit
-
-	order.V = m.V
-	order.S = m.S
-	order.R = m.R
-
-	return &order, cancelAmount, nil
-}
-
-type CutoffMethod struct {
-	Cutoff *big.Int `fieldName:"cutoff" fieldId:"0"`
-}
-
-func (method *CutoffMethod) ConvertDown() *types.CutoffMethodEvent {
-	evt := &types.CutoffMethodEvent{}
-	evt.Value = method.Cutoff
-
-	return evt
-}
-
-type CutoffPairMethod struct {
-	Token1 common.Address `fieldName:"token1" fieldId:"0"`
-	Token2 common.Address `fieldName:"token2" fieldId:"1"`
-	Cutoff *big.Int       `fieldName:"cutoff" fieldId:"2"`
-}
-
-func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
-	evt := &types.CutoffPairMethodEvent{}
-	evt.Value = method.Cutoff
-	evt.Token1 = method.Token1
-	evt.Token2 = method.Token2
-
-	return evt
-}
-
-type WethWithdrawalMethod struct {
-	Value *big.Int `fieldName:"wad" fieldId:"0"`
-}
-
-func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
-	evt := &types.WethWithdrawalMethodEvent{}
-	evt.Value = e.Value
-
-	return evt
-}
-
-type ApproveMethod struct {
-	Spender common.Address `fieldName:"spender" fieldId:"0"`
-	Value   *big.Int       `fieldName:"value" fieldId:"1"`
-}
-
-func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
-	evt := &types.ApproveMethodEvent{}
-	evt.Spender = e.Spender
-	evt.Value = e.Value
-
-	return evt
-}
-
-// function transfer(address to, uint256 value) public returns (bool);
-type TransferMethod struct {
-	Receiver common.Address `fieldName:"to" fieldId:"0"`
-	Value    *big.Int       `fieldName:"value" fieldId:"1"`
-}
-
-func (e *TransferMethod) ConvertDown() *types.TransferMethodEvent {
-	evt := &types.TransferMethodEvent{}
-	evt.Receiver = e.Receiver
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }

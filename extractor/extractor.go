@@ -83,7 +83,7 @@ func (l *ExtractorServiceImpl) Start() {
 	l.syncComplete = false
 
 	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
-	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
+	eventemitter.On(eventemitter.PendingTransactionEvent, l.pendingTxWatcher)
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
@@ -99,7 +99,7 @@ func (l *ExtractorServiceImpl) Start() {
 }
 
 func (l *ExtractorServiceImpl) Stop() {
-	eventemitter.Un(eventemitter.PendingTransaction, l.pendingTxWatcher)
+	eventemitter.Un(eventemitter.PendingTransactionEvent, l.pendingTxWatcher)
 	l.stop <- true
 }
 
@@ -161,7 +161,7 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	blockEvent := &types.BlockEvent{}
 	blockEvent.BlockNumber = block.Number.BigInt()
 	blockEvent.BlockHash = block.Hash
-	eventemitter.Emit(eventemitter.Block_New, blockEvent)
+	eventemitter.Emit(eventemitter.NewBlock, blockEvent)
 
 	var txcnt types.Big
 	if err := ethaccessor.GetBlockTransactionCountByHash(&txcnt, block.Hash.Hex(), block.Number.BigInt().String()); err != nil {
@@ -238,6 +238,12 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 	} else {
 		status = types.TX_STATUS_SUCCESS
 		gasUsed = receipt.GasUsed.BigInt()
+	}
+
+	data := hexutil.MustDecode("0x" + method.Input[10:])
+	if err := method.CAbi.UnpackMethodInput(&method.Method, method.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s cutoff method unpack error:%s", method.TxHash.Hex(), err.Error())
+		return nil
 	}
 
 	method.FullFilled(tx, gasUsed, blockTime, uint8(status))

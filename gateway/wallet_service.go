@@ -224,24 +224,24 @@ type TokenPrice struct {
 }
 
 type RingMinedDetail struct {
-	RingInfo RingMinedInfo	`json:"ringInfo"`
-	Fills [] dao.FillEvent  `json:"fills"`
+	RingInfo RingMinedInfo   `json:"ringInfo"`
+	Fills    []dao.FillEvent `json:"fills"`
 }
 
 type RingMinedInfo struct {
-	ID                 int    `json:"id"`
-	Protocol           string `json:"protocol"`
-	RingIndex          string `json:"ringIndex"`
-	RingHash           string `json:"ringHash"`
-	TxHash             string `json:"txHash"`
-	Miner              string `json:"miner"`
-	FeeRecipient       string `json:"feeRecipient"`
-	IsRinghashReserved bool   `json:"isRinghashReserved"`
-	BlockNumber        int64  `json:"blockNumber"`
-	TotalLrcFee        string `json:"totalLrcFee"`
+	ID                 int                 `json:"id"`
+	Protocol           string              `json:"protocol"`
+	RingIndex          string              `json:"ringIndex"`
+	RingHash           string              `json:"ringHash"`
+	TxHash             string              `json:"txHash"`
+	Miner              string              `json:"miner"`
+	FeeRecipient       string              `json:"feeRecipient"`
+	IsRinghashReserved bool                `json:"isRinghashReserved"`
+	BlockNumber        int64               `json:"blockNumber"`
+	TotalLrcFee        string              `json:"totalLrcFee"`
 	TotalSplitFee      map[string]*big.Int `json:"totalSplitFee"`
-	TradeAmount        int    `json:"tradeAmount"`
-	Time               int64  `json:"timestamp"`
+	TradeAmount        int                 `json:"tradeAmount"`
+	Time               int64               `json:"timestamp"`
 }
 
 type WalletServiceImpl struct {
@@ -415,7 +415,7 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	tx := &ethaccessor.Transaction{}
 	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
 	if err == nil {
-		eventemitter.Emit(eventemitter.PendingTransaction, tx)
+		eventemitter.Emit(eventemitter.PendingTransactionEvent, tx)
 		log.Info("emit transaction info " + tx.Hash)
 	} else {
 		log.Error(">>>>>>>>getTransaction error : " + err.Error())
@@ -570,7 +570,6 @@ func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMi
 	if rings.Total == 0 {
 		return res, errors.New("no ring found by hash")
 	}
-
 
 	fills, err := w.orderManager.FindFillsByRingHash(common.HexToHash(query.RingHash))
 	if err != nil {
@@ -1070,7 +1069,7 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 }
 
 func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDetail, err error) {
-	rst = RingMinedDetail{Fills:fills}
+	rst = RingMinedDetail{Fills: fills}
 	ringInfo := RingMinedInfo{}
 	ringInfo.ID = ring.ID
 	ringInfo.RingHash = ring.RingHash
@@ -1091,7 +1090,8 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 			symbol := util.AddressToAlias(f.TokenS)
 			if len(symbol) > 0 {
 				splitS, _ := new(big.Int).SetString(f.SplitS, 0)
-				totalSplitS, ok := ringInfo.TotalSplitFee[symbol]; if ok {
+				totalSplitS, ok := ringInfo.TotalSplitFee[symbol]
+				if ok {
 					ringInfo.TotalSplitFee[symbol] = totalSplitS.Add(splitS, totalSplitS)
 				} else {
 					ringInfo.TotalSplitFee[symbol] = splitS
@@ -1102,7 +1102,8 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 			symbol := util.AddressToAlias(f.TokenB)
 			if len(symbol) > 0 {
 				splitB, _ := new(big.Int).SetString(f.SplitB, 0)
-				totalSplitB, ok := ringInfo.TotalSplitFee[symbol]; if ok {
+				totalSplitB, ok := ringInfo.TotalSplitFee[symbol]
+				if ok {
 					ringInfo.TotalSplitFee[symbol] = totalSplitB.Add(splitB, totalSplitB)
 				} else {
 					ringInfo.TotalSplitFee[symbol] = splitB

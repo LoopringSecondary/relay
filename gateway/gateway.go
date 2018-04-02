@@ -24,12 +24,12 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
-	"github.com/Loopring/relay/marketcap"
 )
 
 type Gateway struct {
@@ -50,7 +50,7 @@ type Filter interface {
 func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager, marketCap marketcap.MarketCapProvider) {
 	// add gateway watcher
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
-	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
+	eventemitter.On(eventemitter.GateWay, gatewayWatcher)
 
 	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
@@ -59,17 +59,18 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 
 	// new base filter
 	baseFilter := &BaseFilter{
-		MinLrcFee: big.NewInt(filterOptions.BaseFilter.MinLrcFee),
-		MaxPrice: big.NewInt(filterOptions.BaseFilter.MaxPrice),
-		MinSplitPercentage : filterOptions.BaseFilter.MinSplitPercentage,
-		MaxSplitPercentage: filterOptions.BaseFilter.MaxSplitPercentage,
-		MinTokeSAmount: make(map[string]*big.Int),
-		MinTokenSUsdAmount: filterOptions.BaseFilter.MinTokenSUsdAmount,
+		MinLrcFee:             big.NewInt(filterOptions.BaseFilter.MinLrcFee),
+		MaxPrice:              big.NewInt(filterOptions.BaseFilter.MaxPrice),
+		MinSplitPercentage:    filterOptions.BaseFilter.MinSplitPercentage,
+		MaxSplitPercentage:    filterOptions.BaseFilter.MaxSplitPercentage,
+		MinTokeSAmount:        make(map[string]*big.Int),
+		MinTokenSUsdAmount:    filterOptions.BaseFilter.MinTokenSUsdAmount,
 		MaxValidSinceInterval: filterOptions.BaseFilter.MaxValidSinceInterval,
 	}
 	for k, v := range filterOptions.BaseFilter.MinTokeSAmount {
 		minAmount := big.NewInt(0)
-		amount, succ := minAmount.SetString(v, 10); if succ {
+		amount, succ := minAmount.SetString(v, 10)
+		if succ {
 			baseFilter.MinTokeSAmount[k] = amount
 		}
 	}
@@ -116,7 +117,7 @@ func HandleOrder(input eventemitter.EventData) error {
 		state = &types.OrderState{}
 		state.RawOrder = *order
 		broadcastTime = 0
-		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
+		eventemitter.Emit(eventemitter.NewOrder, state)
 	} else {
 		broadcastTime = state.BroadcastTime
 		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
@@ -171,12 +172,12 @@ func generatePrice(order *types.Order) error {
 }
 
 type BaseFilter struct {
-	MinLrcFee *big.Int
-	MinSplitPercentage float64
-	MaxSplitPercentage float64
-	MaxPrice  *big.Int
-	MinTokeSAmount map[string]*big.Int
-	MinTokenSUsdAmount float64
+	MinLrcFee             *big.Int
+	MinSplitPercentage    float64
+	MaxSplitPercentage    float64
+	MaxPrice              *big.Int
+	MinTokeSAmount        map[string]*big.Int
+	MinTokenSUsdAmount    float64
 	MaxValidSinceInterval int64
 }
 
@@ -211,8 +212,8 @@ func (f *BaseFilter) Filter(o *types.Order) (bool, error) {
 	now := time.Now().Unix()
 
 	// validSince check
-	if o.ValidSince.Int64() - f.MaxValidSinceInterval > now {
-		return false, fmt.Errorf("valid since is too small, order must be valid before %d second timestamp", now - f.MaxValidSinceInterval)
+	if o.ValidSince.Int64()-f.MaxValidSinceInterval > now {
+		return false, fmt.Errorf("valid since is too small, order must be valid before %d second timestamp", now-f.MaxValidSinceInterval)
 	}
 
 	// validUntil check
@@ -221,7 +222,7 @@ func (f *BaseFilter) Filter(o *types.Order) (bool, error) {
 	}
 
 	// MarginSplitPercentage range check
-	if float64(o.MarginSplitPercentage) / 100.0 < f.MinSplitPercentage || float64(o.MarginSplitPercentage) / 100.0 > f.MaxSplitPercentage {
+	if float64(o.MarginSplitPercentage)/100.0 < f.MinSplitPercentage || float64(o.MarginSplitPercentage)/100.0 > f.MaxSplitPercentage {
 		return false, fmt.Errorf("margin split percentage out of range")
 	}
 
