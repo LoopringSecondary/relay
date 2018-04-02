@@ -99,7 +99,7 @@ func (market *Market) match() {
 				orderState := market.reduceAmountAfterFilled(filledOrder)
 				isFullFilled := market.om.IsOrderFullFinished(orderState)
 				matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = isFullFilled
-				market.matcher.rounds.appendFilledOrderToCurrent(filledOrder, ringForSubmit.RawRing.Hash)
+				market.matcher.rounds.AppendFilledOrderToCurrent(filledOrder, ringForSubmit.RawRing.Hash)
 
 				list = market.reduceReceivedOfCandidateRing(list, filledOrder, isFullFilled)
 			}
@@ -218,7 +218,7 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 
-	amountS, amountB := market.matcher.rounds.dealtAmount(orderHash)
+	amountS, amountB := market.matcher.rounds.DealtAmount(orderHash)
 
 	log.Debugf("reduceRemainedAmountBeforeMatch:%s, %s, %s", orderState.RawOrder.Owner.Hex(), amountS.String(), amountB.String())
 	orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(amountB))

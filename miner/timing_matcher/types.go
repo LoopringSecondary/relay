@@ -55,7 +55,10 @@ func NewRoundState(round *big.Int) *RoundState {
 	return rs
 }
 
-func (rs *RoundState) filledAmountS(owner common.Address, token common.Address) (amountS *big.Rat) {
+func (rs *RoundState) FilledAmountS(owner common.Address, token common.Address) (amountS *big.Rat) {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
+
 	amountS = new(big.Rat).SetInt64(int64(0))
 	if orderhashes, exists := rs.matchedBalances[owner]; exists {
 		for _, orderhash := range orderhashes {
@@ -69,7 +72,10 @@ func (rs *RoundState) filledAmountS(owner common.Address, token common.Address) 
 	return amountS
 }
 
-func (rs *RoundState) dealtAmount(orderhash common.Hash) (amountS *big.Rat, amountB *big.Rat) {
+func (rs *RoundState) DealtAmount(orderhash common.Hash) (amountS *big.Rat, amountB *big.Rat) {
+	rs.mtx.RLock()
+	defer rs.mtx.RUnlock()
+
 	amountS = new(big.Rat).SetInt64(int64(0))
 	amountB = new(big.Rat).SetInt64(int64(0))
 
@@ -102,7 +108,7 @@ func (rs *RoundState) removeMinedOrder(orderhash common.Hash) {
 	}
 }
 
-func (rs *RoundState) removeMinedRing(ringhash common.Hash) {
+func (rs *RoundState) RemoveMinedRing(ringhash common.Hash) {
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 
@@ -120,7 +126,7 @@ func (rs *RoundState) removeMinedRing(ringhash common.Hash) {
 	}
 }
 
-func (rs *RoundState) addMatchedOrders(filledOrder *types.FilledOrder, ringHash common.Hash) {
+func (rs *RoundState) AddMatchedOrders(filledOrder *types.FilledOrder, ringHash common.Hash) {
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 
@@ -145,6 +151,7 @@ func (rs *RoundState) addMatchedOrders(filledOrder *types.FilledOrder, ringHash 
 	if _, exists := rs.matchedBalances[owner]; !exists {
 		rs.matchedBalances[owner] = []common.Hash{}
 	}
+
 	rs.matchedBalances[owner] = append(rs.matchedBalances[owner], orderhash)
 }
 
@@ -176,8 +183,11 @@ func (r *RoundStates) appendNewRoundState(round *big.Int) {
 	r.states = append(r.states, state)
 }
 
-func (r *RoundStates) appendFilledOrderToCurrent(filledOrder *types.FilledOrder, ringHash common.Hash) {
-	r.states[len(r.states)-1].addMatchedOrders(filledOrder, ringHash)
+func (r *RoundStates) AppendFilledOrderToCurrent(filledOrder *types.FilledOrder, ringHash common.Hash) {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.states[len(r.states)-1].AddMatchedOrders(filledOrder, ringHash)
 }
 
 func (r *RoundStates) maxCacheRounds() []*RoundState {
@@ -188,11 +198,14 @@ func (r *RoundStates) maxCacheRounds() []*RoundState {
 	return r.states[startIdx:]
 }
 
-func (r *RoundStates) dealtAmount(orderhash common.Hash) (amountS *big.Rat, amountB *big.Rat) {
+func (r *RoundStates) DealtAmount(orderhash common.Hash) (amountS *big.Rat, amountB *big.Rat) {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+
 	amountS = new(big.Rat).SetInt64(int64(0))
 	amountB = new(big.Rat).SetInt64(int64(0))
 	for _, state := range r.maxCacheRounds() {
-		amountS1, amountB1 := state.dealtAmount(orderhash)
+		amountS1, amountB1 := state.DealtAmount(orderhash)
 		amountS.Add(amountS, amountS1)
 		amountB.Add(amountB, amountB1)
 	}
@@ -200,20 +213,23 @@ func (r *RoundStates) dealtAmount(orderhash common.Hash) (amountS *big.Rat, amou
 	return amountS, amountB
 }
 
-func (r *RoundStates) filledAmountS(owner common.Address, token common.Address) (amountS *big.Rat) {
+func (r *RoundStates) FilledAmountS(owner common.Address, token common.Address) (amountS *big.Rat) {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+
 	amountS = new(big.Rat).SetInt64(int64(0))
 	for _, state := range r.maxCacheRounds() {
-		amountS.Add(amountS, state.filledAmountS(owner, token))
+		amountS.Add(amountS, state.FilledAmountS(owner, token))
 	}
 	return amountS
 }
 
-func (r *RoundStates) removeMinedRing(ringhash common.Hash) {
+func (r *RoundStates) RemoveMinedRing(ringhash common.Hash) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
 	for _, state := range r.states {
-		state.removeMinedRing(ringhash)
+		state.RemoveMinedRing(ringhash)
 	}
 }
 
