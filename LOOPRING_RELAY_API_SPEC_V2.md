@@ -5,14 +5,14 @@ Loopring Relays are nodes that act as a bridge between Ethereum nodes and Loopri
 
 Wallets can host their own relay nodes to facility trading using Loopring, but can also take advantage of public relays provided by Loopring foundation or other third-parties. Order-book visulzation services or order browsers can also set up their own relay nodes to dispaly Loopring order-books to their users -- in such a senario, wallet-facing APIs can be disabled so the relay will run in a read-only mode. 
 
-This document describes relay's public APIs V2.0 (JSON_RPC and WebSocket), but doesn't articulate how order-books nor trading history are maintained.
+This document describes relay's public APIs v2.0 (JSON_RPC and SocketIO), but doesn't articulate how order-books nor trading history are maintained.
 
-Against v1.2 supporting array and json request format, v2.0 unifies the request params to only support json format, and add websocket support.
+Against v1.0 supporting array and json request format, v2.0 unifies the request params to only support json format, and add socketIO support.
 
 This document contains the following sections:
 - Endport
 - JSON-RPC Methods
-- Websocket Methods
+- SocketIO Events
 
 
 ## Endport
@@ -20,8 +20,8 @@ This document contains the following sections:
 JSON-RPC : http://{hostname}:{port}/rpc/v2/
 JSON-RPC(mainnet) : https://relay1.loopring.io/rpc/v2/
 Ethereum standard JSON-RPC : https://relay1.loopring.io/eth
-Websocket(local|test) : ws://{hostname}:{port}/ws/(+business_key) (for exapmle, balance query websocket url is ws://127.0.0.0:8087/ws/balance)
-Websocket(mainnet) : wss://relay1.loopring.io/ws/(+business_key)
+SocketIO(local|test) : https://{hostname}:{port}/socket.io/
+SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 ```
 
 ## JSON-RPC Methods 
@@ -44,12 +44,14 @@ Websocket(mainnet) : wss://relay1.loopring.io/ws/(+business_key)
 * [loopring_getPortfolio](#loopring_getportfolio)
 * [loopring_getTransactions](#loopring_gettransactions)
 * [loopring_unlockWallet](#loopring_unlockwallet)
+* [loopring_notifyTransactionSubmitted](#loopring_notifytransactionsubmitted)
 
-## Websocket Methods 
+## SocketIO Events
 
 * [portfolio](#portfolio)
 * [balance](#balance)
 * [tickers](#tickers)
+* [loopringTickers](#loopringtickers)
 * [transactions](#transactions)
 * [marketcap](#marketcap)
 * [depth](#depth)
@@ -67,10 +69,10 @@ Get user's balance and token allowance info.
 - `contractVersion` - The loopring contract version you selected.
 
 ```js
-params: [{
+params: {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "contractVersion" : "v1.2"
-}]
+}
 ```
 
 ##### Returns
@@ -1005,59 +1007,91 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_unlockWallet","params":
   "result": ["unlock_notice_success"]
 }
 ```
+#### loopring_notifyTransactionSubmitted
+
+wallet should notify relay there was a transaction sending to eth network, then relay will get and save the pending transaction immediately.
+
+##### Parameters
+
+- `txHash` - The txHash.
+
+```js
+params: {
+  "txHash" : "0xf462c63f46a4e1dc87a7256d40c5e2ec8262cd006fe98ac0839d1aae61818f84",
+}
+```
+
+##### Returns
+
+`Account` - Account balance info object.
+
+1. no result.if failed, you can see error info in param.
+
+##### Example
+```js
+// Request
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmitted","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": ""
+}
+```
 
 ***
 
 ***
 
-## Websocket API Reference
-
-All the API reference is used after building ws connection with server successfully.
+## SocketIO Methods Reference
 
 #### portfolio
 
-Get user's portfolio info by address.
+Subscribe user's portfolio info by address.
 
-##### URL
-- ws://{hostname}:{port}/ws/portfolio
+##### subscribe events
+- portfolio_req : emit this event to receive push message.
+- portfolio_res : subscribe this event to receive push message.
+- portfolio_end : emit this event to stop receive push message.
 
 ##### Parameters
 
 - `owner` - The owner address.
 
 ```js
-params: {
-  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"
-}
+socketio.emit("portfolio_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"}', function(data) {
+  // your business code
+});
+socketio.on("portfolio_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
 
-`Account` - Portfolio info object.
+`portfolios` - Portfolio info object.
 
 1. `tokens` - All token portfolio info array.
 
 ##### Example
 ```js
 // Request
-send message in websocket channel
 
 '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"}'
 
 // Result
-{
-  "tokens": [
-    {
-      "token": "LRC",
-      "amount": "0x000001234d",
-      "percentage": 2.35
-    },{
-      "token": "WETH",
-      "amount": "0x00000012dae734",
-      "percentage": 80.23
-    }
-  ]
-}
+[
+  {
+    "token": "LRC",
+    "amount": "0x000001234d",
+    "percentage": 2.35
+  },{
+    "token": "WETH",
+    "amount": "0x00000012dae734",
+    "percentage": 80.23
+  }
+]
 ```
 ***
 
@@ -1065,19 +1099,23 @@ send message in websocket channel
 
 Get user's balance and token allowance info.
 
-##### URL
-- ws://{hostname}:{port}/ws/balance
+##### subscribe events
+- balance_req : emit this event to receive push message.
+- balance_res : subscribe this event to receive push message.
+- balance_end : emit this event to stop receive push message.
 
 ##### Parameters
 
-- `owner` - The address, if is null, will query all orders.
+- `owner` - The wallet address
 - `contractVersion` - The loopring contract version you selected.
 
 ```js
-params: {
-  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.2"
-}
+socketio.emit("balance_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",   "contractVersion" : "v1.2"}', function(data) {
+  // your business code
+});
+socketio.on("balance_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
@@ -1090,8 +1128,6 @@ params: {
 ##### Example
 ```js
 // Request
-send message in websocket channel
-
 {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "contractVersion" : "v1.2"
@@ -1116,20 +1152,25 @@ send message in websocket channel
 ```
 ***
 
-#### tickers
+#### loopringTickers
 
 Get 24hr merged tickers info from loopring relay.
 
-##### URL
-- ws://{hostname}:{port}/ws/tickers
+##### subscribe events
+- loopringTickers_req : emit this event to receive push message.
+- loopringTickers_res : subscribe this event to receive push message.
+- loopringTickers_end : emit this event to stop receive push message.
 
 ##### Parameters
 1. `contractVersion` - The loopring protocol version.
 
 ```js
-params: {
-    "contractVersion" : "v1.2"
-}
+socketio.emit("loopringTickers_req", '{"contractVersion" : "v1.2"}', function(data) {
+  // your business code
+});
+socketio.on("loopringTickers_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
@@ -1146,9 +1187,99 @@ params: {
 ##### Example
 ```js
 // Request
-send message in websocket channel
 
 {"contractVersion" : "v1.2"}
+
+// Result
+[
+  {
+    "exchange" : "",
+    "market" : "LRC-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "exchange" : "",
+    "market" : "RDN-WETH",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "market" : "ZRX-WETH",
+    "exchange" : "",
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  },
+  {
+    "exchange" : "",
+    "market" : "AUX-WETH"
+    "high" : 30384.2,
+    "low" : 19283.2,
+    "last" : 28002.2,
+    "vol" : 1038,
+    "amount" : 1003839.32,
+    "buy" : 122321,
+    "sell" : 12388,
+    "change" : "-50.12%"
+  }
+]
+```
+
+#### tickers
+
+Get 24hr merged tickers reference info from other exchange like binance, huobi.
+
+##### subscribe events
+- tickers_req : emit this event to receive push message.
+- tickers_res : subscribe this event to receive push message.
+- tickers_end : emit this event to stop receive push message.
+
+##### Parameters
+1. `market` - The market selected.
+
+```js
+socketio.emit("tickers_req", '{"market" : "LRC-WETH"}', function(data) {
+  // your business code
+});
+socketio.on("tickers_res", function(data) {
+  // your business code
+});
+```
+
+##### Returns
+
+1. `high` - The 24hr highest price.
+2. `low`  - The 24hr lowest price.
+3. `last` - The newest dealt price.
+4. `vol` - The 24hr exchange volume.
+5. `amount` - The 24hr exchange amount.
+5. `buy` - The highest buy price in the depth.
+6. `sell` - The lowest sell price in the depth.
+7. `change` - The 24hr change percent of price.
+
+##### Example
+```js
+// Request
+
+{"market" : "LRC-WETH"}
 
 // Result
 {
@@ -1201,21 +1332,32 @@ send message in websocket channel
 
 ***
 
-#### transactions
+#### transaction
 
-Get user's latest 20 transactions by owner.
+push user's latest 20 transactions by owner.
 
-##### URL
-- ws://{hostname}:{port}/ws/transactions
+##### subscribe events
+- transaction_req : emit this event to receive push message.
+- transaction_res : subscribe this event to receive push message.
+- transaction_end : emit this event to stop receive push message.
 
 ##### Parameters
 
 - `owner` - The owner address.
+- `thxHash` - The transaction hash.
+- `symbol` - The token symbol, like LRC, WETH....
+- `status` - The transaction status enum(pending, success, failed).
+- `txType` - The transaction type(approve, send, receive, convert...).
+- `pageIndex` - The pageIndex.
+- `pageSize`  - The pageSize.
 
 ```js
-params: {
-  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"
-}
+socketio.emit("transaction_req", '{see below}', function(data) {
+  // your business code
+});
+socketio.on("transaction_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
@@ -1230,7 +1372,7 @@ params: {
   - `hash` - The transaction hash.
   - `blockNumber` - The number of the block which contains the transaction.
   - `value` - The amount of transaction involved.
-  - `type` - The transaction type, like wrap/unwrap, transfer/receive.
+  - `type` - The transaction type, like convert, transfer/receive.
   - `status` - The current transaction status.
 2. `pageIndex`
 3. `pageSize`
@@ -1239,9 +1381,15 @@ params: {
 ##### Example
 ```js
 // Request
-send message in websocket channel
-
-{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"}
+params: {
+  "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "thxHash" : "0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
+  "symbol" : "WETH",
+  "status" : "pending",
+  "txType" : "receive",
+  "pageIndex" : 1,
+  "pageSize" : 20
+}
 
 // Result
 [
@@ -1254,7 +1402,7 @@ send message in websocket channel
       "hash":"0xa226639a5852df7a61a19a473a5f6feb98be5247077a7b22b8c868178772d01e",
       "blockNumber":5029675,
       "value":"0x0000000a7640001",
-      "type":"WRAP", // eth -> weth
+      "type":"convert", // eth -> weth
       "status":"PENDING"
   },{}...
 ]
@@ -1267,15 +1415,22 @@ send message in websocket channel
 
 Get the USD/CNY/BTC quoted price of tokens.
 
-##### URL
-- ws://{hostname}:{port}/ws/marketcap
+##### subscribe events
+- marketcap_req : emit this event to receive push message.
+- marketcap_res : subscribe this event to receive push message.
+- marketcap_end : emit this event to stop receive push message.
 
 ##### Parameters
 
 1. `curreny` - The base currency want to query, supported types is `CNY`, `USD`.
 
 ```js
-params: { "currency" : "CNY" }
+socketio.emit("marketcap_req", '{see below}', function(data) {
+  // your business code
+});
+socketio.on("marketcap_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
@@ -1285,8 +1440,6 @@ params: { "currency" : "CNY" }
 ##### Example
 ```js
 // Request
-send message in websocket channel
-
 {"currency" : "CNY"}
 
 // Result
@@ -1310,8 +1463,11 @@ send message in websocket channel
 
 Get depth and accuracy by token pair.
 
-##### URL
-- ws://{hostname}:{port}/ws/depth
+##### subscribe events
+- depth_req : emit this event to receive push message.
+- depth_res : subscribe this event to receive push message.
+- depth_end : emit this event to stop receive push message.
+
 
 ##### Parameters
 
@@ -1321,11 +1477,12 @@ Get depth and accuracy by token pair.
 
 
 ```js
-params: {
-  "market" : "LRC-WETH",
-  "contractVersion": "v1.2",
-  "length" : 10 // defalut is 50
-}
+socketio.emit("depth_req", '{see below}', function(data) {
+  // your business code
+});
+socketio.on("depth_res", function(data) {
+  // your business code
+});
 ```
 
 ##### Returns
@@ -1337,8 +1494,6 @@ params: {
 ##### Example
 ```js
 // Request
-send message in websocket channel
-
 {
   "market" : "LRC-WETH",
   "contractVersion": "v1.2",
@@ -1349,10 +1504,10 @@ send message in websocket channel
 {
     "depth" : {
       "buy" : [
-        ["0x000313", "0x013"], ["0x1", "0x2"], ["0x000123", "0x12"]
+        ["0x000313", "0x2384", "0x013"], ["0x1", "0x2384", "0x2"], ["0x000123", "0x2384", "0x12"]
       ],
       "sell" : [
-        ["0x000313", "0x013"], ["0x1", "0x2"], ["0x000123", "0x12"]
+        ["0x000313", "0x2384", "0x013"], ["0x1", "0x2384", "0x2"], ["0x000123", "0x2384", "0x12"]
       ]
     },
     "market" : "LRC-WETH",
@@ -1367,8 +1522,10 @@ send message in websocket channel
 
 Get trend info per market.
 
-##### URL
-- ws://{hostname}:{port}/ws/trends
+##### subscribe events
+- trends_req : emit this event to receive push message.
+- trends_res : subscribe this event to receive push message.
+- trends_end : emit this event to stop receive push message.
 
 ##### Parameters
 
@@ -1395,8 +1552,6 @@ params: {"market" : "LRC-WETH", "interval" : "1Hr"}
 ##### Example
 ```js
 // Request
-send message in websocket channel
-
 {"market" : "LRC-WETH", "interval" : "4hr"}
 
 
