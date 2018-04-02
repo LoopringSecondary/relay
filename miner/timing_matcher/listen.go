@@ -81,7 +81,7 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 			select {
 			case ringhash := <-submitEventChan:
 				log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s", ringhash.Hex())
-				matcher.rounds.removeMinedRing(ringhash)
+				matcher.rounds.RemoveMinedRing(ringhash)
 			}
 		}
 	}()
