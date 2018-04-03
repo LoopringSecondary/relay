@@ -27,14 +27,14 @@ import (
 )
 
 type OrderMatchedState struct {
-	ringHash      common.Hash
-	filledAmountS *big.Rat
-	filledAmountB *big.Rat
+	ringHash      common.Hash  `json:"ringhash"`
+	filledAmountS *big.Rat	`json:"filled_amount_s"`
+	filledAmountB *big.Rat	`json:"filled_amount_b"`
 }
 
 type OrderRoundState struct {
-	owner  common.Address
-	tokenS common.Address
+	owner  common.Address	`json:"owner"`
+	tokenS common.Address	`json:"token_s"`
 	rings  map[common.Hash]*OrderMatchedState
 }
 
@@ -62,7 +62,7 @@ func (rs *RoundState) FilledAmountS(owner common.Address, token common.Address) 
 	amountS = new(big.Rat).SetInt64(int64(0))
 	if orderhashes, exists := rs.matchedBalances[owner]; exists {
 		for _, orderhash := range orderhashes {
-			if roundState, exists := rs.orderStates[orderhash]; exists {
+			if roundState, exists := rs.orderStates[orderhash]; exists && token == roundState.tokenS {
 				for _, matchedState := range roundState.rings {
 					amountS.Add(amountS, matchedState.filledAmountS)
 				}

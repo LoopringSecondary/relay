@@ -31,9 +31,10 @@ import (
 )
 
 type Evaluator struct {
-	marketCapProvider     marketcap.MarketCapProvider
-	rateRatioCVSThreshold int64
-	gasUsedWithLength     map[int]*big.Int
+	marketCapProvider        marketcap.MarketCapProvider
+	rateRatioCVSThreshold    int64
+	gasUsedWithLength        map[int]*big.Int
+	realCostRate,walletSplit *big.Rat
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -279,16 +280,23 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 			legalFee.Add(legalFee, order.LegalLrcFee)
 		}
 	}
+
+	costLegal.Mul(costLegal, e.realCostRate)
 	received.Sub(legalFee, costLegal)
-	received.Mul(received, big.NewRat(int64(8), int64(10)))
+	received.Mul(received, e.walletSplit)
 	return
 }
 
-func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64) *Evaluator {
+func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64, subsidy, walletSplit float64) *Evaluator {
 	gasUsedMap := make(map[int]*big.Int)
 	gasUsedMap[2] = big.NewInt(400000)
 	//todo:confirm this value
 	gasUsedMap[3] = big.NewInt(400000)
 	gasUsedMap[4] = big.NewInt(400000)
-	return &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, gasUsedWithLength: gasUsedMap}
+	e := &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, gasUsedWithLength: gasUsedMap}
+	e.realCostRate = new(big.Rat)
+	e.realCostRate.SetFloat64(float64(1.0) - subsidy)
+	e.walletSplit = new(big.Rat)
+	e.walletSplit.SetFloat64(walletSplit)
+	return e
 }
