@@ -131,6 +131,7 @@ type ExtractorOptions struct {
 	EndBlockNumber     *big.Int
 	ConfirmBlockNumber uint64
 	Debug              bool
+	Open               bool
 }
 
 type KeyStoreOptions struct {
@@ -202,12 +203,12 @@ type MarketCapOptions struct {
 
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
-		MinLrcFee int64
-		MaxPrice  int64
-		MinSplitPercentage float64
-		MaxSplitPercentage float64
-		MinTokeSAmount map[string]string
-		MinTokenSUsdAmount float64
+		MinLrcFee             int64
+		MaxPrice              int64
+		MinSplitPercentage    float64
+		MaxSplitPercentage    float64
+		MinTokeSAmount        map[string]string
+		MinTokenSUsdAmount    float64
 		MaxValidSinceInterval int64
 	}
 }

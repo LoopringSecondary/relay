@@ -79,6 +79,10 @@ func NewExtractorService(options config.ExtractorOptions,
 }
 
 func (l *ExtractorServiceImpl) Start() {
+	if !l.options.Open {
+		return
+	}
+
 	log.Info("extractor start...")
 	l.syncComplete = false
 
@@ -99,6 +103,10 @@ func (l *ExtractorServiceImpl) Start() {
 }
 
 func (l *ExtractorServiceImpl) Stop() {
+	if !l.options.Open {
+		return
+	}
+
 	eventemitter.Un(eventemitter.PendingTransaction, l.pendingTxWatcher)
 	l.stop <- true
 }
