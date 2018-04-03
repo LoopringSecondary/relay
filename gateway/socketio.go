@@ -213,12 +213,6 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 		if err != nil {
 			log.Println("unmarshal error " + err.Error())
 			errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
-			//if conn != nil && conn.Context() != nil {
-			//	context := conn.Context().(map[string]string)
-			//	delete(context, eventType)
-			//	conn.SetContext(context)
-			//	so.connIdMap[conn.ID()] = conn
-			//}
 			return string(errJson[:])
 
 		}

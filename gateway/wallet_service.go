@@ -207,6 +207,7 @@ type TransactionJsonResult struct {
 	Status      string             `json:"status"`
 	CreateTime  int64              `json:"createTime"`
 	UpdateTime  int64              `json:"updateTime"`
+	Nonce       string             `json:"nonce"`
 }
 
 type TransactionContent struct {
@@ -1094,6 +1095,7 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
 	dst.Symbol = tx.Symbol
+	dst.Nonce = tx.TxInfo.Nonce.String()
 	return dst
 }
 
