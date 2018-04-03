@@ -119,7 +119,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 func (s *RdsServiceImpl) FindFillsByRingHash(ringHash common.Hash) ([]FillEvent, error) {
 	var (
 		fills []FillEvent
-		err  error
+		err   error
 	)
 	err = s.db.Where("ring_hash = ?", ringHash.Hex()).Find(&fills).Error
 	return fills, err

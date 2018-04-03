@@ -58,7 +58,7 @@ type Allowance struct {
 }
 
 type AccountManager struct {
-	c                 *cache.Cache
+	c *cache.Cache
 }
 
 type Token struct {
@@ -159,7 +159,7 @@ func (a *AccountManager) HandleTokenTransfer(input eventemitter.EventData) (err 
 
 	//log.Info("received transfer event...")
 
-	if event == nil || event.Status  != types.TX_STATUS_SUCCESS {
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
 	}
@@ -180,7 +180,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 
 	event := input.(*types.ApprovalEvent)
 	log.Debugf("received approval event, %s, %s", event.Protocol.Hex(), event.Owner.Hex())
-	if event == nil || event.Status  != types.TX_STATUS_SUCCESS {
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
 	}
@@ -192,7 +192,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethDepositMethodEvent)
-	if event == nil || event.Status  != types.TX_STATUS_SUCCESS {
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
 	}
@@ -204,7 +204,7 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
 	event := input.(*types.WethWithdrawalMethodEvent)
-	if event == nil || event.Status  != types.TX_STATUS_SUCCESS {
+	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
 	}
