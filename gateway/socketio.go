@@ -20,6 +20,7 @@ const (
 	EventPostfixRes        = "_res"
 	EventPostfixEnd        = "_end"
 	DefaultCronSpec3Second = "0/3 * * * * *"
+	DefaultCronSpec10Second = "0/10 * * * * *"
 	DefaultCronSpec5Minute = "0 */5 * * * *"
 )
 
@@ -70,7 +71,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}, true, DefaultCronSpec5Minute},
 	"balance":         {"GetBalance", CommonTokenRequest{}, false, DefaultCronSpec3Second},
 	"transaction":     {"GetTransactions", TransactionQuery{}, false, DefaultCronSpec3Second},
-	"trxByHashes":     {"GetTransactionsByHash", TransactionQuery{}, false, DefaultCronSpec3Second},
+	"pendingTx":       {"GetPendingTransactions", SingleOwner{}, false, DefaultCronSpec10Second},
 	"depth":           {"GetDepth", DepthQuery{}, true, DefaultCronSpec3Second},
 }
 

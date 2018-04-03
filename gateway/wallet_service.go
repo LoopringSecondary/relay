@@ -715,6 +715,35 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 	return result, nil
 }
 
+func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []TransactionJsonResult, err error) {
+
+	if len(query.Owner) == 0 {
+		return nil, errors.New("owner can't be null")
+	}
+
+	txQuery := make(map[string]interface{})
+	txQuery["owner"] = query.Owner
+	txQuery["status"] = types.TX_STATUS_PENDING
+
+	rst, err := w.rds.PendingTransactions(txQuery)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result = make([]TransactionJsonResult, 0)
+	for _, r := range rst {
+		tr := types.Transaction{}
+		err = r.ConvertUp(&tr)
+		if err != nil {
+			log.Error("convert error occurs..." + err.Error())
+		}
+		result = append(result, toTxJsonResult(tr))
+	}
+
+	return result, nil
+}
+
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
 
 	query = make(map[string]interface{})

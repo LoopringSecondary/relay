@@ -196,3 +196,9 @@ func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) 
 	err := s.db.Where("tx_hash in (?)", hashes).Find(&trxs).Error
 	return trxs, err
 }
+
+func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Transaction, error) {
+	var txs []Transaction
+	err := s.db.Where(query).Find(&txs).Error
+	return txs, err
+}
