@@ -114,7 +114,7 @@ func (matcher *TimingMatcher) GetAccountAvailableAmount(address common.Address, 
 			availableAmount = allowanceAmount
 		}
 
-		matchedAmountS := matcher.rounds.filledAmountS(address, tokenAddress)
+		matchedAmountS := matcher.rounds.FilledAmountS(address, tokenAddress)
 		availableAmount.Sub(availableAmount, matchedAmountS)
 
 		return availableAmount, nil
