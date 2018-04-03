@@ -157,12 +157,17 @@ func (n *Node) registerMineNode() {
 func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
+	n.marketCapProvider.Start()
 
 	// todo delete after test
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
 	//txManager.Start()
 
 	ethaccessor.IncludeGasPriceEvaluator()
+
+	if n.globalConfig.Mode != MODEL_MINER {
+		n.relayNode.Start()
+	}
 
 	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
 	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
@@ -173,14 +178,8 @@ func (n *Node) Start() {
 
 func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
 	n.ipfsSubService.Start()
-	n.marketCapProvider.Start()
 
-	if n.globalConfig.Mode == MODEL_RELAY {
-		n.relayNode.Start()
-	} else if n.globalConfig.Mode == MODEL_MINER {
-		n.mineNode.Start()
-	} else {
-		n.relayNode.Start()
+	if n.globalConfig.Mode != MODEL_RELAY {
 		n.mineNode.Start()
 	}
 

@@ -99,13 +99,13 @@ func TestRing(t *testing.T) {
 
 	// set order and marshal to json
 	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 1; i++ {
 		walletId := big.NewInt(int64(i))
 
 		// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
 		amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
-		amountB1, _ := new(big.Int).SetString("1000"+suffix, 0)
-		lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10)) // 20个lrc
+		amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
+		lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5)) // 20个lrc
 		order1 := test.CreateOrder(
 			privkey,
 			walletId,
@@ -120,9 +120,9 @@ func TestRing(t *testing.T) {
 		bs1, _ := order1.MarshalJSON()
 
 		// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-		amountS2, _ := new(big.Int).SetString("1000"+suffix, 0)
+		amountS2, _ := new(big.Int).SetString("20"+suffix, 0)
 		amountB2, _ := new(big.Int).SetString("1"+suffix, 0)
-		lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5))
+		lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(3))
 		order2 := test.CreateOrder(
 			privkey,
 			walletId,
