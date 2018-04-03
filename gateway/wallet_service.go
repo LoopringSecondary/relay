@@ -212,6 +212,7 @@ type TransactionJsonResult struct {
 
 type TransactionContent struct {
 	Market string `json:"market"`
+	OrderHash string `json:"orderHash"`
 }
 
 type PriceQuote struct {
@@ -1076,13 +1077,22 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst.From = tx.From
 	dst.To = tx.To
 	dst.TxHash = tx.TxHash
-	ctx, err := tx.GetCutoffPairContent()
-	if err == nil && ctx != nil {
-		mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
-		if err == nil {
-			dst.Content = TransactionContent{Market: mkt}
+
+	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
+		ctx, err := tx.GetCutoffPairContent()
+		if err == nil && ctx != nil {
+			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
+			if err == nil {
+				dst.Content = TransactionContent{Market: mkt}
+			}
+		}
+	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
+		ctx, err := tx.GetCancelOrderHash()
+		if err == nil && ctx != "" {
+			dst.Content = TransactionContent{OrderHash: ctx}
 		}
 	}
+
 	dst.BlockNumber = tx.BlockNumber.Int64()
 	dst.LogIndex = tx.LogIndex
 	if tx.Value == nil {
