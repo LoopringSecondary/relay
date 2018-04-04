@@ -342,8 +342,6 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	order.S = m.S
 	order.R = m.R
 
-	order.Hash = order.GenerateHash()
-
 	return &order, cancelAmount, nil
 }
 
