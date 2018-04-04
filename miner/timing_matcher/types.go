@@ -27,14 +27,14 @@ import (
 )
 
 type OrderMatchedState struct {
-	ringHash      common.Hash  `json:"ringhash"`
-	filledAmountS *big.Rat	`json:"filled_amount_s"`
-	filledAmountB *big.Rat	`json:"filled_amount_b"`
+	ringHash      common.Hash `json:"ringhash"`
+	filledAmountS *big.Rat    `json:"filled_amount_s"`
+	filledAmountB *big.Rat    `json:"filled_amount_b"`
 }
 
 type OrderRoundState struct {
-	owner  common.Address	`json:"owner"`
-	tokenS common.Address	`json:"token_s"`
+	owner  common.Address `json:"owner"`
+	tokenS common.Address `json:"token_s"`
 	rings  map[common.Hash]*OrderMatchedState
 }
 

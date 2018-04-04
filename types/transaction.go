@@ -251,6 +251,13 @@ func (tx *Transaction) GetCutoffPairContent() (*CutoffPairSalt, error) {
 	return &cutoffpair, nil
 }
 
+func (tx *Transaction) GetCancelOrderHash() (string, error) {
+	if tx.Type != TX_TYPE_CANCEL_ORDER {
+		return "", fmt.Errorf("cutoff pair salt,transaction type error:%d", tx.Type)
+	}
+	return string(tx.Content), nil
+}
+
 // 充值和提现from和to都是用户钱包自己的地址，因为合约限制了发送方msg.sender
 func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent, isIncome bool) error {
 	tx.fullFilled(src.TxInfo)
