@@ -211,7 +211,7 @@ type TransactionJsonResult struct {
 }
 
 type TransactionContent struct {
-	Market string `json:"market"`
+	Market    string `json:"market"`
 	OrderHash string `json:"orderHash"`
 }
 

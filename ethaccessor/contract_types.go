@@ -325,6 +325,7 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	order.Owner = m.AddressList[0]
 	order.TokenS = m.AddressList[1]
 	order.TokenB = m.AddressList[2]
+	order.AuthAddr = m.AddressList[3]
 
 	order.AmountS = m.OrderValues[0]
 	order.AmountB = m.OrderValues[1]
@@ -340,6 +341,8 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	order.V = m.V
 	order.S = m.S
 	order.R = m.R
+
+	order.Hash = order.GenerateHash()
 
 	return &order, cancelAmount, nil
 }

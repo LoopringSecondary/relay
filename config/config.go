@@ -182,8 +182,8 @@ type NormalMinerAddress struct {
 type MinerOptions struct {
 	RingMaxLength         int `` //recommended value:4
 	Name                  string
-	Subsidy	float64
-	WalletSplit	float64
+	Subsidy               float64
+	WalletSplit           float64
 	NormalMiners          []NormalMinerAddress  //
 	PercentMiners         []PercentMinerAddress //
 	TimingMatcher         *TimingMatcher

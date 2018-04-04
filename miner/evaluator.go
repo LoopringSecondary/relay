@@ -31,10 +31,10 @@ import (
 )
 
 type Evaluator struct {
-	marketCapProvider        marketcap.MarketCapProvider
-	rateRatioCVSThreshold    int64
-	gasUsedWithLength        map[int]*big.Int
-	realCostRate,walletSplit *big.Rat
+	marketCapProvider         marketcap.MarketCapProvider
+	rateRatioCVSThreshold     int64
+	gasUsedWithLength         map[int]*big.Int
+	realCostRate, walletSplit *big.Rat
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
