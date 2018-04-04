@@ -155,6 +155,7 @@ func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
 	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
 	tx.Value = src.AmountCancelled
+	tx.Content = []byte(src.OrderHash.Hex())
 
 	return nil
 }
