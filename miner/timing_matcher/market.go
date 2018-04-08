@@ -252,7 +252,7 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 	for _, order := range orders {
 
 		if filledOrder, err := market.generateFilledOrder(order); nil != err {
-
+			log.Errorf("err:%s", err.Error())
 		} else {
 			filledOrders = append(filledOrders, filledOrder)
 		}
