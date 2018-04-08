@@ -348,6 +348,34 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_NameRegistry(t *testing.T) {
+	protocol := test.Protocol()
+	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
+	nameRegistryAbi := ethaccessor.NameRegistryAbi()
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
+
+	name := ""
+	if result, err := callMethod(miner.Address, "registerName", gas, gasPrice, nil, name); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("registerName:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
+	protocol := test.Protocol()
+	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
+	nameRegistryAbi := ethaccessor.NameRegistryAbi()
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
+
+	name := ""
+	if result, err := callMethod(miner.Address, "unregisterName", gas, gasPrice, nil, name); err != nil {
+		t.Fatal(err)
+	} else {
+		t.Logf("unregisterName:%s", result)
+	}
+}
+
 func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
 	protocol := test.Protocol()
 	miner := test.Entity().Creator.Address
