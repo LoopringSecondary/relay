@@ -51,19 +51,21 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options            *config.OrderManagerOptions
-	rds                dao.RdsService
-	processor          *ForkProcessor
-	um                 usermanager.UserManager
-	mc                 marketcap.MarketCapProvider
-	cutoffCache        *CutoffCache
-	newOrderWatcher    *eventemitter.Watcher
-	ringMinedWatcher   *eventemitter.Watcher
-	fillOrderWatcher   *eventemitter.Watcher
-	cancelOrderWatcher *eventemitter.Watcher
-	cutoffOrderWatcher *eventemitter.Watcher
-	cutoffPairWatcher  *eventemitter.Watcher
-	forkWatcher        *eventemitter.Watcher
+	options             *config.OrderManagerOptions
+	rds                 dao.RdsService
+	processor           *ForkProcessor
+	um                  usermanager.UserManager
+	mc                  marketcap.MarketCapProvider
+	cutoffCache         *CutoffCache
+	newOrderWatcher     *eventemitter.Watcher
+	ringMinedWatcher    *eventemitter.Watcher
+	fillOrderWatcher    *eventemitter.Watcher
+	cancelOrderWatcher  *eventemitter.Watcher
+	cutoffOrderWatcher  *eventemitter.Watcher
+	cutoffPairWatcher   *eventemitter.Watcher
+	forkWatcher         *eventemitter.Watcher
+	syncWatcher         *eventemitter.Watcher
+	ordersValidForMiner bool
 }
 
 func NewOrderManager(
@@ -79,6 +81,7 @@ func NewOrderManager(
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(options.CutoffCacheCleanTime)
+	om.ordersValidForMiner = false
 
 	dustOrderValue = om.options.DustOrderValue
 
@@ -93,6 +96,7 @@ func (om *OrderManagerImpl) Start() {
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
 	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoff}
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
+	om.syncWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSync}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
 	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
@@ -101,6 +105,7 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
+	eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
 }
 
@@ -110,13 +115,28 @@ func (om *OrderManagerImpl) Stop() {
 	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.Un(eventemitter.ChainForkProcess, om.forkWatcher)
+
+	om.ordersValidForMiner = false
+}
+
+func (om *OrderManagerImpl) handleSync(input eventemitter.EventData) error {
+	blockNumber := input.(types.Big)
+	if blockNumber.BigInt().Cmp(big.NewInt(0)) > 0 {
+		om.ordersValidForMiner = true
+	}
+
+	return nil
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
+	om.Stop()
 	if err := om.processor.Fork(input.(*types.ForkedEvent)); err != nil {
 		log.Fatalf("order manager,handle fork error:%s", err.Error())
 	}
+	om.Start()
+
 	return nil
 }
 
@@ -355,8 +375,14 @@ func (om *OrderManagerImpl) IsValueDusted(tokenAddress common.Address, value *bi
 }
 
 func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
+	var list []*types.OrderState
+
+	// 订单在extractor同步结束后才可以提供给miner进行撮合
+	if !om.ordersValidForMiner {
+		return list
+	}
+
 	var (
-		list         []*types.OrderState
 		modelList    []*dao.Order
 		err          error
 		filterStatus = []types.OrderStatus{types.ORDER_FINISHED, types.ORDER_CUTOFF, types.ORDER_CANCEL}

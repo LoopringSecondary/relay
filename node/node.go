@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/log"
@@ -38,11 +37,9 @@ import (
 	"github.com/Loopring/relay/miner/timing_matcher"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/txmanager"
-	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
-	"math/big"
 )
 
 const (
@@ -168,55 +165,9 @@ func (n *Node) Start() {
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
 	}
-
-	extractorSyncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterExtractorSync}
-	eventemitter.On(eventemitter.SyncChainComplete, extractorSyncWatcher)
-
-	chainForkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: n.startAfterChainFork}
-	eventemitter.On(eventemitter.ChainForkDetected, chainForkWatcher)
-}
-
-func (n *Node) startAfterExtractorSync(input eventemitter.EventData) error {
-	n.ipfsSubService.Start()
-
 	if n.globalConfig.Mode != MODEL_RELAY {
 		n.mineNode.Start()
 	}
-
-	return nil
-}
-
-func (n *Node) startAfterChainFork(input eventemitter.EventData) error {
-	// stop extractor
-	if n.globalConfig.Mode == MODEL_MINER {
-		n.mineNode.Stop()
-	} else if n.globalConfig.Mode == MODEL_RELAY {
-		//n.relayNode.Stop()
-	} else {
-		//n.relayNode.Stop()
-		n.mineNode.Stop()
-	}
-	n.extractorService.Stop()
-
-	// emit fork event,waiting for ordermanager and accountmanager finished procedure of process chain fork
-	forkEvent := input.(*types.ForkedEvent)
-	eventemitter.Emit(eventemitter.ChainForkProcess, forkEvent)
-
-	// reset new block number and start extractor
-	nextBlockNumber := new(big.Int).Add(forkEvent.ForkBlock, big.NewInt(1))
-	n.extractorService.Fork(nextBlockNumber)
-	n.extractorService.Start()
-
-	if n.globalConfig.Mode == MODEL_MINER {
-		n.mineNode.Start()
-	} else if n.globalConfig.Mode == MODEL_RELAY {
-		//n.relayNode.Start()
-	} else {
-		//n.relayNode.Start()
-		n.mineNode.Start()
-	}
-
-	return nil
 }
 
 func (n *Node) Wait() {

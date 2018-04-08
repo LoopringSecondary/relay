@@ -43,7 +43,7 @@ const defaultEndBlockNumber = 1000000000
 type ExtractorService interface {
 	Start()
 	Stop()
-	Fork(start *big.Int)
+	ForkProcess(block *types.Block)
 }
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
@@ -71,7 +71,7 @@ func NewExtractorService(options config.ExtractorOptions,
 	l.options = options
 	l.dao = db
 	l.processor = newAbiProcessor(db, ac)
-	l.detector = newForkDetector(db)
+	l.detector = newForkDetector(db, l.options.StartBlockNumber)
 	l.stop = make(chan bool, 1)
 
 	l.setBlockNumberRange()
@@ -112,8 +112,32 @@ func (l *ExtractorServiceImpl) Stop() {
 }
 
 // 重启(分叉)时先关停subscribeEvents，然后关
-func (l *ExtractorServiceImpl) Fork(start *big.Int) {
-	l.startBlockNumber = start
+func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
+	forkBlock := l.detector.Detect(currentBlock)
+	if forkBlock == nil {
+		return
+	}
+
+	// mark fork block in database
+	model := dao.Block{}
+	model.ConvertDown(forkBlock)
+	if err := l.dao.SetForkBlock(forkBlock.BlockHash); err != nil {
+		log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+	}
+
+	// emit fork event
+	var forkEvent types.ForkedEvent
+	forkEvent.ForkHash = forkBlock.BlockHash
+	forkEvent.ForkBlock = forkBlock.BlockNumber
+	forkEvent.DetectedHash = currentBlock.BlockHash
+	forkEvent.DetectedBlock = currentBlock.BlockNumber
+
+	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
+	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
+
+	l.Stop()
+	l.startBlockNumber = new(big.Int).Add(forkBlock.BlockNumber, big.NewInt(1))
+	l.Start()
 }
 
 func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
@@ -158,12 +182,12 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	}
 
 	// detect chain fork
-	l.detector.Detect(currentBlock)
+	l.ForkProcess(currentBlock)
 
 	// convert block to dao entity
 	var entity dao.Block
 	entity.ConvertDown(currentBlock)
-	l.dao.Add(&entity)
+	l.dao.SaveBlock(&entity)
 
 	// emit new block
 	blockEvent := &types.BlockEvent{}

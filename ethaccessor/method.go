@@ -384,7 +384,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		}
 	}
 
-	block, err := iterator.ethClient.getFullBlock(iterator.currentNumber, iterator.withTxData)
+	block, err := iterator.ethClient.GetFullBlock(iterator.currentNumber, iterator.withTxData)
 	if nil == err {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
 	}
@@ -405,7 +405,7 @@ func (accessor *ethNodeAccessor) getFullBlockFromCacheByHash(hash string) (*Bloc
 	}
 }
 
-func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject bool) (interface{}, error) {
+func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject bool) (interface{}, error) {
 	blockWithTxHash := &BlockWithTxHash{}
 
 	if err := accessor.RetryCall(blockNumber.String(), 2, &blockWithTxHash, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), false); nil != err {
