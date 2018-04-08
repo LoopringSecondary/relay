@@ -46,7 +46,6 @@ name = "Loopring corporation"
     cutoff_cache_expire_time = 864000
     cutoff_cache_clean_time = 0
     dust_order_value = 1
-    mode = 0 # 0: only read, 1: only write, 2: read and write
 
 [ipfs]
     server = "127.0.0.1"
