@@ -67,6 +67,7 @@ type RdsService interface {
 	FindLatestBlock() (*Block, error)
 	FindForkBlock() (*Block, error)
 	SetForkBlock(blockhash common.Hash) error
+	SaveBlock(latest *Block) error
 
 	// fill event table
 	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)

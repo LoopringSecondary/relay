@@ -16,12 +16,12 @@ import (
 type BusinessType int
 
 const (
-	EventPostfixReq        = "_req"
-	EventPostfixRes        = "_res"
-	EventPostfixEnd        = "_end"
-	DefaultCronSpec3Second = "0/3 * * * * *"
+	EventPostfixReq         = "_req"
+	EventPostfixRes         = "_res"
+	EventPostfixEnd         = "_end"
+	DefaultCronSpec3Second  = "0/3 * * * * *"
 	DefaultCronSpec10Second = "0/10 * * * * *"
-	DefaultCronSpec5Minute = "0 */5 * * * *"
+	DefaultCronSpec5Minute  = "0 */5 * * * *"
 )
 
 var EventPostfixs = []string{EventPostfixReq, EventPostfixRes, EventPostfixEnd}

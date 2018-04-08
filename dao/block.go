@@ -93,3 +93,12 @@ func (s *RdsServiceImpl) FindForkBlock() (*Block, error) {
 func (s *RdsServiceImpl) SetForkBlock(blockhash common.Hash) error {
 	return s.db.Model(&Block{}).Where("block_hash", blockhash.String()).Update("fork = ?", true).Error
 }
+
+func (s *RdsServiceImpl) SaveBlock(latest *Block) error {
+	var current Block
+	if err := s.db.Where("block_hash=?", latest.BlockHash).Find(&current).Error; err == nil {
+		return nil
+	}
+
+	return s.db.Create(latest).Error
+}
