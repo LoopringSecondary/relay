@@ -133,9 +133,9 @@ func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
 	forkEvent.DetectedBlock = currentBlock.BlockNumber
 
 	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
-	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
 
 	l.Stop()
+	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
 	l.startBlockNumber = new(big.Int).Add(forkBlock.BlockNumber, big.NewInt(1))
 	l.Start()
 }

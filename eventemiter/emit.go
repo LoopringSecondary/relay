@@ -67,7 +67,6 @@ const (
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
 	ChainForkDetected = "ChainForkDetected"
-	ChainForkProcess  = "ChainForkProcess"
 
 	// Methods
 	WethDepositMethod    = "WethDepositMethod"
