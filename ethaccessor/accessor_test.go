@@ -69,14 +69,14 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := accounts.Account{Address: account1}
-	tokenAddress := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
+	account := account2
+	tokenAddress := lrcTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
 	//amount,_ := big.NewInt(0).SetString("9223372036854775806000000000000000000", 0)
 	spender := delegateAddress
 
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
-	if result, err := callMethod(account.Address, "approve", gas, gasPrice, nil, spender, amount); nil != err {
+	if result, err := callMethod(account, "approve", gas, gasPrice, nil, spender, amount); nil != err {
 		t.Fatalf("call method approve error:%s", err.Error())
 	} else {
 		t.Logf("approve result:%s", result)
@@ -336,7 +336,7 @@ func TestEthNodeAccessor_EthTransfer(t *testing.T) {
 }
 
 func TestEthNodeAccessor_TokenAddress(t *testing.T) {
-	symbol := "WETH"
+	symbol := "LRC"
 	protocol := test.Protocol()
 	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
 	callMethod := ethaccessor.ContractCallMethod(ethaccessor.TokenRegistryAbi(), tokenRegistryAddress)
