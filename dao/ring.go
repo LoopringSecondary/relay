@@ -211,7 +211,7 @@ func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]common.Has
 		hashesStr []string
 	)
 
-	err = s.db.Model(&RingSubmitInfo{}).Where("protocol_tx_hash = ? ", txHash.Hex(), txHash.Hex()).Pluck("ringhash", &hashesStr).Error
+	err = s.db.Model(&RingSubmitInfo{}).Where("protocol_tx_hash = ? ", txHash.Hex()).Pluck("ringhash", &hashesStr).Error
 	for _, h := range hashesStr {
 		hashes = append(hashes, common.HexToHash(h))
 	}
