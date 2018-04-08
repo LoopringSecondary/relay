@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/log"
@@ -165,6 +164,9 @@ func (n *Node) Start() {
 
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
+	}
+	if n.globalConfig.Mode != MODEL_RELAY {
+		n.mineNode.Start()
 	}
 }
 

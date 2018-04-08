@@ -114,6 +114,9 @@ func (l *ExtractorServiceImpl) Stop() {
 // 重启(分叉)时先关停subscribeEvents，然后关
 func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
 	forkBlock := l.detector.Detect(currentBlock)
+	if forkBlock == nil {
+		return
+	}
 
 	// mark fork block in database
 	model := dao.Block{}
