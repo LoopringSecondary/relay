@@ -348,13 +348,14 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	}
 }
 
+// 同一个地址可以注册多个名字,但一个名字不允许注册多次
 func TestEthNodeAccessor_NameRegistry(t *testing.T) {
 	protocol := test.Protocol()
 	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
 	nameRegistryAbi := ethaccessor.NameRegistryAbi()
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
 
-	name := ""
+	name := test.Cfg().Miner.Name
 	if result, err := callMethod(miner.Address, "registerName", gas, gasPrice, nil, name); err != nil {
 		t.Fatal(err)
 	} else {
@@ -368,7 +369,7 @@ func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
 	nameRegistryAbi := ethaccessor.NameRegistryAbi()
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
 
-	name := ""
+	name := test.Cfg().Miner.Name
 	if result, err := callMethod(miner.Address, "unregisterName", gas, gasPrice, nil, name); err != nil {
 		t.Fatal(err)
 	} else {
