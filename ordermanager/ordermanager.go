@@ -106,7 +106,7 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
 	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
-	eventemitter.On(eventemitter.ChainForkProcess, om.forkWatcher)
+	eventemitter.On(eventemitter.ChainForkDetected, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
@@ -116,7 +116,7 @@ func (om *OrderManagerImpl) Stop() {
 	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
 	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
 	eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
-	eventemitter.Un(eventemitter.ChainForkProcess, om.forkWatcher)
+	eventemitter.Un(eventemitter.ChainForkDetected, om.forkWatcher)
 
 	om.ordersValidForMiner = false
 }
