@@ -37,7 +37,7 @@ var RedisCachePlaceHolder = make([]byte, 0)
 
 const DefaultUnlockTtl = 3600 * 24 * 30
 const UnlockCachePreKey = "Unlocked_Address_"
-const DefaultContractVersion = "v1.2"
+const DefaultContractVersion = "v1.3"
 
 type Account struct {
 	Address    string
@@ -141,7 +141,7 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 	}
 
 	//todo(xiaolu): 从配置文件中获取
-	account, _ := a.GetBalance("v1.2", address.Hex())
+	account, _ := a.GetBalance(DefaultContractVersion, address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return

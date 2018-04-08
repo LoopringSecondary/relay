@@ -58,7 +58,7 @@ type TestEntity struct {
 }
 
 const (
-	Version   = "v1.2"
+	Version   = "v1.3"
 	DebugFile = "debug.toml"
 )
 
