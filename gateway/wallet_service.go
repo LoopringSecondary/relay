@@ -360,12 +360,14 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 	for k, v := range util.AllTokens {
 		price, err := w.marketCap.GetMarketCapByCurrency(v.Protocol, query.Currency)
 		if err != nil {
-			return result, err
-		}
-		floatPrice, _ := price.Float64()
-		rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
-		if k == "WETH" {
-			rst.Tokens = append(rst.Tokens, TokenPrice{"ETH", floatPrice})
+			log.Debug(">>>>>>>> get market cap error " + err.Error())
+			rst.Tokens = append(rst.Tokens, TokenPrice{k, 0.0})
+		} else {
+			floatPrice, _ := price.Float64()
+			rst.Tokens = append(rst.Tokens, TokenPrice{k, floatPrice})
+			if k == "WETH" {
+				rst.Tokens = append(rst.Tokens, TokenPrice{"ETH", floatPrice})
+			}
 		}
 	}
 
