@@ -155,6 +155,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.marketCapProvider.Start()
+	n.ipfsSubService.Start()
 
 	// todo delete after test
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)

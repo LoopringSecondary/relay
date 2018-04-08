@@ -46,7 +46,7 @@ var (
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	owner := miner.Address
+	owner := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
 	test.SetTokenBalance(owner, lrcTokenAddress, amount)
 }
