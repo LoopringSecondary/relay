@@ -238,7 +238,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	event := input.(*types.OrderCancelledEvent)
 
 	// save cancel event
-	_, err := om.rds.GetCancelEvent(event.OrderHash, event.TxHash)
+	_, err := om.rds.GetCancelEvent(event.TxHash)
 	if err == nil {
 		log.Debugf("order manager,handle order cancelled event error:event %s have already exist", event.OrderHash.Hex())
 		return nil

@@ -78,7 +78,7 @@ type RdsService interface {
 	FindFillsByRingHash(ringHash common.Hash) ([]FillEvent, error)
 
 	// cancel event table
-	GetCancelEvent(txhash, orderhash common.Hash) (CancelEvent, error)
+	GetCancelEvent(txhash common.Hash) (CancelEvent, error)
 	RollBackCancel(from, to int64) error
 	GetCancelForkEvents(from, to int64) ([]CancelEvent, error)
 

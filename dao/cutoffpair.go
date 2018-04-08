@@ -86,7 +86,7 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 
 func (s *RdsServiceImpl) GetCutoffPairEvent(txhash common.Hash) (CutOffPairEvent, error) {
 	var event CutOffPairEvent
-	err := s.db.Where("tx_hash=?").Where("fork=?", false).First(&event).Error
+	err := s.db.Where("tx_hash=?", txhash.Hex()).Where("fork=?", false).First(&event).Error
 	return event, err
 }
 

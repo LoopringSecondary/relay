@@ -62,9 +62,9 @@ func (e *CancelEvent) ConvertUp(dst *types.OrderCancelledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) GetCancelEvent(txhash, orderhash common.Hash) (CancelEvent, error) {
+func (s *RdsServiceImpl) GetCancelEvent(txhash common.Hash) (CancelEvent, error) {
 	var event CancelEvent
-	err := s.db.Where("tx_hash=? and order_hash=?").Where("fork=?", false).First(&event).Error
+	err := s.db.Where("tx_hash=?", txhash.Hex()).Where("fork=?", false).First(&event).Error
 	return event, err
 }
 
