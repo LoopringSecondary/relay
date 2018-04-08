@@ -34,17 +34,26 @@ type forkDetector struct {
 func newForkDetector(db dao.RdsService, startBlockConfig *big.Int) *forkDetector {
 	detector := &forkDetector{}
 	detector.db = db
+	detector.latestBlock = &types.Block{}
 
-	entity, err := detector.db.FindLatestBlock()
-	if err == nil {
-		detector.latestBlock = new(types.Block)
+	if entity, err := detector.db.FindLatestBlock(); err == nil {
 		entity.ConvertUp(detector.latestBlock)
 		return detector
 	}
 
-	if err := ethaccessor.GetBlockByNumber(detector.latestBlock, startBlockConfig, false); err != nil {
+	var block ethaccessor.Block
+	if err := ethaccessor.GetBlockByNumber(&block, startBlockConfig, false); err != nil {
 		log.Fatalf("extractor,fork detector can not find init block:%s", startBlockConfig.String())
 	}
+
+	detector.latestBlock.BlockNumber = block.Number.BigInt()
+	detector.latestBlock.BlockHash = block.Hash
+	detector.latestBlock.CreateTime = block.Timestamp.BigInt().Int64()
+	detector.latestBlock.ParentHash = block.ParentHash
+
+	model := &dao.Block{}
+	model.ConvertDown(detector.latestBlock)
+	detector.db.SaveBlock(model)
 
 	return detector
 }
