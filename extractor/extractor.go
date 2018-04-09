@@ -113,23 +113,16 @@ func (l *ExtractorServiceImpl) Stop() {
 
 // 重启(分叉)时先关停subscribeEvents，然后关
 func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
-	forkBlock := l.detector.Detect(currentBlock)
-	if forkBlock == nil {
+	forkEvent := l.detector.Detect(currentBlock)
+	if forkEvent == nil {
 		return
 	}
-
-	// emit fork event
-	var forkEvent types.ForkedEvent
-	forkEvent.ForkHash = forkBlock.BlockHash
-	forkEvent.ForkBlock = forkBlock.BlockNumber
-	forkEvent.DetectedHash = currentBlock.BlockHash
-	forkEvent.DetectedBlock = currentBlock.BlockNumber
 
 	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
 
 	l.Stop()
 	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
-	l.startBlockNumber = new(big.Int).Add(forkBlock.BlockNumber, big.NewInt(1))
+	l.startBlockNumber = new(big.Int).Add(forkEvent.ForkBlock, big.NewInt(1))
 	l.Start()
 }
 
@@ -169,18 +162,18 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	currentBlock.BlockHash = block.Hash
 	currentBlock.CreateTime = block.Timestamp.Int64()
 
-	// Sync blocks on chain
+	// convert and save block
+	var entity dao.Block
+	entity.ConvertDown(currentBlock)
+	l.dao.SaveBlock(&entity)
+
+	// sync block on chain
 	if l.syncComplete == false {
 		l.Sync(block.Number.BigInt())
 	}
 
 	// detect chain fork
 	l.ForkProcess(currentBlock)
-
-	// convert block to dao entity
-	var entity dao.Block
-	entity.ConvertDown(currentBlock)
-	l.dao.SaveBlock(&entity)
 
 	// emit new block
 	blockEvent := &types.BlockEvent{}
