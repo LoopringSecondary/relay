@@ -34,6 +34,9 @@ func (o Order) MarshalJSON() ([]byte, error) {
 		Price                 *big.Rat                   `json:"price"`
 		Owner                 common.Address             `json:"owner"`
 		Hash                  common.Hash                `json:"hash"`
+		Market                string                     `json:"market"`
+		CreateTime            int64                      `json:"createTime"`
+		PowNonce              uint64                     `json:"powNonce"`
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
@@ -55,6 +58,9 @@ func (o Order) MarshalJSON() ([]byte, error) {
 	enc.Price = o.Price
 	enc.Owner = o.Owner
 	enc.Hash = o.Hash
+	enc.Market = o.Market
+	enc.CreateTime = o.CreateTime
+	enc.PowNonce = o.PowNonce
 	return json.Marshal(&enc)
 }
 
@@ -79,6 +85,9 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		Price                 *big.Rat                    `json:"price"`
 		Owner                 *common.Address             `json:"owner"`
 		Hash                  *common.Hash                `json:"hash"`
+		Market                *string                     `json:"market"`
+		CreateTime            *int64                      `json:"createTime"`
+		PowNonce              *uint64                     `json:"powNonce"`
 	}
 	var dec Order
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -155,6 +164,15 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 	}
 	if dec.Hash != nil {
 		o.Hash = *dec.Hash
+	}
+	if dec.Market != nil {
+		o.Market = *dec.Market
+	}
+	if dec.CreateTime != nil {
+		o.CreateTime = *dec.CreateTime
+	}
+	if dec.PowNonce != nil {
+		o.PowNonce = *dec.PowNonce
 	}
 	return nil
 }

@@ -30,6 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"crypto/sha256"
+	"encoding/binary"
 )
 
 type Gateway struct {
@@ -56,6 +58,9 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	gateway.marketCap = marketCap
+
+	// new pow filter
+	powFilter := &PowFilter{Difficulty:types.HexToBigint(filterOptions.PowFilter.Difficulty)}
 
 	// new base filter
 	baseFilter := &BaseFilter{
@@ -84,7 +89,8 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// new cutoff filter
 	cutoffFilter := &CutoffFilter{om: om}
 
-	//gateway.filters = append(gateway.filters, baseFilter)
+	gateway.filters = append(gateway.filters, powFilter)
+	gateway.filters = append(gateway.filters, baseFilter)
 	gateway.filters = append(gateway.filters, signFilter)
 	gateway.filters = append(gateway.filters, tokenFilter)
 	gateway.filters = append(gateway.filters, cutoffFilter)
@@ -181,7 +187,7 @@ type BaseFilter struct {
 	MaxValidSinceInterval int64
 }
 
-func (f *BaseFilter) Filter(o *types.Order) (bool, error) {
+func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	const (
 		addrLength = 20
 		hashLength = 32
@@ -308,4 +314,46 @@ func (f *CutoffFilter) filter(o *types.Order) (bool, error) {
 	}
 
 	return true, nil
+}
+
+type PowFilter struct {
+	Difficulty *big.Int
+}
+
+func (f *PowFilter) filter(o *types.Order) (bool, error) {
+
+	if o.PowNonce <= 0 {
+		return false, fmt.Errorf("invalid pow nonce")
+	}
+
+	pow := GetPow(o.V, o.R, o.S, o.PowNonce)
+
+	if pow.Cmp(f.Difficulty) < 0 {
+		return false, fmt.Errorf("invalid pow")
+	}
+	return true, nil
+}
+
+func GetPow(v uint8, r types.Bytes32, s types.Bytes32, powNonce uint64) *big.Int {
+
+	input := make([]byte, 0)
+	input = append(input, v)
+	input = append(input, r.Bytes()...)
+	input = append(input, s.Bytes()...)
+	nonce := Uint64ToByteArray(powNonce)
+	input = append(input, nonce...)
+
+	hash := sha256.New()
+	hash.Write(input)
+
+	rst := hash.Sum(nil)
+	bigRst := big.NewInt(0)
+	bigRst.SetBytes(rst)
+	return bigRst
+}
+
+func Uint64ToByteArray(src uint64) []byte {
+	rst := make([]byte, 8)
+	binary.LittleEndian.PutUint64(rst, src)
+	return rst
 }
