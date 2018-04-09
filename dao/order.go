@@ -221,25 +221,6 @@ func (s *RdsServiceImpl) GetOrdersByHash(orderhashs []string) (map[string]Order,
 	return ret, err
 }
 
-func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error) {
-	var (
-		list []Order
-		err  error
-	)
-
-	if from >= to {
-		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
-	}
-
-	nowtime := time.Now().Unix()
-	err = s.db.Where("updated_block > ? and updated_block <= ?", from, to).
-		Where("valid_since < ?", nowtime).
-		Where("valid_until >= ?", nowtime).
-		Find(&list).Error
-
-	return list, err
-}
-
 func (s *RdsServiceImpl) GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error) {
 	var (
 		list []Order
