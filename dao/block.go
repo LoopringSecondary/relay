@@ -61,37 +61,19 @@ func (s *RdsServiceImpl) FindBlockByHash(blockhash common.Hash) (*Block, error) 
 		return nil, errors.New("block table findBlockByHash get an illegal hash")
 	}
 
-	err := s.db.Where("block_hash = ?", blockhash.Hex()).First(&block).Error
-
-	return &block, err
-}
-
-func (s *RdsServiceImpl) FindBlockByParentHash(parenthash common.Hash) (*Block, error) {
-	var block Block
-
-	if types.IsZeroHash(parenthash) {
-		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
-	}
-
-	err := s.db.Where("block_hash = ?", parenthash.Hex()).First(&block).Error
+	err := s.db.Where("block_hash = ?", blockhash.Hex()).Where("fork = ?", false).First(&block).Error
 
 	return &block, err
 }
 
 func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
 	var block Block
-	err := s.db.Order("create_time desc").First(&block).Error
+	err := s.db.Order("create_time desc").Where("fork = ?", false).First(&block).Error
 	return &block, err
 }
 
-func (s *RdsServiceImpl) FindForkBlock() (*Block, error) {
-	var block Block
-	err := s.db.Where("fork = ?", true).First(&block).Error
-	return &block, err
-}
-
-func (s *RdsServiceImpl) SetForkBlock(blockhash common.Hash) error {
-	return s.db.Model(&Block{}).Where("block_hash", blockhash.String()).Update("fork = ?", true).Error
+func (s *RdsServiceImpl) SetForkBlock(from, to *big.Int) error {
+	return s.db.Model(&Block{}).Where("block_number > ? and block_number <= ?", from.Int64(), to.Int64()).Update("fork = ?", true).Error
 }
 
 func (s *RdsServiceImpl) SaveBlock(latest *Block) error {

@@ -111,7 +111,7 @@ func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash
 		fill FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).First(&fill).Error
+	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).Where("fork = ?", false).First(&fill).Error
 
 	return &fill, err
 }
@@ -121,18 +121,18 @@ func (s *RdsServiceImpl) FindFillsByRingHash(ringHash common.Hash) ([]FillEvent,
 		fills []FillEvent
 		err   error
 	)
-	err = s.db.Where("ring_hash = ?", ringHash.Hex()).Find(&fills).Error
+	err = s.db.Where("ring_hash = ?", ringHash.Hex()).Where("fork = ?", false).Find(&fills).Error
 	return fills, err
 }
 
 func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	fills := make([]FillEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
-	err = s.db.Where(query).Order("create_time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&fills).Error
+	err = s.db.Where(query).Where("fork=?", false).Order("create_time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&fills).Error
 	if err != nil {
 		return res, err
 	}
-	err = s.db.Model(&FillEvent{}).Where(query).Count(&res.Total).Error
+	err = s.db.Model(&FillEvent{}).Where(query).Where("fork=?", false).Count(&res.Total).Error
 	if err != nil {
 		return res, err
 	}
@@ -158,9 +158,9 @@ func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end
 	timeQuery := buildTimeQueryString(start, end)
 
 	if timeQuery != "" {
-		err = s.db.Where(query).Where(timeQuery).Order("create_time desc").Limit(100).Find(&fills).Error
+		err = s.db.Where(query).Where(timeQuery).Where("fork=?", false).Order("create_time desc").Limit(100).Find(&fills).Error
 	} else {
-		err = s.db.Where(query).Order("create_time desc").Limit(100).Find(&fills).Error
+		err = s.db.Where(query).Where("fork=?", false).Order("create_time desc").Limit(100).Find(&fills).Error
 	}
 	return
 }

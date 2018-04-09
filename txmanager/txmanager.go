@@ -56,6 +56,8 @@ type TransactionManager struct {
 	orderFilledEventWatcher *eventemitter.Watcher
 
 	ethTransferEventWatcher *eventemitter.Watcher
+
+	forkDetectedEventWatcher *eventemitter.Watcher
 }
 
 func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) TransactionManager {
@@ -107,6 +109,9 @@ func (tm *TransactionManager) Start() {
 
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
 	eventemitter.On(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+
+	tm.forkDetectedEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.ForkProcess}
+	eventemitter.On(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
 func (tm *TransactionManager) Stop() {
@@ -134,9 +139,26 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.TxManagerOrderFilledEvent, tm.orderFilledEventWatcher)
 
 	eventemitter.Un(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+
+	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
 const ETH_SYMBOL = "ETH"
+
+func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
+	log.Debugf("txmanager,processing chain fork......")
+
+	tm.Stop()
+	forkEvent := input.(*types.ForkedEvent)
+	from := forkEvent.ForkBlock.Int64()
+	to := forkEvent.DetectedBlock.Int64()
+	if err := tm.db.RollBackTransaction(from, to); err != nil {
+		log.Fatalf("txmanager,process fork error:%s", err.Error())
+	}
+	tm.Start()
+
+	return nil
+}
 
 func (tm *TransactionManager) SaveApproveMethod(input eventemitter.EventData) error {
 	evt := input.(*types.ApproveMethodEvent)
@@ -228,7 +250,7 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 	evt := input.(*types.WethDepositEvent)
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
+	log.Debugf("txmanager:tx:%s saveWethDepositEventAsTx", evt.TxHash.Hex())
 
 	// save weth
 	tx1.FromWethDepositEvent(evt, true)
@@ -252,7 +274,7 @@ func (tm *TransactionManager) SaveWethWithdrawalMethod(input eventemitter.EventD
 	evt := input.(*types.WethWithdrawalMethodEvent)
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
+	log.Debugf("txmanager:tx:%s saveWethWithdrawalMethodAsTx", evt.TxHash.Hex())
 
 	tx1.FromWethWithdrawalMethod(evt, false)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
@@ -274,7 +296,7 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 	evt := input.(*types.WethWithdrawalEvent)
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
+	log.Debugf("txmanager:tx:%s saveWethWithdrawalEventAsTx", evt.TxHash.Hex())
 
 	// save weth
 	tx1.FromWethWithdrawalEvent(evt, false)
@@ -316,7 +338,7 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 	evt := input.(*types.TransferEvent)
 	var tx1, tx2 types.Transaction
 
-	log.Debugf("extractor:tx:%s saveTransferAsTx", evt.TxHash.Hex())
+	log.Debugf("txmanager:tx:%s saveTransferAsTx", evt.TxHash.Hex())
 
 	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
 	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)

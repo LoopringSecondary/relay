@@ -58,7 +58,7 @@ func newForkDetector(db dao.RdsService, startBlockConfig *big.Int) *forkDetector
 	return detector
 }
 
-func (detector *forkDetector) Detect(currentBlock *types.Block) *types.Block {
+func (detector *forkDetector) Detect(currentBlock *types.Block) *types.ForkedEvent {
 	// filter invalid block
 	if types.IsZeroHash(currentBlock.ParentHash) || types.IsZeroHash(currentBlock.BlockHash) {
 		log.Debugf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
@@ -78,7 +78,21 @@ func (detector *forkDetector) Detect(currentBlock *types.Block) *types.Block {
 	}
 	detector.latestBlock = forkBlock
 
-	return forkBlock
+	// set fork event
+	var forkEvent types.ForkedEvent
+	forkEvent.ForkHash = forkBlock.BlockHash
+	forkEvent.ForkBlock = forkBlock.BlockNumber
+	forkEvent.DetectedHash = currentBlock.BlockHash
+	forkEvent.DetectedBlock = currentBlock.BlockNumber
+
+	// mark fork block in database
+	model := dao.Block{}
+	model.ConvertDown(forkBlock)
+	if err := detector.db.SetForkBlock(forkEvent.ForkBlock, forkEvent.DetectedBlock); err != nil {
+		log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+	}
+
+	return &forkEvent
 }
 
 func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, error) {
@@ -88,7 +102,7 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 	)
 
 	// find parent block in database
-	if parentBlockModel, err := detector.db.FindBlockByParentHash(block.ParentHash); err == nil {
+	if parentBlockModel, err := detector.db.FindBlockByHash(block.ParentHash); err == nil {
 		parentBlockModel.ConvertUp(&parentBlock)
 		return &parentBlock, nil
 	}
