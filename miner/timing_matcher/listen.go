@@ -22,7 +22,6 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
 )
@@ -75,13 +74,15 @@ func (matcher *TimingMatcher) listenNewBlock() {
 }
 
 func (matcher *TimingMatcher) listenSubmitEvent() {
-	submitEventChan := make(chan common.Hash)
+	submitEventChan := make(chan *types.RingSubmitResultEvent)
 	go func() {
 		for {
 			select {
-			case ringhash := <-submitEventChan:
-				log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s", ringhash.Hex())
-				matcher.rounds.RemoveMinedRing(ringhash)
+			case minedEvent := <-submitEventChan:
+				log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s", minedEvent.RingHash.Hex())
+				if minedEvent.Status == types.TX_STATUS_FAILED || minedEvent.Status == types.TX_STATUS_SUCCESS || minedEvent.Status == types.TX_STATUS_UNKNOWN {
+					matcher.rounds.RemoveMinedRing(minedEvent.RingHash)
+				}
 			}
 		}
 	}()
@@ -99,7 +100,7 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
 			minedEvent := eventData.(*types.RingSubmitResultEvent)
-			submitEventChan <- minedEvent.RingHash
+			submitEventChan <- minedEvent
 			return nil
 		},
 	}

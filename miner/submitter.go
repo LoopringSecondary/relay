@@ -271,9 +271,7 @@ func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, statu
 		log.Errorf("err:%s", err.Error())
 	}
 
-	if status == types.TX_STATUS_FAILED || status == types.TX_STATUS_SUCCESS || status == types.TX_STATUS_UNKNOWN {
-		eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
-	}
+	eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
 }
 
 ////提交错误，执行错误
