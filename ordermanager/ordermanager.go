@@ -131,6 +131,8 @@ func (om *OrderManagerImpl) handleSync(input eventemitter.EventData) error {
 }
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
+	log.Debugf("order manager processing chain fork......")
+
 	om.Stop()
 	if err := om.processor.Fork(input.(*types.ForkedEvent)); err != nil {
 		log.Fatalf("order manager,handle fork error:%s", err.Error())

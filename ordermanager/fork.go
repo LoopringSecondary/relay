@@ -51,8 +51,6 @@ func NewForkProcess(rds dao.RdsService, mc marketcap.MarketCapProvider) *ForkPro
 //     那么,在回滚时,我们需要知道某一个订单以前是否也cutoff过,在dao/cutoff中我们存储了orderhashList,可以将这些订单取出并按照订单量重置状态
 //   d.处理cutoffPair,同cutoff
 func (p *ForkProcessor) Fork(event *types.ForkedEvent) error {
-	log.Debugf("order manager processing chain fork......")
-
 	from := event.ForkBlock.Int64()
 	to := event.DetectedBlock.Int64()
 
@@ -204,6 +202,9 @@ func (p *ForkProcessor) RollBackSingleCutoffPair(evt *types.CutoffPairEvent) err
 }
 
 func (p *ForkProcessor) MarkForkEvents(from, to int64) error {
+	if err := p.db.RollBackRingMined(from, to); err != nil {
+		return fmt.Errorf("fork rollback ringmined events error:%s", err.Error())
+	}
 	if err := p.db.RollBackFill(from, to); err != nil {
 		return fmt.Errorf("fork rollback fill events error:%s", err.Error())
 	}

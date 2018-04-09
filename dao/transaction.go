@@ -44,6 +44,7 @@ type Transaction struct {
 	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
 	CreateTime  int64  `gorm:"column:create_time"`
 	UpdateTime  int64  `gorm:"column:update_time"`
+	Fork        bool   `gorm:"column:fork"`
 }
 
 // convert types/transaction to dao/transaction
@@ -67,6 +68,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.GasUsed = src.GasUsed.String()
 	tx.GasPrice = src.GasPrice.String()
 	tx.Nonce = src.Nonce.String()
+	tx.Fork = false
 
 	return nil
 }
@@ -141,7 +143,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		return nil
 	}
 
-	err := s.db.Where(query, args...).Find(&current).Error
+	err := s.db.Where(query, args...).Where("fork=?", false).Find(&current).Error
 	if err != nil {
 		return s.db.Create(latest).Error
 	}
@@ -173,7 +175,7 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&trxs).Error; err != nil {
+	if err = s.db.Where(query).Where("fork=?", false).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&trxs).Error; err != nil {
 		return pageResult, err
 	}
 
@@ -183,7 +185,7 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 
 	pageResult = PageResult{data, pageIndex, pageSize, 0}
 
-	err = s.db.Model(&Transaction{}).Where(query).Count(&pageResult.Total).Error
+	err = s.db.Model(&Transaction{}).Where("fork=?", false).Where(query).Count(&pageResult.Total).Error
 	if err != nil {
 		return pageResult, err
 	}
@@ -193,12 +195,16 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 
 func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
-	err := s.db.Where("tx_hash in (?)", hashes).Find(&trxs).Error
+	err := s.db.Where("tx_hash in (?)", hashes).Where("fork=?", false).Find(&trxs).Error
 	return trxs, err
 }
 
 func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Transaction, error) {
 	var txs []Transaction
-	err := s.db.Where(query).Find(&txs).Error
+	err := s.db.Where(query).Where("fork=?", false).Find(&txs).Error
 	return txs, err
+}
+
+func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {
+	return s.db.Model(&Transaction{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

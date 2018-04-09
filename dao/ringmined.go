@@ -38,6 +38,7 @@ type RingMinedEvent struct {
 	TotalLrcFee        string `gorm:"column:total_lrc_fee;type:varchar(40)" json:"totalLrcFee"`
 	TradeAmount        int    `gorm:"column:trade_amount" json:"tradeAmount"`
 	Time               int64  `gorm:"column:time;type:bigint" json:"timestamp"`
+	Fork               bool   `gorm:"column:fork"`
 }
 
 func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
@@ -51,6 +52,7 @@ func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.BlockNumber = event.BlockNumber.Int64()
 	r.Time = event.BlockTime
 	r.TradeAmount = event.TradeAmount
+	r.Fork = false
 
 	return nil
 }
@@ -75,26 +77,25 @@ func (s *RdsServiceImpl) FindRingMinedByRingIndex(index string) (*RingMinedEvent
 		err   error
 	)
 
-	err = s.db.Where("ring_index = ?", index).First(&model).Error
+	err = s.db.Where("ring_index = ?", index).Where("fork = ?", false).First(&model).Error
 
 	return &model, err
 }
 
 func (s *RdsServiceImpl) RollBackRingMined(from, to int64) error {
-	err := s.db.Where("block_number > ? and block_number <= ?", from, to).Delete(&RingMinedEvent{}).Error
-	return err
+	return s.db.Model(&RingMinedEvent{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
 
 func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error) {
 	ringMined := make([]RingMinedEvent, 0)
 	res = PageResult{PageIndex: pageIndex, PageSize: pageSize, Data: make([]interface{}, 0)}
 
-	err = s.db.Where(query).Order("time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&ringMined).Error
+	err = s.db.Where(query).Where("fork = ?", false).Order("time desc").Offset((pageIndex - 1) * pageSize).Limit(pageSize).Find(&ringMined).Error
 
 	if err != nil {
 		return res, err
 	}
-	err = s.db.Model(&RingMinedEvent{}).Where(query).Count(&res.Total).Error
+	err = s.db.Model(&RingMinedEvent{}).Where(query).Where("fork = ?", false).Count(&res.Total).Error
 	if err != nil {
 		return res, err
 	}

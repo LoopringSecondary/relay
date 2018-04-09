@@ -112,6 +112,7 @@ type RdsService interface {
 
 	// transactions
 	SaveTransaction(latest *Transaction) error
+	RollBackTransaction(from, to int64) error
 
 	// checkpoint
 	QueryCheckPointByType(businessType string) (point CheckPoint, err error)
