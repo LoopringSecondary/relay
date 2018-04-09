@@ -253,7 +253,9 @@ func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
 			ticker.Amount = innerTicker.Amount
 			ticker.Open = innerTicker.Open
 			ticker.Close = innerTicker.Close
-			ticker.Last = innerTicker.Bid[0]
+			if len(innerTicker.Bid) > 0 {
+				ticker.Last = innerTicker.Bid[0]
+			}
 			if ticker.Last-ticker.Open > 0 {
 				ticker.Change = fmt.Sprintf("+%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
 			} else {
