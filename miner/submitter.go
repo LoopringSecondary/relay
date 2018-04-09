@@ -200,7 +200,7 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 }
 
 func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, error) {
-	status := types.TX_STATUS_SUCCESS
+	status := types.TX_STATUS_PENDING
 	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
 	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
 
@@ -270,7 +270,10 @@ func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, statu
 	if err := submitter.dbService.UpdateRingSubmitInfoResult(resultEvt); nil != err {
 		log.Errorf("err:%s", err.Error())
 	}
-	eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
+
+	if status == types.TX_STATUS_FAILED || status == types.TX_STATUS_SUCCESS || status == types.TX_STATUS_UNKNOWN {
+		eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
+	}
 }
 
 ////提交错误，执行错误
