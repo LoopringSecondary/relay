@@ -30,12 +30,12 @@ import (
 	"strings"
 	"sync"
 	"time"
-	//"encoding/json"
 )
 
 type MutilClient struct {
-	mtx     sync.RWMutex
-	clients SortedClients
+	mtx          sync.RWMutex
+	clients      SortedClients
+	latestMaxIdx int
 }
 
 type SortedClients []*RpcClient
@@ -63,15 +63,14 @@ type SyncingResult struct {
 }
 
 func (sr *SyncingResult) isSynced() bool {
-	//todo:
-	return true
+	return sr.CurrentBlock.BigInt().Cmp(sr.HighestBlock.BigInt()) >= 0
 }
 
 func (mc *MutilClient) startSyncStatus() {
 	go func() {
 		for {
 			select {
-			case <-time.After(time.Duration(10 * time.Second)):
+			case <-time.After(time.Duration(300 * time.Second)):
 				mc.syncStatus()
 			}
 		}
@@ -84,23 +83,27 @@ func (mc *MutilClient) syncStatus() {
 
 	highest := big.NewInt(int64(0))
 	for _, client := range mc.clients {
-		var blockNumber types.Big
-		if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
-			//todo:
-		}
-		if highest.Cmp(blockNumber.BigInt()) < 0 {
-			highest.Set(blockNumber.BigInt())
-		}
 		var status bool
 
 		sr := &SyncingResult{}
-		sr.CurrentBlock = blockNumber
 
 		if err := client.client.Call(&status, "eth_syncing"); nil != err {
-			//todo:
 			if err := client.client.Call(&sr, "eth_syncing"); nil != err {
-				//todo:
+				log.Errorf("err:%s", err.Error())
+			} else {
+				if highest.Cmp(sr.HighestBlock.BigInt()) < 0 {
+					highest.Set(sr.HighestBlock.BigInt())
+				}
 			}
+		} else {
+			var blockNumber types.Big
+			if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
+				log.Errorf("err:%s", err.Error())
+			}
+			if highest.Cmp(blockNumber.BigInt()) < 0 {
+				highest.Set(blockNumber.BigInt())
+			}
+			sr.CurrentBlock = blockNumber
 		}
 		client.syncingResult = sr
 	}
@@ -109,13 +112,24 @@ func (mc *MutilClient) syncStatus() {
 		c.syncingResult.HighestBlock = new(types.Big).SetInt(highest)
 	}
 	sort.Sort(mc.clients)
+
+	if len(mc.clients) > 0 {
+		latestBlockNumber := mc.clients[0].syncingResult.CurrentBlock.Int()
+		for idx, c := range mc.clients {
+			if latestBlockNumber <= c.syncingResult.CurrentBlock.Int() {
+				mc.latestMaxIdx = idx
+			}
+		}
+	}
 }
 
 func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 	var idx int
 	//latest,pending
+	lastIdx := 0
+
 	if "latest" == routeParam || "" == routeParam {
-		idx = 0
+		lastIdx = mc.latestMaxIdx
 	} else if strings.Contains(routeParam, ":") {
 		//specific node
 		for _, c := range mc.clients {
@@ -131,7 +145,6 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			blockNumberForRouteBig = new(big.Int)
 			blockNumberForRouteBig.SetString(routeParam, 0)
 		}
-		lastIdx := 0
 		for curIdx, c := range mc.clients {
 			//todo:request from synced client
 			if blockNumberForRouteBig.Cmp(c.syncingResult.CurrentBlock.BigInt()) <= 0 {
@@ -140,9 +153,10 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 				break
 			}
 		}
-		if lastIdx > 0 {
-			idx = rand.Intn(lastIdx)
-		}
+
+	}
+	if lastIdx > 0 {
+		idx = rand.Intn(lastIdx)
 	}
 	return mc.clients[idx]
 }
