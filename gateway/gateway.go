@@ -322,6 +322,8 @@ type PowFilter struct {
 
 func (f *PowFilter) filter(o *types.Order) (bool, error) {
 
+
+
 	pow := GetPow(o.V, o.R, o.S, o.PowNonce)
 
 
