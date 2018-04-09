@@ -10,6 +10,7 @@ config/*.toml
 config/debug_tokens.json
 config/mainchain.toml
 config/docker.toml
+config/default_market.json
 test/*.toml
 startup.sh
 nameregistry.sh
