@@ -160,8 +160,6 @@ func (n *Node) Start() {
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
 	//txManager.Start()
 
-	ethaccessor.IncludeGasPriceEvaluator()
-
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
 	}
@@ -259,6 +257,7 @@ func (n *Node) registerSocketIOService() {
 }
 
 func (n *Node) registerMiner() {
+	ethaccessor.IncludeGasPriceEvaluator()
 	submitter, err := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
 	if nil != err {
 		log.Fatalf("failed to init submitter, error:%s", err.Error())

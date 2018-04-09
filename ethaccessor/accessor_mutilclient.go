@@ -33,8 +33,8 @@ import (
 )
 
 type MutilClient struct {
-	mtx     sync.RWMutex
-	clients SortedClients
+	mtx          sync.RWMutex
+	clients      SortedClients
 	latestMaxIdx int
 }
 
@@ -115,7 +115,7 @@ func (mc *MutilClient) syncStatus() {
 
 	if len(mc.clients) > 0 {
 		latestBlockNumber := mc.clients[0].syncingResult.CurrentBlock.Int()
-		for idx,c := range mc.clients {
+		for idx, c := range mc.clients {
 			if latestBlockNumber <= c.syncingResult.CurrentBlock.Int() {
 				mc.latestMaxIdx = idx
 			}
