@@ -39,7 +39,7 @@ type TimingMatcher struct {
 	markets         []*Market
 	submitter       *miner.RingSubmitter
 	evaluator       *miner.Evaluator
-	lastBlockNumber *big.Int
+	lastRoundNumber *big.Int
 	duration        *big.Int
 	roundOrderCount int
 
@@ -62,7 +62,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	matcher.duration = big.NewInt(matcherOptions.Duration)
 	matcher.delayedNumber = matcherOptions.DelayedNumber
 
-	matcher.lastBlockNumber = big.NewInt(0)
+	matcher.lastRoundNumber = big.NewInt(0)
 	matcher.stopFuncs = []func(){}
 
 	for _, pair := range marketUtilLib.AllTokenPairs {
@@ -94,7 +94,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 }
 
 func (matcher *TimingMatcher) Start() {
-	matcher.listenNewBlock()
+	matcher.listenTimingRound()
 	matcher.listenSubmitEvent()
 }
 
