@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
-	"fmt"
 )
 
 type OrderStatus uint8
@@ -422,6 +421,5 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.Owner = request.Owner
 	order.WalletId = request.WalletId
 	order.PowNonce = request.PowNonce
-	fmt.Println(order.PowNonce)
 	return order
 }

@@ -322,10 +322,11 @@ type PowFilter struct {
 
 func (f *PowFilter) filter(o *types.Order) (bool, error) {
 
-
+	if o.PowNonce <= 0 {
+		return false, fmt.Errorf("invalid pow nonce")
+	}
 
 	pow := GetPow(o.V, o.R, o.S, o.PowNonce)
-
 
 	if pow.Cmp(f.Difficulty) < 0 {
 		return false, fmt.Errorf("invalid pow")
