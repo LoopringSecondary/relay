@@ -78,6 +78,13 @@ func (detector *forkDetector) Detect(currentBlock *types.Block) *types.Block {
 	}
 	detector.latestBlock = forkBlock
 
+	// mark fork block in database
+	model := dao.Block{}
+	model.ConvertDown(forkBlock)
+	if err := detector.db.SetForkBlock(forkBlock.BlockHash); err != nil {
+		log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+	}
+
 	return forkBlock
 }
 
@@ -88,7 +95,7 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 	)
 
 	// find parent block in database
-	if parentBlockModel, err := detector.db.FindBlockByParentHash(block.ParentHash); err == nil {
+	if parentBlockModel, err := detector.db.FindBlockByHash(block.ParentHash); err == nil {
 		parentBlockModel.ConvertUp(&parentBlock)
 		return &parentBlock, nil
 	}

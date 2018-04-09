@@ -63,10 +63,8 @@ type RdsService interface {
 
 	// block table
 	FindBlockByHash(blockhash common.Hash) (*Block, error)
-	FindBlockByParentHash(parenthash common.Hash) (*Block, error)
 	FindLatestBlock() (*Block, error)
-	FindForkBlock() (*Block, error)
-	SetForkBlock(blockhash common.Hash) error
+	SetForkBlock(from, to *big.Int) error
 	SaveBlock(latest *Block) error
 
 	// fill event table

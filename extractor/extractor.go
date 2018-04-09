@@ -118,13 +118,6 @@ func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
 		return
 	}
 
-	// mark fork block in database
-	model := dao.Block{}
-	model.ConvertDown(forkBlock)
-	if err := l.dao.SetForkBlock(forkBlock.BlockHash); err != nil {
-		log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
-	}
-
 	// emit fork event
 	var forkEvent types.ForkedEvent
 	forkEvent.ForkHash = forkBlock.BlockHash
