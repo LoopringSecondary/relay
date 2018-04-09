@@ -80,6 +80,8 @@ type Order struct {
 	Hash                  common.Hash                `json:"hash"`
 	Market                string                     `json:"market"`
 	CreateTime            int64                      `json:"createTime"`
+	PowNonce              uint64       `json:"powNonce"`
+	Pow					  *big.Int  	 `json:"pow"`
 }
 
 type orderMarshaling struct {
@@ -89,6 +91,7 @@ type orderMarshaling struct {
 	ValidUntil *Big
 	WalletId   *Big
 	LrcFee     *Big
+	Pow        *Big
 }
 
 //go:generate gencodec -type OrderJsonRequest -field-override orderJsonRequestMarshaling -out gen_order_request_json.go
@@ -114,6 +117,8 @@ type OrderJsonRequest struct {
 	Owner                 common.Address `json:"owner"`
 	Hash                  common.Hash    `json:"hash"`
 	CreateTime            int64          `json:"createTime"`
+	PowNonce              uint64         `json:"powNonce"`
+	Pow					  *big.Int  	 `json:"pow"`
 }
 
 type orderJsonRequestMarshaling struct {
@@ -123,6 +128,7 @@ type orderJsonRequestMarshaling struct {
 	ValidUntil *Big
 	WalletId   *Big
 	LrcFee     *Big
+	Pow        *Big
 }
 
 func (o *Order) GenerateHash() common.Hash {

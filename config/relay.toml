@@ -113,6 +113,8 @@ name = "Loopring corporation"
         max_valid_since_interval = 3600
         [gateway_filters.base_filter.min_tokeS_amount]
             "RDN" = "10000000"
+    [gateway_filters.pow_filter]
+        difficulty = "0x67d5cc45bc84c10e58d1c9819cb5b794700cda79f8dcc6f7cdb31f6a53613b4f"
 
 
 [keystore]
