@@ -255,7 +255,7 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 	amountDivDecimal, _ := big.NewRat(o.AmountS.Int64(), tokenS.Decimals.Int64()).Float64()
 	usdAmount := amountDivDecimal * tokenSFloatPrice
 	if usdAmount < f.MinTokenSUsdAmount {
-		return false, fmt.Errorf("tokenS usd amount is too small")
+		return false, fmt.Errorf("tokenS usd amount is too small, price:%f, amount:%f, value:%f, usdMinValue:%f", tokenSFloatPrice, amountDivDecimal, usdAmount, f.MinTokenSUsdAmount)
 	}
 
 	return true, nil
