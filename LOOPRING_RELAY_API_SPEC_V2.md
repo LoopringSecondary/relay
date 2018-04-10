@@ -41,6 +41,7 @@ SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 * [loopring_getEstimatedAllocatedAllowance](#loopring_getestimatedallocatedallowance)
 * [loopring_getGetFrozenLRCFee](#loopring_getgetfrozenlrcfee)
 * [loopring_getSupportedMarket](#loopring_getsupportedmarket)
+* [loopring_getSupportedTokens](#loopring_getsupportedtokens)
 * [loopring_getPortfolio](#loopring_getportfolio)
 * [loopring_getTransactions](#loopring_gettransactions)
 * [loopring_unlockWallet](#loopring_unlockwallet)
@@ -854,6 +855,43 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedMarket","par
   "id":64,
   "jsonrpc": "2.0",
   "result": ["SAN-WETH","GNO-WETH","RLC-WETH","AST-WETH"]
+}
+```
+***
+
+#### loopring_getSupportedTokens
+
+Get relay supported all tokens
+
+##### Parameters
+no input params.
+
+```js
+params: {}
+```
+
+##### Returns
+- `array of string` - The array of all supported tokens.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": [
+      {
+        "protocol":"0xd26114cd6EE289AccF82350c8d8487fedB8A0C07",
+        "symbol":"OMG",
+        "source":"omisego",
+        "deny":false,
+        "decimals":18,
+        "isMarket":false
+      },....
+  ]
 }
 ```
 ***
