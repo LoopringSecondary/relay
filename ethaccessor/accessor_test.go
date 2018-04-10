@@ -55,6 +55,18 @@ func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_EthBalance(t *testing.T) {
+	account := account1
+
+	var balance types.Big
+	if err := ethaccessor.GetBalance(&balance, account, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		amount := new(big.Rat).SetFrac(balance.BigInt(), big.NewInt(1e18)).FloatString(2)
+		t.Logf("eth account:%s amount:%s", account.Hex(), amount)
+	}
+}
+
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 	accounts := []common.Address{account1, account2, miner.Address}
 	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
