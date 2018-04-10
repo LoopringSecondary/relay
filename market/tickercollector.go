@@ -408,6 +408,7 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 					ticker.Change = v.Change
 					ticker.Exchange = "okex"
 					ticker.Amount, _ = strconv.ParseFloat(v.Vol, 64)
+					ticker.Vol = ticker.Amount * ticker.Last
 					ticker.High, _ = strconv.ParseFloat(v.High, 64)
 					ticker.Low, _ = strconv.ParseFloat(v.Low, 64)
 					tickers = append(tickers, ticker)
