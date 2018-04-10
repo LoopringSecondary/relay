@@ -37,7 +37,7 @@ var RedisCachePlaceHolder = make([]byte, 0)
 
 const DefaultUnlockTtl = 3600 * 24 * 30
 const UnlockCachePreKey = "Unlocked_Address_"
-const DefaultContractVersion = "v1.3"
+const DefaultContractVersion = "v1.4"
 
 type Account struct {
 	Address    string
