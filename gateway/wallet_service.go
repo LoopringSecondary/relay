@@ -152,10 +152,10 @@ type FillQuery struct {
 }
 
 type RingMinedQuery struct {
-	ContractVersion string   `json:"contractVersion"`
-	RingIndex       *big.Int `json:"ringIndex"`
-	PageIndex       int      `json:"pageIndex"`
-	PageSize        int      `json:"pageSize"`
+	ContractVersion string    `json:"contractVersion"`
+	RingIndex       types.Big `json:"ringIndex"`
+	PageIndex       int       `json:"pageIndex"`
+	PageSize        int       `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -560,7 +560,7 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMinedDetail, err error) {
-	if query.RingIndex.Cmp(big.NewInt(0)) <= 0 {
+	if query.RingIndex.BigInt().Cmp(big.NewInt(0)) <= 0 {
 		return res, errors.New("ring index can't be 0")
 	}
 
@@ -963,8 +963,8 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
-	if q.RingIndex.Cmp(big.NewInt(0)) > 0 {
-		rst["ring_index"] = q.RingIndex.String()
+	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) > 0 {
+		rst["ring_index"] = q.RingIndex.BigInt().String()
 	}
 
 	return rst, pi, ps
