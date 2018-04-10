@@ -19,6 +19,8 @@
 package gateway
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
@@ -30,8 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
-	"crypto/sha256"
-	"encoding/binary"
 )
 
 type Gateway struct {
@@ -60,7 +60,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.marketCap = marketCap
 
 	// new pow filter
-	powFilter := &PowFilter{Difficulty:types.HexToBigint(filterOptions.PowFilter.Difficulty)}
+	powFilter := &PowFilter{Difficulty: types.HexToBigint(filterOptions.PowFilter.Difficulty)}
 
 	// new base filter
 	baseFilter := &BaseFilter{

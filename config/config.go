@@ -214,7 +214,7 @@ type GatewayFiltersOptions struct {
 		MaxValidSinceInterval int64
 	}
 	PowFilter struct {
-		Difficulty  string
+		Difficulty string
 	}
 }
 

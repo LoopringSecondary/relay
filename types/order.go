@@ -80,7 +80,7 @@ type Order struct {
 	Hash                  common.Hash                `json:"hash"`
 	Market                string                     `json:"market"`
 	CreateTime            int64                      `json:"createTime"`
-	PowNonce              uint64       `json:"powNonce"`
+	PowNonce              uint64                     `json:"powNonce"`
 }
 
 type orderMarshaling struct {
