@@ -395,14 +395,14 @@ func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
 
 func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
 	protocol := test.Protocol()
-	miner := test.Entity().Creator.Address
 	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
 	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
+	creator := miner.Address
 	var result string
-	if err := callMethod(&result, "nameMap", "latest", miner); nil != err {
+	if err := callMethod(&result, "nameMap", "latest", creator); nil != err {
 		t.Fatalf("call method nameMap error:%s", err.Error())
 	} else {
-		t.Logf("name:%s-> address:%s", result, miner.Hex())
+		t.Logf("name:%s-> address:%s", result, creator.Hex())
 	}
 }
 
