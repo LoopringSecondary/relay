@@ -46,9 +46,13 @@ var (
 )
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	owner := account2
+	accounts := []common.Address{account1, account2}
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
-	test.SetTokenBalance(owner, lrcTokenAddress, amount)
+	token := lrcTokenAddress
+
+	for _, account := range accounts {
+		test.SetTokenBalance(account, token, amount)
+	}
 }
 
 func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
@@ -69,17 +73,19 @@ func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
 }
 
 func TestEthNodeAccessor_Approval(t *testing.T) {
-	account := account2
+	accounts := []common.Address{account1, account2}
+	spender := delegateAddress
 	tokenAddress := lrcTokenAddress
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1000000))
 	//amount,_ := big.NewInt(0).SetString("9223372036854775806000000000000000000", 0)
-	spender := delegateAddress
 
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
-	if result, err := callMethod(account, "approve", gas, gasPrice, nil, spender, amount); nil != err {
-		t.Fatalf("call method approve error:%s", err.Error())
-	} else {
-		t.Logf("approve result:%s", result)
+	for _, account := range accounts {
+		callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), tokenAddress)
+		if result, err := callMethod(account, "approve", gas, gasPrice, nil, spender, amount); nil != err {
+			t.Fatalf("call method approve error:%s", err.Error())
+		} else {
+			t.Logf("approve result:%s", result)
+		}
 	}
 }
 
@@ -348,7 +354,8 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	}
 }
 
-// todo 同一个地址不允许注册多个名字，取消时有问题
+// 注册&取消注册都不能连续性重复调用
+// 同一个地址不能注册同一个名字多次
 func TestEthNodeAccessor_NameRegistry(t *testing.T) {
 	protocol := test.Protocol()
 	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
@@ -395,14 +402,14 @@ func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
 
 func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
 	protocol := test.Protocol()
-	miner := test.Entity().Creator.Address
 	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
 	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
+	creator := miner.Address
 	var result string
-	if err := callMethod(&result, "nameMap", "latest", miner); nil != err {
+	if err := callMethod(&result, "nameMap", "latest", creator); nil != err {
 		t.Fatalf("call method nameMap error:%s", err.Error())
 	} else {
-		t.Logf("name:%s-> address:%s", result, miner.Hex())
+		t.Logf("name:%s-> address:%s", result, creator.Hex())
 	}
 }
 

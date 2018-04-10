@@ -41,7 +41,7 @@ type TokenPair struct {
 	TokenB common.Address
 }
 
-var MarketBaseOrder = map[string]uint8{"LRC" : 1, "WETH" : 2, "DAI" : 4}
+var MarketBaseOrder = map[string]uint8{"LRC": 1, "WETH": 2, "DAI": 4}
 
 type TokenStandard uint8
 
@@ -153,15 +153,16 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	// set all markets
 	for k := range allTokens { // lrc,omg
 		for kk := range supportMarkets { //eth
-			o, ok := MarketBaseOrder[k]; if ok {
+			o, ok := MarketBaseOrder[k]
+			if ok {
 				baseOrder := MarketBaseOrder[kk]
 				if o < baseOrder {
-					allMarkets = append(allMarkets, k + "-" + kk)
+					allMarkets = append(allMarkets, k+"-"+kk)
 				}
 			} else {
-				allMarkets = append(allMarkets, k + "-" + kk)
+				allMarkets = append(allMarkets, k+"-"+kk)
 			}
-			log.Infof("market util,supported market:%s", k + "-" + kk)
+			log.Infof("market util,supported market:%s", k+"-"+kk)
 		}
 	}
 

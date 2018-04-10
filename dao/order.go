@@ -54,6 +54,7 @@ type Order struct {
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
+	PowNonce              uint64  `gorm:"column:pow_nonce;type:bigint"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	UpdatedBlock          int64   `gorm:"column:updated_block;type:bigint"`
 	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(40)"`
@@ -107,6 +108,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
+	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
 
 	return nil
@@ -142,6 +144,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.V = o.V
 	state.RawOrder.S = types.HexToBytes32(o.S)
 	state.RawOrder.R = types.HexToBytes32(o.R)
+	state.RawOrder.PowNonce = o.PowNonce
 	state.RawOrder.Owner = common.HexToAddress(o.Owner)
 	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
 
@@ -219,25 +222,6 @@ func (s *RdsServiceImpl) GetOrdersByHash(orderhashs []string) (map[string]Order,
 	}
 
 	return ret, err
-}
-
-func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error) {
-	var (
-		list []Order
-		err  error
-	)
-
-	if from >= to {
-		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
-	}
-
-	nowtime := time.Now().Unix()
-	err = s.db.Where("updated_block > ? and updated_block <= ?", from, to).
-		Where("valid_since < ?", nowtime).
-		Where("valid_until >= ?", nowtime).
-		Find(&list).Error
-
-	return list, err
 }
 
 func (s *RdsServiceImpl) GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error) {

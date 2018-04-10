@@ -1,10 +1,10 @@
 package gateway_test
 
 import (
-	"testing"
 	"fmt"
-	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/gateway"
+	"github.com/Loopring/relay/types"
+	"testing"
 	//"github.com/Loopring/relay/test"
 )
 
