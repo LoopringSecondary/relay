@@ -103,30 +103,64 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 		return account, err
 	} else {
 		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock: sync.Mutex{}}
-		for k, v := range util.AllTokens {
-			balance := Balance{Token: k}
+		reqs := []*ethaccessor.BatchErc20Req{}
 
-			amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
-			if err != nil {
-				log.Infof("get balance failed, token:%s", v.Symbol)
-			} else {
-				balance.Balance = amount
-				account.Balances[k] = balance
-			}
-
-			allowance := Allowance{
-				//contractVersion: contractVersion,
-				token: k}
-
-			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
-			if err != nil {
-				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
-			} else {
-				allowance.allowance = allowanceAmount
-				account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
-			}
-
+		spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[contractVersion]))
+		if nil != err {
+			return account, errors.New("invalid spender address")
 		}
+		for k, v := range util.AllTokens {
+			req := &ethaccessor.BatchErc20Req{}
+			req.BlockParameter = "latest"
+			req.Symbol = k
+			req.Owner = common.HexToAddress(address)
+
+			req.Spender = spenderAddress
+			req.Token = v.Protocol
+			reqs = append(reqs, req)
+
+			//balance := Balance{Token: k}
+			//
+			//amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
+			//if err != nil {
+			//	log.Infof("get balance failed, token:%s", v.Symbol)
+			//} else {
+			//	balance.Balance = amount
+			//	account.Balances[k] = balance
+			//}
+			//
+			//allowance := Allowance{
+			//	//contractVersion: contractVersion,
+			//	token: k}
+			//
+			//allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
+			//if err != nil {
+			//	log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
+			//} else {
+			//	allowance.allowance = allowanceAmount
+			//	account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
+			//}
+		}
+		if err := ethaccessor.BatchErc20BalanceAndAllowance("latest", reqs); nil != err {
+			return account, err
+		}
+		for _,req := range reqs {
+			balance := Balance{Token: req.Symbol}
+			if nil != req.BalanceErr {
+				log.Errorf("get balance failed, token:%s", req.Symbol)
+			} else {
+				balance.Balance = req.Balance.BigInt()
+				account.Balances[req.Symbol] = balance
+			}
+			allowance := Allowance{ token: req.Symbol }
+			if nil != req.AllowanceErr {
+				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", req.Symbol, address, contractVersion)
+			} else {
+				allowance.allowance = req.Allowance.BigInt()
+				account.Allowances[buildAllowanceKey(contractVersion, req.Symbol)] = allowance
+			}
+		}
+
 		a.c.Set(address, account, cache.NoExpiration)
 		return account, nil
 	}

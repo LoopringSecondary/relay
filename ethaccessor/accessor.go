@@ -154,6 +154,10 @@ func GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNu
 	return accessor.GetCancelled(contractAddress, orderhash, blockNumber)
 }
 
+func BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) error {
+	return accessor.BatchErc20BalanceAndAllowance(routeParam, reqs)
+}
+
 func BatchTransactions(reqs []*BatchTransactionReq, blockNumber string) error {
 	return accessor.BatchTransactions(blockNumber, 5, reqs)
 }
