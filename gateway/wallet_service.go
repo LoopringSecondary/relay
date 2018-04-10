@@ -152,10 +152,10 @@ type FillQuery struct {
 }
 
 type RingMinedQuery struct {
-	ContractVersion string `json:"contractVersion"`
-	RingHash        string `json:"ringHash"`
-	PageIndex       int    `json:"pageIndex"`
-	PageSize        int    `json:"pageSize"`
+	ContractVersion string   `json:"contractVersion"`
+	RingIndex       *big.Int `json:"ringIndex"`
+	PageIndex       int      `json:"pageIndex"`
+	PageSize        int      `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -560,12 +560,13 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMinedDetail, err error) {
-	if len(query.RingHash) == 0 {
-		return res, errors.New("ring hash can't be null")
+	if query.RingIndex.Cmp(big.NewInt(0)) <= 0 {
+		return res, errors.New("ring index can't be 0")
 	}
 
 	rings, err := w.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
 
+	// todo:如果ringhash重复暂时先取第一条
 	if err != nil || rings.Total > 1 {
 		log.Errorf("query ring error, %s, %d", err.Error(), rings.Total)
 		return res, errors.New("query ring error occurs")
@@ -575,11 +576,12 @@ func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMi
 		return res, errors.New("no ring found by hash")
 	}
 
-	fills, err := w.orderManager.FindFillsByRingHash(common.HexToHash(query.RingHash))
+	ring := rings.Data[0].(dao.RingMinedEvent)
+	fills, err := w.orderManager.FindFillsByRingHash(common.HexToHash(ring.RingHash))
 	if err != nil {
 		return res, err
 	}
-	return fillDetail(rings.Data[0].(dao.RingMinedEvent), fills)
+	return fillDetail(ring, fills)
 }
 
 func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
@@ -961,8 +963,8 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
-	if q.RingHash != "" {
-		rst["ring_hash"] = q.RingHash
+	if q.RingIndex.Cmp(big.NewInt(0)) > 0 {
+		rst["ring_index"] = q.RingIndex.String()
 	}
 
 	return rst, pi, ps
