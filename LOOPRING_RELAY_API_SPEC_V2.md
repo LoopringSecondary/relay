@@ -41,6 +41,7 @@ SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 * [loopring_getEstimatedAllocatedAllowance](#loopring_getestimatedallocatedallowance)
 * [loopring_getGetFrozenLRCFee](#loopring_getgetfrozenlrcfee)
 * [loopring_getSupportedMarket](#loopring_getsupportedmarket)
+* [loopring_getSupportedTokens](#loopring_getsupportedtokens)
 * [loopring_getPortfolio](#loopring_getportfolio)
 * [loopring_getTransactions](#loopring_gettransactions)
 * [loopring_unlockWallet](#loopring_unlockwallet)
@@ -703,7 +704,7 @@ Get cut off time of the address.
 ```js
 params: [{
   "address": "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "contractVersion": "v1.3",
+  "contractVersion": "v1.4",
   "blockNumber": "latest"
 }]
 ```
@@ -854,6 +855,43 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedMarket","par
   "id":64,
   "jsonrpc": "2.0",
   "result": ["SAN-WETH","GNO-WETH","RLC-WETH","AST-WETH"]
+}
+```
+***
+
+#### loopring_getSupportedTokens
+
+Get relay supported all tokens
+
+##### Parameters
+no input params.
+
+```js
+params: {}
+```
+
+##### Returns
+- `array of string` - The array of all supported tokens.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": [
+      {
+        "protocol":"0xd26114cd6EE289AccF82350c8d8487fedB8A0C07",
+        "symbol":"OMG",
+        "source":"omisego",
+        "deny":false,
+        "decimals":18,
+        "isMarket":false
+      },....
+  ]
 }
 ```
 ***
@@ -1110,7 +1148,7 @@ Get user's balance and token allowance info.
 - `contractVersion` - The loopring contract version you selected.
 
 ```js
-socketio.emit("balance_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",   "contractVersion" : "v1.3"}', function(data) {
+socketio.emit("balance_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",   "contractVersion" : "v1.4"}', function(data) {
   // your business code
 });
 socketio.on("balance_res", function(data) {
@@ -1130,12 +1168,12 @@ socketio.on("balance_res", function(data) {
 // Request
 {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.3"
+  "contractVersion" : "v1.4"
 }
 
 // Result
 {
-    "contractVersion":"v1.3",
+    "contractVersion":"v1.4",
     "tokens": [
       {
           "token": "LRC",
@@ -1165,7 +1203,7 @@ Get 24hr merged tickers info from loopring relay.
 1. `contractVersion` - The loopring protocol version.
 
 ```js
-socketio.emit("loopringTickers_req", '{"contractVersion" : "v1.3"}', function(data) {
+socketio.emit("loopringTickers_req", '{"contractVersion" : "v1.4"}', function(data) {
   // your business code
 });
 socketio.on("loopringTickers_res", function(data) {
@@ -1188,7 +1226,7 @@ socketio.on("loopringTickers_res", function(data) {
 ```js
 // Request
 
-{"contractVersion" : "v1.3"}
+{"contractVersion" : "v1.4"}
 
 // Result
 [
@@ -1496,7 +1534,7 @@ socketio.on("depth_res", function(data) {
 // Request
 {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.3",
+  "contractVersion": "v1.4",
   "length" : 10 // defalut is 50
 }
 
@@ -1511,7 +1549,7 @@ socketio.on("depth_res", function(data) {
       ]
     },
     "market" : "LRC-WETH",
-    "contractVersion": "v1.3",
+    "contractVersion": "v1.4",
   }
 }
 ```

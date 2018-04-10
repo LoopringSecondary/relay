@@ -38,7 +38,7 @@ import (
 	"time"
 )
 
-const DefaultContractVersion = "v1.3"
+const DefaultContractVersion = "v1.4"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {

@@ -344,6 +344,8 @@ func GetPow(v uint8, r types.Bytes32, s types.Bytes32, powNonce uint64) *big.Int
 	input = append(input, nonce...)
 
 	hash := sha256.New()
+	fmt.Println(input)
+	fmt.Println(common.Bytes2Hex(input))
 	hash.Write(input)
 
 	rst := hash.Sum(nil)
