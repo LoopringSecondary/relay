@@ -213,6 +213,9 @@ type GatewayFiltersOptions struct {
 		MinTokenSUsdAmount    float64
 		MaxValidSinceInterval int64
 	}
+	PowFilter struct {
+		Difficulty  string
+	}
 }
 
 type GateWayOptions struct {

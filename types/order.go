@@ -80,6 +80,7 @@ type Order struct {
 	Hash                  common.Hash                `json:"hash"`
 	Market                string                     `json:"market"`
 	CreateTime            int64                      `json:"createTime"`
+	PowNonce              uint64       `json:"powNonce"`
 }
 
 type orderMarshaling struct {
@@ -114,6 +115,7 @@ type OrderJsonRequest struct {
 	Owner                 common.Address `json:"owner"`
 	Hash                  common.Hash    `json:"hash"`
 	CreateTime            int64          `json:"createTime"`
+	PowNonce              uint64         `json:"powNonce"`
 }
 
 type orderJsonRequestMarshaling struct {
@@ -418,5 +420,6 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.S = request.S
 	order.Owner = request.Owner
 	order.WalletId = request.WalletId
+	order.PowNonce = request.PowNonce
 	return order
 }
