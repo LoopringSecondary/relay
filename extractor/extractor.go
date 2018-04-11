@@ -204,14 +204,14 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.ProcessEvent(tx, receipt, blockTime)
-		if receipt.IsFailed() {
-			l.ProcessMethod(tx, receipt, blockTime)
-		}
-		return nil
-	} else {
+	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
 		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
+	}
+
+	if receipt.IsFailed() {
+		return l.ProcessMethod(tx, receipt, blockTime)
+	} else {
+		return l.ProcessEvent(tx, receipt, blockTime)
 	}
 }
 

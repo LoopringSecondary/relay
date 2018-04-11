@@ -45,13 +45,52 @@ var (
 	gasPrice             = big.NewInt(21000000000)
 )
 
-func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	accounts := []common.Address{account1, account2}
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
-	token := lrcTokenAddress
+func TestEthNodeAccessor_WethDeposit(t *testing.T) {
+	account := account2
+	wethAddr := wethTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
+	if result, err := callMethod(account, "deposit", gas, gasPrice, amount); nil != err {
+		t.Fatalf("call method weth-deposit error:%s", err.Error())
+	} else {
+		t.Logf("weth-deposit result:%s", result)
+	}
+}
 
-	for _, account := range accounts {
-		test.SetTokenBalance(account, token, amount)
+func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
+	account := account1
+	wethAddr := wethTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
+	if result, err := callMethod(account, "withdraw", gas, gasPrice, nil, amount); nil != err {
+		t.Fatalf("call method weth-withdraw error:%s", err.Error())
+	} else {
+		t.Logf("weth-withdraw result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_WethTransfer(t *testing.T) {
+	from := account1
+	to := account2
+	wethAddr := wethTokenAddress
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
+	if result, err := callMethod(from, "transfer", gas, gasPrice, nil, to, amount); nil != err {
+		t.Fatalf("call method weth-transfer error:%s", err.Error())
+	} else {
+		t.Logf("weth-transfer result:%s", result)
+	}
+}
+
+func TestEthNodeAccessor_EthTransfer(t *testing.T) {
+	sender := miner.Address
+	receiver := account2
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
+	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
+		t.Errorf(err.Error())
+	} else {
+		t.Logf("txhash:%s", hash)
 	}
 }
 
@@ -67,7 +106,32 @@ func TestEthNodeAccessor_EthBalance(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_Erc20Balance(t *testing.T) {
+func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
+	accounts := []common.Address{account1, account2}
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
+	token := lrcTokenAddress
+
+	for _, account := range accounts {
+		test.SetTokenBalance(account, token, amount)
+	}
+}
+
+func TestEthNodeAccessor_ERC20Transfer(t *testing.T) {
+	from := account1
+	to := account2
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(180))
+
+	erc20abi := ethaccessor.Erc20Abi()
+	tokenAddress := lrcTokenAddress
+	callMethod := ethaccessor.ContractSendTransactionMethod("latest", erc20abi, tokenAddress)
+	if result, err := callMethod(from, "transfer", gas, gasPrice, nil, to, amount); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("txhash:%s", common.HexToHash(result).Hex())
+	}
+}
+
+func TestEthNodeAccessor_ERC20Balance(t *testing.T) {
 	accounts := []common.Address{account1, account2, miner.Address}
 	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
 
@@ -304,55 +368,6 @@ func TestEthNodeAccessor_IsAddressAuthorized(t *testing.T) {
 	}
 }
 
-func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := account2
-	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account, "deposit", gas, gasPrice, amount); nil != err {
-		t.Fatalf("call method weth-deposit error:%s", err.Error())
-	} else {
-		t.Logf("weth-deposit result:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_WethWithdrawal(t *testing.T) {
-	account := account1
-	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(account, "withdraw", gas, gasPrice, nil, amount); nil != err {
-		t.Fatalf("call method weth-withdraw error:%s", err.Error())
-	} else {
-		t.Logf("weth-withdraw result:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_WethTransfer(t *testing.T) {
-	from := account1
-	to := account2
-	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
-
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
-	if result, err := callMethod(from, "transfer", gas, gasPrice, nil, to, amount); nil != err {
-		t.Fatalf("call method weth-transfer error:%s", err.Error())
-	} else {
-		t.Logf("weth-transfer result:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_EthTransfer(t *testing.T) {
-	sender := miner.Address
-	receiver := account2
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
-	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
-		t.Errorf(err.Error())
-	} else {
-		t.Logf("txhash:%s", hash)
-	}
-}
-
 func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	symbol := "LRC"
 	protocol := test.Protocol()
@@ -442,7 +457,7 @@ func TestEthNodeAccessor_BlockTransactions(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	tx := &ethaccessor.Transaction{}
-	if err := ethaccessor.GetTransactionByHash(tx, "0x4ca6e676562c84c8d28068b8e1ff900880a60695b87f512b150f9e30fe7e480c", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionByHash(tx, "0x26383249d29e13c4c5f73505775813829875d0b0bf496f2af2867548e2bf8108", "latest"); err == nil {
 		t.Logf("tx blockNumber:%s, from:%s, to:%s, gas:%s value:%s", tx.BlockNumber.BigInt().String(), tx.From, tx.To, tx.Gas.BigInt().String(), tx.Value.BigInt().String())
 		t.Logf("tx input:%s", tx.Input)
 	} else {
@@ -452,7 +467,7 @@ func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	var tx ethaccessor.TransactionReceipt
-	if err := ethaccessor.GetTransactionReceipt(&tx, "0x4ca6e676562c84c8d28068b8e1ff900880a60695b87f512b150f9e30fe7e480c", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionReceipt(&tx, "0x26383249d29e13c4c5f73505775813829875d0b0bf496f2af2867548e2bf8108", "latest"); err == nil {
 		t.Logf("tx blockNumber:%s gasUsed:%s status:%s logs:%d", tx.BlockNumber.BigInt().String(), tx.GasUsed.BigInt().String(), tx.Status.BigInt().String(), len(tx.Logs))
 		idx := len(tx.Logs) - 1
 		t.Logf("tx event:%d data:%s", idx, tx.Logs[idx].Data)

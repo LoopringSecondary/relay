@@ -24,21 +24,22 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
+	"github.com/ethereum/bak/go-ethereum1/common"
 	"math/big"
 	"testing"
 )
 
 func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
-	account := test.Entity().Accounts[1].Address.Hex()
+	account := common.HexToAddress("0x71C079107B5af8619D54537A93dbF16e5aab4900") //test.Entity().Accounts[1].Address
 	manager := test.GenerateAccountManager()
-	manager.UnlockedWallet(account)
+	manager.UnlockedWallet(account.Hex())
 }
 
 // test save transaction
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0x23fb21eba23c93b151e72d10d49876250c5ff80ea2967c0375621c1375c31154", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0xed95b1f7534113faa6d16c6d74f9b044a453b1f5a072c6e625a2b69b6ddda663", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
@@ -53,7 +54,7 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 // test save transaction
 func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
-	txhash := "0x23fb21eba23c93b151e72d10d49876250c5ff80ea2967c0375621c1375c31154"
+	txhash := "0x26383249d29e13c4c5f73505775813829875d0b0bf496f2af2867548e2bf8108"
 
 	tx := &ethaccessor.Transaction{}
 	receipt := &ethaccessor.TransactionReceipt{}
