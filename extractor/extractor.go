@@ -222,8 +222,10 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transac
 	blockTime := big.NewInt(time.Now().Unix())
 
 	if l.processor.HasContract(tx) {
+		log.Debugf("extractor,pending transaction:%s supported.", tx.Hash)
 		return l.ProcessMethod(tx, nil, blockTime)
 	} else {
+		l.debug("extractor,pending transaction:%s unsupported", tx.Hash)
 		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
 	}
 }
@@ -257,31 +259,21 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 }
 
 func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	// filter logs
-	if len(receipt.Logs) <= 0 {
-		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
-		return nil
-	}
-
-	txhash := receipt.TransactionHash
 	for _, evtLog := range receipt.Logs {
-		// 过滤事件
 		event, ok := l.processor.GetEvent(evtLog)
 		if !ok {
-			l.debug("extractor,tx:%s,unsupported contract event", txhash)
+			l.debug("extractor,tx:%s,unsupported contract event", tx.Hash)
 			continue
 		}
 
-		// 解析事件
 		data := hexutil.MustDecode(evtLog.Data)
 		if nil != data && len(data) > 0 {
 			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
-				log.Errorf("extractor,tx:%s unpack event error:%s", txhash, err.Error())
+				log.Errorf("extractor,tx:%s unpack event error:%s", tx.Hash, err.Error())
 				continue
 			}
 		}
 
-		// full filled event and emit to abi processor
 		event.FullFilled(tx, &evtLog, receipt.GasUsed.BigInt(), blockTime)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
