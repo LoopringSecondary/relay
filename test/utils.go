@@ -204,7 +204,7 @@ func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 }
 
 func GenerateAccountManager() market.AccountManager {
-	return market.NewAccountManager()
+	return market.NewAccountManager(cfg.Common.ProtocolImpl.Address)
 }
 
 func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {

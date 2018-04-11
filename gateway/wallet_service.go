@@ -38,7 +38,6 @@ import (
 	"time"
 )
 
-const DefaultContractVersion = "v1.4"
 const DefaultCapCurrency = "CNY"
 
 type Portfolio struct {
@@ -255,10 +254,11 @@ type WalletServiceImpl struct {
 	tickerCollector market.CollectorImpl
 	rds             dao.RdsService
 	oldWethAddress  string
+	defaultContractVersion string
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string, protocols map[string]string) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -268,6 +268,11 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	w.tickerCollector = collector
 	w.rds = rds
 	w.oldWethAddress = oldWethAddress
+	// select first contract version to default
+	for k := range protocols {
+		w.defaultContractVersion = k
+		break
+	}
 	return w
 }
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
@@ -290,7 +295,7 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account, _ := w.accountManager.GetBalance(DefaultContractVersion, query.Owner)
+	account, _ := w.accountManager.GetBalance(w.defaultContractVersion, query.Owner)
 	balances := account.Balances
 	if len(balances) == 0 {
 		return
