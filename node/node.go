@@ -38,6 +38,7 @@ import (
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/txmanager"
 	"github.com/Loopring/relay/usermanager"
+	"github.com/Loopring/relay/zklock"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"go.uber.org/zap"
 )
@@ -58,6 +59,7 @@ type Node struct {
 	accountManager    market.AccountManager
 	relayNode         *RelayNode
 	mineNode          *MineNode
+	zkLock            *zklock.ZkLock
 
 	stop   chan struct{}
 	lock   sync.RWMutex
@@ -105,10 +107,10 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n := &Node{}
 	n.logger = logger
 	n.globalConfig = globalConfig
-
 	// register
 	n.registerMysql()
 	cache.NewCache(n.globalConfig.Redis)
+	n.registerZkLock()
 
 	util.Initialize(n.globalConfig.Market, n.globalConfig.Common.ProtocolImpl.Address)
 	n.registerMarketCap()
@@ -279,4 +281,8 @@ func (n *Node) registerUserManager() {
 
 func (n *Node) registerMarketCap() {
 	n.marketCapProvider = marketcap.NewMarketCapProvider(n.globalConfig.MarketCap)
+}
+
+func (n *Node) registerZkLock() {
+	n.zkLock = zklock.NewLock(n.globalConfig.Zookeeper)
 }

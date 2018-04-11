@@ -87,6 +87,7 @@ type GlobalConfig struct {
 	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
+	Zookeeper      ZookeeperOptions
 }
 
 type JsonrpcOptions struct {
@@ -246,6 +247,12 @@ type UserManagerOptions struct {
 	WhiteListOpen            bool
 	WhiteListCacheExpireTime int64
 	WhiteListCacheCleanTime  int64
+}
+
+type ZookeeperOptions struct {
+	WithZookeeper   bool
+	ZkServers       string
+	ConnectTimeOut  int
 }
 
 func Validator(cv reflect.Value) (bool, error) {
