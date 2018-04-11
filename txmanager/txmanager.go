@@ -346,11 +346,18 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 func (tm *TransactionManager) SaveTransferMethod(input eventemitter.EventData) error {
 	evt := input.(*types.TransferMethodEvent)
 
+	var (
+		tx1, tx2 types.Transaction
+		err      error
+	)
+
+	tx1.FromTransferMethodEvent(evt, types.TX_TYPE_SEND)
+	if tx1.Symbol, err = util.GetSymbolWithAddress(tx1.Protocol); err != nil {
+		return nil
+	}
+
 	log.Debugf("txmanager:tx:%s SaveTransferMethod from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
-	var tx1, tx2 types.Transaction
-	tx1.FromTransferMethodEvent(evt, types.TX_TYPE_SEND)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	tx2.FromTransferMethodEvent(evt, types.TX_TYPE_RECEIVE)
 	tx2.Symbol = tx1.Symbol
 	if err := tm.saveTransaction(&tx1); err != nil {
@@ -366,11 +373,17 @@ func (tm *TransactionManager) SaveTransferMethod(input eventemitter.EventData) e
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
 	evt := input.(*types.TransferEvent)
 
+	var (
+		tx1, tx2 types.Transaction
+		err      error
+	)
+	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
+	if tx1.Symbol, err = util.GetSymbolWithAddress(tx1.Protocol); err != nil {
+		return nil
+	}
+
 	log.Debugf("txmanager:tx:%s SaveTransferEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
-	var tx1, tx2 types.Transaction
-	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
 	tx2.Symbol = tx1.Symbol
 	if err := tm.saveTransaction(&tx1); err != nil {
