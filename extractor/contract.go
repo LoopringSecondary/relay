@@ -131,9 +131,9 @@ const (
 )
 
 type AbiProcessor struct {
-	events         map[common.Hash]EventData
-	methods        map[string]MethodData
-	protocols      map[common.Address]string
+	events  map[common.Hash]EventData
+	methods map[string]MethodData
+	//protocols      map[common.Address]string
 	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
 	db             dao.RdsService
@@ -146,7 +146,7 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
 	processor.methods = make(map[string]MethodData)
-	processor.protocols = make(map[common.Address]string)
+	//processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
 	processor.db = db
 
@@ -161,28 +161,45 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 }
 
 // GetEvent get EventData with id hash
-func (processor *AbiProcessor) GetEvent(id common.Hash) (EventData, bool) {
+func (processor *AbiProcessor) GetEvent(evtLog ethaccessor.Log) (EventData, bool) {
 	var (
 		event EventData
 		ok    bool
 	)
+
+	id := common.HexToHash(evtLog.Topics[0])
 	event, ok = processor.events[id]
 	return event, ok
 }
 
 // GetMethod get MethodData with method id
-func (processor *AbiProcessor) GetMethod(id string) (MethodData, bool) {
+func (processor *AbiProcessor) GetMethod(tx *ethaccessor.Transaction) (MethodData, bool) {
 	var (
 		method MethodData
 		ok     bool
 	)
+
+	// filter method input
+	input := common.FromHex(tx.Input)
+	if len(input) < 4 || len(tx.Input) < 10 {
+		return method, false
+	}
+
+	// filter method id
+	id := common.ToHex(input[0:4])
+
 	method, ok = processor.methods[id]
 	return method, ok
 }
 
 // HasContract judge protocol have ever been load
-func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
-	_, ok := processor.protocols[protocol]
+//func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
+//	_, ok := processor.protocols[protocol]
+//	return ok
+//}
+
+func (processor *AbiProcessor) HasContract(tx *ethaccessor.Transaction) bool {
+	_, ok := processor.GetMethod(tx)
 	return ok
 }
 
@@ -193,19 +210,19 @@ func (processor *AbiProcessor) HasSpender(spender common.Address) bool {
 }
 
 func (processor *AbiProcessor) loadProtocolAddress() {
-	for _, v := range util.AllTokens {
-		processor.protocols[v.Protocol] = v.Symbol
-		log.Infof("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
-	}
+	//for _, v := range util.AllTokens {
+	//	processor.protocols[v.Protocol] = v.Symbol
+	//	log.Infof("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
+	//}
 
 	for _, v := range ethaccessor.ProtocolAddresses() {
 		protocolSymbol := "loopring"
 		delegateSymbol := "transfer_delegate"
 		tokenRegisterSymbol := "token_register"
 
-		processor.protocols[v.ContractAddress] = protocolSymbol
-		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
-		processor.protocols[v.DelegateAddress] = delegateSymbol
+		//processor.protocols[v.ContractAddress] = protocolSymbol
+		//processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
+		//processor.protocols[v.DelegateAddress] = delegateSymbol
 
 		processor.delegates[v.DelegateAddress] = delegateSymbol
 

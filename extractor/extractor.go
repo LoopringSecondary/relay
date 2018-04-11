@@ -204,7 +204,7 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if !l.processor.HasContract(common.HexToAddress(tx.To)) {
+	if !l.processor.HasContract(tx) {
 		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
 	}
 
@@ -222,7 +222,7 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transac
 
 	blockTime := big.NewInt(time.Now().Unix())
 
-	if l.processor.HasContract(common.HexToAddress(tx.To)) {
+	if l.processor.HasContract(tx) {
 		return l.ProcessMethod(tx, nil, blockTime)
 	} else {
 		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
@@ -230,18 +230,9 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transac
 }
 
 func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	// filter method input
-	input := common.FromHex(tx.Input)
-	if len(input) < 4 || len(tx.Input) < 10 {
-		l.debug("extractor,tx:%s contract method id %s length invalid", tx.Hash, tx.Input)
-		return nil
-	}
-
-	// filter method id
-	id := common.ToHex(input[0:4])
-	method, ok := l.processor.GetMethod(id)
+	method, ok := l.processor.GetMethod(tx)
 	if !ok {
-		l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
+		l.debug("extractor,tx:%s,unsupported contract method", tx.Hash)
 		return nil
 	}
 
@@ -282,16 +273,15 @@ func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt
 
 		// 过滤合约
 		protocolAddr := common.HexToAddress(evtLog.Address)
-		if ok := l.processor.HasContract(protocolAddr); !ok {
+		if ok := l.processor.HasContract(tx); !ok {
 			l.debug("extractor,tx:%s contract event unsupported protocol %s", txhash, protocolAddr.Hex())
 			continue
 		}
 
 		// 过滤事件
 		data := hexutil.MustDecode(evtLog.Data)
-		id := common.HexToHash(evtLog.Topics[0])
-		if event, ok = l.processor.GetEvent(id); !ok {
-			l.debug("extractor,tx:%s contract event id error:%s", txhash, id.Hex())
+		if event, ok = l.processor.GetEvent(evtLog); !ok {
+			l.debug("extractor,tx:%s,unsupported contract event", txhash)
 			continue
 		}
 

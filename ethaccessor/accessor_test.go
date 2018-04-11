@@ -48,7 +48,7 @@ var (
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
 	account := account2
 	wethAddr := wethTokenAddress
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(10000))
+	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
 	if result, err := callMethod(account, "deposit", gas, gasPrice, amount); nil != err {
 		t.Fatalf("call method weth-deposit error:%s", err.Error())
@@ -189,7 +189,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0x20ea4dae6c9b5df4d97852a5a1dc24e9c0fee3820b50873b21d9bd448a9a293a")
+		orderhash    = common.HexToHash("0xad31e2c07175587cd4592587af811f97a677251c6ec1d3f698aedbbcdf81965b")
 		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 

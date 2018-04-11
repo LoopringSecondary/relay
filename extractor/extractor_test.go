@@ -24,9 +24,9 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
