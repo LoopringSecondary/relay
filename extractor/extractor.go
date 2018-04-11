@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"sync"
@@ -266,27 +265,16 @@ func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt
 
 	txhash := receipt.TransactionHash
 	for _, evtLog := range receipt.Logs {
-		var (
-			event EventData
-			ok    bool
-		)
-
-		// 过滤合约
-		protocolAddr := common.HexToAddress(evtLog.Address)
-		if ok := l.processor.HasContract(tx); !ok {
-			l.debug("extractor,tx:%s contract event unsupported protocol %s", txhash, protocolAddr.Hex())
-			continue
-		}
-
 		// 过滤事件
-		data := hexutil.MustDecode(evtLog.Data)
-		if event, ok = l.processor.GetEvent(evtLog); !ok {
+		event, ok := l.processor.GetEvent(evtLog)
+		if !ok {
 			l.debug("extractor,tx:%s,unsupported contract event", txhash)
 			continue
 		}
 
+		// 解析事件
+		data := hexutil.MustDecode(evtLog.Data)
 		if nil != data && len(data) > 0 {
-			// 解析事件
 			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
 				log.Errorf("extractor,tx:%s unpack event error:%s", txhash, err.Error())
 				continue
