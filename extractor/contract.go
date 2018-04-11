@@ -131,9 +131,10 @@ const (
 )
 
 type AbiProcessor struct {
-	events  map[common.Hash]EventData
-	methods map[string]MethodData
-	//protocols      map[common.Address]string
+	events         map[common.Hash]EventData
+	methods        map[string]MethodData
+	erc20Events    map[common.Hash]bool
+	protocols      map[common.Address]string
 	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
 	db             dao.RdsService
@@ -145,8 +146,9 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 
 	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
+	processor.erc20Events = make(map[common.Hash]bool)
 	processor.methods = make(map[string]MethodData)
-	//processor.protocols = make(map[common.Address]string)
+	processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
 	processor.db = db
 
@@ -193,14 +195,25 @@ func (processor *AbiProcessor) GetMethod(tx *ethaccessor.Transaction) (MethodDat
 }
 
 // HasContract judge protocol have ever been load
-//func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
-//	_, ok := processor.protocols[protocol]
-//	return ok
-//}
-
-func (processor *AbiProcessor) HasContract(tx *ethaccessor.Transaction) bool {
-	_, ok := processor.GetMethod(tx)
+func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
+	_, ok := processor.protocols[protocol]
 	return ok
+}
+
+// HasErc20Events transaction receipt from unsupported contract has erc20 event or not
+func (processor *AbiProcessor) HasErc20Events(receipt *ethaccessor.TransactionReceipt) bool {
+	if receipt == nil || len(receipt.Logs) == 0 {
+		return false
+	}
+
+	for _, evtLog := range receipt.Logs {
+		id := common.HexToHash(evtLog.Topics[0])
+		if _, ok := processor.erc20Events[id]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // HasSpender check approve spender address have ever been load
@@ -210,21 +223,19 @@ func (processor *AbiProcessor) HasSpender(spender common.Address) bool {
 }
 
 func (processor *AbiProcessor) loadProtocolAddress() {
-	//for _, v := range util.AllTokens {
-	//	processor.protocols[v.Protocol] = v.Symbol
-	//	log.Infof("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
-	//}
+	for _, v := range util.AllTokens {
+		processor.protocols[v.Protocol] = v.Symbol
+		log.Infof("extractor,contract protocol %s->%s", v.Symbol, v.Protocol.Hex())
+	}
 
 	for _, v := range ethaccessor.ProtocolAddresses() {
 		protocolSymbol := "loopring"
 		delegateSymbol := "transfer_delegate"
 		tokenRegisterSymbol := "token_register"
 
-		//processor.protocols[v.ContractAddress] = protocolSymbol
-		//processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
-		//processor.protocols[v.DelegateAddress] = delegateSymbol
-
-		processor.delegates[v.DelegateAddress] = delegateSymbol
+		processor.protocols[v.ContractAddress] = protocolSymbol
+		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
+		processor.protocols[v.DelegateAddress] = delegateSymbol
 
 		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
@@ -310,6 +321,7 @@ func (processor *AbiProcessor) loadErc20Contract() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		processor.events[contract.Id] = contract
+		processor.erc20Events[contract.Id] = true
 		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 
