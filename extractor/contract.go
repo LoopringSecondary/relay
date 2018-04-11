@@ -133,6 +133,7 @@ const (
 type AbiProcessor struct {
 	events         map[common.Hash]EventData
 	methods        map[string]MethodData
+	erc20Events    map[common.Hash]bool
 	protocols      map[common.Address]string
 	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
@@ -145,6 +146,7 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 
 	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
+	processor.erc20Events = make(map[common.Hash]bool)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
@@ -161,21 +163,33 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 }
 
 // GetEvent get EventData with id hash
-func (processor *AbiProcessor) GetEvent(id common.Hash) (EventData, bool) {
+func (processor *AbiProcessor) GetEvent(evtLog ethaccessor.Log) (EventData, bool) {
 	var (
 		event EventData
 		ok    bool
 	)
+
+	id := common.HexToHash(evtLog.Topics[0])
 	event, ok = processor.events[id]
 	return event, ok
 }
 
 // GetMethod get MethodData with method id
-func (processor *AbiProcessor) GetMethod(id string) (MethodData, bool) {
+func (processor *AbiProcessor) GetMethod(tx *ethaccessor.Transaction) (MethodData, bool) {
 	var (
 		method MethodData
 		ok     bool
 	)
+
+	// filter method input
+	input := common.FromHex(tx.Input)
+	if len(input) < 4 || len(tx.Input) < 10 {
+		return method, false
+	}
+
+	// filter method id
+	id := common.ToHex(input[0:4])
+
 	method, ok = processor.methods[id]
 	return method, ok
 }
@@ -184,6 +198,22 @@ func (processor *AbiProcessor) GetMethod(id string) (MethodData, bool) {
 func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
 	_, ok := processor.protocols[protocol]
 	return ok
+}
+
+// HasErc20Events transaction receipt from unsupported contract has erc20 event or not
+func (processor *AbiProcessor) HasErc20Events(receipt *ethaccessor.TransactionReceipt) bool {
+	if receipt == nil || len(receipt.Logs) == 0 {
+		return false
+	}
+
+	for _, evtLog := range receipt.Logs {
+		id := common.HexToHash(evtLog.Topics[0])
+		if _, ok := processor.erc20Events[id]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // HasSpender check approve spender address have ever been load
@@ -206,8 +236,6 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 		processor.protocols[v.ContractAddress] = protocolSymbol
 		processor.protocols[v.TokenRegistryAddress] = tokenRegisterSymbol
 		processor.protocols[v.DelegateAddress] = delegateSymbol
-
-		processor.delegates[v.DelegateAddress] = delegateSymbol
 
 		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
@@ -293,6 +321,7 @@ func (processor *AbiProcessor) loadErc20Contract() {
 
 		eventemitter.On(contract.Id.Hex(), watcher)
 		processor.events[contract.Id] = contract
+		processor.erc20Events[contract.Id] = true
 		log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 	}
 

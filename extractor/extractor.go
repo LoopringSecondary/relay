@@ -201,45 +201,46 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
-
-	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		l.ProcessEvent(tx, receipt, blockTime)
-		if receipt.IsFailed() {
-			l.ProcessMethod(tx, receipt, blockTime)
-		}
-		return nil
-	} else {
-		return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
-	}
-}
-
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
 	log.Debugf("extractor,process pending transaction %s", tx.Hash)
 
 	blockTime := big.NewInt(time.Now().Unix())
 
 	if l.processor.HasContract(common.HexToAddress(tx.To)) {
+		log.Debugf("extractor,pending transaction:%s supported.", tx.Hash)
 		return l.ProcessMethod(tx, nil, blockTime)
 	} else {
+		l.debug("extractor,pending transaction:%s unsupported", tx.Hash)
 		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
 	}
 }
 
-func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	// filter method input
-	input := common.FromHex(tx.Input)
-	if len(input) < 4 || len(tx.Input) < 10 {
-		l.debug("extractor,tx:%s contract method id %s length invalid", tx.Hash, tx.Input)
-		return nil
-	}
+func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
+	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	// filter method id
-	id := common.ToHex(input[0:4])
-	method, ok := l.processor.GetMethod(id)
+	if l.processor.HasContract(common.HexToAddress(tx.To)) {
+		if receipt.IsFailed() {
+			log.Debugf("extractor,mined transaction(supported):%s is failed.", tx.Hash)
+			return l.ProcessMethod(tx, receipt, blockTime)
+		} else {
+			log.Debugf("extractor,mined transaction(supported):%s is success.", tx.Hash)
+			return l.ProcessEvent(tx, receipt, blockTime)
+		}
+	} else {
+		if l.processor.HasErc20Events(receipt) {
+			log.Debugf("extractor,mined transaction(unsupported with Erc20Event):%s is success.", tx.Hash)
+			return l.ProcessEvent(tx, receipt, blockTime)
+		} else {
+			log.Debugf("extractor,mined transaction(unsupported without Erc20Event):%s is success.", tx.Hash)
+			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
+		}
+	}
+}
+
+func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
+	method, ok := l.processor.GetMethod(tx)
 	if !ok {
-		l.debug("extractor,tx:%s contract method id error:%s", tx.Hash, id)
+		l.debug("extractor,tx:%s,unsupported contract method", tx.Hash)
 		return nil
 	}
 
@@ -265,43 +266,21 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 }
 
 func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
-	// filter logs
-	if len(receipt.Logs) <= 0 {
-		l.debug("extractor,tx:%s contract method unsupported protocol %s", tx.Hash, tx.To)
-		return nil
-	}
-
-	txhash := receipt.TransactionHash
 	for _, evtLog := range receipt.Logs {
-		var (
-			event EventData
-			ok    bool
-		)
-
-		// 过滤合约
-		protocolAddr := common.HexToAddress(evtLog.Address)
-		if ok := l.processor.HasContract(protocolAddr); !ok {
-			l.debug("extractor,tx:%s contract event unsupported protocol %s", txhash, protocolAddr.Hex())
+		event, ok := l.processor.GetEvent(evtLog)
+		if !ok {
+			l.debug("extractor,tx:%s,unsupported contract event", tx.Hash)
 			continue
 		}
 
-		// 过滤事件
 		data := hexutil.MustDecode(evtLog.Data)
-		id := common.HexToHash(evtLog.Topics[0])
-		if event, ok = l.processor.GetEvent(id); !ok {
-			l.debug("extractor,tx:%s contract event id error:%s", txhash, id.Hex())
-			continue
-		}
-
 		if nil != data && len(data) > 0 {
-			// 解析事件
 			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
-				log.Errorf("extractor,tx:%s unpack event error:%s", txhash, err.Error())
+				log.Errorf("extractor,tx:%s unpack event error:%s", tx.Hash, err.Error())
 				continue
 			}
 		}
 
-		// full filled event and emit to abi processor
 		event.FullFilled(tx, &evtLog, receipt.GasUsed.BigInt(), blockTime)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
