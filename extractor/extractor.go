@@ -209,8 +209,10 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 	}
 
 	if receipt.IsFailed() {
+		log.Debugf("extractor,mined transaction:%s is failed.", tx.Hash)
 		return l.ProcessMethod(tx, receipt, blockTime)
 	} else {
+		log.Debugf("extractor,mined transaction:%s is success.", tx.Hash)
 		return l.ProcessEvent(tx, receipt, blockTime)
 	}
 }
