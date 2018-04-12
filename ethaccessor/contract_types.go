@@ -349,9 +349,9 @@ type CutoffMethod struct {
 	Cutoff *big.Int `fieldName:"cutoff" fieldId:"0"`
 }
 
-func (method *CutoffMethod) ConvertDown() *types.CutoffMethodEvent {
-	evt := &types.CutoffMethodEvent{}
-	evt.Value = method.Cutoff
+func (method *CutoffMethod) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	evt.Cutoff = method.Cutoff
 
 	return evt
 }
@@ -362,9 +362,9 @@ type CutoffPairMethod struct {
 	Cutoff *big.Int       `fieldName:"cutoff" fieldId:"2"`
 }
 
-func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairMethodEvent {
-	evt := &types.CutoffPairMethodEvent{}
-	evt.Value = method.Cutoff
+func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.Cutoff = method.Cutoff
 	evt.Token1 = method.Token1
 	evt.Token2 = method.Token2
 
@@ -375,8 +375,8 @@ type WethWithdrawalMethod struct {
 	Value *big.Int `fieldName:"wad" fieldId:"0"`
 }
 
-func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
-	evt := &types.WethWithdrawalMethodEvent{}
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalEvent {
+	evt := &types.WethWithdrawalEvent{}
 	evt.Value = e.Value
 
 	return evt
@@ -387,8 +387,8 @@ type ApproveMethod struct {
 	Value   *big.Int       `fieldName:"value" fieldId:"1"`
 }
 
-func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
-	evt := &types.ApproveMethodEvent{}
+func (e *ApproveMethod) ConvertDown() *types.ApprovalEvent {
+	evt := &types.ApprovalEvent{}
 	evt.Spender = e.Spender
 	evt.Value = e.Value
 
@@ -401,8 +401,8 @@ type TransferMethod struct {
 	Value    *big.Int       `fieldName:"value" fieldId:"1"`
 }
 
-func (e *TransferMethod) ConvertDown() *types.TransferMethodEvent {
-	evt := &types.TransferMethodEvent{}
+func (e *TransferMethod) ConvertDown() *types.TransferEvent {
+	evt := &types.TransferEvent{}
 	evt.Receiver = e.Receiver
 	evt.Value = e.Value
 

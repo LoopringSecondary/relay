@@ -127,49 +127,9 @@ type WethWithdrawalEvent struct {
 	Value *big.Int
 }
 
-type WethDepositMethodEvent struct {
-	TxInfo
-	Dst   common.Address
-	Value *big.Int
-}
-
-type WethWithdrawalMethodEvent struct {
-	TxInfo
-	Src   common.Address
-	Value *big.Int
-}
-
-type ApproveMethodEvent struct {
-	TxInfo
-	Spender common.Address
-	Value   *big.Int
-	Owner   common.Address
-}
-
-type TransferMethodEvent struct {
-	TxInfo
-	Sender   common.Address
-	Receiver common.Address
-	Value    *big.Int
-}
-
 type SubmitRingMethodEvent struct {
 	TxInfo
 	Err error
-}
-
-type CutoffMethodEvent struct {
-	TxInfo
-	Value *big.Int
-	Owner common.Address
-}
-
-type CutoffPairMethodEvent struct {
-	TxInfo
-	Value  *big.Int
-	Token1 common.Address
-	Token2 common.Address
-	Owner  common.Address
 }
 
 type RingSubmitResultEvent struct {

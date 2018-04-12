@@ -52,7 +52,7 @@ type Filter interface {
 func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager, marketCap marketcap.MarketCapProvider) {
 	// add gateway watcher
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
-	eventemitter.On(eventemitter.Gateway, gatewayWatcher)
+	eventemitter.On(eventemitter.GatewayNewOrder, gatewayWatcher)
 
 	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
@@ -123,7 +123,7 @@ func HandleOrder(input eventemitter.EventData) error {
 		state = &types.OrderState{}
 		state.RawOrder = *order
 		broadcastTime = 0
-		eventemitter.Emit(eventemitter.OrderManagerGatewayNewOrder, state)
+		eventemitter.Emit(eventemitter.NewOrder, state)
 	} else {
 		broadcastTime = state.BroadcastTime
 		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())

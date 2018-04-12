@@ -116,7 +116,7 @@ func NewTrendManager(dao dao.RdsService) TrendManager {
 		trendManager.LoadCache()
 		trendManager.startScheduleUpdate()
 		fillOrderWatcher := &eventemitter.Watcher{Concurrent: false, Handle: trendManager.handleOrderFilled}
-		eventemitter.On(eventemitter.OrderManagerExtractorFill, fillOrderWatcher)
+		eventemitter.On(eventemitter.OrderFilled, fillOrderWatcher)
 
 	})
 
@@ -944,6 +944,10 @@ func (t *TrendManager) handleOrderFilled(input eventemitter.EventData) (err erro
 	if t.cacheReady {
 
 		event := input.(*types.OrderFilledEvent)
+		if event.Status != types.TX_STATUS_SUCCESS {
+			return
+		}
+
 		newFillModel := &dao.FillEvent{}
 		if err = newFillModel.ConvertDown(event); err != nil {
 			return

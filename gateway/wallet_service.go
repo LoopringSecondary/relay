@@ -246,14 +246,14 @@ type RingMinedInfo struct {
 }
 
 type WalletServiceImpl struct {
-	trendManager    market.TrendManager
-	orderManager    ordermanager.OrderManager
-	accountManager  market.AccountManager
-	marketCap       marketcap.MarketCapProvider
-	ethForwarder    *EthForwarder
-	tickerCollector market.CollectorImpl
-	rds             dao.RdsService
-	oldWethAddress  string
+	trendManager           market.TrendManager
+	orderManager           ordermanager.OrderManager
+	accountManager         market.AccountManager
+	marketCap              marketcap.MarketCapProvider
+	ethForwarder           *EthForwarder
+	tickerCollector        market.CollectorImpl
+	rds                    dao.RdsService
+	oldWethAddress         string
 	defaultContractVersion string
 }
 

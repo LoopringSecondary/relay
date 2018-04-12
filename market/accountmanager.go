@@ -57,7 +57,7 @@ type Allowance struct {
 }
 
 type AccountManager struct {
-	c *cache.Cache
+	c                      *cache.Cache
 	defaultContractVersion string
 }
 
@@ -82,10 +82,10 @@ func NewAccountManager(protocols map[string]string) AccountManager {
 	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
 	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
 	blockForkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.BlockForkHandler}
-	eventemitter.On(eventemitter.AccountTransfer, transferWatcher)
-	eventemitter.On(eventemitter.AccountApproval, approveWatcher)
-	eventemitter.On(eventemitter.WethDepositMethod, wethDepositWatcher)
-	eventemitter.On(eventemitter.WethWithdrawalMethod, wethWithdrawalWatcher)
+	eventemitter.On(eventemitter.Transfer, transferWatcher)
+	eventemitter.On(eventemitter.Approve, approveWatcher)
+	eventemitter.On(eventemitter.WethDeposit, wethDepositWatcher)
+	eventemitter.On(eventemitter.WethWithdrawal, wethWithdrawalWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, blockForkWatcher)
 
 	// select first contract version to default
@@ -150,7 +150,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 		if err := ethaccessor.BatchErc20BalanceAndAllowance("latest", reqs); nil != err {
 			return account, err
 		}
-		for _,req := range reqs {
+		for _, req := range reqs {
 			balance := Balance{Token: req.Symbol}
 			if nil != req.BalanceErr {
 				log.Errorf("get balance failed, token:%s", req.Symbol)
@@ -158,7 +158,7 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 				balance.Balance = req.Balance.BigInt()
 				account.Balances[req.Symbol] = balance
 			}
-			allowance := Allowance{ token: req.Symbol }
+			allowance := Allowance{token: req.Symbol}
 			if nil != req.AllowanceErr {
 				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", req.Symbol, address, contractVersion)
 			} else {
@@ -231,7 +231,7 @@ func (a *AccountManager) HandleApprove(input eventemitter.EventData) (err error)
 }
 
 func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err error) {
-	event := input.(*types.WethDepositMethodEvent)
+	event := input.(*types.WethDepositEvent)
 	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
@@ -243,7 +243,7 @@ func (a *AccountManager) HandleWethDeposit(input eventemitter.EventData) (err er
 }
 
 func (a *AccountManager) HandleWethWithdrawal(input eventemitter.EventData) (err error) {
-	event := input.(*types.WethWithdrawalMethodEvent)
+	event := input.(*types.WethWithdrawalEvent)
 	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
 		log.Info("received wrong status event, drop it")
 		return nil
@@ -324,11 +324,11 @@ func (a *AccountManager) updateWethBalance(address string) error {
 	return nil
 }
 
-func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositMethodEvent) error {
+func (a *AccountManager) updateWethBalanceByDeposit(event types.WethDepositEvent) error {
 	return a.updateWethBalance(event.From.Hex())
 }
 
-func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalMethodEvent) error {
+func (a *AccountManager) updateWethBalanceByWithdrawal(event types.WethWithdrawalEvent) error {
 	return a.updateWethBalance(event.From.Hex())
 }
 

@@ -99,22 +99,22 @@ func (om *OrderManagerImpl) Start() {
 	om.syncWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSync}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 
-	eventemitter.On(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
-	eventemitter.On(eventemitter.OrderManagerExtractorCutoffPair, om.cutoffPairWatcher)
+	eventemitter.On(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.On(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.On(eventemitter.OrderFilled, om.fillOrderWatcher)
+	eventemitter.On(eventemitter.CancelOrder, om.cancelOrderWatcher)
+	eventemitter.On(eventemitter.CutoffAll, om.cutoffOrderWatcher)
+	eventemitter.On(eventemitter.CutoffPair, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, om.forkWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
-	eventemitter.Un(eventemitter.OrderManagerGatewayNewOrder, om.newOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorRingMined, om.ringMinedWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorFill, om.fillOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCancel, om.cancelOrderWatcher)
-	eventemitter.Un(eventemitter.OrderManagerExtractorCutoff, om.cutoffOrderWatcher)
+	eventemitter.Un(eventemitter.NewOrder, om.newOrderWatcher)
+	eventemitter.Un(eventemitter.RingMined, om.ringMinedWatcher)
+	eventemitter.Un(eventemitter.OrderFilled, om.fillOrderWatcher)
+	eventemitter.Un(eventemitter.CancelOrder, om.cancelOrderWatcher)
+	eventemitter.Un(eventemitter.CutoffAll, om.cutoffOrderWatcher)
 	eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, om.forkWatcher)
 
@@ -158,6 +158,10 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error {
 	event := input.(*types.RingMinedEvent)
 
+	if event.Status != types.TX_STATUS_SUCCESS {
+		return nil
+	}
+
 	var (
 		model = &dao.RingMinedEvent{}
 		err   error
@@ -180,6 +184,10 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 
 func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) error {
 	event := input.(*types.OrderFilledEvent)
+
+	if event.Status != types.TX_STATUS_SUCCESS {
+		return nil
+	}
 
 	// save fill event
 	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
@@ -239,6 +247,10 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
 
+	if event.Status != types.TX_STATUS_SUCCESS {
+		return nil
+	}
+
 	// save cancel event
 	_, err := om.rds.GetCancelEvent(event.TxHash)
 	if err == nil {
@@ -290,6 +302,10 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffEvent)
 
+	if evt.Status != types.TX_STATUS_SUCCESS {
+		return nil
+	}
+
 	// check tx exist
 	_, err := om.rds.GetCutoffEvent(evt.TxHash)
 	if err == nil {
@@ -328,6 +344,10 @@ func (om *OrderManagerImpl) handleCutoff(input eventemitter.EventData) error {
 
 func (om *OrderManagerImpl) handleCutoffPair(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffPairEvent)
+
+	if evt.Status != types.TX_STATUS_SUCCESS {
+		return nil
+	}
 
 	// check tx exist
 	_, err := om.rds.GetCutoffPairEvent(evt.TxHash)
