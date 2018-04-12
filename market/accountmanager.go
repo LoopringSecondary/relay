@@ -82,10 +82,10 @@ func NewAccountManager(protocols map[string]string) AccountManager {
 	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethDeposit}
 	wethWithdrawalWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.HandleWethWithdrawal}
 	blockForkWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.BlockForkHandler}
-	eventemitter.On(eventemitter.AccountTransfer, transferWatcher)
-	eventemitter.On(eventemitter.AccountApproval, approveWatcher)
-	eventemitter.On(eventemitter.WethDepositEvent, wethDepositWatcher)
-	eventemitter.On(eventemitter.WethWithdrawalEvent, wethWithdrawalWatcher)
+	eventemitter.On(eventemitter.Transfer, transferWatcher)
+	eventemitter.On(eventemitter.Approve, approveWatcher)
+	eventemitter.On(eventemitter.WethDeposit, wethDepositWatcher)
+	eventemitter.On(eventemitter.WethWithdrawal, wethWithdrawalWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, blockForkWatcher)
 
 	// select first contract version to default

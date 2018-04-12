@@ -52,42 +52,42 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 // Start start orderbook as a service
 func (tm *TransactionManager) Start() {
 	tm.approveEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveEvent}
-	eventemitter.On(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
+	eventemitter.On(eventemitter.Approve, tm.approveEventWatcher)
 
 	tm.orderCancelledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderCancelledEvent}
-	eventemitter.On(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
+	eventemitter.On(eventemitter.CancelOrder, tm.orderCancelledEventWatcher)
 
 	tm.cutoffAllEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffAllEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
+	eventemitter.On(eventemitter.CutoffAll, tm.cutoffAllEventWatcher)
 
 	tm.cutoffPairEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffPairEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
+	eventemitter.On(eventemitter.CutoffPair, tm.cutoffPairEventWatcher)
 
 	tm.wethDepositEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethDepositEvent}
-	eventemitter.On(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
+	eventemitter.On(eventemitter.WethDeposit, tm.wethDepositEventWatcher)
 
 	tm.wethWithdrawalEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethWithdrawalEvent}
-	eventemitter.On(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
+	eventemitter.On(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
 
 	tm.transferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveTransferEvent}
-	eventemitter.On(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
+	eventemitter.On(eventemitter.Transfer, tm.transferEventWatcher)
 
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
-	eventemitter.On(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.On(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 
 	tm.forkDetectedEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.ForkProcess}
 	eventemitter.On(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
 func (tm *TransactionManager) Stop() {
-	eventemitter.Un(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.Un(eventemitter.Approve, tm.approveEventWatcher)
+	eventemitter.Un(eventemitter.CancelOrder, tm.orderCancelledEventWatcher)
+	eventemitter.Un(eventemitter.CutoffAll, tm.cutoffAllEventWatcher)
+	eventemitter.Un(eventemitter.CutoffPair, tm.cutoffPairEventWatcher)
+	eventemitter.Un(eventemitter.WethDeposit, tm.wethDepositEventWatcher)
+	eventemitter.Un(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
+	eventemitter.Un(eventemitter.Transfer, tm.transferEventWatcher)
+	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 

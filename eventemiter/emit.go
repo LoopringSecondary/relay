@@ -28,28 +28,32 @@ import (
 type Topic string
 
 const (
-	OrderCanceled                   = "OrderCanceled"
-	OrderFilled                     = "OrderFilled"
-	ExtractorFork                   = "ExtractorFork" //chain forked
-	OrderManagerFork                = "OrderManagerFork"
-	RingSubmitFailed                = "RingSubmitFailed" //submit ring failed
-	Transaction                     = "Transaction"
-	Gateway                         = "Gateway"
-	AccountTransfer                 = "AccountTransfer"
-	AccountApproval                 = "AccountApproval"
-	TokenRegistered                 = "TokenRegistered"
-	TokenUnRegistered               = "TokenUnRegistered"
-	RingHashSubmitted               = "RingHashSubmitted"
-	AddressAuthorized               = "AddressAuthorized"
-	AddressDeAuthorized             = "AddressDeAuthorized"
-	OrderManagerGatewayNewOrder     = "OrderManagerGatewayNewOrder"
-	OrderManagerExtractorRingMined  = "OrderManagerRingMined"
-	OrderManagerExtractorFill       = "OrderManagerExtractorFill"
-	OrderManagerExtractorCancel     = "OrderManagerExtractorCancel"
-	OrderManagerExtractorCutoff     = "OrderManagerExtractorCutoff"
-	OrderManagerExtractorCutoffPair = "OrderManagerExtractorCutoffPair"
-	MinedOrderState                 = "MinedOrderState" //orderbook send orderstate to miner
-	WalletTransactionSubmitted      = "WalletTransactionSubmitted"
+	NewOrder = "NewOrder"
+
+	// Methods
+	WethDeposit      = "WethDepositEvent"
+	WethWithdrawal   = "WethWithdrawalEvent"
+	Approve          = "ApproveMethod"
+	Transfer         = "Transfer"
+	EthTransferEvent = "EthTransferEvent"
+
+	RingMined           = "RingMined"
+	OrderFilled         = "OrderFilled"
+	CancelOrder         = "CancelOrder"
+	CutoffAll           = "Cutoff"
+	CutoffPair          = "CutoffPair"
+	TokenRegistered     = "TokenRegistered"
+	TokenUnRegistered   = "TokenUnRegistered"
+	RingHashSubmitted   = "RingHashSubmitted"
+	AddressAuthorized   = "AddressAuthorized"
+	AddressDeAuthorized = "AddressDeAuthorized"
+
+	MinedOrderState            = "MinedOrderState" //orderbook send orderstate to miner
+	WalletTransactionSubmitted = "WalletTransactionSubmitted"
+
+	ExtractorFork   = "ExtractorFork" //chain forked
+	Transaction     = "Transaction"
+	GatewayNewOrder = "GatewayNewOrder"
 
 	//Miner
 	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
@@ -68,34 +72,9 @@ const (
 	SyncChainComplete = "SyncChainComplete"
 	ChainForkDetected = "ChainForkDetected"
 
-	// Methods
-	WethDepositMethod    = "WethDepositMethod"
-	WethWithdrawalMethod = "WethWithdrawalMethod"
-	WethDepositEvent     = "WethDepositEvent"
-	WethWithdrawalEvent  = "WethWithdrawalEvent"
-	ApproveMethod        = "ApproveMethod"
-
 	// Transaction
 	TransactionEvent   = "TransactionEvent"
 	PendingTransaction = "PendingTransaction"
-
-	// transaction manager
-	TxManagerCancelOrderMethod    = "TxManagerCancelOrderMethod"
-	TxManagerCutoffAllMethod      = "TxManagerCutoffAllMethod"
-	TxManagerCutoffPairMethod     = "TxManagerCutoffPairMethod"
-	TxManagerApproveMethod        = "TxManagerApproveMethod"
-	TxManagerTransferMethod       = "TxManagerTransferMethod"
-	TxManagerWethDepositMethod    = "TxManagerWethDepositMethod"
-	TxManagerWethWithdrawalMethod = "TxManagerWethWithdrawalMethod"
-	TxManagerApproveEvent         = "TxManagerApproveEvent"
-	TxManagerOrderFilledEvent     = "TxManagerOrderFilledEvent"
-	TxManagerOrderCancelledEvent  = "TxManagerOrderCancelledEvent"
-	TxManagerCutoffAllEvent       = "TxManagerCutoffAllEvent"
-	TxManagerCutoffPairEvent      = "TxManagerCutoffPairEvent"
-	TxManagerTransferEvent        = "TxManagerTransferEvent"
-	TxManagerWethDepositEvent     = "TxManagerWethDepositEvent"
-	TxManagerWethWithdrawalEvent  = "TxManagerWethWithdrawalEvent"
-	TxManagerEthTransferEvent     = "TxManagerEthTransferEvent"
 )
 
 var watchers map[string][]*Watcher
