@@ -344,6 +344,10 @@ func GetAllTickerFromBinance() (tickers []Ticker, err error) {
 			return tickers, err
 		} else {
 
+			if len(binanceTickers) == 0 {
+				return tickers, errors.New("fetch ticker from binance failed")
+			}
+
 			tickers = make([]Ticker, 0)
 			for _, binanceTicker := range binanceTickers {
 
