@@ -501,7 +501,7 @@ func (processor *AbiProcessor) handleCutoffMethod(input eventemitter.EventData) 
 	cutoff := contractMethod.ConvertDown()
 	cutoff.TxInfo = contract.TxInfo
 	cutoff.Owner = cutoff.From
-	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Value.Int64(), cutoff.Status)
+	log.Debugf("extractor,tx:%s cutoff method owner:%s, cutoff:%d, status:%d", contract.TxHash.Hex(), cutoff.Owner.Hex(), cutoff.Cutoff.Int64(), cutoff.Status)
 
 	eventemitter.Emit(eventemitter.TxManagerCutoffAllMethod, cutoff)
 
@@ -522,7 +522,7 @@ func (processor *AbiProcessor) handleCutoffPairMethod(input eventemitter.EventDa
 	cutoffpair.TxInfo = contract.TxInfo
 	cutoffpair.Owner = cutoffpair.From
 
-	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Value.Int64())
+	log.Debugf("extractor,tx:%s cutoffpair method owenr:%s, token1:%s, token2:%s, cutoff:%d", contract.TxHash.Hex(), cutoffpair.Owner.Hex(), cutoffpair.Token1.Hex(), cutoffpair.Token2.Hex(), cutoffpair.Cutoff.Int64())
 
 	eventemitter.Emit(eventemitter.TxManagerCutoffPairMethod, cutoffpair)
 
@@ -576,7 +576,7 @@ func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData
 func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventData) error {
 	contractData := input.(MethodData)
 
-	var deposit types.WethDepositMethodEvent
+	var deposit types.WethDepositEvent
 	deposit.Dst = contractData.From
 	deposit.Value = contractData.Value
 	deposit.TxInfo = contractData.TxInfo
