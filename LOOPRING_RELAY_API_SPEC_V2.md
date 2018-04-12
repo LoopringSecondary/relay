@@ -279,7 +279,7 @@ params: {
 
 ##### Returns
 
-1. `depth` - The depth data.
+1. `depth` - 1. `depth` - The depth data, every depth element is a three length of array, which contain price, amount A and B in market A-B in order.
 2. `market` - The market pair.
 3. `contractVersion` - The loopring protocol version.
 
@@ -295,10 +295,10 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
   "result": {
     "depth" : {
       "buy" : [
-        ["0x000313", "0x013"], ["0x1", "0x2"], ["0x000123", "0x12"]
+        ["0.0008666300","10000.0000000000","8.6663000000"]
       ],
       "sell" : [
-        ["0x000313", "0x013"], ["0x1", "0x2"], ["0x000123", "0x12"]
+        ["0.0008683300","900.0000000000","0.7814970000"],["0.0009000000","7750.0000000000","6.9750000000"],["0.0009053200","480.0000000000","0.4345536000"]
       ]
     },
     "market" : "LRC-WETH",
@@ -1525,7 +1525,7 @@ socketio.on("depth_res", function(data) {
 
 ##### Returns
 
-1. `depth` - The depth data.
+1. `depth` - The depth data, every depth element is a three length of array, which contain price, amount A and B in market A-B in order.
 2. `market` - The market pair.
 3. `contractVersion` - The loopring protocol version.
 
@@ -1542,10 +1542,10 @@ socketio.on("depth_res", function(data) {
 {
     "depth" : {
       "buy" : [
-        ["0x000313", "0x2384", "0x013"], ["0x1", "0x2384", "0x2"], ["0x000123", "0x2384", "0x12"]
+        ["0.0008666300","10000.0000000000","8.6663000000"]
       ],
       "sell" : [
-        ["0x000313", "0x2384", "0x013"], ["0x1", "0x2384", "0x2"], ["0x000123", "0x2384", "0x12"]
+        ["0.0008683300","900.0000000000","0.7814970000"],["0.0009000000","7750.0000000000","6.9750000000"],["0.0009053200","480.0000000000","0.4345536000"]
       ]
     },
     "market" : "LRC-WETH",

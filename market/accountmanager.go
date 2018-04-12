@@ -37,7 +37,6 @@ var RedisCachePlaceHolder = make([]byte, 0)
 
 const DefaultUnlockTtl = 3600 * 24 * 30
 const UnlockCachePreKey = "Unlocked_Address_"
-const DefaultContractVersion = "v1.4"
 
 type Account struct {
 	Address    string
@@ -59,6 +58,7 @@ type Allowance struct {
 
 type AccountManager struct {
 	c *cache.Cache
+	defaultContractVersion string
 }
 
 type Token struct {
@@ -73,7 +73,7 @@ type AccountJson struct {
 	Tokens          []Token `json:"tokens"`
 }
 
-func NewAccountManager() AccountManager {
+func NewAccountManager(protocols map[string]string) AccountManager {
 
 	accountManager := AccountManager{}
 	accountManager.c = cache.New(cache.NoExpiration, cache.NoExpiration)
@@ -87,6 +87,12 @@ func NewAccountManager() AccountManager {
 	eventemitter.On(eventemitter.WethDepositMethod, wethDepositWatcher)
 	eventemitter.On(eventemitter.WethWithdrawalMethod, wethWithdrawalWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, blockForkWatcher)
+
+	// select first contract version to default
+	for k := range protocols {
+		accountManager.defaultContractVersion = k
+		break
+	}
 
 	return accountManager
 }
@@ -103,30 +109,64 @@ func (a *AccountManager) GetBalance(contractVersion, address string) (account Ac
 		return account, err
 	} else {
 		account := Account{Address: address, Balances: make(map[string]Balance), Allowances: make(map[string]Allowance), Lock: sync.Mutex{}}
-		for k, v := range util.AllTokens {
-			balance := Balance{Token: k}
+		reqs := []*ethaccessor.BatchErc20Req{}
 
-			amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
-			if err != nil {
-				log.Infof("get balance failed, token:%s", v.Symbol)
-			} else {
-				balance.Balance = amount
-				account.Balances[k] = balance
-			}
-
-			allowance := Allowance{
-				//contractVersion: contractVersion,
-				token: k}
-
-			allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
-			if err != nil {
-				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
-			} else {
-				allowance.allowance = allowanceAmount
-				account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
-			}
-
+		spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[contractVersion]))
+		if nil != err {
+			return account, errors.New("invalid spender address")
 		}
+		for k, v := range util.AllTokens {
+			req := &ethaccessor.BatchErc20Req{}
+			req.BlockParameter = "latest"
+			req.Symbol = k
+			req.Owner = common.HexToAddress(address)
+
+			req.Spender = spenderAddress
+			req.Token = v.Protocol
+			reqs = append(reqs, req)
+
+			//balance := Balance{Token: k}
+			//
+			//amount, err := a.GetBalanceFromAccessor(v.Symbol, address)
+			//if err != nil {
+			//	log.Infof("get balance failed, token:%s", v.Symbol)
+			//} else {
+			//	balance.Balance = amount
+			//	account.Balances[k] = balance
+			//}
+			//
+			//allowance := Allowance{
+			//	//contractVersion: contractVersion,
+			//	token: k}
+			//
+			//allowanceAmount, err := a.GetAllowanceFromAccessor(v.Symbol, address, contractVersion)
+			//if err != nil {
+			//	log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", v.Symbol, address, contractVersion)
+			//} else {
+			//	allowance.allowance = allowanceAmount
+			//	account.Allowances[buildAllowanceKey(contractVersion, k)] = allowance
+			//}
+		}
+		if err := ethaccessor.BatchErc20BalanceAndAllowance("latest", reqs); nil != err {
+			return account, err
+		}
+		for _,req := range reqs {
+			balance := Balance{Token: req.Symbol}
+			if nil != req.BalanceErr {
+				log.Errorf("get balance failed, token:%s", req.Symbol)
+			} else {
+				balance.Balance = req.Balance.BigInt()
+				account.Balances[req.Symbol] = balance
+			}
+			allowance := Allowance{ token: req.Symbol }
+			if nil != req.AllowanceErr {
+				log.Errorf("get allowance failed, token:%s, address:%s, spender:%s", req.Symbol, address, contractVersion)
+			} else {
+				allowance.allowance = req.Allowance.BigInt()
+				account.Allowances[buildAllowanceKey(contractVersion, req.Symbol)] = allowance
+			}
+		}
+
 		a.c.Set(address, account, cache.NoExpiration)
 		return account, nil
 	}
@@ -141,7 +181,7 @@ func (a *AccountManager) GetBalanceByTokenAddress(address common.Address, token 
 	}
 
 	//todo(xiaolu): 从配置文件中获取
-	account, _ := a.GetBalance(DefaultContractVersion, address.Hex())
+	account, _ := a.GetBalance(a.defaultContractVersion, address.Hex())
 	balance = account.Balances[tokenAlias].Balance
 	allowance = account.Allowances[tokenAlias].allowance
 	return
@@ -253,7 +293,7 @@ func (a *AccountManager) updateBalanceAndAllowance(tokenAlias, address string) e
 		}
 		balance.Balance = amount
 		account.Balances[tokenAlias] = balance
-		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, DefaultContractVersion)
+		allowanceAmount, err := a.GetAllowanceFromAccessor(tokenAlias, address, a.defaultContractVersion)
 		if err != nil {
 			log.Error("get allowance failed from accessor")
 			return err
@@ -298,7 +338,7 @@ func (a *AccountManager) updateAllowance(event types.ApprovalEvent) error {
 	address := strings.ToLower(event.Owner.String())
 
 	// 这里只能根据loopring的合约获取了
-	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[DefaultContractVersion]))
+	spenderAddress, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[a.defaultContractVersion]))
 	if err != nil {
 		return errors.New("invalid spender address")
 	}

@@ -228,7 +228,7 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager()
+	n.accountManager = market.NewAccountManager(n.globalConfig.Common.ProtocolImpl.Address)
 }
 
 func (n *Node) registerTransactionManager() {
@@ -242,7 +242,7 @@ func (n *Node) registerTickerCollector() {
 func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
 	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
-		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress)
+		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address)
 }
 
 func (n *Node) registerJsonRpcService() {
