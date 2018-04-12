@@ -376,6 +376,12 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 		}
 	}
 
+	// mock data . will delete later
+	fooPrice := TokenPrice{"FOO", rst.Tokens[1].Price}
+	barPrice := TokenPrice{"BAR", rst.Tokens[2].Price}
+	rst.Tokens = append(rst.Tokens, fooPrice)
+	rst.Tokens = append(rst.Tokens, barPrice)
+
 	return rst, nil
 }
 
