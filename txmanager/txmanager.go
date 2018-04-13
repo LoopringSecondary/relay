@@ -212,23 +212,6 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 	return nil
 }
 
-//func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
-//	evt := input.(*types.OrderFilledEvent)
-//
-//	log.Debugf("txmanager:tx:%s SaveOrderFilledEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex())
-//
-//	var tx1, tx2 types.Transaction
-//	tx1.FromFillEvent(evt, types.TX_TYPE_BUY)
-//	tx1.Symbol = ""
-//	tm.saveTransaction(&tx1)
-//
-//	tx2.FromFillEvent(evt, types.TX_TYPE_SELL)
-//	tx1.Symbol = ""
-//	tm.saveTransaction(&tx2)
-//
-//	return nil
-//}
-
 // 普通的transaction
 // 当value大于0时认为是eth转账
 // 当value等于0时认为是调用系统不支持的合约,默认使用fromTransferEvent/send type为unsupported_contract

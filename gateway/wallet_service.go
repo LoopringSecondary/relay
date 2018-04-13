@@ -191,28 +191,6 @@ type OrderJsonResult struct {
 	Status           string             `json:"status"`
 }
 
-type TransactionJsonResult struct {
-	Protocol    common.Address     `json:"protocol"`
-	Owner       common.Address     `json:"owner"`
-	From        common.Address     `json:"from"`
-	To          common.Address     `json:"to"`
-	TxHash      common.Hash        `json:"txHash"`
-	Symbol      string             `json:"symbol"`
-	Content     TransactionContent `json:"content"`
-	BlockNumber int64              `json:"blockNumber"`
-	Value       string             `json:"value"`
-	LogIndex    int64              `json:"logIndex"`
-	Type        string             `json:"type"`
-	Status      string             `json:"status"`
-	CreateTime  int64              `json:"createTime"`
-	UpdateTime  int64              `json:"updateTime"`
-	Nonce       string             `json:"nonce"`
-}
-
-type TransactionContent struct {
-	Market    string `json:"market"`
-	OrderHash string `json:"orderHash"`
-}
 
 type PriceQuote struct {
 	Currency string       `json:"currency"`
@@ -733,7 +711,7 @@ func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []
 	}
 
 	txQuery := make(map[string]interface{})
-	txQuery["owner"] = query.Owner
+	txQuery["from=? or to=?"] = []string{query.Owner, query.Owner}
 	txQuery["status"] = types.TX_STATUS_PENDING
 
 	rst, err := w.rds.PendingTransactions(txQuery)
@@ -1077,44 +1055,6 @@ func txTypeToUint8(status string) int {
 	default:
 		return -1
 	}
-}
-
-func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
-	dst := TransactionJsonResult{}
-	dst.Protocol = tx.Protocol
-	dst.From = tx.From
-	dst.To = tx.To
-	dst.TxHash = tx.TxHash
-
-	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
-		ctx, err := tx.GetCutoffPairContent()
-		if err == nil && ctx != nil {
-			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
-			if err == nil {
-				dst.Content = TransactionContent{Market: mkt}
-			}
-		}
-	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
-		ctx, err := tx.GetCancelOrderHash()
-		if err == nil && ctx != "" {
-			dst.Content = TransactionContent{OrderHash: ctx}
-		}
-	}
-
-	dst.BlockNumber = tx.BlockNumber.Int64()
-	dst.LogIndex = tx.LogIndex
-	if tx.Value == nil {
-		dst.Value = "0"
-	} else {
-		dst.Value = tx.Value.String()
-	}
-	dst.Type = tx.TypeStr()
-	dst.Status = tx.StatusStr()
-	dst.CreateTime = tx.CreateTime
-	dst.UpdateTime = tx.UpdateTime
-	dst.Symbol = tx.Symbol
-	dst.Nonce = tx.TxInfo.Nonce.String()
-	return dst
 }
 
 func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDetail, err error) {

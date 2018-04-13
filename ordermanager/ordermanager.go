@@ -145,10 +145,11 @@ func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 // 所有来自gateway的订单都是新订单
 func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
 	state := input.(*types.OrderState)
-	log.Debugf("order manager,handle gateway order,order.hash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
+	log.Debugf("order manager,handle gateway order,orderhash:%s amountS:%s", state.RawOrder.Hash.Hex(), state.RawOrder.AmountS.String())
 
 	model, err := newOrderEntity(state, om.mc, nil)
 	if err != nil {
+		log.Errorf("order manager,handle gateway order:%s error", state.RawOrder.Hash.Hex())
 		return err
 	}
 

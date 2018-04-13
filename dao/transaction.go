@@ -164,9 +164,9 @@ func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) 
 	return trxs, err
 }
 
-func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Transaction, error) {
+func (s *RdsServiceImpl) GetPendingTransactions(owner string, status uint8) ([]Transaction, error) {
 	var txs []Transaction
-	err := s.db.Where(query).Where("fork=?", false).Find(&txs).Error
+	err := s.db.Where("from = ? or to = ?", owner, owner).Where("status=?", status).Where("fork=?", false).Find(&txs).Error
 	return txs, err
 }
 
