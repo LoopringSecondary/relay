@@ -104,7 +104,9 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
-const ETH_SYMBOL = "ETH"
+const (
+	ETH_SYMBOL = "ETH"
+)
 
 func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	log.Debugf("txmanager,processing chain fork......")

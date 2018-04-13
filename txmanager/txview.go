@@ -23,11 +23,11 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionJsonResult struct {
 	Protocol    common.Address     `json:"protocol"`
-	Owner       common.Address     `json:"owner"`
 	From        common.Address     `json:"from"`
 	To          common.Address     `json:"to"`
 	TxHash      common.Hash        `json:"txHash"`
@@ -48,7 +48,7 @@ type TransactionContent struct {
 	OrderHash string `json:"orderHash"`
 }
 
-func (dst TransactionJsonResult) fromTransaction(tx *types.Transaction) {
+func (dst TransactionJsonResult) fromTransaction(tx types.Transaction) {
 	dst.Protocol = tx.Protocol
 	dst.From = tx.From
 	dst.To = tx.To
@@ -83,22 +83,39 @@ func (dst TransactionJsonResult) fromTransaction(tx *types.Transaction) {
 	}
 }
 
-// twin create copy while special type
-func twin(tx *types.Transaction, owner common.Address) *types.Transaction {
-	res := tx
-	if tx.Type == types.TX_TYPE_TRANSFER {
-		if owner == tx.From {
-			res.Type = types.TX_TYPE_SEND
-		}
-		if owner == tx.To {
-			res.Type = types.TX_TYPE_RECEIVE
-		}
-	}
-	if tx.Type == types.TX_TYPE_DEPOSIT {
+// copy create copy while special type
+func copy(src types.Transaction, owner common.Address) []types.Transaction {
+	var (
+		list []types.Transaction
+		dst  = src
+	)
 
+	if src.Type == types.TX_TYPE_TRANSFER {
+		if owner == src.From {
+			dst.Type = types.TX_TYPE_SEND
+		}
+		if owner == src.To {
+			dst.Type = types.TX_TYPE_RECEIVE
+		}
+		list = append(list, dst)
+	}
+	if src.Type == types.TX_TYPE_DEPOSIT {
+		src.Type = types.TX_TYPE_CONVERT_INCOME
+		dst.Type = types.TX_TYPE_CONVERT_OUTCOME
+		dst.Symbol = ETH_SYMBOL
+		dst.Protocol = types.NilAddress
+		list = append(list, dst)
+	}
+	if src.Type == types.TX_TYPE_WITHDRAWAL {
+		src.Type = types.TX_TYPE_CONVERT_OUTCOME
+		dst.Type = types.TX_TYPE_CONVERT_INCOME
+		dst.Symbol = ETH_SYMBOL
+		dst.Protocol = types.NilAddress
 	}
 
-	return res
+	list = append(list, src)
+
+	return list
 }
 
 type TransactionView interface {

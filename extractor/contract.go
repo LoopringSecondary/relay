@@ -137,7 +137,6 @@ type AbiProcessor struct {
 	methods        map[string]MethodData
 	erc20Events    map[common.Hash]bool
 	protocols      map[common.Address]string
-	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
 	db             dao.RdsService
 }
@@ -151,7 +150,6 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 	processor.erc20Events = make(map[common.Hash]bool)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
-	processor.delegates = make(map[common.Address]string)
 	processor.db = db
 
 	processor.loadProtocolAddress()
@@ -216,12 +214,6 @@ func (processor *AbiProcessor) HasErc20Events(receipt *ethaccessor.TransactionRe
 	}
 
 	return false
-}
-
-// HasSpender check approve spender address have ever been load
-func (processor *AbiProcessor) HasSpender(spender common.Address) bool {
-	_, ok := processor.delegates[spender]
-	return ok
 }
 
 func (processor *AbiProcessor) loadProtocolAddress() {
