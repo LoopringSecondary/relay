@@ -20,9 +20,9 @@ package txmanager
 
 import (
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/market/util"
 	"github.com/tendermint/go-crypto/keys/tx"
 )
 
@@ -65,13 +65,13 @@ func (dst TransactionJsonResult) fromTransaction(tx *types.Transaction) {
 
 	// fill content
 	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
-		if ctx, err := tx.GetCutoffPairContent(); err == nil{
+		if ctx, err := tx.GetCutoffPairContent(); err == nil {
 			if mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex()); err == nil {
 				dst.Content = TransactionContent{Market: mkt}
 			}
 		}
 	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
-		if ctx, err := tx.GetCancelOrderHash(); err == nil{
+		if ctx, err := tx.GetCancelOrderHash(); err == nil {
 			dst.Content = TransactionContent{OrderHash: ctx}
 		}
 	}

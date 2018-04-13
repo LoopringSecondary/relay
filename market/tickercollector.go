@@ -35,18 +35,18 @@ import (
 type ExchangeType string
 
 const (
-	Binance ExchangeType = "binance"
-	OkEx    ExchangeType = "okex"
-	Huobi   ExchangeType = "huobi"
+	binance = "binance"
+	okex    = "okex"
+	huobi   = "huobi"
 )
 
 const cachePreKey = "TICKER_EX_"
 
 //TODO (xiaolu)  add more exchanges to this list
 var exchanges = map[string]string{
-	"binance": "https://api.binance.com/api/v1/ticker/24hr?symbol=%s",
-	"okex":    "https://www.okex.com/api/v1/ticker.do?symbol=%s",
-	"huobi":   "https://api.huobi.pro/market/detail/merged?symbol=%s",
+	binance: "https://api.binance.com/api/v1/ticker/24hr?symbol=%s",
+	okex:    "https://www.okex.com/api/v1/ticker.do?symbol=%s",
+	huobi:   "https://api.huobi.pro/market/detail/merged?symbol=%s",
 }
 
 const defaultSyncInterval = 5 // minutes
@@ -79,28 +79,34 @@ func (e *ExchangeImpl) updateCache() {
 	log.Info("step in update cache method........")
 
 	switch e.name {
-	case "binance":
+	case binance:
 		updateCacheByExchange(e.name, GetTickerFromBinance)
-	case "okex":
+	case okex:
 		updateCacheByExchange(e.name, GetTickerFromOkex)
-	case "huobi":
+	case huobi:
 		updateCacheByExchange(e.name, GetTickerFromHuobi)
 	}
 }
 
 func updateBinanceCache() {
-	updateCacheByExchange("binance", GetTickerFromBinance)
+	//updateCacheByExchange("binance", GetTickerFromBinance)
+	tickers, err := GetAllTickerFromBinance()
+	if err == nil && len(tickers) > 0 {
+		for _, t := range tickers {
+			setCache(binance, t.Market, t)
+		}
+	}
 }
 func updateOkexCache() {
 	tickers, err := GetAllTickerFromOkex()
 	if err == nil && len(tickers) > 0 {
 		for _, t := range tickers {
-			setCache("okex", t.Market, t)
+			setCache(okex, t.Market, t)
 		}
 	}
 }
 func updateHuobiCache() {
-	updateCacheByExchange("huobi", GetTickerFromHuobi)
+	updateCacheByExchange(huobi, GetTickerFromHuobi)
 }
 
 func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
@@ -223,7 +229,7 @@ func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
 
 	huobiMarket := strings.Replace(market, "-", "", 1)
 	huobiMarket = strings.ToLower(huobiMarket)
-	url := fmt.Sprintf(exchanges["huobi"], huobiMarket)
+	url := fmt.Sprintf(exchanges[huobi], huobiMarket)
 	resp, err := http.Get(url)
 	if err != nil {
 		return ticker, err
@@ -261,7 +267,7 @@ func GetTickerFromHuobi(market string) (ticker Ticker, err error) {
 			} else {
 				ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
 			}
-			ticker.Exchange = "huobi"
+			ticker.Exchange = huobi
 			ticker.Vol = innerTicker.Vol
 			ticker.High = innerTicker.High
 			ticker.Low = innerTicker.Low
@@ -275,7 +281,7 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 
 	binanceMarket := strings.Replace(market, "-", "", 1)
 	binanceMarket = strings.ToUpper(binanceMarket)
-	url := fmt.Sprintf(exchanges["binance"], binanceMarket)
+	url := fmt.Sprintf(exchanges[binance], binanceMarket)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -308,7 +314,7 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 			} else {
 				ticker.Change = fmt.Sprintf("%.2f%%", change)
 			}
-			ticker.Exchange = "binance"
+			ticker.Exchange = binance
 			ticker.Vol, _ = strconv.ParseFloat(binanceTicker.Vol, 64)
 			ticker.High, _ = strconv.ParseFloat(binanceTicker.High, 64)
 			ticker.Low, _ = strconv.ParseFloat(binanceTicker.Low, 64)
@@ -317,11 +323,70 @@ func GetTickerFromBinance(market string) (ticker Ticker, err error) {
 	}
 }
 
+func GetAllTickerFromBinance() (tickers []Ticker, err error) {
+
+	resp, err := http.Get("https://api.binance.com/api/v1/ticker/24hr")
+	if err != nil {
+		return tickers, err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if nil != err {
+		return tickers, err
+	} else {
+		var binanceTickers []BinanceTicker
+		if err := json.Unmarshal(body, &binanceTickers); nil != err {
+			return tickers, err
+		} else {
+
+			if len(binanceTickers) == 0 {
+				return tickers, errors.New("fetch ticker from binance failed")
+			}
+
+			tickers = make([]Ticker, 0)
+			for _, binanceTicker := range binanceTickers {
+
+				if !strings.HasSuffix(binanceTicker.Symbol, "ETH") {
+					// only handle eth market tickers
+					continue
+				}
+
+				ticker := Ticker{}
+				//ticker.Market = market
+				marketPre := binanceTicker.Symbol[0 : len(binanceTicker.Symbol)-len("ETH")]
+
+				ticker.Market = marketPre + "-" + "WETH"
+				ticker.Amount, _ = strconv.ParseFloat(binanceTicker.Amount, 64)
+				ticker.Open, _ = strconv.ParseFloat(binanceTicker.Open, 64)
+				ticker.Close, _ = strconv.ParseFloat(binanceTicker.Close, 64)
+				ticker.Last, _ = strconv.ParseFloat(binanceTicker.LastPrice, 64)
+				change, _ := strconv.ParseFloat(binanceTicker.Change, 64)
+				if change > 0 {
+					ticker.Change = fmt.Sprintf("+%.2f%%", change)
+				} else {
+					ticker.Change = fmt.Sprintf("%.2f%%", change)
+				}
+				ticker.Exchange = binance
+				ticker.Vol, _ = strconv.ParseFloat(binanceTicker.Vol, 64)
+				ticker.High, _ = strconv.ParseFloat(binanceTicker.High, 64)
+				ticker.Low, _ = strconv.ParseFloat(binanceTicker.Low, 64)
+				tickers = append(tickers, ticker)
+			}
+			return tickers, nil
+		}
+	}
+}
+
 func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 
 	okexMarket := strings.Replace(market, "-", "_", 1)
 	okexMarket = strings.ToLower(okexMarket)
-	url := fmt.Sprintf(exchanges["okex"], okexMarket)
+	url := fmt.Sprintf(exchanges[okex], okexMarket)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -350,7 +415,7 @@ func GetTickerFromOkex(market string) (ticker Ticker, err error) {
 			} else {
 				ticker.Change = fmt.Sprintf("%.2f%%", 100*(ticker.Last-ticker.Open)/ticker.Open)
 			}
-			ticker.Exchange = "okex"
+			ticker.Exchange = okex
 			ticker.Amount, _ = strconv.ParseFloat(okexTicker.Vol, 64)
 			ticker.Vol = ticker.Amount * ticker.Last
 			ticker.High, _ = strconv.ParseFloat(okexTicker.High, 64)
@@ -406,7 +471,7 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 				if stringInSlice(okexMarket, util.AllMarkets) {
 					ticker.Last, _ = strconv.ParseFloat(v.Last, 64)
 					ticker.Change = v.Change
-					ticker.Exchange = "okex"
+					ticker.Exchange = okex
 					ticker.Amount, _ = strconv.ParseFloat(v.Vol, 64)
 					ticker.Vol = ticker.Amount * ticker.Last
 					ticker.High, _ = strconv.ParseFloat(v.High, 64)
