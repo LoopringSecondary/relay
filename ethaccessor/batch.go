@@ -27,7 +27,7 @@ import (
 type BatchErc20Req struct {
 	Owner          common.Address
 	Token          common.Address
-	Symbol	string
+	Symbol         string
 	Spender        common.Address
 	BlockParameter string
 	Balance        types.Big

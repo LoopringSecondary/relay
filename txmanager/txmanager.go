@@ -29,35 +29,17 @@ import (
 )
 
 type TransactionManager struct {
-	db             dao.RdsService
-	accountmanager *market.AccountManager
-
-	approveMethodWatcher *eventemitter.Watcher
-	approveEventWatcher  *eventemitter.Watcher
-
-	cancelOrderMethodWatcher   *eventemitter.Watcher
+	db                         dao.RdsService
+	accountmanager             *market.AccountManager
+	approveEventWatcher        *eventemitter.Watcher
 	orderCancelledEventWatcher *eventemitter.Watcher
-
-	cutoffAllMethodWatcher *eventemitter.Watcher
-	cutoffAllEventWatcher  *eventemitter.Watcher
-
-	cutoffPairMethodWatcher *eventemitter.Watcher
-	cutoffPairEventWatcher  *eventemitter.Watcher
-
-	wethDepositMethodWatcher *eventemitter.Watcher
-	wethDepositEventWatcher  *eventemitter.Watcher
-
-	wethWithdrawalMethodWatcher *eventemitter.Watcher
-	wethWithdrawalEventWatcher  *eventemitter.Watcher
-
-	transferMethodWatcher *eventemitter.Watcher
-	transferEventWatcher  *eventemitter.Watcher
-
-	orderFilledEventWatcher *eventemitter.Watcher
-
-	ethTransferEventWatcher *eventemitter.Watcher
-
-	forkDetectedEventWatcher *eventemitter.Watcher
+	cutoffAllEventWatcher      *eventemitter.Watcher
+	cutoffPairEventWatcher     *eventemitter.Watcher
+	wethDepositEventWatcher    *eventemitter.Watcher
+	wethWithdrawalEventWatcher *eventemitter.Watcher
+	transferEventWatcher       *eventemitter.Watcher
+	ethTransferEventWatcher    *eventemitter.Watcher
+	forkDetectedEventWatcher   *eventemitter.Watcher
 }
 
 func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) TransactionManager {
@@ -69,77 +51,43 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 
 // Start start orderbook as a service
 func (tm *TransactionManager) Start() {
-	tm.approveMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveMethod}
-	eventemitter.On(eventemitter.TxManagerApproveMethod, tm.approveMethodWatcher)
 	tm.approveEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveEvent}
-	eventemitter.On(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
+	eventemitter.On(eventemitter.Approve, tm.approveEventWatcher)
 
-	tm.cancelOrderMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCancelOrderMethod}
-	eventemitter.On(eventemitter.TxManagerCancelOrderMethod, tm.cancelOrderMethodWatcher)
 	tm.orderCancelledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderCancelledEvent}
-	eventemitter.On(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
+	eventemitter.On(eventemitter.CancelOrder, tm.orderCancelledEventWatcher)
 
-	tm.cutoffAllMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffAllMethod}
-	eventemitter.On(eventemitter.TxManagerCutoffAllMethod, tm.cutoffAllMethodWatcher)
 	tm.cutoffAllEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffAllEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
+	eventemitter.On(eventemitter.CutoffAll, tm.cutoffAllEventWatcher)
 
-	tm.cutoffPairMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffPairMethod}
-	eventemitter.On(eventemitter.TxManagerCutoffPairMethod, tm.cutoffPairMethodWatcher)
 	tm.cutoffPairEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveCutoffPairEvent}
-	eventemitter.On(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
+	eventemitter.On(eventemitter.CutoffPair, tm.cutoffPairEventWatcher)
 
-	tm.wethDepositMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethDepositMethod}
-	eventemitter.On(eventemitter.TxManagerWethDepositMethod, tm.wethDepositMethodWatcher)
 	tm.wethDepositEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethDepositEvent}
-	eventemitter.On(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
+	eventemitter.On(eventemitter.WethDeposit, tm.wethDepositEventWatcher)
 
-	tm.wethWithdrawalMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethWithdrawalMethod}
-	eventemitter.On(eventemitter.TxManagerWethWithdrawalMethod, tm.wethWithdrawalMethodWatcher)
 	tm.wethWithdrawalEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveWethWithdrawalEvent}
-	eventemitter.On(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
+	eventemitter.On(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
 
-	tm.transferMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveTransferMethod}
-	eventemitter.On(eventemitter.TxManagerTransferMethod, tm.transferMethodWatcher)
 	tm.transferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveTransferEvent}
-	eventemitter.On(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
-
-	tm.orderFilledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderFilledEvent}
-	eventemitter.On(eventemitter.TxManagerOrderFilledEvent, tm.orderFilledEventWatcher)
+	eventemitter.On(eventemitter.Transfer, tm.transferEventWatcher)
 
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
-	eventemitter.On(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.On(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 
 	tm.forkDetectedEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.ForkProcess}
 	eventemitter.On(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
 func (tm *TransactionManager) Stop() {
-	eventemitter.Un(eventemitter.TxManagerApproveMethod, tm.approveMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerApproveEvent, tm.approveEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerCancelOrderMethod, tm.cancelOrderMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerOrderCancelledEvent, tm.orderCancelledEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerCutoffAllMethod, tm.cutoffAllMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerCutoffAllEvent, tm.cutoffAllEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerCutoffPairMethod, tm.cutoffPairMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerCutoffPairEvent, tm.cutoffPairEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerWethDepositMethod, tm.wethDepositMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerWethDepositEvent, tm.wethDepositEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerWethWithdrawalMethod, tm.wethWithdrawalMethodWatcher)
-	eventemitter.Un(eventemitter.TxManagerWethWithdrawalEvent, tm.wethWithdrawalEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerTransferEvent, tm.transferEventWatcher)
-	eventemitter.Un(eventemitter.TxManagerTransferMethod, tm.transferMethodWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerOrderFilledEvent, tm.orderFilledEventWatcher)
-
-	eventemitter.Un(eventemitter.TxManagerEthTransferEvent, tm.ethTransferEventWatcher)
-
+	eventemitter.Un(eventemitter.Approve, tm.approveEventWatcher)
+	eventemitter.Un(eventemitter.CancelOrder, tm.orderCancelledEventWatcher)
+	eventemitter.Un(eventemitter.CutoffAll, tm.cutoffAllEventWatcher)
+	eventemitter.Un(eventemitter.CutoffPair, tm.cutoffPairEventWatcher)
+	eventemitter.Un(eventemitter.WethDeposit, tm.wethDepositEventWatcher)
+	eventemitter.Un(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
+	eventemitter.Un(eventemitter.Transfer, tm.transferEventWatcher)
+	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
@@ -160,17 +108,6 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	return nil
 }
 
-func (tm *TransactionManager) SaveApproveMethod(input eventemitter.EventData) error {
-	evt := input.(*types.ApproveMethodEvent)
-
-	log.Debugf("txmanager:tx:%s SaveApproveMethod from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	var tx types.Transaction
-	tx.FromApproveMethod(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
-	return tm.saveTransaction(&tx)
-}
-
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	evt := input.(*types.ApprovalEvent)
 
@@ -182,17 +119,6 @@ func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) err
 	return tm.saveTransaction(&tx)
 }
 
-func (tm *TransactionManager) SaveCancelOrderMethod(input eventemitter.EventData) error {
-	evt := input.(*types.OrderCancelledEvent)
-
-	log.Debugf("txmanager:tx:%s SaveCancelOrderMethod from:%s, to:%s, orderhash:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.OrderHash.Hex())
-
-	var tx types.Transaction
-	tx.FromCancelMethod(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
-}
-
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
 	evt := input.(*types.OrderCancelledEvent)
 
@@ -200,17 +126,6 @@ func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventDa
 
 	var tx types.Transaction
 	tx.FromCancelEvent(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
-}
-
-func (tm *TransactionManager) SaveCutoffAllMethod(input eventemitter.EventData) error {
-	evt := input.(*types.CutoffMethodEvent)
-
-	log.Debugf("txmanager:tx:%s SaveCutoffAllMethod from:%s, to:%s, cutofftime:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	var tx types.Transaction
-	tx.FromCutoffMethodEvent(evt)
 	tx.Symbol = ETH_SYMBOL
 	return tm.saveTransaction(&tx)
 }
@@ -226,17 +141,6 @@ func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) e
 	return tm.saveTransaction(&tx)
 }
 
-func (tm *TransactionManager) SaveCutoffPairMethod(input eventemitter.EventData) error {
-	evt := input.(*types.CutoffPairMethodEvent)
-
-	log.Debugf("txmanager:tx:%s SaveCutoffPairMethod from:%s, to:%s, cutofftime:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	var tx types.Transaction
-	tx.FromCutoffPairMethod(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
-}
-
 func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffPairEvent)
 
@@ -246,31 +150,6 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 	tx.FromCutoffPairEvent(evt)
 	tx.Symbol = ETH_SYMBOL
 	return tm.saveTransaction(&tx)
-}
-
-func (tm *TransactionManager) SaveWethDepositMethod(input eventemitter.EventData) error {
-	evt := input.(*types.WethDepositMethodEvent)
-
-	log.Debugf("txmanager:tx:%s SaveWethDepositMethod from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	var tx1, tx2 types.Transaction
-
-	// save weth
-	tx1.FromWethDepositMethod(evt, true)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	// save eth
-	tx2.FromWethDepositMethod(evt, false)
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
@@ -297,28 +176,6 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 	return nil
 }
 
-func (tm *TransactionManager) SaveWethWithdrawalMethod(input eventemitter.EventData) error {
-	evt := input.(*types.WethWithdrawalMethodEvent)
-	var tx1, tx2 types.Transaction
-
-	log.Debugf("txmanager:tx:%s SaveWethWithdrawalMethod from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	tx1.FromWethWithdrawalMethod(evt, false)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
-	}
-
-	tx2.FromWethWithdrawalMethod(evt, true)
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
 	evt := input.(*types.WethWithdrawalEvent)
 	var tx1, tx2 types.Transaction
@@ -336,33 +193,6 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 	tx2.FromWethWithdrawalEvent(evt, true)
 	tx2.Protocol = types.NilAddress
 	tx2.Symbol = "ETH"
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (tm *TransactionManager) SaveTransferMethod(input eventemitter.EventData) error {
-	evt := input.(*types.TransferMethodEvent)
-
-	var (
-		tx1, tx2 types.Transaction
-		err      error
-	)
-
-	tx1.FromTransferMethodEvent(evt, types.TX_TYPE_SEND)
-	if tx1.Symbol, err = util.GetSymbolWithAddress(tx1.Protocol); err != nil {
-		return nil
-	}
-
-	log.Debugf("txmanager:tx:%s SaveTransferMethod from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
-	tx2.FromTransferMethodEvent(evt, types.TX_TYPE_RECEIVE)
-	tx2.Symbol = tx1.Symbol
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
-	}
 	if err := tm.saveTransaction(&tx2); err != nil {
 		return err
 	}

@@ -246,14 +246,14 @@ type RingMinedInfo struct {
 }
 
 type WalletServiceImpl struct {
-	trendManager    market.TrendManager
-	orderManager    ordermanager.OrderManager
-	accountManager  market.AccountManager
-	marketCap       marketcap.MarketCapProvider
-	ethForwarder    *EthForwarder
-	tickerCollector market.CollectorImpl
-	rds             dao.RdsService
-	oldWethAddress  string
+	trendManager           market.TrendManager
+	orderManager           ordermanager.OrderManager
+	accountManager         market.AccountManager
+	marketCap              marketcap.MarketCapProvider
+	ethForwarder           *EthForwarder
+	tickerCollector        market.CollectorImpl
+	rds                    dao.RdsService
+	oldWethAddress         string
 	defaultContractVersion string
 }
 
@@ -375,6 +375,12 @@ func (w *WalletServiceImpl) GetPriceQuote(query PriceQuoteQuery) (result PriceQu
 		}
 	}
 
+	// mock data . will delete later
+	fooPrice := TokenPrice{"FOO", rst.Tokens[1].Price}
+	barPrice := TokenPrice{"BAR", rst.Tokens[2].Price}
+	rst.Tokens = append(rst.Tokens, fooPrice)
+	rst.Tokens = append(rst.Tokens, barPrice)
+
 	return rst, nil
 }
 
@@ -441,6 +447,7 @@ func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res str
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
+	log.Debug("order input from wallet...................." + order.Hash.Hex())
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
 		fmt.Println(err)

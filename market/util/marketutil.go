@@ -41,7 +41,7 @@ type TokenPair struct {
 	TokenB common.Address
 }
 
-var MarketBaseOrder = map[string]uint8{"LRC": 1, "WETH": 2, "DAI": 4}
+var MarketBaseOrder = map[string]uint8{"BAR": 5, "LRC": 10, "WETH": 20, "DAI": 30}
 
 type TokenStandard uint8
 
@@ -255,6 +255,12 @@ func WrapMarket(s, b string) (market string, err error) {
 		market = fmt.Sprintf("%s-%s", b, s)
 	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
 		market = fmt.Sprintf("%s-%s", s, b)
+	} else if IsSupportedMarket(b) && IsSupportedMarket(s) {
+		if MarketBaseOrder[s] < MarketBaseOrder[b] {
+			market = fmt.Sprintf("%s-%s", s, b)
+		} else {
+			market = fmt.Sprintf("%s-%s", b, s)
+		}
 	} else {
 		err = errors.New(fmt.Sprintf("not supported market type : %s-%s", s, b))
 	}
