@@ -97,52 +97,23 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	return nil
 }
 
-// value,status可能会变更
-func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
+func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (*Transaction, error) {
 	var (
-		current Transaction
-		query   string
-		args    []interface{}
+		tx  Transaction
+		err error
 	)
-
-	query = "tx_hash=? and tx_type=? and tx_log_index=?"
-	args = append(args, latest.TxHash, latest.Type, latest.LogIndex)
-
-	err := s.db.Where(query, args...).Where("fork=?", false).Find(&current).Error
-	if err != nil {
-		return s.db.Create(latest).Error
-	}
-
-	if latest.Value != current.Value || latest.Status != current.Status {
-		latest.ID = current.ID
-		latest.CreateTime = current.CreateTime
-		if err := s.db.Save(latest).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
+	err = s.db.Where("tx_hash=?", txhash).First(&tx).Error
+	return &tx, err
 }
 
-//func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
-//	var (
-//		current Transaction
-//	)
-//
-//	// delete pending then create new item
-//	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Find(&current).Error; err == nil {
-//		s.db.Delete(&current)
-//		return s.db.Create(latest).Error
-//	}
-//
-//	// select mined transaction then create or update
-//	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Find(&current).Error
-//	if err == nil {
-//		latest.ID = current.ID
-//		return s.db.Save(latest).Error
-//	}
-//	return s.db.Create(latest).Error
-//}
+func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (*Transaction, error) {
+	var (
+		tx  Transaction
+		err error
+	)
+	err = s.db.Where("tx_hash=? and tx_log_index=?", txhash, logIndex).First(&tx).Error
+	return &tx, err
+}
 
 func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
 	var (

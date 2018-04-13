@@ -26,6 +26,7 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
+	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 )
 
@@ -241,10 +242,7 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
-	var (
-		model    dao.Transaction
-		unlocked bool
-	)
+	var unlocked bool
 
 	if tx.Type == types.TX_TYPE_TRANSFER {
 		fromUnlocked, _ := tm.accountmanager.HasUnlocked(tx.From.Hex())
@@ -254,11 +252,38 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 		unlocked, _ = tm.accountmanager.HasUnlocked(tx.From.Hex())
 	}
 
-	if unlocked {
-		log.Debugf("txmanager:tx:%s type:%s, status:%s, from:%s, to:%s, value:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.From.Hex(), tx.To.Hex(), tx.Value.String())
-		model.ConvertDown(tx)
-		return tm.db.SaveTransaction(&model)
+	if !unlocked {
+		return nil
 	}
 
-	return nil
+	log.Debugf("txmanager:tx:%s type:%s, status:%s, from:%s, to:%s, value:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.From.Hex(), tx.To.Hex(), tx.Value.String())
+
+	if tx.Type == types.TX_TYPE_TRANSFER && tx.Status != types.TX_STATUS_PENDING {
+		return tm.saveTransactionWithLogIndex(tx)
+	}
+	return tm.saveTransactionWithoutLogIndex(tx)
+}
+
+func (tm *TransactionManager) saveTransactionWithoutLogIndex(tx *types.Transaction) error {
+	var (
+		model *dao.Transaction
+		err   error
+	)
+	model.ConvertDown(tx)
+	if model, err = tm.db.FindTransactionWithoutLogIndex(tx.TxHash.Hex()); err != nil {
+		return tm.db.Add(model)
+	}
+	return tm.db.Save(model)
+}
+
+func (tm *TransactionManager) saveTransactionWithLogIndex(tx *types.Transaction) error {
+	var (
+		model *dao.Transaction
+		err   error
+	)
+	model.ConvertDown(tx)
+	if model, err = tm.db.FindTransactionWithLogIndex(tx.TxHash.Hex(), int(tx.LogIndex)); err != nil {
+		return tm.db.Add(model)
+	}
+	return tm.db.Save(model)
 }
