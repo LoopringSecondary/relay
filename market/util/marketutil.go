@@ -255,6 +255,12 @@ func WrapMarket(s, b string) (market string, err error) {
 		market = fmt.Sprintf("%s-%s", b, s)
 	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
 		market = fmt.Sprintf("%s-%s", s, b)
+	} else if IsSupportedMarket(b) && IsSupportedMarket(s) {
+		if MarketBaseOrder[s] < MarketBaseOrder[b] {
+			market = fmt.Sprintf("%s-%s", s, b)
+		} else {
+			market = fmt.Sprintf("%s-%s", b, s)
+		}
 	} else {
 		err = errors.New(fmt.Sprintf("not supported market type : %s-%s", s, b))
 	}

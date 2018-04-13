@@ -425,6 +425,7 @@ func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res str
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
+	log.Debug("order input from wallet...................." + order.Hash.Hex())
 	err = HandleOrder(types.ToOrder(order))
 	if err != nil {
 		fmt.Println(err)
