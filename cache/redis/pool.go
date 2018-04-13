@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/garyburd/redigo/redis"
 	"time"
+	"errors"
 )
 
 type RedisCacheImpl struct {
@@ -115,4 +116,64 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	_, err := conn.Do("del", key)
 
 	return err
+}
+
+func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	if len(args) % 2 != 0 {
+		return errors.New("the length of `args` must be even")
+	}
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range args {
+		vs = append(vs, v)
+	}
+	_, err := conn.Do("hmset", vs...)
+
+	return err
+}
+
+func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte,error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range fields {
+		println()
+		vs = append(vs, v)
+	}
+	reply, err := conn.Do("hmget", vs...)
+
+	res := [][]byte{}
+
+	if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _,r := range rs {
+			if nil == r {
+				res = append(res, []byte{})
+			} else {
+				res = append(res, r.([]byte))
+			}
+		}
+	} else {
+		log.Errorf("HMGet err:%s", err.Error())
+	}
+	return res,err
+}
+
+func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte,error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("hgetall", key)
+
+	res := [][]byte{}
+	rs := reply.([]interface{})
+	for _,r := range rs {
+		res = append(res, r.([]byte))
+	}
+	return res,err
 }

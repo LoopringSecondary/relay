@@ -295,26 +295,25 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account, _ := w.accountManager.GetBalance(w.defaultContractVersion, query.Owner)
-	balances := account.Balances
+	balances, _ := w.accountManager.GetBalance(query.Owner)
 	if len(balances) == 0 {
 		return
 	}
 
-	balancesCopy := make(map[string]market.Balance)
+	//balancesCopy := make(map[string]market.BalanceJson)
+	//
+	//for k, v := range balances {
+	//	balancesCopy[k] = v
+	//}
 
-	for k, v := range balances {
-		balancesCopy[k] = v
-	}
-
-	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
-	if bErr == nil {
-		ethBalance.Balance = types.HexToBigint(b)
-		balancesCopy["ETH"] = ethBalance
-	} else {
-		return res, bErr
-	}
+	//ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
+	//b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
+	//if bErr == nil {
+	//	ethBalance.Balance = types.HexToBigint(b)
+	//	balancesCopy["ETH"] = ethBalance
+	//} else {
+	//	return res, bErr
+	//}
 
 	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
 	if err != nil {
@@ -327,13 +326,13 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	}
 
 	totalAsset := big.NewRat(0, 1)
-	for k, v := range balancesCopy {
+	for k, v := range balances {
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
-	for k, v := range balancesCopy {
+	for k, v := range balances {
 		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
 		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
@@ -596,13 +595,13 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	if len(balanceQuery.ContractVersion) == 0 {
 		return res, errors.New("contract version can't be null")
 	}
-	account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
-	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
-	if bErr == nil {
-		ethBalance.Balance = types.HexToBigint(b)
-	}
-	res = account.ToJsonObject(balanceQuery.ContractVersion, ethBalance)
+	//account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
+	//ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
+	//b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
+	//if bErr == nil {
+	//	ethBalance.Balance = types.HexToBigint(b)
+	//}
+	//res = account.ToJsonObject(balanceQuery.ContractVersion, ethBalance)
 	return
 }
 

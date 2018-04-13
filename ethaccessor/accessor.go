@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var accessor *ethNodeAccessor
@@ -156,6 +157,28 @@ func GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNu
 
 func BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) error {
 	return accessor.BatchErc20BalanceAndAllowance(routeParam, reqs)
+}
+
+func BatchCall(routeParam string, reqs []BatchReq) error {
+	var err error
+	elems := []rpc.BatchElem{}
+	elemsLength := []int{}
+	for _,req := range reqs {
+		elems1 := req.ToBatchElem()
+		elemsLength = append(elemsLength, len(elems1))
+		elems = append(elems, elems1...)
+	}
+	if elems,err =  accessor.BatchCall(routeParam, elems); nil != err {
+		return err
+	} else {
+		startId := 0
+		for idx, req := range reqs {
+			endId := startId+elemsLength[idx]
+			req.FromBatchElem(elems[startId:endId])
+			startId = endId
+		}
+		return nil
+	}
 }
 
 func BatchTransactions(reqs []*BatchTransactionReq, blockNumber string) error {

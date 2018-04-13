@@ -98,6 +98,7 @@ const (
 	TxManagerEthTransferEvent     = "TxManagerEthTransferEvent"
 )
 
+//change map to sync.Map
 var watchers map[string][]*Watcher
 var mtx *sync.Mutex
 
