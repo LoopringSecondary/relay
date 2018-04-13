@@ -88,6 +88,7 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, block
 	method.Status = status
 }
 
+// todo pending 的transaction txindex是否为nil
 func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.TxInfo {
 	var txinfo types.TxInfo
 
@@ -95,6 +96,7 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.BlockTime = blockTime.Int64()
 	txinfo.BlockHash = common.HexToHash(tx.BlockHash)
 	txinfo.TxHash = common.HexToHash(tx.Hash)
+	txinfo.TxIndex = tx.TransactionIndex.BigInt().Int64()
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)

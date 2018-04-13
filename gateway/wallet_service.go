@@ -1082,7 +1082,6 @@ func txTypeToUint8(status string) int {
 func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 	dst := TransactionJsonResult{}
 	dst.Protocol = tx.Protocol
-	dst.Owner = tx.Owner
 	dst.From = tx.From
 	dst.To = tx.To
 	dst.TxHash = tx.TxHash
