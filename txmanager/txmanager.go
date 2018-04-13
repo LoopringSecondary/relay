@@ -19,6 +19,7 @@
 package txmanager
 
 import (
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -30,6 +31,7 @@ import (
 
 type TransactionManager struct {
 	db                         dao.RdsService
+	options                    config.TransactionManagerOptions
 	accountmanager             *market.AccountManager
 	approveEventWatcher        *eventemitter.Watcher
 	orderCancelledEventWatcher *eventemitter.Watcher
@@ -42,15 +44,21 @@ type TransactionManager struct {
 	forkDetectedEventWatcher   *eventemitter.Watcher
 }
 
-func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) TransactionManager {
+func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager, options config.TransactionManagerOptions) TransactionManager {
 	var tm TransactionManager
 	tm.db = db
 	tm.accountmanager = accountmanager
+	tm.options = options
+
 	return tm
 }
 
 // Start start orderbook as a service
 func (tm *TransactionManager) Start() {
+	if !tm.options.Open {
+		return
+	}
+
 	tm.approveEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveEvent}
 	eventemitter.On(eventemitter.Approve, tm.approveEventWatcher)
 
@@ -80,6 +88,10 @@ func (tm *TransactionManager) Start() {
 }
 
 func (tm *TransactionManager) Stop() {
+	if !tm.options.Open {
+		return
+	}
+
 	eventemitter.Un(eventemitter.Approve, tm.approveEventWatcher)
 	eventemitter.Un(eventemitter.CancelOrder, tm.orderCancelledEventWatcher)
 	eventemitter.Un(eventemitter.CutoffAll, tm.cutoffAllEventWatcher)

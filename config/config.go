@@ -70,23 +70,24 @@ type GlobalConfig struct {
 	Owner struct {
 		Name string
 	}
-	Mysql          MysqlOptions
-	Redis          RedisOptions
-	Ipfs           IpfsOptions
-	Jsonrpc        JsonrpcOptions
-	Websocket      WebsocketOptions
-	GatewayFilters GatewayFiltersOptions
-	OrderManager   OrderManagerOptions
-	Gateway        GateWayOptions
-	Accessor       AccessorOptions
-	Extractor      ExtractorOptions
-	Common         CommonOptions
-	Miner          MinerOptions
-	Log            LogOptions
-	Keystore       KeyStoreOptions
-	Market         MarketOptions
-	MarketCap      MarketCapOptions
-	UserManager    UserManagerOptions
+	Mysql              MysqlOptions
+	Redis              RedisOptions
+	Ipfs               IpfsOptions
+	Jsonrpc            JsonrpcOptions
+	Websocket          WebsocketOptions
+	GatewayFilters     GatewayFiltersOptions
+	OrderManager       OrderManagerOptions
+	TransactionManager TransactionManagerOptions
+	Gateway            GateWayOptions
+	Accessor           AccessorOptions
+	Extractor          ExtractorOptions
+	Common             CommonOptions
+	Miner              MinerOptions
+	Log                LogOptions
+	Keystore           KeyStoreOptions
+	Market             MarketOptions
+	MarketCap          MarketCapOptions
+	UserManager        UserManagerOptions
 }
 
 type JsonrpcOptions struct {
@@ -105,6 +106,10 @@ type OrderManagerOptions struct {
 	CutoffCacheExpireTime int64
 	CutoffCacheCleanTime  int64
 	DustOrderValue        int64
+}
+
+type TransactionManagerOptions struct {
+	Open bool
 }
 
 type IpfsOptions struct {
