@@ -23,7 +23,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionJsonResult struct {
