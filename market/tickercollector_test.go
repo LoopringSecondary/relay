@@ -1,9 +1,9 @@
 package market_test
 
 import (
-	"testing"
-	"github.com/Loopring/relay/market"
 	"fmt"
+	"github.com/Loopring/relay/market"
+	"testing"
 )
 
 func TestCollectorImpl_GetTickers(t *testing.T) {

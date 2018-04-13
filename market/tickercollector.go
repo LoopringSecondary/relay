@@ -358,7 +358,7 @@ func GetAllTickerFromBinance() (tickers []Ticker, err error) {
 
 				ticker := Ticker{}
 				//ticker.Market = market
-				marketPre := binanceTicker.Symbol[0:len(binanceTicker.Symbol)-len("ETH")]
+				marketPre := binanceTicker.Symbol[0 : len(binanceTicker.Symbol)-len("ETH")]
 
 				ticker.Market = marketPre + "-" + "WETH"
 				ticker.Amount, _ = strconv.ParseFloat(binanceTicker.Amount, 64)

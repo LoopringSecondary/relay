@@ -199,6 +199,8 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 		l.debug("extractor,tx:%s", transaction.Hash)
 		l.ProcessMinedTransaction(&transaction, &receipt, block.Timestamp.BigInt())
 	}
+
+	eventemitter.Emit(eventemitter.Block_End, blockEvent)
 }
 
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
