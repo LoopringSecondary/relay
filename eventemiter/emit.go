@@ -67,6 +67,7 @@ const (
 
 	// Block
 	Block_New = "Block_New"
+	Block_End = "Block_End"
 
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
