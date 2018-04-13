@@ -123,8 +123,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
 
 	case types.TX_TYPE_SEND, types.TX_TYPE_RECEIVE:
-		query = "tx_hash=? and tx_log_index=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.LogIndex, latest.Type)
+		return s.processTransfer(latest)
 
 	case types.TX_TYPE_CUTOFF:
 		query = "tx_hash=? and tx_type=?"
@@ -157,6 +156,26 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	}
 
 	return nil
+}
+
+func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
+	var (
+		current Transaction
+	)
+
+	// delete pending then create new item
+	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Find(&current).Error; err == nil {
+		s.db.Delete(&current)
+		return s.db.Create(latest).Error
+	}
+
+	// select mined transaction then create or update
+	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Find(&current).Error
+	if err == nil {
+		latest.ID = current.ID
+		return s.db.Save(latest).Error
+	}
+	return s.db.Create(latest).Error
 }
 
 func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
