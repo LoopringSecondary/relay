@@ -142,7 +142,6 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte,error)
 	vs := []interface{}{}
 	vs = append(vs, key)
 	for _, v := range fields {
-		println()
 		vs = append(vs, v)
 	}
 	reply, err := conn.Do("hmget", vs...)
