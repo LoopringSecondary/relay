@@ -298,7 +298,11 @@ func NewEvaluator(marketCapProvider marketcap.MarketCapProvider,minerOptions con
 	gasUsedMap[4] = big.NewInt(400000)
 	e := &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: minerOptions.RateRatioCVSThreshold, gasUsedWithLength: gasUsedMap}
 	e.realCostRate = new(big.Rat)
-	e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
+	if int64(minerOptions.Subsidy) >= 1 {
+		e.realCostRate.SetInt64(int64(0))
+	} else {
+		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
+	}
 	e.walletSplit = new(big.Rat)
 	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
 	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)
