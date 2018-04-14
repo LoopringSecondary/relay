@@ -202,6 +202,11 @@ func GetSpenderAddress(protocolAddress common.Address) (spender common.Address, 
 	return impl.DelegateAddress, nil
 }
 
+func IsSpenderAddress(spender common.Address) bool {
+	_,exists := accessor.DelegateAddresses[spender]
+	return exists
+}
+
 func ProtocolAddresses() map[common.Address]*ProtocolAddress {
 	return accessor.ProtocolAddresses
 }
@@ -251,6 +256,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	accessor.WethAddress = wethAddress
 
 	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
+	accessor.DelegateAddresses = make(map[common.Address]bool)
 
 	if protocolImplAbi, err := NewAbi(commonOptions.ProtocolImpl.ImplAbi); nil != err {
 		return err
@@ -305,6 +311,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			impl.NameRegistryAddress = common.HexToAddress(addr)
 		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
+		accessor.DelegateAddresses[impl.DelegateAddress] = true
 	}
 	accessor.MutilClient.startSyncStatus()
 

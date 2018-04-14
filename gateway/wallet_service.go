@@ -291,29 +291,14 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
 	res = make([]Portfolio, 0)
-	if len(query.Owner) == 0 {
+	if !common.IsHexAddress(query.Owner) {
 		return nil, errors.New("owner can't be nil")
 	}
 
-	balances, _ := w.accountManager.GetBalance(query.Owner)
+	balances, _ := w.accountManager.GetBalanceWithSymbolResult(common.HexToAddress(query.Owner))
 	if len(balances) == 0 {
 		return
 	}
-
-	//balancesCopy := make(map[string]market.BalanceJson)
-	//
-	//for k, v := range balances {
-	//	balancesCopy[k] = v
-	//}
-
-	//ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	//b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
-	//if bErr == nil {
-	//	ethBalance.Balance = types.HexToBigint(b)
-	//	balancesCopy["ETH"] = ethBalance
-	//} else {
-	//	return res, bErr
-	//}
 
 	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
 	if err != nil {
@@ -596,19 +581,32 @@ func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMi
 }
 
 func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
-	if len(balanceQuery.Owner) == 0 {
+	if !common.IsHexAddress(balanceQuery.Owner) {
 		return res, errors.New("owner can't be null")
 	}
+	owner := common.HexToAddress(balanceQuery.Owner)
 	if len(balanceQuery.ContractVersion) == 0 {
 		return res, errors.New("contract version can't be null")
 	}
-	//account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
-	//ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	//b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
-	//if bErr == nil {
-	//	ethBalance.Balance = types.HexToBigint(b)
-	//}
-	//res = account.ToJsonObject(balanceQuery.ContractVersion, ethBalance)
+
+	balances, _ := w.accountManager.GetBalanceWithSymbolResult(owner)
+	allowances := make(map[string]market.AllowanceJson)
+	if spender,err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion]));nil == err {
+		allowances,_ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
+	}
+
+	res = market.AccountJson{}
+	res.ContractVersion = balanceQuery.ContractVersion
+	res.Address = balanceQuery.Owner
+	res.Tokens = []market.Token{}
+	for symbol,balance := range balances {
+		token := market.Token{}
+		token.Token = symbol
+		token.Allowance = allowances[symbol].Allowance.String()
+		token.Balance = balance.Balance.String()
+		res.Tokens = append(res.Tokens, )
+	}
+
 	return
 }
 

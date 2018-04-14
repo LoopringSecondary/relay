@@ -38,6 +38,12 @@ type Cache interface {
 	HMGet(key string, fields ...[]byte) ([][]byte,error)
 
 	HGetAll(key string) ([][]byte,error)
+
+	HExists(key string, field []byte) (bool,error)
+
+	SAdd(key string, members ...[]byte) error
+
+	SMembers(key string) ([][]byte,error)
 }
 
 func NewCache(cfg interface{}) {
@@ -61,4 +67,15 @@ func HMGet(key string, fields ...[]byte) ([][]byte,error) {
 
 func HGetAll(key string) ([][]byte,error) {
 	return cache.HGetAll(key)
+}
+
+func HExists(key string, field []byte) (bool,error) {
+	return cache.HExists(key, field)
+}
+func SAdd(key string, members ...[]byte) error {
+	return cache.SAdd(key, members...)
+}
+
+func SMembers(key string) ([][]byte,error) {
+	return cache.SMembers(key)
 }
