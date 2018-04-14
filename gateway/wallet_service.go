@@ -977,7 +977,7 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if q.ContractVersion != "" {
 		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
 	}
-	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) > 0 {
+	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) >= 0 {
 		rst["ring_index"] = q.RingIndex.BigInt().String()
 	}
 
