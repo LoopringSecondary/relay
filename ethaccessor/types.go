@@ -132,19 +132,34 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
+//func (receipt *TransactionReceipt) IsFailed() bool {
+//	txIsFailed := false
+//	byzantiumBlock := big.NewInt(4370000)
+//
+//	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
+//	hasNoLogs := len(receipt.Logs) <= 0
+//	failedStatus := receipt.Status.BigInt().Int64() == 0
+//
+//	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
+//		txIsFailed = true
+//	}
+//
+//	return txIsFailed
+//}
+
 func (receipt *TransactionReceipt) IsFailed() bool {
-	txIsFailed := false
-	byzantiumBlock := big.NewInt(4370000)
-
-	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
-	hasNoLogs := len(receipt.Logs) <= 0
-	failedStatus := receipt.Status.BigInt().Int64() == 0
-
-	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
-		txIsFailed = true
+	if len(receipt.Logs) > 0 {
+		return false
 	}
 
-	return txIsFailed
+	byzantiumBlock := big.NewInt(4370000)
+	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
+	successStatus := receipt.Status.BigInt().Int64() > 0
+	if afterByzantiumFork && successStatus {
+		return false
+	}
+
+	return false
 }
 
 type BlockIterator struct {
