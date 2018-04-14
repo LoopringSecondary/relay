@@ -148,7 +148,7 @@ func (c *CollectorImpl) Start() {
 	updateBinanceCache()
 	updateOkexCache()
 	updateHuobiCache()
-	c.cron.AddFunc("@every 5s", updateBinanceCache)
+	c.cron.AddFunc("@every 20s", updateBinanceCache)
 	c.cron.AddFunc("@every 5s", updateOkexCache)
 	c.cron.AddFunc("@every 5s", updateHuobiCache)
 	log.Info("start collect cron jobs......... ")
@@ -358,7 +358,7 @@ func GetAllTickerFromBinance() (tickers []Ticker, err error) {
 
 				ticker := Ticker{}
 				//ticker.Market = market
-				marketPre := binanceTicker.Symbol[0:len(binanceTicker.Symbol)-len("ETH")]
+				marketPre := binanceTicker.Symbol[0 : len(binanceTicker.Symbol)-len("ETH")]
 
 				ticker.Market = marketPre + "-" + "WETH"
 				ticker.Amount, _ = strconv.ParseFloat(binanceTicker.Amount, 64)
