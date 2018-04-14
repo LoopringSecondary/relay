@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var accessor *ethNodeAccessor
@@ -85,8 +86,8 @@ func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter 
 	return fmt.Errorf("no transaction with hash:%s", txHash)
 }
 
-func EstimateGasPrice() *big.Int {
-	return accessor.gasPriceEvaluator.gasPrice
+func EstimateGasPrice(minGasPrice,maxGasPrice *big.Int) *big.Int {
+	return accessor.gasPriceEvaluator.GasPrice(minGasPrice, maxGasPrice)
 }
 
 func GetBlockTransactionCountByHash(result interface{}, blockHash string, blockParameter string) error {
@@ -158,6 +159,28 @@ func BatchErc20BalanceAndAllowance(routeParam string, reqs []*BatchErc20Req) err
 	return accessor.BatchErc20BalanceAndAllowance(routeParam, reqs)
 }
 
+func BatchCall(routeParam string, reqs []BatchReq) error {
+	var err error
+	elems := []rpc.BatchElem{}
+	elemsLength := []int{}
+	for _,req := range reqs {
+		elems1 := req.ToBatchElem()
+		elemsLength = append(elemsLength, len(elems1))
+		elems = append(elems, elems1...)
+	}
+	if elems,err =  accessor.BatchCall(routeParam, elems); nil != err {
+		return err
+	} else {
+		startId := 0
+		for idx, req := range reqs {
+			endId := startId+elemsLength[idx]
+			req.FromBatchElem(elems[startId:endId])
+			startId = endId
+		}
+		return nil
+	}
+}
+
 func BatchTransactions(reqs []*BatchTransactionReq, blockNumber string) error {
 	return accessor.BatchTransactions(blockNumber, 5, reqs)
 }
@@ -177,6 +200,11 @@ func GetSpenderAddress(protocolAddress common.Address) (spender common.Address, 
 	}
 
 	return impl.DelegateAddress, nil
+}
+
+func IsSpenderAddress(spender common.Address) bool {
+	_,exists := accessor.DelegateAddresses[spender]
+	return exists
 }
 
 func ProtocolAddresses() map[common.Address]*ProtocolAddress {
@@ -228,6 +256,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	accessor.WethAddress = wethAddress
 
 	accessor.ProtocolAddresses = make(map[common.Address]*ProtocolAddress)
+	accessor.DelegateAddresses = make(map[common.Address]bool)
 
 	if protocolImplAbi, err := NewAbi(commonOptions.ProtocolImpl.ImplAbi); nil != err {
 		return err
@@ -282,6 +311,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			impl.NameRegistryAddress = common.HexToAddress(addr)
 		}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
+		accessor.DelegateAddresses[impl.DelegateAddress] = true
 	}
 	accessor.MutilClient.startSyncStatus()
 

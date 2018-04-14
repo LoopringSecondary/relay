@@ -169,11 +169,14 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	// set all token pairs
 	pairsMap := make(map[string]TokenPair, 0)
 	for _, v := range supportMarkets {
-		for _, vv := range supportTokens {
-			pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
-			pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
+		for _, vv := range allTokens {
+			if v.Symbol != vv.Symbol {
+				pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
+				pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
+			}
 		}
 	}
+
 	for _, v := range pairsMap {
 		allTokenPairs = append(allTokenPairs, v)
 	}
@@ -357,6 +360,22 @@ func IsBuy(tokenB string) bool {
 		return false
 	}
 	return true
+}
+
+func GetSide(s, b string) string {
+
+	if IsSupportedMarket(s) && IsSupportedToken(b) {
+		return "buy"
+	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
+		return "sell"
+	} else if IsSupportedMarket(b) && IsSupportedMarket(s) {
+		if MarketBaseOrder[s] < MarketBaseOrder[b] {
+			return "sell"
+		} else {
+			return "buy"
+		}
+	}
+	return ""
 }
 
 func IsAddress(token string) bool {
