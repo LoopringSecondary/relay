@@ -1022,11 +1022,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
-	if rawOrder.TokenB == "WETH" {
-		rawOrder.Side = "sell"
-	} else {
-		rawOrder.Side = "buy"
-	}
+	rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
