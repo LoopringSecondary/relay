@@ -245,6 +245,18 @@ type RingMinedInfo struct {
 	Time               int64               `json:"timestamp"`
 }
 
+type Token struct {
+	Token     string `json:"symbol"`
+	Balance   string `json:"balance"`
+	Allowance string `json:"allowance"`
+}
+
+type AccountJson struct {
+	ContractVersion string  `json:"contractVersion"`
+	Address         string  `json:"owner"`
+	Tokens          []Token `json:"tokens"`
+}
+
 type WalletServiceImpl struct {
 	trendManager           market.TrendManager
 	orderManager           ordermanager.OrderManager
@@ -313,14 +325,14 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	totalAsset := big.NewRat(0, 1)
 	for k, v := range balances {
 		asset := new(big.Rat).Set(priceQuoteMap[k])
-		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset = asset.Mul(asset, new(big.Rat).SetFrac(v, big.NewInt(1)))
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
 	for k, v := range balances {
-		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
+		portfolio := Portfolio{Token: k, Amount: v.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
-		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset = asset.Mul(asset, new(big.Rat).SetFrac(v, big.NewInt(1)))
 		totalAssetFloat, _ := totalAsset.Float64()
 		var percentage float64
 		if totalAssetFloat == 0 {
@@ -573,7 +585,7 @@ func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMi
 	return fillDetail(ring, fills)
 }
 
-func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
+func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res AccountJson, err error) {
 	if !common.IsHexAddress(balanceQuery.Owner) {
 		return res, errors.New("owner can't be null")
 	}
@@ -583,21 +595,21 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res mar
 	}
 
 	balances, _ := w.accountManager.GetBalanceWithSymbolResult(owner)
-	allowances := make(map[string]market.AllowanceJson)
+	allowances := make(map[string]*big.Int)
 	if spender,err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion]));nil == err {
 		allowances,_ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
 	}
 
-	res = market.AccountJson{}
+	res = AccountJson{}
 	res.ContractVersion = balanceQuery.ContractVersion
 	res.Address = balanceQuery.Owner
-	res.Tokens = []market.Token{}
+	res.Tokens = []Token{}
 	for symbol,balance := range balances {
-		token := market.Token{}
+		token := Token{}
 		token.Token = symbol
-		token.Allowance = allowances[symbol].Allowance.String()
-		token.Balance = balance.Balance.String()
-		res.Tokens = append(res.Tokens, )
+		token.Allowance = allowances[symbol].String()
+		token.Balance = balance.String()
+		res.Tokens = append(res.Tokens, token)
 	}
 
 	return

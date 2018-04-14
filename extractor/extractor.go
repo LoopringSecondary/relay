@@ -186,18 +186,17 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
 	}
 	txcntinblock := len(block.Transactions)
-	if txcntinblock < 1 {
-		return
-	}
-	if txcnt.Int() != txcntinblock {
-		log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
-	}
+	if txcntinblock > 0 {
+		if txcnt.Int() != txcntinblock {
+			log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
+		}
 
-	for idx, transaction := range block.Transactions {
-		receipt := block.Receipts[idx]
+		for idx, transaction := range block.Transactions {
+			receipt := block.Receipts[idx]
 
-		l.debug("extractor,tx:%s", transaction.Hash)
-		l.ProcessMinedTransaction(&transaction, &receipt, block.Timestamp.BigInt())
+			l.debug("extractor,tx:%s", transaction.Hash)
+			l.ProcessMinedTransaction(&transaction, &receipt, block.Timestamp.BigInt())
+		}
 	}
 
 	eventemitter.Emit(eventemitter.Block_End, blockEvent)

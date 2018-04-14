@@ -187,7 +187,7 @@ func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool,error) {
 	reply, err := conn.Do("hexists", key, field)
 
 	if nil == err && nil != reply {
-		exists := reply.(int)
+		exists := reply.(int64)
 		return exists > 0, nil
 	}
 
