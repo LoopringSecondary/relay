@@ -169,13 +169,14 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	// set all token pairs
 	pairsMap := make(map[string]TokenPair, 0)
 	for _, v := range supportMarkets {
-		for _, vv := range AllTokens {
+		for _, vv := range allTokens {
 			if v.Symbol != vv.Symbol {
 				pairsMap[v.Symbol+"-"+vv.Symbol] = TokenPair{v.Protocol, vv.Protocol}
 				pairsMap[vv.Symbol+"-"+v.Symbol] = TokenPair{vv.Protocol, v.Protocol}
 			}
 		}
 	}
+
 	for _, v := range pairsMap {
 		allTokenPairs = append(allTokenPairs, v)
 	}
