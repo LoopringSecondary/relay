@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/Loopring/relay/log"
 )
 
 type Block struct {
@@ -135,6 +136,14 @@ type TransactionReceipt struct {
 func (receipt *TransactionReceipt) IsFailed() bool {
 	txIsFailed := false
 	byzantiumBlock := big.NewInt(4370000)
+
+	if receipt.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
+		if bs, err := receipt.Status.MarshalText(); err != nil {
+			log.Debugf("-------batch get receipt, tx:%s status:nil", receipt.TransactionHash)
+		} else {
+			log.Debugf("-------batch get receipt, tx:%s status:%s", receipt.TransactionHash, common.Bytes2Hex(bs))
+		}
+	}
 
 	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
 	hasNoLogs := len(receipt.Logs) <= 0

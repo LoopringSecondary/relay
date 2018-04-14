@@ -499,6 +499,16 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 				}
 
+				for _, v := range blockWithTxAndReceipt.Receipts {
+					if v.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
+						if bs, err := v.Status.MarshalText(); err != nil {
+							log.Debugf("-------batch get receipt, tx:%s status:nil", v.TransactionHash)
+						} else {
+							log.Debugf("-------batch get receipt, tx:%s status:%s", v.TransactionHash, common.Bytes2Hex(bs))
+						}
+					}
+				}
+
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
 					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400))
 				}
