@@ -561,8 +561,8 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMinedDetail, err error) {
-	if query.RingIndex.BigInt().Cmp(big.NewInt(0)) <= 0 {
-		return res, errors.New("ring index can't be 0")
+	if query.RingIndex.BigInt().Cmp(big.NewInt(0)) < 0 {
+		return res, errors.New("ring index can't < 0")
 	}
 
 	rings, err := w.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
