@@ -581,13 +581,14 @@ func (a *AccountManager) GetAllowanceWithSymbolResult(owner, spender common.Addr
 			symbol := ""
 			if types.IsZeroAddress(tokenAddr) {
 				symbol = "ETH"
-			} else {
-				symbol = util.AddressToAlias(tokenAddr.Hex())
-			}
-			if _,exists := allowances[spender]; !exists || nil == allowances[spender].Allowance {
 				res[symbol] = big.NewInt(int64(0))
 			} else {
-				res[symbol] = allowances[spender].Allowance.BigInt()
+				symbol = util.AddressToAlias(tokenAddr.Hex())
+				if _,exists := allowances[spender]; !exists || nil == allowances[spender].Allowance {
+					res[symbol] = big.NewInt(int64(0))
+				} else {
+					res[symbol] = allowances[spender].Allowance.BigInt()
+				}
 			}
 		}
 	}
