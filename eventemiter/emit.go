@@ -78,6 +78,7 @@ const (
 	PendingTransaction = "PendingTransaction"
 )
 
+//change map to sync.Map
 var watchers map[string][]*Watcher
 var mtx *sync.Mutex
 

@@ -34,8 +34,7 @@ import (
 type Market struct {
 	matcher         *TimingMatcher
 	om              ordermanager.OrderManager
-	protocolAddress common.Address
-	lrcAddress      common.Address
+	protocolImpl *ethaccessor.ProtocolAddress
 
 	TokenA     common.Address
 	TokenB     common.Address
@@ -47,7 +46,7 @@ type Market struct {
 }
 
 func (market *Market) match() {
-	market.getOrdersForMatching(market.protocolAddress)
+	market.getOrdersForMatching(market.protocolImpl.ContractAddress)
 	matchedOrderHashes := make(map[common.Hash]bool) //true:fullfilled, false:partfilled
 	ringSubmitInfos := []*types.RingSubmitInfo{}
 	candidateRingList := CandidateRingList{}
@@ -274,12 +273,12 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 
 func (market *Market) generateFilledOrder(order *types.OrderState) (*types.FilledOrder, error) {
 
-	lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.lrcAddress)
+	lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.protocolImpl.LrcTokenAddress, market.protocolImpl.ContractAddress)
 	if nil != err {
 		return nil, err
 	}
 
-	tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS)
+	tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS, market.protocolImpl.DelegateAddress)
 	if nil != err {
 		return nil, err
 	}
@@ -290,7 +289,7 @@ func (market *Market) generateFilledOrder(order *types.OrderState) (*types.Fille
 	if market.om.IsValueDusted(order.RawOrder.TokenS, tokenSBalance) {
 		return nil, fmt.Errorf("owner:%s token:%s balance or allowance is not enough", order.RawOrder.Owner.Hex(), order.RawOrder.TokenS.Hex())
 	}
-	return types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance, market.lrcAddress), nil
+	return types.ConvertOrderStateToFilledOrder(*order, lrcTokenBalance, tokenSBalance, market.protocolImpl.LrcTokenAddress), nil
 }
 
 func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*types.RingSubmitInfo, error) {
@@ -318,8 +317,7 @@ func NewMarket(protocolAddress *ethaccessor.ProtocolAddress, tokenS, tokenB comm
 
 	m := &Market{}
 	m.om = om
-	m.protocolAddress = protocolAddress.ContractAddress
-	m.lrcAddress = protocolAddress.LrcTokenAddress
+	m.protocolImpl = protocolAddress
 	m.matcher = matcher
 	m.TokenA = tokenS
 	m.TokenB = tokenB

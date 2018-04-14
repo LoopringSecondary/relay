@@ -85,16 +85,6 @@ func TestPrepareTestData(t *testing.T) {
 	test.PrepareTestData()
 }
 
-func a() {
-	s := "lll"
-	defer func() {
-		println("kdjl")
-		s = "ppp"
-	}()
-
-	println(s)
-}
-
 func TestSetTokenBalances(t *testing.T) {
 	test.SetTokenBalances()
 }

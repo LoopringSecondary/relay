@@ -77,8 +77,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 		if !inited {
 			for _, protocolAddress := range ethaccessor.ProtocolAddresses() {
 				m := &Market{}
-				m.protocolAddress = protocolAddress.ContractAddress
-				m.lrcAddress = protocolAddress.LrcTokenAddress
+				m.protocolImpl = protocolAddress
 				m.om = om
 				m.matcher = matcher
 				m.TokenA = pair.TokenS
@@ -104,8 +103,8 @@ func (matcher *TimingMatcher) Stop() {
 	}
 }
 
-func (matcher *TimingMatcher) GetAccountAvailableAmount(address common.Address, tokenAddress common.Address) (*big.Rat, error) {
-	if balance, allowance, err := matcher.accountManager.GetBalanceByTokenAddress(address, tokenAddress); nil != err {
+func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address) (*big.Rat, error) {
+	if balance, allowance, err := matcher.accountManager.GetBalanceAndAllowance(address, tokenAddress, spender); nil != err {
 		return nil, err
 	} else {
 		availableAmount := new(big.Rat).SetInt(balance)

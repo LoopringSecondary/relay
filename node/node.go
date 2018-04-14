@@ -228,7 +228,7 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager(n.globalConfig.Common.ProtocolImpl.Address)
+	n.accountManager = market.NewAccountManager()
 }
 
 func (n *Node) registerTransactionManager() {
