@@ -525,11 +525,11 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 
 	for _, f := range res.Data {
 		fill := f.(dao.FillEvent)
-		if util.IsBuy(fill.TokenB) {
-			fill.Side = "buy"
-		} else {
-			fill.Side = "sell"
-		}
+		//if util.IsBuy(fill.TokenB) {
+		//	fill.Side = "buy"
+		//} else {
+		//	fill.Side = "sell"
+		//}
 		fill.TokenS = util.AddressToAlias(fill.TokenS)
 		fill.TokenB = util.AddressToAlias(fill.TokenB)
 

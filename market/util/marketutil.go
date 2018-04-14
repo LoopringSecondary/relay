@@ -35,6 +35,8 @@ import (
 )
 
 const WeiToEther = 1e18
+const SideSell    = "sell"
+const SideBuy     = "buy"
 
 type TokenPair struct {
 	TokenS common.Address
@@ -254,9 +256,9 @@ func WrapMarket(s, b string) (market string, err error) {
 
 	s, b = strings.ToUpper(s), strings.ToUpper(b)
 
-	if IsSupportedMarket(s) && IsSupportedToken(b) {
+	if IsSupportedMarket(s) && isSupportedToken(b) {
 		market = fmt.Sprintf("%s-%s", b, s)
-	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
+	} else if IsSupportedMarket(b) && isSupportedToken(s) {
 		market = fmt.Sprintf("%s-%s", s, b)
 	} else if IsSupportedMarket(b) && IsSupportedMarket(s) {
 		if MarketBaseOrder[s] < MarketBaseOrder[b] {
@@ -294,7 +296,7 @@ func IsSupportedMarket(market string) bool {
 	return ok
 }
 
-func IsSupportedToken(token string) bool {
+func isSupportedToken(token string) bool {
 	_, ok := SupportTokens[strings.ToUpper(token)]
 	return ok
 }
@@ -342,7 +344,7 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 		return 0
 	}
 
-	if IsBuy(s) {
+	if GetSide(s, b) == SideBuy {
 		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
 	} else {
 		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
@@ -351,28 +353,38 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	price, _ := result.Float64()
 	return price
 }
-
-func IsBuy(tokenB string) bool {
-	if IsAddress(tokenB) {
-		tokenB = AddressToAlias(tokenB)
-	}
-	if _, ok := SupportTokens[tokenB]; !ok {
-		return false
-	}
-	return true
-}
+//
+//func IsBuy(tokenB string) bool {
+//	if IsAddress(tokenB) {
+//		tokenB = AddressToAlias(tokenB)
+//	}
+//
+//
+//	if _, ok := SupportTokens[tokenB]; !ok {
+//		return false
+//	}
+//	return true
+//}
 
 func GetSide(s, b string) string {
 
-	if IsSupportedMarket(s) && IsSupportedToken(b) {
-		return "buy"
-	} else if IsSupportedMarket(b) && IsSupportedToken(s) {
-		return "sell"
+	if IsAddress(s) {
+		s = AddressToAlias(s)
+	}
+
+	if IsAddress(b) {
+		b = AddressToAlias(b)
+	}
+
+	if IsSupportedMarket(s) && isSupportedToken(b) {
+		return SideBuy
+	} else if IsSupportedMarket(b) && isSupportedToken(s) {
+		return SideSell
 	} else if IsSupportedMarket(b) && IsSupportedMarket(s) {
 		if MarketBaseOrder[s] < MarketBaseOrder[b] {
-			return "sell"
+			return SideSell
 		} else {
-			return "buy"
+			return SideBuy
 		}
 	}
 	return ""

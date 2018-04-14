@@ -340,11 +340,11 @@ func (ord *OrderState) ResolveStatus(allowance, balance *big.Int) {
 	//}
 }
 
-const (
-	SIDE_SELL    = "sell"
-	SIDE_BUY     = "buy"
-	SIDE_INVALID = ""
-)
+//const (
+//	SIDE_SELL    = "sell"
+//	SIDE_BUY     = "buy"
+//	SIDE_INVALID = ""
+//)
 
 // 根据市场确定订单方向
 //func (ord *OrderState) Side(market common.Address) string {

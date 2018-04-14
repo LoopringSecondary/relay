@@ -335,7 +335,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 
 	for _, data := range fills {
 
-		if util.IsBuy(data.TokenS) {
+		if data.Side == util.SideBuy {
 			vol += util.StringToFloat(data.AmountB)
 			amount += util.StringToFloat(data.AmountS)
 		} else {
@@ -511,7 +511,7 @@ func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt 
 
 		for _, data := range fills {
 
-			if util.IsBuy(data.TokenS) {
+			if data.Side == util.SideBuy {
 				vol += util.StringToFloat(data.AmountB)
 				amount += util.StringToFloat(data.AmountS)
 			} else {
@@ -702,7 +702,7 @@ func (t *TrendManager) ScheduleUpdate() {
 
 					for _, data := range fills {
 
-						if util.IsBuy(data.TokenS) {
+						if data.Side == util.SideBuy {
 							vol += util.StringToFloat(data.AmountB)
 							amount += util.StringToFloat(data.AmountS)
 						} else {
@@ -802,7 +802,7 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend T
 
 	for _, data := range fills {
 
-		if util.IsBuy(data.TokenS) {
+		if data.Side == util.SideBuy {
 			vol += util.StringToFloat(data.AmountB)
 			amount += util.StringToFloat(data.AmountS)
 		} else {
