@@ -139,9 +139,9 @@ func (receipt *TransactionReceipt) IsFailed() bool {
 
 	if receipt.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
 		if bs, err := receipt.Status.MarshalText(); err != nil {
-			log.Debugf("-------batch get receipt, tx:%s status:nil", receipt.TransactionHash)
+			log.Debugf("-------tx judge get receipt, tx:%s status:nil", receipt.TransactionHash)
 		} else {
-			log.Debugf("-------batch get receipt, tx:%s status:%s", receipt.TransactionHash, common.Bytes2Hex(bs))
+			log.Debugf("-------tx judge get receipt, tx:%s status:%s", receipt.TransactionHash, common.Bytes2Hex(bs))
 		}
 	}
 
