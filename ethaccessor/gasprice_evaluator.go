@@ -32,15 +32,17 @@ type GasPriceEvaluator struct {
 	stopChan chan bool
 }
 
-func (e *GasPriceEvaluator) GasPrice(gasPriceLimit *big.Int) *big.Int {
+func (e *GasPriceEvaluator) GasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
 	if nil != e.gasPrice {
-		if nil != gasPriceLimit && gasPriceLimit.Cmp(e.gasPrice) < 0 {
-			return gasPriceLimit
+		if nil != maxGasPrice && maxGasPrice.Cmp(e.gasPrice) < 0 {
+			return maxGasPrice
+		} else if nil != minGasPrice && minGasPrice.Cmp(e.gasPrice) > 0 {
+			return minGasPrice
 		} else {
 			return e.gasPrice
 		}
 	} else {
-		return gasPriceLimit
+		return maxGasPrice
 	}
 }
 
@@ -108,7 +110,7 @@ func (prices gasPrices) bestGasPrice() *big.Int {
 	}
 	averagePrice.Div(averagePrice, big.NewInt(int64(endIdx-startIdx+1)))
 
-	if averagePrice.Cmp(big.NewInt(int64(1000000000))) <= 0 {
+	if averagePrice.Cmp(big.NewInt(int64(0))) <= 0 {
 		averagePrice = big.NewInt(int64(1000000000))
 	}
 	return averagePrice

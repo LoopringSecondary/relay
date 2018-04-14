@@ -86,8 +86,8 @@ func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter 
 	return fmt.Errorf("no transaction with hash:%s", txHash)
 }
 
-func EstimateGasPrice() *big.Int {
-	return accessor.gasPriceEvaluator.gasPrice
+func EstimateGasPrice(minGasPrice,maxGasPrice *big.Int) *big.Int {
+	return accessor.gasPriceEvaluator.GasPrice(minGasPrice, maxGasPrice)
 }
 
 func GetBlockTransactionCountByHash(result interface{}, blockHash string, blockParameter string) error {
