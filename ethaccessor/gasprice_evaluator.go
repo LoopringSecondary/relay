@@ -49,7 +49,7 @@ func (e *GasPriceEvaluator) start() {
 	if err := BlockNumber(&blockNumber); nil == err {
 		go func() {
 			number := new(big.Int).Set(blockNumber.BigInt())
-			number.Sub(number, big.NewInt(5))
+			number.Sub(number, big.NewInt(30))
 			iterator := NewBlockIterator(number, nil, true, uint64(0))
 			for {
 				select {
@@ -59,9 +59,9 @@ func (e *GasPriceEvaluator) start() {
 					blockInterface, err := iterator.Next()
 					if nil == err {
 						blockWithTxAndReceipt := blockInterface.(*BlockWithTxAndReceipt)
-						log.Debugf("gasPriceEvaluator, blockNumber:%s", blockWithTxAndReceipt.Number.BigInt().String())
+						log.Debugf("gasPriceEvaluator, blockNumber:%s, gasPrice:%s", blockWithTxAndReceipt.Number.BigInt().String(), e.gasPrice.String())
 						e.Blocks = append(e.Blocks, blockWithTxAndReceipt)
-						if len(e.Blocks) > 5 {
+						if len(e.Blocks) > 30 {
 							e.Blocks = e.Blocks[1:]
 						}
 						var prices gasPrices = []*big.Int{}
@@ -99,8 +99,8 @@ func (prices gasPrices) Less(i, j int) bool {
 
 func (prices gasPrices) bestGasPrice() *big.Int {
 	sort.Sort(prices)
-	startIdx := len(prices) / 3
-	endIdx := startIdx * 2
+	startIdx := 0
+	endIdx := (len(prices) / 3) * 2
 
 	averagePrice := big.NewInt(0)
 	for _, price := range prices[startIdx:endIdx] {
@@ -108,7 +108,7 @@ func (prices gasPrices) bestGasPrice() *big.Int {
 	}
 	averagePrice.Div(averagePrice, big.NewInt(int64(endIdx-startIdx+1)))
 
-	if averagePrice.Cmp(big.NewInt(0)) <= 0 {
+	if averagePrice.Cmp(big.NewInt(int64(1000000000))) <= 0 {
 		averagePrice = big.NewInt(int64(1000000000))
 	}
 	return averagePrice

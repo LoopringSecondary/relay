@@ -386,6 +386,7 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
 	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
 	lrcAddress := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol].LrcTokenAddress
+	spenderAddress := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol].DelegateAddress
 	useSplit := false
 	//for _,splitMiner := range submitter.splitMinerAddresses {
 	//	//todo:optimize it
@@ -418,7 +419,7 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 	minerAddresses := submitter.availabeMinerAddress()
 	if !useSplit {
 		for _, normalMinerAddress := range minerAddresses {
-			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress)
+			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
 			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
 			feeSelections := []uint8{}
 			legalFees := []*big.Rat{}

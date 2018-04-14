@@ -152,6 +152,41 @@ func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string
 	return nil
 }
 
+func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem,error) {
+	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
+		return reqElems, err
+	}
+
+	return reqElems, nil
+}
+
+func (accessor *ethNodeAccessor) BatchErc20Allowance(routeParam string, reqs []*BatchErc20AllowanceReq) error {
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	erc20Abi := accessor.Erc20Abi
+
+	for idx, req := range reqs {
+		allowanceData, _ := erc20Abi.Pack("allowance", req.Owner, req.Spender)
+		allowanceArg := &CallArg{}
+		allowanceArg.To = req.Token
+		allowanceArg.Data = common.ToHex(allowanceData)
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_call",
+			Args:   []interface{}{allowanceArg, req.BlockParameter},
+			Result: &req.Allowance,
+			Error: req.AllowanceErr,
+		}
+	}
+
+	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
+		return err
+	}
+
+	for idx, req := range reqs {
+		req.AllowanceErr = reqElems[idx].Error
+	}
+	return nil
+}
+
 func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int, reqs []*BatchTransactionReq) error {
 	if len(reqs) < 1 || retry < 1 {
 		return fmt.Errorf("ethaccessor:batchTransactions retry or reqs invalid")
@@ -462,6 +497,16 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				for idx, _ := range txReqs {
 					blockWithTxAndReceipt.Transactions = append(blockWithTxAndReceipt.Transactions, txReqs[idx].TxContent)
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
+				}
+
+				for _, v := range blockWithTxAndReceipt.Receipts {
+					if v.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
+						if bs, err := v.Status.MarshalText(); err != nil {
+							log.Debugf("-------batch get receipt, tx:%s status:nil", v.TransactionHash)
+						} else {
+							log.Debugf("-------batch get receipt, tx:%s status:%s", v.TransactionHash, common.Bytes2Hex(bs))
+						}
+					}
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {

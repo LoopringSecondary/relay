@@ -245,6 +245,18 @@ type RingMinedInfo struct {
 	Time               int64               `json:"timestamp"`
 }
 
+type Token struct {
+	Token     string `json:"symbol"`
+	Balance   string `json:"balance"`
+	Allowance string `json:"allowance"`
+}
+
+type AccountJson struct {
+	ContractVersion string  `json:"contractVersion"`
+	Address         string  `json:"owner"`
+	Tokens          []Token `json:"tokens"`
+}
+
 type WalletServiceImpl struct {
 	trendManager           market.TrendManager
 	orderManager           ordermanager.OrderManager
@@ -291,29 +303,13 @@ func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 
 func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, err error) {
 	res = make([]Portfolio, 0)
-	if len(query.Owner) == 0 {
+	if !common.IsHexAddress(query.Owner) {
 		return nil, errors.New("owner can't be nil")
 	}
 
-	account, _ := w.accountManager.GetBalance(w.defaultContractVersion, query.Owner)
-	balances := account.Balances
+	balances, _ := w.accountManager.GetBalanceWithSymbolResult(common.HexToAddress(query.Owner))
 	if len(balances) == 0 {
 		return
-	}
-
-	balancesCopy := make(map[string]market.Balance)
-
-	for k, v := range balances {
-		balancesCopy[k] = v
-	}
-
-	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	b, bErr := w.ethForwarder.GetBalance(query.Owner, "latest")
-	if bErr == nil {
-		ethBalance.Balance = types.HexToBigint(b)
-		balancesCopy["ETH"] = ethBalance
-	} else {
-		return res, bErr
 	}
 
 	priceQuote, err := w.GetPriceQuote(PriceQuoteQuery{DefaultCapCurrency})
@@ -327,16 +323,16 @@ func (w *WalletServiceImpl) GetPortfolio(query SingleOwner) (res []Portfolio, er
 	}
 
 	totalAsset := big.NewRat(0, 1)
-	for k, v := range balancesCopy {
+	for k, v := range balances {
 		asset := new(big.Rat).Set(priceQuoteMap[k])
-		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset = asset.Mul(asset, new(big.Rat).SetFrac(v, big.NewInt(1)))
 		totalAsset = totalAsset.Add(totalAsset, asset)
 	}
 
-	for k, v := range balancesCopy {
-		portfolio := Portfolio{Token: k, Amount: v.Balance.String()}
+	for k, v := range balances {
+		portfolio := Portfolio{Token: k, Amount: v.String()}
 		asset := new(big.Rat).Set(priceQuoteMap[k])
-		asset = asset.Mul(asset, new(big.Rat).SetFrac(v.Balance, big.NewInt(1)))
+		asset = asset.Mul(asset, new(big.Rat).SetFrac(v, big.NewInt(1)))
 		totalAssetFloat, _ := totalAsset.Float64()
 		var percentage float64
 		if totalAssetFloat == 0 {
@@ -589,20 +585,33 @@ func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMi
 	return fillDetail(ring, fills)
 }
 
-func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res market.AccountJson, err error) {
-	if len(balanceQuery.Owner) == 0 {
+func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res AccountJson, err error) {
+	if !common.IsHexAddress(balanceQuery.Owner) {
 		return res, errors.New("owner can't be null")
 	}
+	owner := common.HexToAddress(balanceQuery.Owner)
 	if len(balanceQuery.ContractVersion) == 0 {
 		return res, errors.New("contract version can't be null")
 	}
-	account, _ := w.accountManager.GetBalance(balanceQuery.ContractVersion, balanceQuery.Owner)
-	ethBalance := market.Balance{Token: "ETH", Balance: big.NewInt(0)}
-	b, bErr := w.ethForwarder.GetBalance(balanceQuery.Owner, "latest")
-	if bErr == nil {
-		ethBalance.Balance = types.HexToBigint(b)
+
+	balances, _ := w.accountManager.GetBalanceWithSymbolResult(owner)
+	allowances := make(map[string]*big.Int)
+	if spender,err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion]));nil == err {
+		allowances,_ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
 	}
-	res = account.ToJsonObject(balanceQuery.ContractVersion, ethBalance)
+
+	res = AccountJson{}
+	res.ContractVersion = balanceQuery.ContractVersion
+	res.Address = balanceQuery.Owner
+	res.Tokens = []Token{}
+	for symbol,balance := range balances {
+		token := Token{}
+		token.Token = symbol
+		token.Allowance = allowances[symbol].String()
+		token.Balance = balance.String()
+		res.Tokens = append(res.Tokens, token)
+	}
+
 	return
 }
 
@@ -1013,11 +1022,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
-	if rawOrder.TokenB == "WETH" {
-		rawOrder.Side = "sell"
-	} else {
-		rawOrder.Side = "buy"
-	}
+	rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
