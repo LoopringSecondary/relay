@@ -81,6 +81,7 @@ type Order struct {
 	Market                string                     `json:"market"`
 	CreateTime            int64                      `json:"createTime"`
 	PowNonce              uint64                     `json:"powNonce"`
+	Side                  string                     `json:"side"`
 }
 
 type orderMarshaling struct {
@@ -116,6 +117,7 @@ type OrderJsonRequest struct {
 	Hash                  common.Hash    `json:"hash"`
 	CreateTime            int64          `json:"createTime"`
 	PowNonce              uint64         `json:"powNonce"`
+	Side                  string         `json:"side"`
 }
 
 type orderJsonRequestMarshaling struct {
@@ -345,19 +347,19 @@ const (
 )
 
 // 根据市场确定订单方向
-func (ord *OrderState) Side(market common.Address) string {
-	var side string
-	switch market {
-	case ord.RawOrder.TokenS:
-		side = SIDE_SELL
-	case ord.RawOrder.TokenB:
-		side = SIDE_BUY
-	default:
-		side = SIDE_INVALID
-	}
-
-	return side
-}
+//func (ord *OrderState) Side(market common.Address) string {
+//	var side string
+//	switch market {
+//	case ord.RawOrder.TokenS:
+//		side = SIDE_SELL
+//	case ord.RawOrder.TokenB:
+//		side = SIDE_BUY
+//	default:
+//		side = SIDE_INVALID
+//	}
+//
+//	return side
+//}
 
 func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {
 	remainedAmountS = new(big.Rat)

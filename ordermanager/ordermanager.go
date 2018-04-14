@@ -29,6 +29,7 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/Loopring/relay/market/util"
 )
 
 type OrderManager interface {
@@ -199,6 +200,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	newFillModel := &dao.FillEvent{}
 	newFillModel.ConvertDown(event)
 	newFillModel.Fork = false
+	newFillModel.Side = util.GetSide(util.AddressToAlias(event.TokenS.Hex()), util.AddressToAlias(event.TokenB.Hex()))
 	if err := om.rds.Add(newFillModel); err != nil {
 		log.Debugf("order manager,handle order filled event error:order %s insert faild", event.OrderHash.Hex())
 		return err

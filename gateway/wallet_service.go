@@ -782,10 +782,8 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
 	}
-	if strings.ToLower(orderQuery.Side) == "buy" {
-		query["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
-	} else if strings.ToLower(orderQuery.Side) == "sell" {
-		query["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	if orderQuery.Side != "" {
+		query["side"] = orderQuery.Side
 	}
 
 	pageIndex = orderQuery.PageIndex
@@ -952,10 +950,8 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 		rst["ring_hash"] = q.RingHash
 	}
 
-	if strings.ToLower(q.Side) == "buy" {
-		rst["token_s"] = util.AllTokens["WETH"].Protocol.Hex()
-	} else if strings.ToLower(q.Side) == "sell" {
-		rst["token_b"] = util.AllTokens["WETH"].Protocol.Hex()
+	if q.Side != "" {
+		rst["side"] = q.Side
 	}
 
 	return rst, pi, ps
@@ -1022,10 +1018,11 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
-	rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
+	//rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
+	rawOrder.Side = src.RawOrder.Side
 	rst.RawOrder = rawOrder
 	return rst
 }
