@@ -139,7 +139,7 @@ func (receipt *TransactionReceipt) AfterByzantiumFork() bool {
 
 func (receipt *TransactionReceipt) StatusInvalid() bool {
 	if !receipt.AfterByzantiumFork() {
-		return true
+		return false
 	}
 	return receipt.Status == nil
 }
