@@ -35,7 +35,7 @@ import (
 const (
 	BalancePrefix   = "balance_"
 	AllowancePrefix = "allowance_"
-	CustomTokens    = "customtoken_"
+	CustomTokenPrefix = "customtoken_"
 )
 
 type AccountBase struct {
@@ -168,7 +168,7 @@ func (accountBalances AccountBalances) syncFromEthNode(tokens ...common.Address)
 	}
 	for _, req := range reqs {
 		if nil != req.BalanceErr {
-			log.Errorf("get balance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.BalanceErr.Error())
 		} else {
 			balance := Balance{}
 			balance.Balance = &req.Balance
@@ -323,7 +323,7 @@ func (accountAllowances *AccountAllowances) syncFromEthNode(tokens, spenders []c
 	}
 	for _, req := range reqs {
 		if nil != req.AllowanceErr {
-			log.Errorf("get balance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
 			allowance := Allowance{}
 			allowance.Allowance = &req.Allowance
@@ -405,23 +405,23 @@ func (b *ChangedOfBlock) syncAndSaveBalances() error {
 	if err := ethaccessor.BatchCall("latest", []ethaccessor.BatchReq{reqs}); nil != err {
 		return err
 	}
-	accountBalances := make(map[common.Address]*AccountBalances)
-	for _, req := range reqs {
+	accounts := make(map[common.Address]*AccountBalances)
+	for _,req := range reqs {
 		if nil != req.BalanceErr {
-			log.Errorf("get balance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.BalanceErr.Error())
 		} else {
-			if _, exists := accountBalances[req.Owner]; !exists {
-				accountBalances[req.Owner] = &AccountBalances{}
-				accountBalances[req.Owner].Owner = req.Owner
-				accountBalances[req.Owner].Balances = make(map[common.Address]Balance)
+			if _,exists := accounts[req.Owner]; !exists {
+				accounts[req.Owner] = &AccountBalances{}
+				accounts[req.Owner].Owner = req.Owner
+				accounts[req.Owner].Balances = make(map[common.Address]Balance)
 			}
 			balance := Balance{}
 			balance.LastBlock = types.NewBigPtr(b.currentBlockNumber)
 			balance.Balance = &req.Balance
-			accountBalances[req.Owner].Balances[req.Token] = balance
+			accounts[req.Owner].Balances[req.Token] = balance
 		}
 	}
-	for _, balances := range accountBalances {
+	for _,balances := range accounts {
 		balances.save()
 	}
 
@@ -485,7 +485,7 @@ func (b *ChangedOfBlock) syncAndSaveAllowances() error {
 	accountAllowances := make(map[common.Address]*AccountAllowances)
 	for _, req := range reqs {
 		if nil != req.AllowanceErr {
-			log.Errorf("get allowance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get allowance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
 			if _, exists := accountAllowances[req.Owner]; !exists {
 				accountAllowances[req.Owner] = &AccountAllowances{}
@@ -691,6 +691,7 @@ func (a *AccountManager) handleBlockEnd(input eventemitter.EventData) error {
 
 	return nil
 }
+
 func (a *AccountManager) handleBlockNew(input eventemitter.EventData) error {
 	event := input.(*types.BlockEvent)
 	log.Debugf("handleBlockNewhandleBlockNewhandleBlockNewhandleBlockNew:%s", event.BlockNumber.String())
