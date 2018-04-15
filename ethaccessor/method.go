@@ -152,7 +152,7 @@ func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string
 	return nil
 }
 
-func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem,error) {
+func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem, error) {
 	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
 		return reqElems, err
 	}
@@ -173,7 +173,7 @@ func (accessor *ethNodeAccessor) BatchErc20Allowance(routeParam string, reqs []*
 			Method: "eth_call",
 			Args:   []interface{}{allowanceArg, req.BlockParameter},
 			Result: &req.Allowance,
-			Error: req.AllowanceErr,
+			Error:  req.AllowanceErr,
 		}
 	}
 

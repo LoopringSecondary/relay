@@ -19,10 +19,10 @@
 package ethaccessor
 
 import (
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/log"
 )
 
 type Block struct {

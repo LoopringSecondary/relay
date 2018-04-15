@@ -24,12 +24,12 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/market/util"
 )
 
 type OrderManager interface {

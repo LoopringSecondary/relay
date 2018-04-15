@@ -5,13 +5,13 @@ import (
 	"github.com/Loopring/relay/types"
 	"testing"
 	//"github.com/Loopring/relay/test"
-	"github.com/Loopring/relay/test"
-	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/usermanager"
-	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/marketcap"
+	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/usermanager"
 )
 
 func TestGetPow(t *testing.T) {
@@ -47,11 +47,6 @@ func TestGetPow(t *testing.T) {
 	//ooo := pr.Data[0].(types.OrderState)
 	//fmt.Println(ooo)
 	//fmt.Println(gateway.OrderStateToJson(ooo))
-
-
-
-
-
 
 	o := types.Order{}
 	o.V = 27

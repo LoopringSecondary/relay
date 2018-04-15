@@ -32,8 +32,8 @@ import (
 )
 
 type Market struct {
-	matcher         *TimingMatcher
-	om              ordermanager.OrderManager
+	matcher      *TimingMatcher
+	om           ordermanager.OrderManager
 	protocolImpl *ethaccessor.ProtocolAddress
 
 	TokenA     common.Address

@@ -492,7 +492,7 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 			blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 		}
 
-		success:=0
+		success := 0
 		failed := 0
 		niltx := 0
 		for _, v := range blockWithTxAndReceipt.Receipts {

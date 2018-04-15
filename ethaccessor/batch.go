@@ -79,7 +79,7 @@ func (reqs BatchBalanceReqs) ToBatchElem() []rpc.BatchElem {
 }
 
 func (reqs BatchBalanceReqs) FromBatchElem(elems []rpc.BatchElem) {
-	for idx,req := range elems {
+	for idx, req := range elems {
 		reqs[idx].BalanceErr = req.Error
 	}
 }
@@ -115,11 +115,10 @@ func (reqs BatchErc20AllowanceReqs) ToBatchElem() []rpc.BatchElem {
 }
 
 func (reqs BatchErc20AllowanceReqs) FromBatchElem(elems []rpc.BatchElem) {
-	for idx,req := range elems {
+	for idx, req := range elems {
 		reqs[idx].AllowanceErr = req.Error
 	}
 }
-
 
 type BatchTransactionReq struct {
 	TxHash    string
