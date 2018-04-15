@@ -150,6 +150,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 
 	model, err := newOrderEntity(state, om.mc, nil)
 	if err != nil {
+		log.Errorf("order manager,handle gateway order:%s error", state.RawOrder.Hash.Hex())
 		return err
 	}
 
