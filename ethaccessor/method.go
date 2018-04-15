@@ -160,6 +160,17 @@ func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.Bat
 	return reqElems, nil
 }
 
+func (accessor *ethNodeAccessor) RetryBatchCall(routeParam string, reqElems []rpc.BatchElem, retry int) ([]rpc.BatchElem, error) {
+	var err error
+	for i := 0; i < retry; i++ {
+		if _, err = accessor.BatchCall(routeParam, reqElems); err == nil {
+			break
+		}
+		log.Debugf("accessor,RetryBatchCall %d'st time to get block's transactions", i+1)
+	}
+	return reqElems, err
+}
+
 func (accessor *ethNodeAccessor) BatchErc20Allowance(routeParam string, reqs []*BatchErc20AllowanceReq) error {
 	reqElems := make([]rpc.BatchElem, len(reqs))
 	erc20Abi := accessor.Erc20Abi
@@ -201,34 +212,20 @@ func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int,
 		}
 	}
 
-	var err error
-	for i := 0; i < retry; i++ {
-		if _, err = accessor.MutilClient.BatchCall(routeParam, reqElems); err == nil {
-			break
-		}
-	}
-	if err != nil {
+	if _, err := accessor.RetryBatchCall(routeParam, reqElems, retry); err != nil {
 		return err
 	}
 
 	for idx, v := range reqElems {
-		var (
-			tx     Transaction
-			txhash string = reqs[idx].TxHash
-		)
-
+		repeatCnt := 0
+	mark:
 		if v.Error == nil {
 			continue
 		}
-
-		for i := 0; i < retry; i++ {
-			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionByHash", txhash); v.Error == nil {
-				break
-			}
-		}
-		if v.Error != nil {
-			return v.Error
-		}
+		repeatCnt++
+		log.Debugf("accessor,BatchTransactions %d's time to get Transaction:%s", repeatCnt, reqs[idx].TxHash)
+		_, v.Error = accessor.Call(routeParam, &reqs[idx].TxContent, "eth_getTransactionByHash", reqs[idx].TxHash)
+		goto mark
 	}
 
 	return nil
@@ -248,34 +245,20 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 		}
 	}
 
-	var err error
-	for i := 0; i < retry; i++ {
-		if _, err = accessor.BatchCall(routeParam, reqElems); err == nil {
-			break
-		}
-	}
-	if err != nil {
+	if _, err := accessor.RetryBatchCall(routeParam, reqElems, retry); err != nil {
 		return err
 	}
 
 	for idx, v := range reqElems {
-		var (
-			tx     TransactionReceipt
-			txhash string = reqs[idx].TxHash
-		)
-
-		if v.Error == nil {
+		repeatCnt := 0
+	mark:
+		if v.Error == nil && !reqs[idx].TxContent.StatusInvalid() {
 			continue
 		}
-
-		for i := 0; i < retry; i++ {
-			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
-				break
-			}
-		}
-		if v.Error != nil {
-			return v.Error
-		}
+		repeatCnt++
+		log.Debugf("accessor,BatchTransactions %d's time to get TransactionReceipt:%s", repeatCnt, reqs[idx].TxHash)
+		_, v.Error = accessor.Call(routeParam, &reqs[idx].TxContent, "eth_getTransactionReceipt", reqs[idx].TxHash)
+		goto mark
 	}
 
 	return nil
@@ -497,16 +480,6 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				for idx, _ := range txReqs {
 					blockWithTxAndReceipt.Transactions = append(blockWithTxAndReceipt.Transactions, txReqs[idx].TxContent)
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
-				}
-
-				for _, v := range blockWithTxAndReceipt.Receipts {
-					if v.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
-						if bs, err := v.Status.MarshalText(); err != nil {
-							log.Debugf("-------batch get receipt, tx:%s status:nil", v.TransactionHash)
-						} else {
-							log.Debugf("-------batch get receipt, tx:%s status:%s", v.TransactionHash, common.Bytes2Hex(bs))
-						}
-					}
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {

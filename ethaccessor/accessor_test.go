@@ -444,8 +444,8 @@ func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
 
 func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 	const (
-		startBlock = 5438185
-		endBlock   = startBlock + 20
+		startBlock = 5444365
+		endBlock   = startBlock + 2
 	)
 
 	for i := startBlock; i < endBlock; i++ {
@@ -492,52 +492,24 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 			blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 		}
 
-		success := 0
-		failed := 0
-		niltx := 0
+		var (
+			success   = 0
+			failed    = 0
+			nilstatus = 0
+		)
 		for _, v := range blockWithTxAndReceipt.Receipts {
-			if v.Status.BigInt().Cmp(big.NewInt(1)) < 0 {
-				if bs, err := v.Status.MarshalText(); err != nil {
-					niltx++
-					fmt.Printf("tx:%s status marshal error:%s \n", v.TransactionHash, err.Error())
-				} else {
-					failed++
-					fmt.Printf("tx:%s status:%s\n", v.TransactionHash, common.Bytes2Hex(bs))
-				}
+			if v.Status == nil {
+				nilstatus++
+				fmt.Printf("tx:%s status is nil\n", v.TransactionHash)
+			} else if v.Status.BigInt().Cmp(big.NewInt(1)) < 0 {
+				failed++
+				fmt.Printf("tx:%s status:%s\n", v.TransactionHash, v.Status.BigInt().String())
 			} else {
 				success++
 			}
 		}
-		fmt.Printf("blockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d failed:%d nil:%d \n", blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, niltx)
-
-		//blockMark:
-		//	var block ethaccessor.BlockWithTxObject
-		//	if err := ethaccessor.GetBlockByNumber(&block, blockNumber, true); err != nil || len(block.Transactions) == 0 {
-		//		time.Sleep(1 * time.Second)
-		//		fmt.Printf("...........\n")
-		//		goto blockMark
-		//	}
-		//
-		//	go func (bn *big.Int) {
-		//		number := 0
-		//		for _, tx := range block.Transactions {
-		//		mark:
-		//			var receipt ethaccessor.TransactionReceipt
-		//			err := ethaccessor.GetTransactionReceipt(&receipt, tx.Hash, "latest")
-		//			if err != nil {
-		//				t.Fatalf(err.Error())
-		//			}
-		//			if _, err := receipt.Status.MarshalText(); err != nil {
-		//				fmt.Printf("tx:%s status marshal error:%s", tx.Hash, err.Error())
-		//				time.Sleep(1 * time.Second)
-		//				goto mark
-		//			} else {
-		//				number++
-		//				//fmt.Printf("tx:%s status:%s", tx.Hash, common.Bytes2Hex(bs))
-		//			}
-		//		}
-		//		fmt.Printf("blockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d \n", bn.String(), block.Hash.Hex(), len(block.Transactions), number)
-		//	}(blockNumber)
+		fmt.Printf("blockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d failed:%d nil:%d \n",
+			blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, nilstatus)
 	}
 }
 

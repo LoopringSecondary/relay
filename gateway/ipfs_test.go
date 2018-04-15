@@ -120,7 +120,7 @@ func TestRing(t *testing.T) {
 		bs1, _ := order1.MarshalJSON()
 
 		// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-		amountS2, _ := new(big.Int).SetString("2000"+suffix, 0)
+		amountS2, _ := new(big.Int).SetString("1000"+suffix, 0)
 		amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
 		lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(3))
 		order2 := test.CreateOrder(
