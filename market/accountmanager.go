@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	BalancePrefix   = "balance_"
-	AllowancePrefix = "allowance_"
+	BalancePrefix     = "balance_"
+	AllowancePrefix   = "allowance_"
 	CustomTokenPrefix = "customtoken_"
 )
 
@@ -406,11 +406,11 @@ func (b *ChangedOfBlock) syncAndSaveBalances() error {
 		return err
 	}
 	accounts := make(map[common.Address]*AccountBalances)
-	for _,req := range reqs {
+	for _, req := range reqs {
 		if nil != req.BalanceErr {
 			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.BalanceErr.Error())
 		} else {
-			if _,exists := accounts[req.Owner]; !exists {
+			if _, exists := accounts[req.Owner]; !exists {
 				accounts[req.Owner] = &AccountBalances{}
 				accounts[req.Owner].Owner = req.Owner
 				accounts[req.Owner].Balances = make(map[common.Address]Balance)
@@ -421,7 +421,7 @@ func (b *ChangedOfBlock) syncAndSaveBalances() error {
 			accounts[req.Owner].Balances[req.Token] = balance
 		}
 	}
-	for _,balances := range accounts {
+	for _, balances := range accounts {
 		balances.save()
 	}
 

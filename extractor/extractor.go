@@ -220,7 +220,7 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
 	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		if receipt.IsFailed() {
+		if receipt.Failed() {
 			log.Debugf("extractor,mined transaction(supported):%s is failed.", tx.Hash)
 			return l.ProcessMethod(tx, receipt, blockTime)
 		} else {
@@ -233,7 +233,7 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 			return l.ProcessEvent(tx, receipt, blockTime)
 		} else {
 			log.Debugf("extractor,mined transaction(unsupported without Erc20Event):%s is success.", tx.Hash)
-			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
+			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, receipt.ToStatus())
 		}
 	}
 }
@@ -245,22 +245,7 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 		return nil
 	}
 
-	var (
-		status  uint
-		gasUsed *big.Int
-	)
-	if receipt == nil {
-		status = types.TX_STATUS_PENDING
-		gasUsed = big.NewInt(0)
-	} else if receipt.IsFailed() {
-		status = types.TX_STATUS_FAILED
-		gasUsed = receipt.GasUsed.BigInt()
-	} else {
-		status = types.TX_STATUS_SUCCESS
-		gasUsed = receipt.GasUsed.BigInt()
-	}
-
-	method.FullFilled(tx, gasUsed, blockTime, uint8(status))
+	method.FullFilled(tx, receipt.GasUsed.BigInt(), blockTime, receipt.ToStatus())
 	eventemitter.Emit(method.Id, method)
 
 	return nil
