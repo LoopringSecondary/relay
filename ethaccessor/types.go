@@ -159,6 +159,16 @@ func (receipt *TransactionReceipt) Failed() bool {
 	return true
 }
 
+func (receipt *TransactionReceipt) ToStatus() uint8 {
+	if receipt == nil {
+		return types.TX_STATUS_PENDING
+	} else if receipt.Failed() {
+		return types.TX_STATUS_FAILED
+	} else {
+		return types.TX_STATUS_SUCCESS
+	}
+}
+
 type BlockIterator struct {
 	startNumber   *big.Int
 	endNumber     *big.Int
