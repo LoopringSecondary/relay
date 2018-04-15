@@ -19,6 +19,7 @@
 package ethaccessor
 
 import (
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -132,19 +133,43 @@ type TransactionReceipt struct {
 	TransactionIndex  types.Big `json:"transactionIndex"`
 }
 
+//func (receipt *TransactionReceipt) IsFailed() bool {
+//	txIsFailed := false
+//	byzantiumBlock := big.NewInt(4370000)
+//
+//	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
+//	hasNoLogs := len(receipt.Logs) <= 0
+//	failedStatus := receipt.Status.BigInt().Int64() == 0
+//
+//	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
+//		txIsFailed = true
+//	}
+//
+//	return txIsFailed
+//}
+
 func (receipt *TransactionReceipt) IsFailed() bool {
-	txIsFailed := false
-	byzantiumBlock := big.NewInt(4370000)
-
-	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
-	hasNoLogs := len(receipt.Logs) <= 0
-	failedStatus := receipt.Status.BigInt().Int64() == 0
-
-	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
-		txIsFailed = true
+	if len(receipt.Logs) > 0 {
+		return false
 	}
 
-	return txIsFailed
+	byzantiumBlock := big.NewInt(4370000)
+	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
+	successStatus := receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0
+	if afterByzantiumFork && successStatus {
+		return false
+	}
+
+	// todo(fuk): delete after debug
+	if afterByzantiumFork && !successStatus {
+		if bs, err := receipt.Status.MarshalText(); err != nil {
+			log.Debugf("-------tx judge get receipt, tx:%s status:nil", receipt.TransactionHash)
+		} else {
+			log.Debugf("-------tx judge get receipt, tx:%s status:%s", receipt.TransactionHash, common.Bytes2Hex(bs))
+		}
+	}
+
+	return true
 }
 
 type BlockIterator struct {

@@ -26,9 +26,9 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"sync"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 var accessor *ethNodeAccessor
@@ -86,7 +86,7 @@ func GetTransactionByHash(result types.CheckNull, txHash string, blockParameter 
 	return fmt.Errorf("no transaction with hash:%s", txHash)
 }
 
-func EstimateGasPrice(minGasPrice,maxGasPrice *big.Int) *big.Int {
+func EstimateGasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
 	return accessor.gasPriceEvaluator.GasPrice(minGasPrice, maxGasPrice)
 }
 
@@ -163,17 +163,17 @@ func BatchCall(routeParam string, reqs []BatchReq) error {
 	var err error
 	elems := []rpc.BatchElem{}
 	elemsLength := []int{}
-	for _,req := range reqs {
+	for _, req := range reqs {
 		elems1 := req.ToBatchElem()
 		elemsLength = append(elemsLength, len(elems1))
 		elems = append(elems, elems1...)
 	}
-	if elems,err =  accessor.BatchCall(routeParam, elems); nil != err {
+	if elems, err = accessor.BatchCall(routeParam, elems); nil != err {
 		return err
 	} else {
 		startId := 0
 		for idx, req := range reqs {
-			endId := startId+elemsLength[idx]
+			endId := startId + elemsLength[idx]
 			req.FromBatchElem(elems[startId:endId])
 			startId = endId
 		}
@@ -203,7 +203,7 @@ func GetSpenderAddress(protocolAddress common.Address) (spender common.Address, 
 }
 
 func IsSpenderAddress(spender common.Address) bool {
-	_,exists := accessor.DelegateAddresses[spender]
+	_, exists := accessor.DelegateAddresses[spender]
 	return exists
 }
 

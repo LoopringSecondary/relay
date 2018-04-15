@@ -19,12 +19,12 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/garyburd/redigo/redis"
 	"time"
-	"errors"
 )
 
 type RedisCacheImpl struct {
@@ -40,6 +40,7 @@ func (impl *RedisCacheImpl) Initialize(cfg interface{}) {
 		IdleTimeout: time.Duration(options.IdleTimeout) * time.Second,
 		MaxIdle:     options.MaxIdle,
 		MaxActive:   options.MaxActive,
+		Wait:        true,
 		Dial: func() (redis.Conn, error) {
 			address := fmt.Sprintf("%s:%s", options.Host, options.Port)
 			var (
@@ -122,7 +123,7 @@ func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
-	if len(args) % 2 != 0 {
+	if len(args)%2 != 0 {
 		return errors.New("the length of `args` must be even")
 	}
 	vs := []interface{}{}
@@ -135,7 +136,7 @@ func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
 	return err
 }
 
-func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte,error) {
+func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -150,7 +151,7 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte,error)
 
 	if nil == err && nil != reply {
 		rs := reply.([]interface{})
-		for _,r := range rs {
+		for _, r := range rs {
 			if nil == r {
 				res = append(res, []byte{})
 			} else {
@@ -160,10 +161,10 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte,error)
 	} else {
 		log.Errorf("HMGet err:%s", err.Error())
 	}
-	return res,err
+	return res, err
 }
 
-func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte,error) {
+func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -172,14 +173,14 @@ func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte,error) {
 	res := [][]byte{}
 	if nil == err && nil != reply {
 		rs := reply.([]interface{})
-		for _,r := range rs {
+		for _, r := range rs {
 			res = append(res, r.([]byte))
 		}
 	}
-	return res,err
+	return res, err
 }
 
-func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool,error) {
+func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -190,7 +191,7 @@ func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool,error) {
 		return exists > 0, nil
 	}
 
-	return false,err
+	return false, err
 }
 
 func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
@@ -207,7 +208,7 @@ func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
 	return err
 }
 
-func  (impl *RedisCacheImpl) SMembers(key string) ([][]byte,error) {
+func (impl *RedisCacheImpl) SMembers(key string) ([][]byte, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -216,9 +217,9 @@ func  (impl *RedisCacheImpl) SMembers(key string) ([][]byte,error) {
 	res := [][]byte{}
 	if nil == err && nil != reply {
 		rs := reply.([]interface{})
-		for _,r := range rs {
+		for _, r := range rs {
 			res = append(res, r.([]byte))
 		}
 	}
-	return res,err
+	return res, err
 }

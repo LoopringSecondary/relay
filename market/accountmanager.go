@@ -19,33 +19,33 @@
 package market
 
 import (
+	"encoding/json"
 	"errors"
 	rcache "github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
-	"encoding/json"
-	"github.com/Loopring/relay/market/util"
 )
 
 const (
-	BalancePrefix = "balance_"
+	BalancePrefix   = "balance_"
 	AllowancePrefix = "allowance_"
 	CustomTokenPrefix = "customtoken_"
 )
 
 type AccountBase struct {
-	Owner common.Address
+	Owner        common.Address
 	CustomTokens []types.Token
 }
 
 type Balance struct {
 	LastBlock *types.Big `json:"last_block"`
-	Balance *types.Big `json:"balance"`
+	Balance   *types.Big `json:"balance"`
 }
 
 type Allowance struct {
@@ -80,7 +80,7 @@ func (b AccountBalances) batchReqs(tokens ...common.Address) ethaccessor.BatchBa
 		req.Owner = b.Owner
 		reqs = append(reqs, req)
 	}
-	for _,token := range b.CustomTokens {
+	for _, token := range b.CustomTokens {
 		req := &ethaccessor.BatchBalanceReq{}
 		req.BlockParameter = "latest"
 		req.Token = token.Protocol
@@ -97,8 +97,8 @@ func (b AccountBalances) batchReqs(tokens ...common.Address) ethaccessor.BatchBa
 
 func (accountBalances AccountBalances) save() error {
 	data := [][]byte{}
-	for token,balance := range accountBalances.Balances {
-		if balanceData,err := json.Marshal(balance);nil == err {
+	for token, balance := range accountBalances.Balances {
+		if balanceData, err := json.Marshal(balance); nil == err {
 			data = append(data, balanceCacheField(token), balanceData)
 		} else {
 			log.Errorf("accountmanager er:%s", err.Error())
@@ -126,14 +126,14 @@ func (accountBalances AccountBalances) applyData(cachedFieldData, balanceData []
 func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) error {
 	if len(tokens) > 0 {
 		tokensBytes := [][]byte{}
-		for _,token := range tokens {
+		for _, token := range tokens {
 			tokensBytes = append(tokensBytes, balanceCacheField(token))
 		}
-		if balancesData,err := rcache.HMGet(balanceCacheKey(accountBalances.Owner), tokensBytes...);nil != err {
+		if balancesData, err := rcache.HMGet(balanceCacheKey(accountBalances.Owner), tokensBytes...); nil != err {
 			return err
 		} else {
 			if len(balancesData) > 0 {
-				for idx,data := range balancesData {
+				for idx, data := range balancesData {
 					if err := accountBalances.applyData(tokensBytes[idx], data); nil != err {
 						return err
 					}
@@ -143,14 +143,14 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 			}
 		}
 	} else {
-		if balancesData,err := rcache.HGetAll(balanceCacheKey(accountBalances.Owner)); nil != err {
+		if balancesData, err := rcache.HGetAll(balanceCacheKey(accountBalances.Owner)); nil != err {
 			return err
 		} else {
 			if len(balancesData) > 0 {
 				i := 0
 				for i < len(balancesData) {
 					accountBalances.applyData(balancesData[i], balancesData[i+1])
-					i = i + 2;
+					i = i + 2
 				}
 			} else {
 				return errors.New("this address not in cache")
@@ -166,7 +166,7 @@ func (accountBalances AccountBalances) syncFromEthNode(tokens ...common.Address)
 	if err := ethaccessor.BatchCall("latest", []ethaccessor.BatchReq{reqs}); nil != err {
 		return err
 	}
-	for _,req := range reqs {
+	for _, req := range reqs {
 		if nil != req.BalanceErr {
 			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.BalanceErr.Error())
 		} else {
@@ -192,7 +192,7 @@ func (accountBalances AccountBalances) getOrSave(tokens ...common.Address) error
 
 type AccountAllowances struct {
 	AccountBase
-	Allowances map[common.Address]map[common.Address]Allowance  //token -> spender
+	Allowances map[common.Address]map[common.Address]Allowance //token -> spender
 }
 
 func allowanceCacheKey(owner common.Address) string {
@@ -208,10 +208,10 @@ func parseAllowanceCacheField(data []byte) (token common.Address, spender common
 }
 
 //todo:tokens
-func (accountAllowances *AccountAllowances) batchReqs(tokens,spenders []common.Address) ethaccessor.BatchErc20AllowanceReqs {
+func (accountAllowances *AccountAllowances) batchReqs(tokens, spenders []common.Address) ethaccessor.BatchErc20AllowanceReqs {
 	reqs := ethaccessor.BatchErc20AllowanceReqs{}
 	for _, v := range util.AllTokens {
-		for _,impl := range ethaccessor.ProtocolAddresses() {
+		for _, impl := range ethaccessor.ProtocolAddresses() {
 			req := &ethaccessor.BatchErc20AllowanceReq{}
 			req.BlockParameter = "latest"
 			req.Spender = impl.DelegateAddress
@@ -221,7 +221,7 @@ func (accountAllowances *AccountAllowances) batchReqs(tokens,spenders []common.A
 		}
 	}
 	for _, v := range accountAllowances.CustomTokens {
-		for _,impl := range ethaccessor.ProtocolAddresses() {
+		for _, impl := range ethaccessor.ProtocolAddresses() {
 			req := &ethaccessor.BatchErc20AllowanceReq{}
 			req.BlockParameter = "latest"
 			req.Spender = impl.DelegateAddress
@@ -235,9 +235,9 @@ func (accountAllowances *AccountAllowances) batchReqs(tokens,spenders []common.A
 
 func (accountAllowances *AccountAllowances) save() error {
 	data := [][]byte{}
-	for token,spenderMap := range accountAllowances.Allowances {
+	for token, spenderMap := range accountAllowances.Allowances {
 		for spender, allowance := range spenderMap {
-			if allowanceData,err := json.Marshal(allowance);nil == err {
+			if allowanceData, err := json.Marshal(allowance); nil == err {
 				data = append(data, allowanceCacheField(token, spender), allowanceData)
 			} else {
 				log.Errorf("accountmanager allowance.save err:%s", err.Error())
@@ -247,7 +247,7 @@ func (accountAllowances *AccountAllowances) save() error {
 	return rcache.HMSet(allowanceCacheKey(accountAllowances.Owner), data...)
 }
 
-func (accountAllowances *AccountAllowances) applyData(cacheFieldData,allowanceData []byte) error {
+func (accountAllowances *AccountAllowances) applyData(cacheFieldData, allowanceData []byte) error {
 	if len(allowanceData) <= 0 {
 		return errors.New("invalid allowanceData")
 	} else {
@@ -256,8 +256,8 @@ func (accountAllowances *AccountAllowances) applyData(cacheFieldData,allowanceDa
 			log.Errorf("accountmanager syncFromCache err:%s", err.Error())
 			return err
 		} else {
-			token,spender := parseAllowanceCacheField(cacheFieldData)
-			if _,exists := accountAllowances.Allowances[token]; !exists {
+			token, spender := parseAllowanceCacheField(cacheFieldData)
+			if _, exists := accountAllowances.Allowances[token]; !exists {
 				accountAllowances.Allowances[token] = make(map[common.Address]Allowance)
 			}
 			accountAllowances.Allowances[token][spender] = allowance
@@ -266,11 +266,11 @@ func (accountAllowances *AccountAllowances) applyData(cacheFieldData,allowanceDa
 	return nil
 }
 
-func generateAllowanceCahceFieldList(tokens,spenders []common.Address) [][]byte {
+func generateAllowanceCahceFieldList(tokens, spenders []common.Address) [][]byte {
 	fields := [][]byte{}
-	for _,token := range tokens {
+	for _, token := range tokens {
 		if !types.IsZeroAddress(token) {
-			for _,spender := range spenders {
+			for _, spender := range spenders {
 				if !types.IsZeroAddress(spender) {
 					fields = append(fields, allowanceCacheField(token, spender))
 				}
@@ -280,14 +280,14 @@ func generateAllowanceCahceFieldList(tokens,spenders []common.Address) [][]byte 
 	return fields
 }
 
-func (accountAllowances *AccountAllowances) syncFromCache(tokens,spenders []common.Address) error {
+func (accountAllowances *AccountAllowances) syncFromCache(tokens, spenders []common.Address) error {
 	fields := generateAllowanceCahceFieldList(tokens, spenders)
 	if len(fields) > 0 {
-		if allowanceData,err := rcache.HMGet(allowanceCacheKey(accountAllowances.Owner), fields...);nil != err {
+		if allowanceData, err := rcache.HMGet(allowanceCacheKey(accountAllowances.Owner), fields...); nil != err {
 			return err
 		} else {
 			if len(allowanceData) > 0 {
-				for idx,data := range allowanceData {
+				for idx, data := range allowanceData {
 					if err := accountAllowances.applyData(fields[idx], data); nil != err {
 						return err
 					}
@@ -297,16 +297,16 @@ func (accountAllowances *AccountAllowances) syncFromCache(tokens,spenders []comm
 			}
 		}
 	} else {
-		if allowanceData,err := rcache.HGetAll(allowanceCacheKey(accountAllowances.Owner)); nil != err {
+		if allowanceData, err := rcache.HGetAll(allowanceCacheKey(accountAllowances.Owner)); nil != err {
 			return err
 		} else {
 			if len(allowanceData) > 0 {
 				i := 0
 				for i < len(allowanceData) {
-					if err := accountAllowances.applyData(allowanceData[i], allowanceData[i + 1]);nil != err {
+					if err := accountAllowances.applyData(allowanceData[i], allowanceData[i+1]); nil != err {
 						return err
 					}
-					i = i + 2;
+					i = i + 2
 				}
 			} else {
 				return errors.New("this address not in cache")
@@ -316,19 +316,19 @@ func (accountAllowances *AccountAllowances) syncFromCache(tokens,spenders []comm
 	return nil
 }
 
-func (accountAllowances *AccountAllowances) syncFromEthNode(tokens,spenders []common.Address) error {
+func (accountAllowances *AccountAllowances) syncFromEthNode(tokens, spenders []common.Address) error {
 	reqs := accountAllowances.batchReqs(tokens, spenders)
 	if err := ethaccessor.BatchCall("latest", []ethaccessor.BatchReq{reqs}); nil != err {
 		return err
 	}
-	for _,req := range reqs {
+	for _, req := range reqs {
 		if nil != req.AllowanceErr {
 			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
 			allowance := Allowance{}
 			allowance.Allowance = &req.Allowance
 			//balance.LastBlock =
-			if _,exists := accountAllowances.Allowances[req.Token]; !exists {
+			if _, exists := accountAllowances.Allowances[req.Token]; !exists {
 				accountAllowances.Allowances[req.Token] = make(map[common.Address]Allowance)
 			}
 			accountAllowances.Allowances[req.Token][req.Spender] = allowance
@@ -338,9 +338,9 @@ func (accountAllowances *AccountAllowances) syncFromEthNode(tokens,spenders []co
 	return nil
 }
 
-func (accountAllowances *AccountAllowances) getOrSave(tokens,spenders []common.Address) error {
-	if err := accountAllowances.syncFromCache(tokens,spenders); nil != err {
-		if err := accountAllowances.syncFromEthNode(tokens,spenders); nil != err {
+func (accountAllowances *AccountAllowances) getOrSave(tokens, spenders []common.Address) error {
+	if err := accountAllowances.syncFromCache(tokens, spenders); nil != err {
+		if err := accountAllowances.syncFromEthNode(tokens, spenders); nil != err {
 			return err
 		} else {
 			go accountAllowances.save()
@@ -351,10 +351,10 @@ func (accountAllowances *AccountAllowances) getOrSave(tokens,spenders []common.A
 
 type ChangedOfBlock struct {
 	currentBlockNumber *big.Int
-	cachedDuration *big.Int
+	cachedDuration     *big.Int
 }
 
-func (b *ChangedOfBlock) saveBalanceKey(owner,token common.Address) error {
+func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
 	return rcache.SAdd(b.cacheBalanceKey(), b.cacheBalanceField(owner, token))
 }
 
@@ -362,10 +362,10 @@ func (b *ChangedOfBlock) cacheBalanceKey() string {
 	return "block_balance_" + b.currentBlockNumber.String()
 }
 
-func (b *ChangedOfBlock) cacheBalanceField(owner,token common.Address) []byte {
-	return append(owner.Bytes(),token.Bytes()...)
+func (b *ChangedOfBlock) cacheBalanceField(owner, token common.Address) []byte {
+	return append(owner.Bytes(), token.Bytes()...)
 }
-func (b *ChangedOfBlock) parseCacheBalanceField(data []byte) (owner,token common.Address){
+func (b *ChangedOfBlock) parseCacheBalanceField(data []byte) (owner, token common.Address) {
 	return common.BytesToAddress(data[0:20]), common.BytesToAddress(data[20:])
 }
 
@@ -373,15 +373,15 @@ func (b *ChangedOfBlock) cacheAllowanceKey() string {
 	return "block_allowance_" + b.currentBlockNumber.String()
 }
 
-func (b *ChangedOfBlock) cacheAllowanceField(owner,token,spender common.Address) []byte {
+func (b *ChangedOfBlock) cacheAllowanceField(owner, token, spender common.Address) []byte {
 	return append(append(owner.Bytes(), token.Bytes()...), spender.Bytes()...)
 }
 
-func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner,token,spender common.Address) {
+func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner, token, spender common.Address) {
 	return common.BytesToAddress(data[0:20]), common.BytesToAddress(data[20:40]), common.BytesToAddress(data[40:])
 }
 
-func (b *ChangedOfBlock) saveAllowanceKey(owner,token,spender common.Address) error {
+func (b *ChangedOfBlock) saveAllowanceKey(owner, token, spender common.Address) error {
 	return rcache.SAdd(b.cacheAllowanceKey(), b.cacheAllowanceField(owner, token, spender))
 }
 
@@ -430,13 +430,13 @@ func (b *ChangedOfBlock) syncAndSaveBalances() error {
 
 func (b *ChangedOfBlock) batchBalanceReqs() ethaccessor.BatchBalanceReqs {
 	reqs := ethaccessor.BatchBalanceReqs{}
-	if balancesData,err := rcache.SMembers(b.cacheBalanceKey());nil == err && len(balancesData) > 0 {
+	if balancesData, err := rcache.SMembers(b.cacheBalanceKey()); nil == err && len(balancesData) > 0 {
 		for _, data := range balancesData {
-			accountAddr,token := b.parseCacheBalanceField(data)
+			accountAddr, token := b.parseCacheBalanceField(data)
 			//log.Debugf("1---batchBalanceReqsbatchBalanceReqsbatchBalanceReqs:%s,%s", accountAddr.Hex(), token.Hex())
-			if exists,err := rcache.Exists(balanceCacheKey(accountAddr)); nil == err && exists {
+			if exists, err := rcache.Exists(balanceCacheKey(accountAddr)); nil == err && exists {
 				//log.Debugf("2---batchBalanceReqsbatchBalanceReqsbatchBalanceReqs:%s,%s", accountAddr.Hex(), token.Hex())
-				if exists1,err1 := rcache.HExists(balanceCacheKey(accountAddr), balanceCacheField(token)); nil == err1 && exists1 {
+				if exists1, err1 := rcache.HExists(balanceCacheKey(accountAddr), balanceCacheField(token)); nil == err1 && exists1 {
 					log.Debugf("3---batchBalanceReqsbatchBalanceReqsbatchBalanceReqs:%s,%s", accountAddr.Hex(), token.Hex())
 					req := &ethaccessor.BatchBalanceReq{}
 					req.Owner = accountAddr
@@ -452,14 +452,14 @@ func (b *ChangedOfBlock) batchBalanceReqs() ethaccessor.BatchBalanceReqs {
 
 func (b *ChangedOfBlock) batchAllowanceReqs() ethaccessor.BatchErc20AllowanceReqs {
 	reqs := ethaccessor.BatchErc20AllowanceReqs{}
-	if allowancesData,err := rcache.SMembers(b.cacheAllowanceKey());nil == err && len(allowancesData) > 0 {
-		for _,data := range allowancesData {
-			owner,token,spender := b.parseCacheAllowanceField(data)
+	if allowancesData, err := rcache.SMembers(b.cacheAllowanceKey()); nil == err && len(allowancesData) > 0 {
+		for _, data := range allowancesData {
+			owner, token, spender := b.parseCacheAllowanceField(data)
 			//log.Debugf("1---batchAllowanceReqs owner:%s, t:%s, s:%s", owner.Hex(), token.Hex(), spender.Hex())
 			if ethaccessor.IsSpenderAddress(spender) {
-				if exists,err := rcache.Exists(balanceCacheKey(owner)); nil == err && exists {
+				if exists, err := rcache.Exists(balanceCacheKey(owner)); nil == err && exists {
 					//log.Debugf("2---batchAllowanceReqs owner:%s, t:%s, s:%s", owner.Hex(), token.Hex(), spender.Hex())
-					if exists1,err1 := rcache.HExists(allowanceCacheKey(owner), allowanceCacheField(token, spender)); nil == err1 && exists1 {
+					if exists1, err1 := rcache.HExists(allowanceCacheKey(owner), allowanceCacheField(token, spender)); nil == err1 && exists1 {
 						log.Debugf("3---batchAllowanceReqs owner:%s, t:%s, s:%s", owner.Hex(), token.Hex(), spender.Hex())
 						req := &ethaccessor.BatchErc20AllowanceReq{}
 						req.BlockParameter = "latest"
@@ -476,7 +476,6 @@ func (b *ChangedOfBlock) batchAllowanceReqs() ethaccessor.BatchErc20AllowanceReq
 	return reqs
 }
 
-
 func (b *ChangedOfBlock) syncAndSaveAllowances() error {
 
 	reqs := b.batchAllowanceReqs()
@@ -484,11 +483,11 @@ func (b *ChangedOfBlock) syncAndSaveAllowances() error {
 		return err
 	}
 	accountAllowances := make(map[common.Address]*AccountAllowances)
-	for _,req := range reqs {
+	for _, req := range reqs {
 		if nil != req.AllowanceErr {
 			log.Errorf("get allowance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
-			if _,exists := accountAllowances[req.Owner]; !exists {
+			if _, exists := accountAllowances[req.Owner]; !exists {
 				accountAllowances[req.Owner] = &AccountAllowances{}
 				accountAllowances[req.Owner].Owner = req.Owner
 				accountAllowances[req.Owner].Allowances = make(map[common.Address]map[common.Address]Allowance)
@@ -496,13 +495,13 @@ func (b *ChangedOfBlock) syncAndSaveAllowances() error {
 			allowance := Allowance{}
 			allowance.LastBlock = types.NewBigPtr(b.currentBlockNumber)
 			allowance.Allowance = &req.Allowance
-			if _,exists := accountAllowances[req.Owner].Allowances[req.Token]; !exists {
+			if _, exists := accountAllowances[req.Owner].Allowances[req.Token]; !exists {
 				accountAllowances[req.Owner].Allowances[req.Token] = make(map[common.Address]Allowance)
 			}
 			accountAllowances[req.Owner].Allowances[req.Token][req.Spender] = allowance
 		}
 	}
-	for _,allowances := range accountAllowances {
+	for _, allowances := range accountAllowances {
 		allowances.save()
 	}
 
@@ -513,7 +512,7 @@ type AccountManager struct {
 	cacheDuration uint64
 
 	maxBlockLength uint64
-	block *ChangedOfBlock
+	block          *ChangedOfBlock
 }
 
 func NewAccountManager() AccountManager {
@@ -554,7 +553,7 @@ func (a *AccountManager) GetBalanceWithSymbolResult(owner common.Address) (map[s
 	err := accountBalances.getOrSave()
 
 	if nil == err {
-		for tokenAddr,balance := range accountBalances.Balances {
+		for tokenAddr, balance := range accountBalances.Balances {
 			symbol := ""
 			if types.IsZeroAddress(tokenAddr) {
 				symbol = "ETH"
@@ -577,14 +576,14 @@ func (a *AccountManager) GetAllowanceWithSymbolResult(owner, spender common.Addr
 	err := accountAllowances.getOrSave([]common.Address{}, []common.Address{spender})
 
 	if nil == err {
-		for tokenAddr,allowances := range accountAllowances.Allowances {
+		for tokenAddr, allowances := range accountAllowances.Allowances {
 			symbol := ""
 			if types.IsZeroAddress(tokenAddr) {
 				symbol = "ETH"
 				res[symbol] = big.NewInt(int64(0))
 			} else {
 				symbol = util.AddressToAlias(tokenAddr.Hex())
-				if _,exists := allowances[spender]; !exists || nil == allowances[spender].Allowance {
+				if _, exists := allowances[spender]; !exists || nil == allowances[spender].Allowance {
 					res[symbol] = big.NewInt(int64(0))
 				} else {
 					res[symbol] = allowances[spender].Allowance.BigInt()
@@ -634,7 +633,7 @@ func (a *AccountManager) handleTokenTransfer(input eventemitter.EventData) (err 
 	a.block.saveBalanceKey(event.Receiver, event.Protocol)
 
 	//allowance
-	if spender,nil := ethaccessor.GetSpenderAddress(event.To); nil == err {
+	if spender, nil := ethaccessor.GetSpenderAddress(event.To); nil == err {
 		log.Debugf("handleTokenTransfer allowance owner:%s", event.Sender.Hex(), event.Protocol.Hex(), spender.Hex())
 		a.block.saveAllowanceKey(event.Sender, event.Protocol, spender)
 	}
@@ -642,7 +641,7 @@ func (a *AccountManager) handleTokenTransfer(input eventemitter.EventData) (err 
 	return nil
 }
 
-func (a *AccountManager) handleApprove(input eventemitter.EventData) (error) {
+func (a *AccountManager) handleApprove(input eventemitter.EventData) error {
 	event := input.(*types.ApprovalEvent)
 	log.Debugf("received approval event, %s, %s", event.Protocol.Hex(), event.Owner.Hex())
 	if event == nil || event.Status != types.TX_STATUS_SUCCESS {
@@ -716,15 +715,15 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 	accountBalances.Owner = common.HexToAddress(owner)
 	accountBalances.Balances = make(map[common.Address]Balance)
 	err = accountBalances.getOrSave()
-	for _,balance := range accountBalances.Balances {
-		log.Debugf("token:%s, owner:%s",accountBalances.Owner.Hex(), balance.Balance.BigInt().String())
+	for _, balance := range accountBalances.Balances {
+		log.Debugf("token:%s, owner:%s", accountBalances.Owner.Hex(), balance.Balance.BigInt().String())
 	}
 	return
 }
 
 func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 	if !common.IsHexAddress(owner) {
-		return false,errors.New("owner isn't a valid hex-address")
+		return false, errors.New("owner isn't a valid hex-address")
 	}
 	return rcache.Exists(balanceCacheKey(common.HexToAddress(owner)))
 }
@@ -744,4 +743,3 @@ func (a *AccountManager) handleBlockFork(input eventemitter.EventData) (err erro
 
 	return nil
 }
-

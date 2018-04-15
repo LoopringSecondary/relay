@@ -152,7 +152,7 @@ func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string
 	return nil
 }
 
-func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem,error) {
+func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem, error) {
 	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
 		return reqElems, err
 	}
@@ -173,7 +173,7 @@ func (accessor *ethNodeAccessor) BatchErc20Allowance(routeParam string, reqs []*
 			Method: "eth_call",
 			Args:   []interface{}{allowanceArg, req.BlockParameter},
 			Result: &req.Allowance,
-			Error: req.AllowanceErr,
+			Error:  req.AllowanceErr,
 		}
 	}
 
@@ -497,6 +497,16 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				for idx, _ := range txReqs {
 					blockWithTxAndReceipt.Transactions = append(blockWithTxAndReceipt.Transactions, txReqs[idx].TxContent)
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
+				}
+
+				for _, v := range blockWithTxAndReceipt.Receipts {
+					if v.Status.BigInt().Cmp(big.NewInt(1)) != 0 {
+						if bs, err := v.Status.MarshalText(); err != nil {
+							log.Debugf("-------batch get receipt, tx:%s status:nil", v.TransactionHash)
+						} else {
+							log.Debugf("-------batch get receipt, tx:%s status:%s", v.TransactionHash, common.Bytes2Hex(bs))
+						}
+					}
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
