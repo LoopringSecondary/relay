@@ -145,11 +145,11 @@ func (receipt *TransactionReceipt) StatusInvalid() bool {
 }
 
 func (receipt *TransactionReceipt) HasNoLog() bool {
-	return len(receipt.Logs) > 0
+	return len(receipt.Logs) == 0
 }
 
 func (receipt *TransactionReceipt) Failed() bool {
-	if !receipt.AfterByzantiumFork() && len(receipt.Logs) > 0 {
+	if !receipt.AfterByzantiumFork() && !receipt.HasNoLog() {
 		return false
 	}
 	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
@@ -160,9 +160,7 @@ func (receipt *TransactionReceipt) Failed() bool {
 }
 
 func (receipt *TransactionReceipt) ToStatus() uint8 {
-	if receipt == nil {
-		return types.TX_STATUS_PENDING
-	} else if receipt.Failed() {
+	if receipt.Failed() {
 		return types.TX_STATUS_FAILED
 	} else {
 		return types.TX_STATUS_SUCCESS
