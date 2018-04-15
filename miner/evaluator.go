@@ -24,11 +24,11 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/config"
 )
 
 type Evaluator struct {
@@ -37,7 +37,7 @@ type Evaluator struct {
 	gasUsedWithLength         map[int]*big.Int
 	realCostRate, walletSplit *big.Rat
 
-	minGasPrice, maxGasPrice  *big.Int
+	minGasPrice, maxGasPrice *big.Int
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -290,7 +290,7 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 	return
 }
 
-func NewEvaluator(marketCapProvider marketcap.MarketCapProvider,minerOptions config.MinerOptions) *Evaluator {
+func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions config.MinerOptions) *Evaluator {
 	gasUsedMap := make(map[int]*big.Int)
 	gasUsedMap[2] = big.NewInt(400000)
 	//todo:confirm this value

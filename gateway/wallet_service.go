@@ -573,15 +573,15 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 
 	balances, _ := w.accountManager.GetBalanceWithSymbolResult(owner)
 	allowances := make(map[string]*big.Int)
-	if spender,err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion]));nil == err {
-		allowances,_ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
+	if spender, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion])); nil == err {
+		allowances, _ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
 	}
 
 	res = AccountJson{}
 	res.ContractVersion = balanceQuery.ContractVersion
 	res.Address = balanceQuery.Owner
 	res.Tokens = []Token{}
-	for symbol,balance := range balances {
+	for symbol, balance := range balances {
 		token := Token{}
 		token.Token = symbol
 		token.Allowance = allowances[symbol].String()

@@ -109,7 +109,7 @@ type RdsService interface {
 	// transactions
 	//SaveTransaction(latest *Transaction) error
 	FindTransactionWithoutLogIndex(txhash string) (*Transaction, error)
-	FindTransactionWithLogIndex(txhash string, logIndex int) (*Transaction, error)
+	FindTransactionWithLogIndex(txhash string, logIndex int64) (*Transaction, error)
 	GetPendingTransactions(owner string, status uint8) ([]Transaction, error)
 	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)

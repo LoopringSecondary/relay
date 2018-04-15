@@ -95,13 +95,13 @@ func TestRedisCacheImpl_SAdd(t *testing.T) {
 
 	//err := cache.HMSet("test1", []byte("k1"), []byte("v1"), []byte("k2"), []byte("v2"))
 
-	repl,err := cache.HGetAll("test1")
+	repl, err := cache.HGetAll("test1")
 
 	if nil != err {
 		t.Error(err.Error())
 	} else {
 		//println(string(repl))
-		for _,r := range repl {
+		for _, r := range repl {
 			t.Log(string(r))
 		}
 	}

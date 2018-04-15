@@ -444,7 +444,7 @@ func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
 
 func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 	const (
-		startBlock = 5438185
+		startBlock = 5443360
 		endBlock   = startBlock + 20
 	)
 
@@ -452,14 +452,19 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 		blockNumber := big.NewInt(int64(i))
 
 	blockMark:
-		var blockWithTxHash ethaccessor.BlockWithTxHash
+		var (
+			blockWithTxHash ethaccessor.BlockWithTxHash
+			bn              types.Big
+		)
+		ethaccessor.BlockNumber(&bn)
+
 		if err := ethaccessor.GetBlockByNumber(&blockWithTxHash, blockNumber, false); err != nil {
 			time.Sleep(1 * time.Second)
-			fmt.Printf("........err:%s nil\n", err.Error())
+			fmt.Printf("kindA........currentBlockNumber:%s requestBlockNumber:%s txNumber:%d err:%s\n", bn.BigInt().String(), blockNumber.String(), len(blockWithTxHash.Transactions), err.Error())
 			goto blockMark
 		} else if len(blockWithTxHash.Transactions) == 0 {
 			time.Sleep(1 * time.Second)
-			fmt.Printf("........tx 0\n")
+			fmt.Printf("kindB........currentBlockNumber:%s requestBlockNumber:%s txNumber:%d\n", bn.BigInt().String(), blockNumber.String(), len(blockWithTxHash.Transactions))
 			goto blockMark
 		}
 
@@ -492,7 +497,7 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 			blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 		}
 
-		success:=0
+		success := 0
 		failed := 0
 		niltx := 0
 		for _, v := range blockWithTxAndReceipt.Receipts {
@@ -508,7 +513,7 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 				success++
 			}
 		}
-		fmt.Printf("blockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d failed:%d nil:%d \n", blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, niltx)
+		fmt.Printf("currentBlockNumber:%s, requestBlockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d failed:%d nil:%d \n", bn.BigInt().String(), blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, niltx)
 
 		//blockMark:
 		//	var block ethaccessor.BlockWithTxObject

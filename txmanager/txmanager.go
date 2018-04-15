@@ -284,7 +284,7 @@ func (tm *TransactionManager) saveTransactionWithLogIndex(tx *types.Transaction)
 		err   error
 	)
 	model.ConvertDown(tx)
-	if model, err = tm.db.FindTransactionWithLogIndex(tx.TxHash.Hex(), int(tx.LogIndex)); err != nil {
+	if model, err = tm.db.FindTransactionWithLogIndex(tx.TxHash.Hex(), tx.LogIndex); err != nil {
 		return tm.db.Add(model)
 	}
 	return tm.db.Save(model)
