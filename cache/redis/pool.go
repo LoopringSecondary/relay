@@ -39,6 +39,7 @@ func (impl *RedisCacheImpl) Initialize(cfg interface{}) {
 		IdleTimeout: time.Duration(options.IdleTimeout) * time.Second,
 		MaxIdle:     options.MaxIdle,
 		MaxActive:   options.MaxActive,
+		Wait:        true,
 		Dial: func() (redis.Conn, error) {
 			address := fmt.Sprintf("%s:%s", options.Host, options.Port)
 			var (

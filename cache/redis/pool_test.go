@@ -22,6 +22,9 @@ import (
 	"encoding/json"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/test"
+	"os/exec"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -76,5 +79,46 @@ func TestRedisCacheImpl_SetStruct(t *testing.T) {
 			}
 			t.Logf("name:%s, height:%d", u1.Name, u1.Height)
 		}
+	}
+}
+
+func TestRedisCacheImpl_BenchSyncPool(t *testing.T) {
+	cache.NewCache(test.Cfg().Redis)
+
+	for i := 0; i < 1000000; i++ {
+		if err := cache.Set("test_expire", []byte(strconv.Itoa(i)), 1000); err != nil {
+			t.Fatalf(err.Error())
+		}
+	}
+
+	execCmd("netstat -an|grep 6379|grep ESTABLISHED -c", t)
+	execCmd("netstat -an|grep 6379|grep TIME_WAIT|wc -l", t)
+}
+
+func TestRedisCacheImpl_BenchAsyncPool(t *testing.T) {
+	cache.NewCache(test.Cfg().Redis)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100000; i++ {
+		wg.Add(1)
+		go func(num int) {
+			wg.Done()
+			if err := cache.Set("test_expire", []byte(strconv.Itoa(num)), 1000); err != nil {
+				t.Fatalf(err.Error())
+			}
+		}(i)
+	}
+	wg.Wait()
+	execCmd("netstat -an|grep 6379|grep ESTABLISHED -c", t)
+	execCmd("netstat -an|grep 6379|grep TIME_WAIT -c", t)
+}
+
+func execCmd(cmdStr string, t *testing.T) {
+	cmd := exec.Command("sh", "-c", cmdStr)
+	if bs, err := cmd.Output(); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Log(cmdStr)
+		t.Log(string(bs))
 	}
 }
