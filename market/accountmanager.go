@@ -323,7 +323,7 @@ func (accountAllowances *AccountAllowances) syncFromEthNode(tokens,spenders []co
 	}
 	for _,req := range reqs {
 		if nil != req.AllowanceErr {
-			log.Errorf("get balance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
 			allowance := Allowance{}
 			allowance.Allowance = &req.Allowance
@@ -408,7 +408,7 @@ func (b *ChangedOfBlock) syncAndSaveBalances() error {
 	accounts := make(map[common.Address]*AccountBalances)
 	for _,req := range reqs {
 		if nil != req.BalanceErr {
-			log.Errorf("get balance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get balance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.BalanceErr.Error())
 		} else {
 			if _,exists := accounts[req.Owner]; !exists {
 				accounts[req.Owner] = &AccountBalances{}
@@ -486,7 +486,7 @@ func (b *ChangedOfBlock) syncAndSaveAllowances() error {
 	accountAllowances := make(map[common.Address]*AccountAllowances)
 	for _,req := range reqs {
 		if nil != req.AllowanceErr {
-			log.Errorf("get allowance failed, owner:%s, token:%s", req.Owner.Hex(), req.Token.Hex())
+			log.Errorf("get allowance failed, owner:%s, token:%s, err:%s", req.Owner.Hex(), req.Token.Hex(), req.AllowanceErr.Error())
 		} else {
 			if _,exists := accountAllowances[req.Owner]; !exists {
 				accountAllowances[req.Owner] = &AccountAllowances{}
