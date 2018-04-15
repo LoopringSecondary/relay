@@ -21,6 +21,7 @@ package ethaccessor
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 type BatchErc20Req struct {
@@ -33,6 +34,90 @@ type BatchErc20Req struct {
 	Allowance      types.Big
 	BalanceErr     error
 	AllowanceErr   error
+}
+
+type BatchReq interface {
+	ToBatchElem() []rpc.BatchElem
+	FromBatchElem(batchElems []rpc.BatchElem)
+}
+
+type BatchBalanceReq struct {
+	Owner          common.Address
+	Token          common.Address
+	BlockParameter string
+	Balance        types.Big
+	BalanceErr     error
+}
+
+type BatchBalanceReqs []*BatchBalanceReq
+
+func (reqs BatchBalanceReqs) ToBatchElem() []rpc.BatchElem {
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	erc20Abi := accessor.Erc20Abi
+
+	for idx, req := range reqs {
+		if types.IsZeroAddress(req.Token) {
+			reqElems[idx] = rpc.BatchElem{
+				Method: "eth_getBalance",
+				Args:   []interface{}{req.Owner.Hex(), req.BlockParameter},
+				Result: &req.Balance,
+			}
+		} else {
+			balanceOfData, _ := erc20Abi.Pack("balanceOf", req.Owner)
+			balanceOfArg := &CallArg{}
+			balanceOfArg.To = req.Token
+			balanceOfArg.Data = common.ToHex(balanceOfData)
+
+			reqElems[idx] = rpc.BatchElem{
+				Method: "eth_call",
+				Args:   []interface{}{balanceOfArg, req.BlockParameter},
+				Result: &req.Balance,
+			}
+		}
+	}
+	return reqElems
+}
+
+func (reqs BatchBalanceReqs) FromBatchElem(elems []rpc.BatchElem) {
+	for idx, req := range elems {
+		reqs[idx].BalanceErr = req.Error
+	}
+}
+
+type BatchErc20AllowanceReq struct {
+	Owner          common.Address
+	Token          common.Address
+	BlockParameter string
+	Spender        common.Address
+	Allowance      types.Big
+	AllowanceErr   error
+}
+
+type BatchErc20AllowanceReqs []*BatchErc20AllowanceReq
+
+func (reqs BatchErc20AllowanceReqs) ToBatchElem() []rpc.BatchElem {
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	erc20Abi := accessor.Erc20Abi
+
+	for idx, req := range reqs {
+		balanceOfData, _ := erc20Abi.Pack("allowance", req.Owner, req.Spender)
+		balanceOfArg := &CallArg{}
+		balanceOfArg.To = req.Token
+		balanceOfArg.Data = common.ToHex(balanceOfData)
+
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_call",
+			Args:   []interface{}{balanceOfArg, req.BlockParameter},
+			Result: &req.Allowance,
+		}
+	}
+	return reqElems
+}
+
+func (reqs BatchErc20AllowanceReqs) FromBatchElem(elems []rpc.BatchElem) {
+	for idx, req := range elems {
+		reqs[idx].AllowanceErr = req.Error
+	}
 }
 
 type BatchTransactionReq struct {

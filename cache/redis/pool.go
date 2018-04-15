@@ -19,6 +19,7 @@
 package redis
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
@@ -116,4 +117,109 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	_, err := conn.Do("del", key)
 
 	return err
+}
+
+func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	if len(args)%2 != 0 {
+		return errors.New("the length of `args` must be even")
+	}
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range args {
+		vs = append(vs, v)
+	}
+	_, err := conn.Do("hmset", vs...)
+
+	return err
+}
+
+func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range fields {
+		vs = append(vs, v)
+	}
+	reply, err := conn.Do("hmget", vs...)
+
+	res := [][]byte{}
+
+	if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			if nil == r {
+				res = append(res, []byte{})
+			} else {
+				res = append(res, r.([]byte))
+			}
+		}
+	} else {
+		log.Errorf("HMGet err:%s", err.Error())
+	}
+	return res, err
+}
+
+func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("hgetall", key)
+
+	res := [][]byte{}
+	if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			res = append(res, r.([]byte))
+		}
+	}
+	return res, err
+}
+
+func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("hexists", key, field)
+
+	if nil == err && nil != reply {
+		exists := reply.(int64)
+		return exists > 0, nil
+	}
+
+	return false, err
+}
+
+func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range members {
+		vs = append(vs, v)
+	}
+	_, err := conn.Do("sadd", vs...)
+
+	return err
+}
+
+func (impl *RedisCacheImpl) SMembers(key string) ([][]byte, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("smembers", key)
+
+	res := [][]byte{}
+	if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			res = append(res, r.([]byte))
+		}
+	}
+	return res, err
 }

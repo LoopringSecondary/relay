@@ -228,7 +228,7 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager(n.globalConfig.Common.ProtocolImpl.Address)
+	n.accountManager = market.NewAccountManager()
 }
 
 func (n *Node) registerTransactionManager() {
@@ -263,7 +263,7 @@ func (n *Node) registerMiner() {
 	if nil != err {
 		log.Fatalf("failed to init submitter, error:%s", err.Error())
 	}
-	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner.RateRatioCVSThreshold, n.globalConfig.Miner.Subsidy, n.globalConfig.Miner.WalletSplit)
+	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner)
 	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
 	submitter.SetMatcher(matcher)
 	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.marketCapProvider)

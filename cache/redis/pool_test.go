@@ -82,6 +82,34 @@ func TestRedisCacheImpl_SetStruct(t *testing.T) {
 	}
 }
 
+func TestRedisCacheImpl_SAdd(t *testing.T) {
+	cache.NewCache(test.Cfg().Redis)
+
+	//type user struct {
+	//	Name   string `json:name`
+	//	Height int    `json:height`
+	//}
+	//
+	//u1 := user{Name: "tom2", Height: 181}
+	//u2 := user{Name: "tom1", Height: 182}
+	//
+	//u1Data, _ := json.Marshal(u1)
+	//u2Data, _ := json.Marshal(u2)
+
+	//err := cache.HMSet("test1", []byte("k1"), []byte("v1"), []byte("k2"), []byte("v2"))
+
+	repl, err := cache.HGetAll("test1")
+
+	if nil != err {
+		t.Error(err.Error())
+	} else {
+		//println(string(repl))
+		for _, r := range repl {
+			t.Log(string(r))
+		}
+	}
+}
+
 func TestRedisCacheImpl_BenchSyncPool(t *testing.T) {
 	cache.NewCache(test.Cfg().Redis)
 

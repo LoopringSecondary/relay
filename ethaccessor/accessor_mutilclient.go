@@ -206,6 +206,8 @@ type ethNodeAccessor struct {
 	WethAbi           *abi.ABI
 	WethAddress       common.Address
 	ProtocolAddresses map[common.Address]*ProtocolAddress
+	DelegateAddresses map[common.Address]bool
+
 	*MutilClient
 	gasPriceEvaluator *GasPriceEvaluator
 	mtx               sync.RWMutex

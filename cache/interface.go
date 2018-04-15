@@ -32,15 +32,50 @@ type Cache interface {
 	Del(key string) error
 
 	Exists(key string) (bool, error)
+
+	HMSet(key string, args ...[]byte) error
+
+	HMGet(key string, fields ...[]byte) ([][]byte, error)
+
+	HGetAll(key string) ([][]byte, error)
+
+	HExists(key string, field []byte) (bool, error)
+
+	SAdd(key string, members ...[]byte) error
+
+	SMembers(key string) ([][]byte, error)
 }
 
 func NewCache(cfg interface{}) {
-	redis := &myredis.RedisCacheImpl{}
-	redis.Initialize(cfg)
-	cache = redis
+	redisCache := &myredis.RedisCacheImpl{}
+	redisCache.Initialize(cfg)
+	cache = redisCache
 }
 
 func Set(key string, value []byte, ttl int64) error { return cache.Set(key, value, ttl) }
 func Get(key string) ([]byte, error)                { return cache.Get(key) }
 func Del(key string) error                          { return cache.Del(key) }
 func Exists(key string) (bool, error)               { return cache.Exists(key) }
+
+func HMSet(key string, args ...[]byte) error {
+	return cache.HMSet(key, args...)
+}
+
+func HMGet(key string, fields ...[]byte) ([][]byte, error) {
+	return cache.HMGet(key, fields...)
+}
+
+func HGetAll(key string) ([][]byte, error) {
+	return cache.HGetAll(key)
+}
+
+func HExists(key string, field []byte) (bool, error) {
+	return cache.HExists(key, field)
+}
+func SAdd(key string, members ...[]byte) error {
+	return cache.SAdd(key, members...)
+}
+
+func SMembers(key string) ([][]byte, error) {
+	return cache.SMembers(key)
+}

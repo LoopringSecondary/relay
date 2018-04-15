@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
@@ -35,6 +36,8 @@ type Evaluator struct {
 	rateRatioCVSThreshold     int64
 	gasUsedWithLength         map[int]*big.Int
 	realCostRate, walletSplit *big.Rat
+
+	minGasPrice, maxGasPrice *big.Int
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -265,7 +268,7 @@ func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Ra
 }
 
 func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.Int, costLegal, received *big.Rat) {
-	gasPrice = ethaccessor.EstimateGasPrice()
+	gasPrice = ethaccessor.EstimateGasPrice(e.minGasPrice, e.maxGasPrice)
 	gas = e.gasUsedWithLength[len(ringState.Orders)]
 	protocolCost := new(big.Int).Mul(gas, gasPrice)
 
@@ -287,16 +290,22 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 	return
 }
 
-func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, rateRatioCVSThreshold int64, subsidy, walletSplit float64) *Evaluator {
+func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions config.MinerOptions) *Evaluator {
 	gasUsedMap := make(map[int]*big.Int)
 	gasUsedMap[2] = big.NewInt(400000)
 	//todo:confirm this value
 	gasUsedMap[3] = big.NewInt(400000)
 	gasUsedMap[4] = big.NewInt(400000)
-	e := &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: rateRatioCVSThreshold, gasUsedWithLength: gasUsedMap}
+	e := &Evaluator{marketCapProvider: marketCapProvider, rateRatioCVSThreshold: minerOptions.RateRatioCVSThreshold, gasUsedWithLength: gasUsedMap}
 	e.realCostRate = new(big.Rat)
-	e.realCostRate.SetFloat64(float64(1.0) - subsidy)
+	if int64(minerOptions.Subsidy) >= 1 {
+		e.realCostRate.SetInt64(int64(0))
+	} else {
+		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
+	}
 	e.walletSplit = new(big.Rat)
-	e.walletSplit.SetFloat64(walletSplit)
+	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
+	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)
+	e.maxGasPrice = big.NewInt(minerOptions.MaxGasLimit)
 	return e
 }
