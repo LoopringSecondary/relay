@@ -493,13 +493,13 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 		}
 
 		var (
-			success   = 0
-			failed    = 0
-			nilstatus = 0
+			success = 0
+			failed  = 0
+			invalid = 0
 		)
 		for _, v := range blockWithTxAndReceipt.Receipts {
-			if v.Status == nil {
-				nilstatus++
+			if v.StatusInvalid() {
+				invalid++
 				fmt.Printf("tx:%s status is nil\n", v.TransactionHash)
 			} else if v.Status.BigInt().Cmp(big.NewInt(1)) < 0 {
 				failed++
@@ -509,7 +509,7 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 			}
 		}
 		fmt.Printf("blockNumber:%s, blockHash:%s, txNumber:%d, successTx:%d failed:%d nil:%d \n",
-			blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, nilstatus)
+			blockNumber.String(), blockWithTxHash.Hash.Hex(), txno, success, failed, invalid)
 	}
 }
 
