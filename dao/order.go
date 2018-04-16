@@ -306,13 +306,14 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 		pageSize = 20
 	}
 
+	openedStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
+	now := time.Now().Unix()
+
 	if len(statusList) == 1 {
 		if statusList[0] == 6 {
-			now := time.Now().Unix()
-			filterStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 			if err = s.db.Where(query).
 				Where("valid_until < ?", now).
-				Where("status in (?)", filterStatus).
+				Where("status in (?)", openedStatus).
 				Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 				return pageResult, err
 			}
@@ -327,9 +328,21 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 		for _, s := range statusList {
 			statusStrList = append(statusStrList, strconv.Itoa(s))
 		}
-		if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
-			return pageResult, err
+
+		queryOpened := allContain(statusList, openedStatus); if queryOpened {
+			if err = s.db.Where(query).
+				Where("status in (?)", statusStrList).
+				Where("valid_since < ?", now).
+				Where("valid_until >= ? ", now).
+				Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+		} else {
+			if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
 		}
+
 	} else {
 		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 			return pageResult, err
@@ -352,6 +365,30 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 	}
 
 	return pageResult, err
+}
+
+func containStatus(status int, statusList []types.OrderStatus) bool {
+	if len(statusList) == 0 {
+		return false
+	}
+
+	for _, s := range statusList {
+		if status == int(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func allContain(left []int, right []types.OrderStatus) bool {
+
+	for _, l := range left {
+		if !containStatus(l, right) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
