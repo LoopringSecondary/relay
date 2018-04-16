@@ -23,7 +23,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionJsonResult struct {
@@ -48,7 +47,11 @@ type TransactionContent struct {
 	OrderHash string `json:"orderHash"`
 }
 
-func (dst TransactionJsonResult) fromTransaction(tx types.Transaction) {
+func  fromTransaction(tx types.Transaction) []TransactionJsonResult{
+	var (
+		dst TransactionJsonResult
+		list []TransactionJsonResult
+	)
 	dst.Protocol = tx.Protocol
 	dst.From = tx.From
 	dst.To = tx.To
@@ -81,25 +84,18 @@ func (dst TransactionJsonResult) fromTransaction(tx types.Transaction) {
 	} else {
 		dst.Value = tx.Value.String()
 	}
-}
 
-// copy create copy while special type
-func copy(src types.Transaction, owner common.Address) []types.Transaction {
-	var (
-		list []types.Transaction
-		dst  = src
-	)
 
-	if src.Type == types.TX_TYPE_TRANSFER {
-		if owner == src.From {
+	if tx.Type == types.TX_TYPE_TRANSFER {
+		if owner == tx.From {
 			dst.Type = types.TX_TYPE_SEND
 		}
-		if owner == src.To {
+		if owner == tx.To {
 			dst.Type = types.TX_TYPE_RECEIVE
 		}
 		list = append(list, dst)
 	}
-	if src.Type == types.TX_TYPE_DEPOSIT {
+	if tx.Type == types.TX_TYPE_DEPOSIT {
 		src.Type = types.TX_TYPE_CONVERT_INCOME
 		dst.Type = types.TX_TYPE_CONVERT_OUTCOME
 		dst.Symbol = ETH_SYMBOL
@@ -113,7 +109,7 @@ func copy(src types.Transaction, owner common.Address) []types.Transaction {
 		dst.Protocol = types.NilAddress
 	}
 
-	list = append(list, src)
+	list = append(list, dst)
 
 	return list
 }
@@ -146,19 +142,17 @@ func (impl *TransactionViewImpl) GetPendingTransactions(owner common.Address) []
 	return dbListToView(txs)
 }
 
-func dbItemToView(src dao.Transaction) TransactionJsonResult {
-	var dst TransactionJsonResult
-	tx := &types.Transaction{}
-	src.ConvertUp(tx)
-	dst.fromTransaction(tx)
-	return dst
+func dbItemToView(src dao.Transaction) []TransactionJsonResult {
+	var tx types.Transaction
+	src.ConvertUp(&tx)
+	return fromTransaction(tx)
 }
 
 func dbListToView(items []dao.Transaction) []TransactionJsonResult {
 	var list []TransactionJsonResult
 	for _, v := range items {
 		res := dbItemToView(v)
-		list = append(list, res)
+		list = append(list, res...)
 	}
 	return list
 }
