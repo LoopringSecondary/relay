@@ -302,7 +302,11 @@ func isSupportedToken(token string) bool {
 }
 
 func AliasToAddress(t string) common.Address {
-	return AllTokens[t].Protocol
+	token, ok := AllTokens[t]
+	if !ok {
+		return types.NilAddress
+	}
+	return token.Protocol
 }
 
 func AddressToAlias(t string) string {
