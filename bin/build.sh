@@ -11,14 +11,14 @@ export GOPATH=/opt/loopring/go-src
 sudo cp -rf $WORK_DIR/src/bin/svc/* $SVC_DIR
 sudo chmod -R 755 $SVC_DIR
 
-SRC_DIR=$GOPATH/github.com/Loopring/relay
+SRC_DIR=$GOPATH/src/github.com/Loopring/relay
 if [ ! -d $SRC_DIR ]; then
       sudo mkdir -p $SRC_DIR
+	  sudo chown -R ubuntu:ubuntu $GOPATH
 fi
 
 cd $SRC_DIR
-sudo rm -rf ./*
-sudo cp -r $WORK_DIR/src/* ./
-sudo chmod -R 333 ./
+rm -rf ./*
+cp -r $WORK_DIR/src/* ./
 go build -ldflags -s -v  -o build/bin/relay cmd/lrc/*
 cp build/bin/relay $WORK_DIR/bin
