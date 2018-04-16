@@ -195,6 +195,7 @@ type MinerOptions struct {
 type MarketOptions struct {
 	TokenFile             string
 	OldVersionWethAddress string
+	CronJobLock           bool
 }
 
 type MarketCapOptions struct {
