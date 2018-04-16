@@ -234,7 +234,7 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 		return nil
 	}
 
-	gas, status := l.processor.getGasAndStatus(receipt)
+	gas, status := l.processor.getGasAndStatus(tx, receipt)
 	method.FullFilled(tx, gas, blockTime, status)
 	eventemitter.Emit(method.Id, method)
 

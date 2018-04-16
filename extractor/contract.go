@@ -948,7 +948,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
-	dst.GasUsed, dst.Status = processor.getGasAndStatus(receipt)
+	dst.GasUsed, dst.Status = processor.getGasAndStatus(tx, receipt)
 
 	log.Debugf("extractor,tx:%s handleEthTransfer from:%s, to:%s, value:%s, gasUsed:%s, status:%d", tx.Hash, tx.From, tx.To, tx.Value.BigInt().String(), dst.GasUsed.String(), dst.Status)
 
@@ -957,7 +957,7 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	return nil
 }
 
-func (processor *AbiProcessor) getGasAndStatus(receipt *ethaccessor.TransactionReceipt) (*big.Int, uint8) {
+func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, uint8) {
 	var (
 		gasUsed *big.Int
 		status  uint8
@@ -965,7 +965,7 @@ func (processor *AbiProcessor) getGasAndStatus(receipt *ethaccessor.TransactionR
 	if receipt == nil {
 		gasUsed = big.NewInt(0)
 		status = types.TX_STATUS_PENDING
-	} else if receipt.Failed() {
+	} else if receipt.Failed(tx) {
 		gasUsed = receipt.GasUsed.BigInt()
 		status = types.TX_STATUS_FAILED
 	} else {
