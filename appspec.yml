@@ -25,3 +25,7 @@ hooks:
     - location: bin/start.sh
       timeout: 60
       runas: ubuntu
+  ValidateService:
+    - location: bin/check.sh
+      timeout: 40
+      runas: ubuntu
