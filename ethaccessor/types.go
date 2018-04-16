@@ -167,13 +167,15 @@ func (receipt *TransactionReceipt) HasNoLog() bool {
 }
 
 func (receipt *TransactionReceipt) Failed(tx *Transaction) bool {
+	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
+		return false
+	}
+
+	// env:local or test net
 	if !receipt.AfterByzantiumFork() && !receipt.HasNoLog() {
 		return false
 	}
 	if !receipt.AfterByzantiumFork() && tx.Value.BigInt().Cmp(big.NewInt(0)) > 0 {
-		return false
-	}
-	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
 		return false
 	}
 
