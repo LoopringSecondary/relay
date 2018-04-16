@@ -104,9 +104,13 @@ func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 	if _, err := conn.Do("set", key, value); err != nil {
 		return err
 	}
-	if _, err := conn.Do("expire", key, ttl); err != nil {
-		return err
+
+	if ttl > 0 {
+		if _, err := conn.Do("expire", key, ttl); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
