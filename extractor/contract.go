@@ -134,7 +134,6 @@ type AbiProcessor struct {
 	events         map[common.Hash]EventData
 	methods        map[string]MethodData
 	erc20Events    map[common.Hash]bool
-	erc20Methods   map[string]bool
 	protocols      map[common.Address]string
 	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
@@ -148,7 +147,6 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
 	processor.erc20Events = make(map[common.Hash]bool)
-	processor.erc20Methods = make(map[string]bool)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
@@ -367,7 +365,6 @@ func (processor *AbiProcessor) loadErc20Contract() {
 
 		eventemitter.On(contract.Id, watcher)
 		processor.methods[contract.Id] = contract
-		processor.erc20Methods[contract.Id] = true
 		log.Infof("extractor,contract method name:%s -> key:%s", contract.Name, contract.Id)
 	}
 }
