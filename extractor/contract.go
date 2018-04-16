@@ -169,7 +169,11 @@ func (processor *AbiProcessor) GetEvent(evtLog ethaccessor.Log) (EventData, bool
 		ok    bool
 	)
 
-	id := common.HexToHash(evtLog.Topics[0])
+	id := evtLog.EventId()
+	if id == types.NilHash {
+		return event, false
+	}
+
 	event, ok = processor.events[id]
 	return event, ok
 }
@@ -181,39 +185,56 @@ func (processor *AbiProcessor) GetMethod(tx *ethaccessor.Transaction) (MethodDat
 		ok     bool
 	)
 
-	// filter method input
-	input := common.FromHex(tx.Input)
-	if len(input) < 4 || len(tx.Input) < 10 {
+	id := tx.MethodId()
+	if id == "" {
 		return method, false
 	}
-
-	// filter method id
-	id := common.ToHex(input[0:4])
 
 	method, ok = processor.methods[id]
 	return method, ok
 }
 
-// HasContract judge protocol have ever been load
-func (processor *AbiProcessor) HasContract(protocol common.Address) bool {
+// SupportedContract judge protocol have ever been load
+func (processor *AbiProcessor) SupportedContract(protocol common.Address) bool {
 	_, ok := processor.protocols[protocol]
 	return ok
 }
 
-// HasErc20Events transaction receipt from unsupported contract has erc20 event or not
-func (processor *AbiProcessor) HasErc20Events(receipt *ethaccessor.TransactionReceipt) bool {
+// SupportedEvents supported contract events and unsupported erc20 events
+func (processor *AbiProcessor) SupportedEvents(receipt *ethaccessor.TransactionReceipt) bool {
 	if receipt == nil || len(receipt.Logs) == 0 {
 		return false
 	}
 
-	for _, evtLog := range receipt.Logs {
-		id := common.HexToHash(evtLog.Topics[0])
+	for _, evtlog := range receipt.Logs {
+		id := evtlog.EventId()
+		if id == types.NilHash {
+			continue
+		}
+		// supported contracts event
+		if _, ok := processor.events[id]; ok {
+			return true
+		}
+		// unsupported erc20 contracts event
 		if _, ok := processor.erc20Events[id]; ok {
 			return true
 		}
 	}
 
 	return false
+}
+
+// SupportedMethod only supported contracts method
+func (processor *AbiProcessor) SupportedMethod(tx *ethaccessor.Transaction) bool {
+	if !processor.SupportedContract(common.HexToAddress(tx.To)) {
+		return false
+	}
+	id := tx.MethodId()
+	if id == "" {
+		return false
+	}
+	_, ok := processor.methods[id]
+	return ok
 }
 
 // HasSpender check approve spender address have ever been load
@@ -910,7 +931,7 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	return nil
 }
 
-func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, gasUsed, time *big.Int, status uint8) error {
+func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
 	var dst types.TransferEvent
 
 	dst.From = common.HexToAddress(tx.From)
@@ -920,19 +941,37 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, ga
 	dst.LogIndex = 0
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
-	dst.Status = status
 
 	dst.GasLimit = tx.Gas.BigInt()
 	dst.GasPrice = tx.GasPrice.BigInt()
 	dst.Nonce = tx.Nonce.BigInt()
-	dst.GasUsed = gasUsed
 
 	dst.Sender = common.HexToAddress(tx.From)
 	dst.Receiver = common.HexToAddress(tx.To)
+	dst.GasUsed, dst.Status = processor.getGasAndStatus(tx, receipt)
 
-	log.Debugf("extractor,tx:%s handleEthTransfer from:%s, to:%s, value:%s", tx.Hash, tx.From, tx.To, tx.Value.BigInt().String())
+	log.Debugf("extractor,tx:%s handleEthTransfer from:%s, to:%s, value:%s, gasUsed:%s, status:%d", tx.Hash, tx.From, tx.To, tx.Value.BigInt().String(), dst.GasUsed.String(), dst.Status)
 
 	eventemitter.Emit(eventemitter.EthTransferEvent, &dst)
 
 	return nil
+}
+
+func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, uint8) {
+	var (
+		gasUsed *big.Int
+		status  uint8
+	)
+	if receipt == nil {
+		gasUsed = big.NewInt(0)
+		status = types.TX_STATUS_PENDING
+	} else if receipt.Failed(tx) {
+		gasUsed = receipt.GasUsed.BigInt()
+		status = types.TX_STATUS_FAILED
+	} else {
+		gasUsed = receipt.GasUsed.BigInt()
+		status = types.TX_STATUS_SUCCESS
+	}
+
+	return gasUsed, status
 }

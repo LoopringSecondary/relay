@@ -81,6 +81,17 @@ type Transaction struct {
 	V                string    `json:"v"`
 }
 
+func (tx *Transaction) MethodId() string {
+	// filter method input
+	input := common.FromHex(tx.Input)
+	if len(input) < 4 || len(tx.Input) < 10 {
+		return ""
+	}
+
+	// filter method id
+	return common.ToHex(input[0:4])
+}
+
 func (tx *Transaction) IsNull() bool {
 	return types.IsZeroHash(common.HexToHash(tx.Hash))
 }
@@ -103,6 +114,13 @@ type Log struct {
 	Data             string    `json:"data"`
 	Topics           []string  `json:"topics"`
 	Removed          bool      `json:"removed"`
+}
+
+func (evtlog *Log) EventId() common.Hash {
+	if len(evtlog.Topics) == 0 {
+		return types.NilHash
+	}
+	return common.HexToHash(evtlog.Topics[0])
 }
 
 type FilterQuery struct {
@@ -148,11 +166,16 @@ func (receipt *TransactionReceipt) HasNoLog() bool {
 	return len(receipt.Logs) == 0
 }
 
-func (receipt *TransactionReceipt) Failed() bool {
+func (receipt *TransactionReceipt) Failed(tx *Transaction) bool {
+	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
+		return false
+	}
+
+	// env:local or test net
 	if !receipt.AfterByzantiumFork() && !receipt.HasNoLog() {
 		return false
 	}
-	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
+	if !receipt.AfterByzantiumFork() && tx.Value.BigInt().Cmp(big.NewInt(0)) > 0 {
 		return false
 	}
 
