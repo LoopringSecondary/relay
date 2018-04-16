@@ -233,7 +233,7 @@ func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transacti
 			return l.ProcessEvent(tx, receipt, blockTime)
 		} else {
 			log.Debugf("extractor,mined transaction(unsupported without Erc20Event):%s is success.", tx.Hash)
-			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, receipt.ToStatus())
+			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
 		}
 	}
 }
@@ -245,7 +245,22 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 		return nil
 	}
 
-	method.FullFilled(tx, receipt.GasUsed.BigInt(), blockTime, receipt.ToStatus())
+	var (
+		status  uint
+		gasUsed *big.Int
+	)
+	if receipt == nil {
+		status = types.TX_STATUS_PENDING
+		gasUsed = big.NewInt(0)
+	} else if receipt.Failed() {
+		status = types.TX_STATUS_FAILED
+		gasUsed = receipt.GasUsed.BigInt()
+	} else {
+		status = types.TX_STATUS_SUCCESS
+		gasUsed = receipt.GasUsed.BigInt()
+	}
+
+	method.FullFilled(tx, gasUsed, blockTime, uint8(status))
 	eventemitter.Emit(method.Id, method)
 
 	return nil
