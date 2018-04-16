@@ -37,6 +37,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 		Market                string                     `json:"market"`
 		CreateTime            int64                      `json:"createTime"`
 		PowNonce              uint64                     `json:"powNonce"`
+		Side                  string                     `json:"side"`
 	}
 	var enc Order
 	enc.Protocol = o.Protocol
@@ -61,6 +62,7 @@ func (o Order) MarshalJSON() ([]byte, error) {
 	enc.Market = o.Market
 	enc.CreateTime = o.CreateTime
 	enc.PowNonce = o.PowNonce
+	enc.Side = o.Side
 	return json.Marshal(&enc)
 }
 
@@ -88,6 +90,7 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		Market                *string                     `json:"market"`
 		CreateTime            *int64                      `json:"createTime"`
 		PowNonce              *uint64                     `json:"powNonce"`
+		Side                  *string                     `json:"side"`
 	}
 	var dec Order
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -173,6 +176,9 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 	}
 	if dec.PowNonce != nil {
 		o.PowNonce = *dec.PowNonce
+	}
+	if dec.Side != nil {
+		o.Side = *dec.Side
 	}
 	return nil
 }

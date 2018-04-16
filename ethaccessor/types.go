@@ -118,55 +118,43 @@ type LogParameter struct {
 }
 
 type TransactionReceipt struct {
-	BlockHash         string    `json:"blockHash"`
-	BlockNumber       types.Big `json:"blockNumber"`
-	ContractAddress   string    `json:"contractAddress"`
-	CumulativeGasUsed types.Big `json:"cumulativeGasUsed"`
-	From              string    `json:"from"`
-	GasUsed           types.Big `json:"gasUsed"`
-	Logs              []Log     `json:"logs"`
-	LogsBloom         string    `json:"logsBloom"`
-	Root              string    `json:"root"`
-	Status            types.Big `json:"status"`
-	To                string    `json:"to"`
-	TransactionHash   string    `json:"transactionHash"`
-	TransactionIndex  types.Big `json:"transactionIndex"`
+	BlockHash         string     `json:"blockHash"`
+	BlockNumber       types.Big  `json:"blockNumber"`
+	ContractAddress   string     `json:"contractAddress"`
+	CumulativeGasUsed types.Big  `json:"cumulativeGasUsed"`
+	From              string     `json:"from"`
+	GasUsed           types.Big  `json:"gasUsed"`
+	Logs              []Log      `json:"logs"`
+	LogsBloom         string     `json:"logsBloom"`
+	Root              string     `json:"root"`
+	Status            *types.Big `json:"status"`
+	To                string     `json:"to"`
+	TransactionHash   string     `json:"transactionHash"`
+	TransactionIndex  types.Big  `json:"transactionIndex"`
 }
 
-//func (receipt *TransactionReceipt) IsFailed() bool {
-//	txIsFailed := false
-//	byzantiumBlock := big.NewInt(4370000)
-//
-//	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
-//	hasNoLogs := len(receipt.Logs) <= 0
-//	failedStatus := receipt.Status.BigInt().Int64() == 0
-//
-//	if (!afterByzantiumFork && hasNoLogs) || (afterByzantiumFork && failedStatus) {
-//		txIsFailed = true
-//	}
-//
-//	return txIsFailed
-//}
-
-func (receipt *TransactionReceipt) IsFailed() bool {
-	if len(receipt.Logs) > 0 {
-		return false
-	}
-
+func (receipt *TransactionReceipt) AfterByzantiumFork() bool {
 	byzantiumBlock := big.NewInt(4370000)
-	afterByzantiumFork := receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) > 0
-	successStatus := receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0
-	if afterByzantiumFork && successStatus {
+	return receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) >= 0
+}
+
+func (receipt *TransactionReceipt) StatusInvalid() bool {
+	if !receipt.AfterByzantiumFork() {
 		return false
 	}
+	return receipt.Status == nil
+}
 
-	// todo(fuk): delete after debug
-	if afterByzantiumFork && !successStatus {
-		if bs, err := receipt.Status.MarshalText(); err != nil {
-			log.Debugf("-------tx judge get receipt, tx:%s status:nil", receipt.TransactionHash)
-		} else {
-			log.Debugf("-------tx judge get receipt, tx:%s status:%s", receipt.TransactionHash, common.Bytes2Hex(bs))
-		}
+func (receipt *TransactionReceipt) HasNoLog() bool {
+	return len(receipt.Logs) == 0
+}
+
+func (receipt *TransactionReceipt) Failed() bool {
+	if !receipt.AfterByzantiumFork() && !receipt.HasNoLog() {
+		return false
+	}
+	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
+		return false
 	}
 
 	return true

@@ -19,7 +19,6 @@
 package market_test
 
 import (
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/test"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
@@ -38,7 +37,6 @@ func TestAccountManager_GetBalance(t *testing.T) {
 func TestAccountManager_UnlockedWallet(t *testing.T) {
 	owner := common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")
 	data := append(append(owner.Bytes(), owner.Bytes()...), owner.Bytes()...)
-	println("###", len(owner.Bytes()))
 	t.Log(common.BytesToAddress(data[0:20]).Hex(), common.BytesToAddress(data[20:40]).Hex(), common.BytesToAddress(data[40:]).Hex())
 	//accManager := test.GenerateAccountManager()
 	//
@@ -62,12 +60,6 @@ func TestAccountManager_GetBAndAllowance(t *testing.T) {
 		t.Fatalf("err:%s", err.Error())
 	}
 	t.Logf("balance:%s, allowance:%s", balance.String(), allowance.String())
-}
-func TestAccountManager_Markets(t *testing.T) {
-	println("####", len(util.AllTokenPairs))
-	for _, tokenPair := range util.AllTokenPairs {
-		println(tokenPair.TokenB.Hex(), tokenPair.TokenS.Hex())
-	}
 }
 
 func TestAccountManager_GetAllowances(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
@@ -200,6 +201,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	newFillModel := &dao.FillEvent{}
 	newFillModel.ConvertDown(event)
 	newFillModel.Fork = false
+	newFillModel.Side = util.GetSide(util.AddressToAlias(event.TokenS.Hex()), util.AddressToAlias(event.TokenB.Hex()))
 	if err := om.rds.Add(newFillModel); err != nil {
 		log.Debugf("order manager,handle order filled event error:order %s insert faild", event.OrderHash.Hex())
 		return err

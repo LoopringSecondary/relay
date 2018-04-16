@@ -40,6 +40,7 @@ func (impl *RedisCacheImpl) Initialize(cfg interface{}) {
 		IdleTimeout: time.Duration(options.IdleTimeout) * time.Second,
 		MaxIdle:     options.MaxIdle,
 		MaxActive:   options.MaxActive,
+		Wait:        true,
 		Dial: func() (redis.Conn, error) {
 			address := fmt.Sprintf("%s:%s", options.Host, options.Port)
 			var (
@@ -142,7 +143,6 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error
 	vs := []interface{}{}
 	vs = append(vs, key)
 	for _, v := range fields {
-		println()
 		vs = append(vs, v)
 	}
 	reply, err := conn.Do("hmget", vs...)
