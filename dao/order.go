@@ -309,7 +309,11 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 	if len(statusList) == 1 {
 		if statusList[0] == 6 {
 			now := time.Now().Unix()
-			if err = s.db.Where(query).Where("valid_until < ", now).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			filterStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
+			if err = s.db.Where(query).
+				Where("valid_until < ?", now).
+				Where("status in (?)", filterStatus).
+				Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
 				return pageResult, err
 			}
 		} else {
