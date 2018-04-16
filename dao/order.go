@@ -307,10 +307,18 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 	}
 
 	if len(statusList) == 1 {
-		query["status"] = statusList[0]
-		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
-			return pageResult, err
+		if statusList[0] == 6 {
+			now := time.Now().Unix()
+			if err = s.db.Where(query).Where("valid_until < ", now).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+		} else {
+			query["status"] = statusList[0]
+			if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
 		}
+
 	} else if len(statusList) > 1 {
 		for _, s := range statusList {
 			statusStrList = append(statusStrList, strconv.Itoa(s))
