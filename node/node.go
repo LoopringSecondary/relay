@@ -54,6 +54,7 @@ type Node struct {
 	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
 	txManager         txmanager.TransactionManager
+	txView            txmanager.TransactionView
 	userManager       usermanager.UserManager
 	marketCapProvider marketcap.MarketCapProvider
 	accountManager    market.AccountManager
@@ -113,6 +114,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerTransactionManager()
+	n.registerTransactionView()
 	n.registerExtractor()
 	n.registerGateway()
 	n.registerCrypto(nil)
@@ -228,6 +230,10 @@ func (n *Node) registerTransactionManager() {
 	n.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager, n.globalConfig.TransactionManager)
 }
 
+func (n *Node) registerTransactionView() {
+	n.txView = txmanager.NewTxView(n.rdsService)
+}
+
 func (n *Node) registerTickerCollector() {
 	n.relayNode.tickerCollector = *market.NewCollector()
 }
@@ -235,7 +241,8 @@ func (n *Node) registerTickerCollector() {
 func (n *Node) registerWalletService() {
 	ethForwarder := gateway.EthForwarder{}
 	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
-		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address)
+		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService,
+		n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address, n.txView)
 }
 
 func (n *Node) registerJsonRpcService() {

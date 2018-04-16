@@ -32,22 +32,21 @@ const (
 	TX_STATUS_SUCCESS = 2
 	TX_STATUS_FAILED  = 3
 
-	TX_TYPE_APPROVE         = 1
-	TX_TYPE_SEND            = 2 // SEND
-	TX_TYPE_RECEIVE         = 3
-	TX_TYPE_SELL            = 4 // SELL
-	TX_TYPE_BUY             = 5
-	TX_TYPE_CONVERT_INCOME  = 7 // WETH WITHDRAWAL
-	TX_TYPE_CONVERT_OUTCOME = 8
-	TX_TYPE_CANCEL_ORDER    = 9
-	TX_TYPE_CUTOFF          = 10
-	TX_TYPE_CUTOFF_PAIR     = 11
-
+	TX_TYPE_UNKNOWN              = 0
+	TX_TYPE_APPROVE              = 1
+	TX_TYPE_SEND                 = 2 // SEND
+	TX_TYPE_RECEIVE              = 3
+	TX_TYPE_SELL                 = 4 // SELL
+	TX_TYPE_BUY                  = 5
+	TX_TYPE_CONVERT_INCOME       = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT_OUTCOME      = 8
+	TX_TYPE_CANCEL_ORDER         = 9
+	TX_TYPE_CUTOFF               = 10
+	TX_TYPE_CUTOFF_PAIR          = 11
 	TX_TYPE_UNSUPPORTED_CONTRACT = 12
-
-	TX_TYPE_TRANSFER   = 101
-	TX_TYPE_DEPOSIT    = 102
-	TX_TYPE_WITHDRAWAL = 103
+	TX_TYPE_TRANSFER             = 101
+	TX_TYPE_DEPOSIT              = 102
+	TX_TYPE_WITHDRAWAL           = 103
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -89,6 +88,24 @@ func (tx *Transaction) StatusStr() string {
 		ret = "success"
 	case TX_STATUS_FAILED:
 		ret = "failed"
+	default:
+		ret = "unknown"
+	}
+
+	return ret
+}
+
+func StrToTxStatus(txType string) uint8 {
+	var ret uint8
+	switch txType {
+	case "pending":
+		ret = TX_STATUS_PENDING
+	case "success":
+		ret = TX_STATUS_SUCCESS
+	case "failed":
+		ret = TX_STATUS_FAILED
+	default:
+		ret = TX_STATUS_UNKNOWN
 	}
 
 	return ret
@@ -126,6 +143,47 @@ func (tx *Transaction) TypeStr() string {
 		ret = "deposit"
 	case TX_TYPE_WITHDRAWAL:
 		ret = "withdrawal"
+	default:
+		ret = "unknown"
+	}
+
+	return ret
+}
+
+func StrToTxType(status string) uint8 {
+	var ret uint8
+
+	switch status {
+	case "approve":
+		ret = TX_TYPE_APPROVE
+	case "send":
+		ret = TX_TYPE_SEND
+	case "receive":
+		ret = TX_TYPE_RECEIVE
+	case "sell":
+		ret = TX_TYPE_SELL
+	case "buy":
+		ret = TX_TYPE_BUY
+	case "convert_income":
+		ret = TX_TYPE_CONVERT_INCOME
+	case "convert_outcome":
+		ret = TX_TYPE_CONVERT_OUTCOME
+	case "cancel_order":
+		ret = TX_TYPE_CANCEL_ORDER
+	case "cutoff":
+		ret = TX_TYPE_CUTOFF
+	case "cutoff_trading_pair":
+		ret = TX_TYPE_CUTOFF_PAIR
+	case "unsupported_contract":
+		ret = TX_TYPE_UNSUPPORTED_CONTRACT
+	case "transfer":
+		ret = TX_TYPE_TRANSFER
+	case "deposit":
+		ret = TX_TYPE_DEPOSIT
+	case "withdrawal":
+		ret = TX_TYPE_WITHDRAWAL
+	default:
+		ret = TX_TYPE_UNKNOWN
 	}
 
 	return ret

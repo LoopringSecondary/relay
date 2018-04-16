@@ -157,31 +157,42 @@ func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) 
 
 func (s *RdsServiceImpl) GetPendingTransactions(owner string, status uint8) ([]Transaction, error) {
 	var txs []Transaction
-	err := s.db.Where("from = ? or to = ?", owner, owner).Where("status=?", status).Where("fork=?", false).Find(&txs).Error
+	err := s.db.Where("from = ? or to = ?", owner, owner).
+		Where("status=?", status).
+		Where("fork=?", false).
+		Find(&txs).Error
 	return txs, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactions(owner string, protocol string, status []uint8, limit, offset int) ([]Transaction, error) {
+func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, protocol string, status []uint8) (int, error) {
 	var (
-		txs   []Transaction
+		count int
+		err   error
+	)
+	err = s.db.Model(&Transaction{}).Find(&count).
+		Where("from=? or to=?", owner, owner).
+		Where("protocol=?", protocol).
+		Where("status in (?)", status).
+		Where("fork=?", false).
+		Group("tx_hash").Error
+
+	return count, err
+}
+
+func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, protocol string, status []uint8, limit, offset int) ([]string, error) {
+	var (
 		hashs []string
 		err   error
 	)
 
-	err = s.db.Model(&Transaction{}).Pluck("distinct(tx_hash)", &hashs).Where("from=? or to=?", owner, owner).
+	err = s.db.Model(&Transaction{}).Pluck("distinct(tx_hash)", &hashs).
+		Where("from=? or to=?", owner, owner).
 		Where("protocol=?", protocol).
 		Where("status in (?)", status).
-		Limit(limit).Offset(offset).
-		Find(&txs).Error
+		Where("fork=?", false).
+		Limit(limit).Offset(offset).Error
 
-	if err != nil {
-		return txs, err
-	}
-	if len(txs) == 0 {
-		return txs, nil
-	}
-
-	return s.GetTrxByHashes(hashs)
+	return hashs, err
 }
 
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {

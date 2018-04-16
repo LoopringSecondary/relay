@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/txmanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -238,6 +239,7 @@ type WalletServiceImpl struct {
 	trendManager           market.TrendManager
 	orderManager           ordermanager.OrderManager
 	accountManager         market.AccountManager
+	transactionView        txmanager.TransactionView
 	marketCap              marketcap.MarketCapProvider
 	ethForwarder           *EthForwarder
 	tickerCollector        market.CollectorImpl
@@ -247,7 +249,8 @@ type WalletServiceImpl struct {
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string, protocols map[string]string) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string, protocols map[string]string,
+	txview txmanager.TransactionView) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -257,6 +260,7 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	w.tickerCollector = collector
 	w.rds = rds
 	w.oldWethAddress = oldWethAddress
+	w.transactionView = txview
 	// select first contract version to default
 	for k := range protocols {
 		w.defaultContractVersion = k
@@ -264,6 +268,7 @@ func NewWalletService(trendManager market.TrendManager, orderManager ordermanage
 	}
 	return w
 }
+
 func (w *WalletServiceImpl) TestPing(input int) (resp []byte, err error) {
 
 	var res string
@@ -648,97 +653,30 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 }
 
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
-
-	trxQuery := make(map[string]interface{})
-
-	if query.Symbol != "" {
-		trxQuery["symbol"] = query.Symbol
-	}
-
-	if query.Owner != "" {
-		trxQuery["owner"] = query.Owner
-	}
-
-	if query.ThxHash != "" {
-		trxQuery["tx_hash"] = query.ThxHash
-	}
-
-	if txStatusToUint8(query.Status) > 0 {
-		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
-	}
-
-	if txTypeToUint8(query.TxType) > 0 {
-		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
-	}
-
-	pageIndex := query.PageIndex
-	pageSize := query.PageSize
-
-	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
-
-	if err != nil {
-		return pr, err
-	}
+	txs, err := w.transactionView.GetMinedTransactions(query.Owner, query.Symbol, query.PageIndex, query.PageSize)
 
 	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
+	rst.Data = append(rst.Data, txs...)
 
-	for _, d := range daoPr.Data {
-		o := d.(dao.Transaction)
-		tr := types.Transaction{}
-		err = o.ConvertUp(&tr)
-		rst.Data = append(rst.Data, toTxJsonResult(tr))
+	if err != nil {
+		return rst, err
 	}
+
+	//for _, d := range daoPr.Data {
+	//	o := d.(dao.Transaction)
+	//	tr := types.Transaction{}
+	//	err = o.ConvertUp(&tr)
+	//	rst.Data = append(rst.Data, toTxJsonResult(tr))
+	//}
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []TransactionJsonResult, err error) {
-
-	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result = make([]TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
-	}
-
-	return result, nil
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
+	return w.transactionView.GetTransactionsByHash(query.Owner, query.TrxHashes)
 }
 
-func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []TransactionJsonResult, err error) {
-
-	if len(query.Owner) == 0 {
-		return nil, errors.New("owner can't be null")
-	}
-
-	txQuery := make(map[string]interface{})
-	txQuery["from=? or to=?"] = []string{query.Owner, query.Owner}
-	txQuery["status"] = types.TX_STATUS_PENDING
-
-	rst, err := w.rds.PendingTransactions(txQuery)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result = make([]TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
-	}
-
-	return result, nil
+func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txmanager.TransactionJsonResult, err error) {
+	return w.transactionView.GetPendingTransactions(query.Owner)
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
@@ -1017,44 +955,6 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 		if len(depth.Depth.Sell) > 0 {
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
-	}
-}
-
-func txStatusToUint8(txType string) int {
-	switch txType {
-	case "pending":
-		return 1
-	case "success":
-		return 2
-	case "failed":
-		return 3
-	default:
-		return -1
-	}
-}
-
-func txTypeToUint8(status string) int {
-	switch status {
-	case "approve":
-		return 1
-	case "send":
-		return 2
-	case "receive":
-		return 3
-	case "sell":
-		return 4
-	case "buy":
-		return 5
-	case "convert":
-		return 7
-	case "cancel_order":
-		return 8
-	case "cutoff":
-		return 9
-	case "cutoff_trading_pair":
-		return 10
-	default:
-		return -1
 	}
 }
 
