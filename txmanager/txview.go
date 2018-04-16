@@ -20,104 +20,14 @@ package txmanager
 
 import (
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type TransactionJsonResult struct {
-	Protocol    common.Address     `json:"protocol"`
-	From        common.Address     `json:"from"`
-	To          common.Address     `json:"to"`
-	TxHash      common.Hash        `json:"txHash"`
-	Symbol      string             `json:"symbol"`
-	Content     TransactionContent `json:"content"`
-	BlockNumber int64              `json:"blockNumber"`
-	Value       string             `json:"value"`
-	LogIndex    int64              `json:"logIndex"`
-	Type        string             `json:"type"`
-	Status      string             `json:"status"`
-	CreateTime  int64              `json:"createTime"`
-	UpdateTime  int64              `json:"updateTime"`
-	Nonce       string             `json:"nonce"`
-}
-
-type TransactionContent struct {
-	Market    string `json:"market"`
-	OrderHash string `json:"orderHash"`
-}
-
-func  fromTransaction(tx types.Transaction) []TransactionJsonResult{
-	var (
-		dst TransactionJsonResult
-		list []TransactionJsonResult
-	)
-	dst.Protocol = tx.Protocol
-	dst.From = tx.From
-	dst.To = tx.To
-	dst.TxHash = tx.TxHash
-	dst.BlockNumber = tx.BlockNumber.Int64()
-	dst.LogIndex = tx.LogIndex
-	dst.Type = tx.TypeStr()
-	dst.Status = tx.StatusStr()
-	dst.CreateTime = tx.CreateTime
-	dst.UpdateTime = tx.UpdateTime
-	dst.Symbol = tx.Symbol
-	dst.Nonce = tx.TxInfo.Nonce.String()
-
-	// fill content
-	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
-		if ctx, err := tx.GetCutoffPairContent(); err == nil {
-			if mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex()); err == nil {
-				dst.Content = TransactionContent{Market: mkt}
-			}
-		}
-	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
-		if ctx, err := tx.GetCancelOrderHash(); err == nil {
-			dst.Content = TransactionContent{OrderHash: ctx}
-		}
-	}
-
-	// set value
-	if tx.Value == nil {
-		dst.Value = "0"
-	} else {
-		dst.Value = tx.Value.String()
-	}
-
-
-	if tx.Type == types.TX_TYPE_TRANSFER {
-		if owner == tx.From {
-			dst.Type = types.TX_TYPE_SEND
-		}
-		if owner == tx.To {
-			dst.Type = types.TX_TYPE_RECEIVE
-		}
-		list = append(list, dst)
-	}
-	if tx.Type == types.TX_TYPE_DEPOSIT {
-		src.Type = types.TX_TYPE_CONVERT_INCOME
-		dst.Type = types.TX_TYPE_CONVERT_OUTCOME
-		dst.Symbol = ETH_SYMBOL
-		dst.Protocol = types.NilAddress
-		list = append(list, dst)
-	}
-	if src.Type == types.TX_TYPE_WITHDRAWAL {
-		src.Type = types.TX_TYPE_CONVERT_OUTCOME
-		dst.Type = types.TX_TYPE_CONVERT_INCOME
-		dst.Symbol = ETH_SYMBOL
-		dst.Protocol = types.NilAddress
-	}
-
-	list = append(list, dst)
-
-	return list
-}
-
 type TransactionView interface {
-	GetPendingTransactions(owner common.Address) []*types.Transaction
-	GetMinedTransactions(owner common.Address, symbol string, page, size int) []*types.Transaction
-	GetTransactionsByHash(hashList []common.Hash) []*types.Transaction
+	GetPendingTransactions(owner common.Address) []TransactionJsonResult
+	GetMinedTransactions(owner common.Address, symbol string, page, size int) []TransactionJsonResult
+	GetTransactionsByHash(hashList []common.Hash) []TransactionJsonResult
 }
 
 type TransactionViewImpl struct {
@@ -139,20 +49,73 @@ func (impl *TransactionViewImpl) GetPendingTransactions(owner common.Address) []
 		return list
 	}
 
-	return dbListToView(txs)
+	return assemble(txs, owner)
 }
 
-func dbItemToView(src dao.Transaction) []TransactionJsonResult {
-	var tx types.Transaction
-	src.ConvertUp(&tx)
-	return fromTransaction(tx)
+func (impl *TransactionViewImpl) GetMinedTransactions(owner common.Address, symbol string, page, size int) []TransactionJsonResult {
+	var list []TransactionJsonResult
+
+	protocol := symbolToProtocol(symbol)
+	status := []uint8{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
+	limit, offset := pagination(page, size)
+
+	txs, err := impl.db.GetMinedTransactions(owner.Hex(), protocol.Hex(), status, limit, offset)
+	if len(txs) == 0 || err != nil {
+		return list
+	}
+
+	return assemble(txs, owner)
 }
 
-func dbListToView(items []dao.Transaction) []TransactionJsonResult {
+func (impl *TransactionViewImpl) GetTransactionsByHash(hashList []common.Hash) []TransactionJsonResult {
+	var (
+		list    []TransactionJsonResult
+		hashstr []string
+	)
+	if len(hashList) == 0 {
+		return list
+	}
+
+	for _, v := range hashList {
+		hashstr = append(hashstr, v.Hex())
+	}
+	txs, err := impl.db.GetTrxByHashes(hashstr)
+
+	// todo: handle error code
+	if len(txs) == 0 || err != nil {
+		return list
+	}
+
+	return list
+}
+
+func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonResult {
 	var list []TransactionJsonResult
 	for _, v := range items {
-		res := dbItemToView(v)
-		list = append(list, res...)
+		res := fromDb(v, owner)
+		list = append(list, res)
 	}
 	return list
+}
+
+func fromDb(src dao.Transaction, owner common.Address) TransactionJsonResult {
+	var (
+		tx  types.Transaction
+		res TransactionJsonResult
+	)
+	src.ConvertUp(&tx)
+	symbol := protocolToSymbol(tx.Protocol)
+	res.fromTransaction(tx, owner, symbol)
+
+	return res
+}
+
+func pagination(page, size int) (int, int) {
+	limit := size
+	if page <= 0 {
+		page = 1
+	}
+	offset := (page - 1) * size
+
+	return limit, offset
 }

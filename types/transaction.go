@@ -131,31 +131,6 @@ func (tx *Transaction) TypeStr() string {
 	return ret
 }
 
-func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype uint8) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Type = txtype
-	if txtype == TX_TYPE_SELL {
-		tx.From = src.BuyFrom
-		tx.To = src.SellTo
-		tx.Value = src.AmountS
-	} else {
-		tx.From = src.SellTo
-		tx.To = src.BuyFrom
-		tx.Value = src.AmountB
-	}
-	tx.Content = []byte(src.OrderHash.Hex())
-
-	return nil
-}
-
-func (tx *Transaction) GetFillContent() (common.Hash, error) {
-	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
-		return common.HexToHash(string(tx.Content)), nil
-	} else {
-		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
-	}
-}
-
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.From = src.From

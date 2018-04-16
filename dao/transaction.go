@@ -161,6 +161,29 @@ func (s *RdsServiceImpl) GetPendingTransactions(owner string, status uint8) ([]T
 	return txs, err
 }
 
+func (s *RdsServiceImpl) GetMinedTransactions(owner string, protocol string, status []uint8, limit, offset int) ([]Transaction, error) {
+	var (
+		txs   []Transaction
+		hashs []string
+		err   error
+	)
+
+	err = s.db.Model(&Transaction{}).Pluck("distinct(tx_hash)", &hashs).Where("from=? or to=?", owner, owner).
+		Where("protocol=?", protocol).
+		Where("status in (?)", status).
+		Limit(limit).Offset(offset).
+		Find(&txs).Error
+
+	if err != nil {
+		return txs, err
+	}
+	if len(txs) == 0 {
+		return txs, nil
+	}
+
+	return s.GetTrxByHashes(hashs)
+}
+
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {
 	return s.db.Model(&Transaction{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
