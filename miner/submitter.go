@@ -427,6 +427,7 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 			for _, filledOrder := range ringState.Orders {
 				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
 				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
+				log.Debugf("lrcFee:%s, filledOrder.LegalFeeS:%s, minerLrcBalance:%s, filledOrder.LrcFee:%s", lrcFee.FloatString(3), filledOrder.LegalFeeS.FloatString(3), minerLrcBalance.FloatString(3), filledOrder.LrcFee.FloatString(3))
 				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
 					feeSelections = append(feeSelections, 1)
 					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
