@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/Loopring/relay/market/util"
 )
 
 // order amountS 上限1e30
@@ -164,6 +165,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.RawOrder.CreateTime = o.CreateTime
 	state.RawOrder.Side = o.Side
 
+	state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
 	return nil
 }
 
