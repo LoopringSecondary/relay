@@ -389,6 +389,8 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 		data = append(data, v)
 	}
 
+	pageResult.Data = data
+
 	return pageResult, err
 }
 
