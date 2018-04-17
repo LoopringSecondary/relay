@@ -108,8 +108,8 @@ type RdsService interface {
 
 	// transactions
 	//SaveTransaction(latest *Transaction) error
-	FindTransactionWithoutLogIndex(txhash string) (*Transaction, error)
-	FindTransactionWithLogIndex(txhash string, logIndex int64) (*Transaction, error)
+	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
+	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
 	GetPendingTransactions(owner string, status uint8) ([]Transaction, error)
 	GetMinedTransactionCount(owner string, protocol string, status []uint8) (int, error)
 	GetMinedTransactionHashs(owner string, protocol string, status []uint8, limit, offset int) ([]string, error)

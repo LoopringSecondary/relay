@@ -124,7 +124,3 @@ func symbolToProtocol(symbol string) common.Address {
 	}
 	return util.AliasToAddress(symbol)
 }
-
-func txTypeToUint8(status string) int {
-
-}

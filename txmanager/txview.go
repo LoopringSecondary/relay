@@ -27,7 +27,8 @@ import (
 
 type TransactionView interface {
 	GetPendingTransactions(owner string) ([]TransactionJsonResult, error)
-	GetMinedTransactions(owner, symbol string, pageIndex, pageSize int) ([]TransactionJsonResult, error)
+	GetMinedTransactionCount(ownerStr, symbol string) (int, error)
+	GetMinedTransactions(owner, symbol string, limit, offset int) ([]TransactionJsonResult, error)
 	GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error)
 }
 
@@ -35,6 +36,11 @@ type TransactionViewImpl struct {
 	db dao.RdsService
 }
 
+// todo(fuk): 在分布式锁以及wallet_service事件通知推送落地后使用redis缓存(当前版本暂时不考虑redis),考虑到分叉及用户tx总量，
+// 缓存应该有三个数据类型:
+// 1. user key 存储用户pengding&mined first page transactions,设置过期时间
+// 2. user tx number key存储某个用户所有tx数量的key,设置过期时间
+// 3. block key 存储某个block涉及到的用户key(用于分叉),设置过期时间
 func NewTxView(db dao.RdsService) *TransactionViewImpl {
 	var tm TransactionViewImpl
 	tm.db = db
@@ -48,7 +54,6 @@ var (
 	ErrNonTransaction      error = errors.New("no transaction found")
 )
 
-// todo pagination
 func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]TransactionJsonResult, error) {
 	var list []TransactionJsonResult
 
@@ -66,56 +71,31 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]Tran
 	return list, nil
 }
 
-func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, pageIndex, pageSize int) ([]TransactionJsonResult, error) {
-	//trxQuery := make(map[string]interface{})
-	//
-	//if query.Symbol != "" {
-	//	trxQuery["symbol"] = query.Symbol
-	//}
-	//
-	//if query.Owner != "" {
-	//	trxQuery["owner"] = query.Owner
-	//}
-	//
-	//if query.ThxHash != "" {
-	//	trxQuery["tx_hash"] = query.ThxHash
-	//}
-	//
-	//if txStatusToUint8(query.Status) > 0 {
-	//	trxQuery["status"] = uint8(txStatusToUint8(query.Status))
-	//}
-	//
-	//if txTypeToUint8(query.TxType) > 0 {
-	//	trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
-	//}
-	//
-	//pageIndex := query.PageIndex
-	//pageSize := query.PageSize
-	//
-	//daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
-	//
-	//if err != nil {
-	//	return pr, err
-	//}
-	//
-	//rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
-	//
-	//for _, d := range daoPr.Data {
-	//	o := d.(dao.Transaction)
-	//	tr := types.Transaction{}
-	//	err = o.ConvertUp(&tr)
-	//	rst.Data = append(rst.Data, toTxJsonResult(tr))
-	//}
-	//return rst, nil
+func (impl *TransactionViewImpl) GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
+	owner := common.HexToAddress(ownerStr)
+	protocol := symbolToProtocol(symbol)
+	status := []uint8{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
 
+	number, err := impl.db.GetMinedTransactionCount(owner.Hex(), protocol.Hex(), status)
+	if number == 0 || err != nil {
+		return 0, ErrNonTransaction
+	}
+	return number, nil
+}
+
+func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, limit, offset int) ([]TransactionJsonResult, error) {
 	var list []TransactionJsonResult
 
 	owner := common.HexToAddress(ownerStr)
 	protocol := symbolToProtocol(symbol)
 	status := []uint8{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
-	limit, offset := pagination(pageIndex, pageSize)
 
-	txs, err := impl.db.GetMinedTransactions(owner.Hex(), protocol.Hex(), status, limit, offset)
+	hashs, err := impl.db.GetMinedTransactionHashs(owner.Hex(), protocol.Hex(), status, limit, offset)
+	if len(hashs) == 0 || err != nil {
+		return list, ErrNonTransaction
+	}
+
+	txs, err := impl.db.GetTrxByHashes(hashs)
 	if len(txs) == 0 || err != nil {
 		return list, ErrNonTransaction
 	}
@@ -137,7 +117,6 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 		hashstr = append(hashstr, common.HexToHash(v).Hex())
 	}
 	txs, err := impl.db.GetTrxByHashes(hashstr)
-
 	if len(txs) == 0 || err != nil {
 		return list, ErrNonTransaction
 	}
@@ -161,14 +140,4 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 		list = append(list, res)
 	}
 	return list
-}
-
-func pagination(page, size int) (int, int) {
-	limit := size
-	if page <= 0 {
-		page = 1
-	}
-	offset := (page - 1) * size
-
-	return limit, offset
 }

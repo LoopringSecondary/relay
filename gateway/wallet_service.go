@@ -652,22 +652,42 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 	return markets, err
 }
 
-func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
-	txs, err := w.transactionView.GetMinedTransactions(query.Owner, query.Symbol, query.PageIndex, query.PageSize)
+const pageSize = 20
 
-	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
-	rst.Data = append(rst.Data, txs...)
+func pagination(pageIndex, PageSize int) (int, int, int, int) {
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+	if PageSize < pageSize {
+		PageSize = pageSize
+	}
+	offset := (pageIndex - 1) * pageSize
+	limit := pageSize
+	return pageIndex, pageSize, limit, offset
+}
+
+func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
+	var (
+		rst           PageResult
+		txs           []txmanager.TransactionJsonResult
+		limit, offset int
+		err           error
+	)
+
+	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
+	rst.Total, err = w.transactionView.GetMinedTransactionCount(query.Owner, query.Symbol)
+	if err != nil {
+		return rst, err
+	}
+	txs, err = w.transactionView.GetMinedTransactions(query.Owner, query.Symbol, limit, offset)
+	for _, v := range txs {
+		rst.Data = append(rst.Data, v)
+	}
 
 	if err != nil {
 		return rst, err
 	}
 
-	//for _, d := range daoPr.Data {
-	//	o := d.(dao.Transaction)
-	//	tr := types.Transaction{}
-	//	err = o.ConvertUp(&tr)
-	//	rst.Data = append(rst.Data, toTxJsonResult(tr))
-	//}
 	return rst, nil
 }
 

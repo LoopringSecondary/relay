@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
-	"gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model"
 	"math/big"
 )
 
@@ -264,24 +263,26 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 
 func (tm *TransactionManager) saveTransactionWithoutLogIndex(tx *types.Transaction) error {
 	var (
-		model *dao.Transaction
-		err   error
+		current, latest dao.Transaction
+		err             error
 	)
-	model.ConvertDown(tx)
-	if model, err = tm.db.FindTransactionWithoutLogIndex(tx.TxHash.Hex()); err != nil {
-		return tm.db.Add(model)
+	latest.ConvertDown(tx)
+	if current, err = tm.db.FindTransactionWithoutLogIndex(tx.TxHash.Hex()); err != nil {
+		return tm.db.Add(&latest)
 	}
-	return tm.db.Save(model)
+	latest.ID = current.ID
+	return tm.db.Save(&latest)
 }
 
 func (tm *TransactionManager) saveTransactionWithLogIndex(tx *types.Transaction) error {
 	var (
-		model *dao.Transaction
-		err   error
+		current, latest dao.Transaction
+		err             error
 	)
-	model.ConvertDown(tx)
-	if model, err = tm.db.FindTransactionWithLogIndex(tx.TxHash.Hex(), tx.LogIndex); err != nil {
-		return tm.db.Add(model)
+	latest.ConvertDown(tx)
+	if current, err = tm.db.FindTransactionWithLogIndex(tx.TxHash.Hex(), tx.LogIndex); err != nil {
+		return tm.db.Add(&latest)
 	}
-	return tm.db.Save(model)
+	latest.ID = current.ID
+	return tm.db.Save(&latest)
 }

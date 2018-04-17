@@ -27,7 +27,6 @@ import (
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
-	Symbol      string `gorm:"column:symbol;type:varchar(20)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
@@ -63,7 +62,6 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
 	tx.UpdateTime = src.UpdateTime
-	tx.Symbol = src.Symbol
 	tx.GasLimit = src.GasLimit.String()
 	tx.GasUsed = src.GasUsed.String()
 	tx.GasPrice = src.GasPrice.String()
@@ -88,7 +86,6 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Status = tx.Status
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
-	dst.Symbol = tx.Symbol
 	dst.GasLimit, _ = new(big.Int).SetString(tx.GasLimit, 0)
 	dst.GasUsed, _ = new(big.Int).SetString(tx.GasUsed, 0)
 	dst.GasPrice, _ = new(big.Int).SetString(tx.GasPrice, 0)
@@ -97,22 +94,22 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (*Transaction, error) {
+func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (Transaction, error) {
 	var (
 		tx  Transaction
 		err error
 	)
 	err = s.db.Where("tx_hash=?", txhash).First(&tx).Error
-	return &tx, err
+	return tx, err
 }
 
-func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (*Transaction, error) {
+func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error) {
 	var (
 		tx  Transaction
 		err error
 	)
 	err = s.db.Where("tx_hash=? and tx_log_index=?", txhash, logIndex).First(&tx).Error
-	return &tx, err
+	return tx, err
 }
 
 func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
