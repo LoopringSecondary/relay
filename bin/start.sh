@@ -8,7 +8,7 @@ if [ $PROCESS_NUM -eq 0 ]; then
     sleep 5
 fi
 
-LOG_DIR=/opt/loopring/log/relay
+LOG_DIR=/var/log/relay
 if [ ! -d $LOG_DIR ]; then
     sudo mkdir -p $LOG_DIR
     sudo chown -R ubuntu:ubuntu $LOG_DIR
