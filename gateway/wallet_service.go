@@ -778,7 +778,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
 
-		tokenSymbol, marketSymbol:= util.UnWrap(orderQuery.Market)
+		tokenSymbol, marketSymbol := util.UnWrap(orderQuery.Market)
 		market := util.AliasToAddress(marketSymbol)
 		token := util.AliasToAddress(tokenSymbol)
 		switch orderQuery.Side {

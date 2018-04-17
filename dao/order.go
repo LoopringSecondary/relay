@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/market/util"
 )
 
 // order amountS 上限1e30
