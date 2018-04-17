@@ -285,8 +285,8 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 		}
 	}
 
-	log.Debugf("legalFee:%s", legalFee.String())
 	costLegal.Mul(costLegal, e.realCostRate)
+	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s", legalFee.String(), costLegal.String(), e.realCostRate.String())
 	received.Sub(legalFee, costLegal)
 	received.Mul(received, e.walletSplit)
 	return

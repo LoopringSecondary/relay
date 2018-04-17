@@ -313,6 +313,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	ringSubmitInfo.Ringhash = ringState.Hash
 
 	protocolAbi := ethaccessor.ProtocolImplAbi()
+	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
+
 	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(signer); nil != err1 {
 		return nil, err1
 	} else {
@@ -333,7 +335,6 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	}
 	//预先判断是否会提交成功
 	//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
-	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
 
 	if nil != err {
 		return nil, err
@@ -427,6 +428,7 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 			for _, filledOrder := range ringState.Orders {
 				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
 				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
+				log.Debugf("lrcFee:%s, filledOrder.LegalFeeS:%s, minerLrcBalance:%s, filledOrder.LrcFee:%s", lrcFee.FloatString(3), filledOrder.LegalFeeS.FloatString(3), minerLrcBalance.FloatString(3), filledOrder.LrcFee.FloatString(3))
 				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
 					feeSelections = append(feeSelections, 1)
 					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
