@@ -38,3 +38,16 @@ func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
 		t.Logf("owner:%s have %d transactions in %s", owner, number, symbol)
 	}
 }
+
+func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
+	view := newTxView()
+	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+	symbol := "LRC"
+	if txs, err := view.GetMinedTransactions(owner, symbol, 3, 0); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		for k, v := range txs {
+			t.Logf("%d->%s", k, v.TxHash.Hex())
+		}
+	}
+}

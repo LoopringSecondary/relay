@@ -51,7 +51,7 @@ type TransactionContent struct {
 	OrderHash string `json:"orderHash"`
 }
 
-func (dst TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) {
+func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) {
 	switch tx.Type {
 	case types.TX_TYPE_TRANSFER:
 		if tx.From == owner {
