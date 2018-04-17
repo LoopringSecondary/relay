@@ -80,7 +80,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status uint8) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus) {
 	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
@@ -951,10 +951,10 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	return nil
 }
 
-func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, uint8) {
+func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, types.TxStatus) {
 	var (
 		gasUsed *big.Int
-		status  uint8
+		status  types.TxStatus
 	)
 	if receipt == nil {
 		gasUsed = big.NewInt(0)

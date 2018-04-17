@@ -210,7 +210,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		status = types.TX_STATUS_FAILED
 	}
 	txHash := common.HexToHash(txHashStr)
-	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, uint8(status), big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
+	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
 	return txHash, err
 }
 
@@ -257,7 +257,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 	})
 }
 
-func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, status uint8, ringIndex, blockNumber, usedGas *big.Int, err error) {
+func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, status types.TxStatus, ringIndex, blockNumber, usedGas *big.Int, err error) {
 	resultEvt := &types.RingSubmitResultEvent{
 		RingHash:    ringhash,
 		TxHash:      txhash,

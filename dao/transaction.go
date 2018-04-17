@@ -56,8 +56,8 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
-	tx.Type = src.Type
-	tx.Status = src.Status
+	tx.Type = uint8(src.Type)
+	tx.Status = uint8(src.Status)
 	tx.TxIndex = src.TxIndex
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
@@ -82,8 +82,8 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.TxIndex = tx.TxIndex
 	dst.LogIndex = tx.LogIndex
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
-	dst.Type = tx.Type
-	dst.Status = tx.Status
+	dst.Type = types.TxType(tx.Type)
+	dst.Status = types.TxStatus(tx.Status)
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
 	dst.GasLimit, _ = new(big.Int).SetString(tx.GasLimit, 0)
@@ -112,47 +112,13 @@ func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int
 	return tx, err
 }
 
-func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
-	var (
-		trxs       []Transaction
-		err        error
-		data       = make([]interface{}, 0)
-		pageResult PageResult
-	)
-
-	if pageIndex <= 0 {
-		pageIndex = 1
-	}
-
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-
-	if err = s.db.Where(query).Where("fork=?", false).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&trxs).Error; err != nil {
-		return pageResult, err
-	}
-
-	for _, v := range trxs {
-		data = append(data, v)
-	}
-
-	pageResult = PageResult{data, pageIndex, pageSize, 0}
-
-	err = s.db.Model(&Transaction{}).Where("fork=?", false).Where(query).Count(&pageResult.Total).Error
-	if err != nil {
-		return pageResult, err
-	}
-
-	return pageResult, err
-}
-
 func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
 	err := s.db.Where("tx_hash in (?)", hashes).Where("fork=?", false).Find(&trxs).Error
 	return trxs, err
 }
 
-func (s *RdsServiceImpl) GetPendingTransactions(owner string, status uint8) ([]Transaction, error) {
+func (s *RdsServiceImpl) GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error) {
 	var txs []Transaction
 	err := s.db.Where("from = ? or to = ?", owner, owner).
 		Where("status=?", status).
@@ -161,22 +127,23 @@ func (s *RdsServiceImpl) GetPendingTransactions(owner string, status uint8) ([]T
 	return txs, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, protocol string, status []uint8) (int, error) {
+func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, protocol string, status []types.TxStatus) (int, error) {
 	var (
-		count int
-		err   error
+		number int
+		err    error
 	)
-	err = s.db.Model(&Transaction{}).Find(&count).
-		Where("from=? or to=?", owner, owner).
+
+	err = s.db.Model(&Transaction{}).Select("distinct(tx_hash)").
+		Where("tx_from=? or tx_to=?", owner, owner).
 		Where("protocol=?", protocol).
 		Where("status in (?)", status).
 		Where("fork=?", false).
-		Group("tx_hash").Error
+		Count(&number).Error
 
-	return count, err
+	return number, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, protocol string, status []uint8, limit, offset int) ([]string, error) {
+func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, protocol string, status []types.TxStatus, limit, offset int) ([]string, error) {
 	var (
 		hashs []string
 		err   error

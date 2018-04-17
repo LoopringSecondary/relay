@@ -26,27 +26,33 @@ import (
 )
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
-const (
-	TX_STATUS_UNKNOWN = 0
-	TX_STATUS_PENDING = 1
-	TX_STATUS_SUCCESS = 2
-	TX_STATUS_FAILED  = 3
 
-	TX_TYPE_UNKNOWN              = 0
-	TX_TYPE_APPROVE              = 1
-	TX_TYPE_SEND                 = 2 // SEND
-	TX_TYPE_RECEIVE              = 3
-	TX_TYPE_SELL                 = 4 // SELL
-	TX_TYPE_BUY                  = 5
-	TX_TYPE_CONVERT_INCOME       = 7 // WETH WITHDRAWAL
-	TX_TYPE_CONVERT_OUTCOME      = 8
-	TX_TYPE_CANCEL_ORDER         = 9
-	TX_TYPE_CUTOFF               = 10
-	TX_TYPE_CUTOFF_PAIR          = 11
-	TX_TYPE_UNSUPPORTED_CONTRACT = 12
-	TX_TYPE_TRANSFER             = 101
-	TX_TYPE_DEPOSIT              = 102
-	TX_TYPE_WITHDRAWAL           = 103
+type (
+	TxStatus uint8
+	TxType   uint8
+)
+
+const (
+	TX_STATUS_UNKNOWN TxStatus = 0
+	TX_STATUS_PENDING TxStatus = 1
+	TX_STATUS_SUCCESS TxStatus = 2
+	TX_STATUS_FAILED  TxStatus = 3
+
+	TX_TYPE_UNKNOWN              TxType = 0
+	TX_TYPE_APPROVE              TxType = 1
+	TX_TYPE_SEND                 TxType = 2 // SEND
+	TX_TYPE_RECEIVE              TxType = 3
+	TX_TYPE_SELL                 TxType = 4 // SELL
+	TX_TYPE_BUY                  TxType = 5
+	TX_TYPE_CONVERT_INCOME       TxType = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT_OUTCOME      TxType = 8
+	TX_TYPE_CANCEL_ORDER         TxType = 9
+	TX_TYPE_CUTOFF               TxType = 10
+	TX_TYPE_CUTOFF_PAIR          TxType = 11
+	TX_TYPE_UNSUPPORTED_CONTRACT TxType = 12
+	TX_TYPE_TRANSFER             TxType = 101
+	TX_TYPE_DEPOSIT              TxType = 102
+	TX_TYPE_WITHDRAWAL           TxType = 103
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -61,7 +67,7 @@ type TxInfo struct {
 	LogIndex    int64          `json:"logIndex"`
 	BlockNumber *big.Int       `json:"blockNumber"`
 	BlockTime   int64          `json:"block_time"`
-	Status      uint8          `json:"status"`
+	Status      TxStatus       `json:"status"`
 	GasLimit    *big.Int       `json:"gas_limit"`
 	GasUsed     *big.Int       `json:"gas_used"`
 	GasPrice    *big.Int       `json:"gas_price"`
@@ -74,7 +80,7 @@ type Transaction struct {
 	Protocol   common.Address `json:"protocol"`
 	Content    []byte         `json:"content"`
 	Value      *big.Int       `json:"value"`
-	Type       uint8          `json:"type"`
+	Type       TxType         `json:"type"`
 	CreateTime int64          `json:"createTime"`
 	UpdateTime int64          `json:"updateTime"`
 }
@@ -95,8 +101,8 @@ func (tx *Transaction) StatusStr() string {
 	return ret
 }
 
-func StrToTxStatus(txType string) uint8 {
-	var ret uint8
+func StrToTxStatus(txType string) TxStatus {
+	var ret TxStatus
 	switch txType {
 	case "pending":
 		ret = TX_STATUS_PENDING
@@ -150,8 +156,8 @@ func (tx *Transaction) TypeStr() string {
 	return ret
 }
 
-func StrToTxType(status string) uint8 {
-	var ret uint8
+func StrToTxType(status string) TxType {
+	var ret TxType
 
 	switch status {
 	case "approve":

@@ -74,7 +74,7 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]Tran
 func (impl *TransactionViewImpl) GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
 	owner := common.HexToAddress(ownerStr)
 	protocol := symbolToProtocol(symbol)
-	status := []uint8{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
+	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
 
 	number, err := impl.db.GetMinedTransactionCount(owner.Hex(), protocol.Hex(), status)
 	if number == 0 || err != nil {
@@ -88,7 +88,7 @@ func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, l
 
 	owner := common.HexToAddress(ownerStr)
 	protocol := symbolToProtocol(symbol)
-	status := []uint8{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
+	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
 
 	hashs, err := impl.db.GetMinedTransactionHashs(owner.Hex(), protocol.Hex(), status, limit, offset)
 	if len(hashs) == 0 || err != nil {
