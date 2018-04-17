@@ -27,7 +27,6 @@ import (
 	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
 	"sync"
@@ -207,60 +206,36 @@ func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transac
 
 	blockTime := big.NewInt(time.Now().Unix())
 
-	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		log.Debugf("extractor,pending transaction:%s supported.", tx.Hash)
+	if l.processor.SupportedMethod(tx) {
 		return l.ProcessMethod(tx, nil, blockTime)
-	} else {
-		l.debug("extractor,pending transaction:%s unsupported", tx.Hash)
-		return l.processor.handleEthTransfer(tx, big.NewInt(0), blockTime, types.TX_STATUS_PENDING)
 	}
+
+	return l.processor.handleEthTransfer(tx, nil, blockTime)
 }
 
 func (l *ExtractorServiceImpl) ProcessMinedTransaction(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	l.debug("extractor,process mined transaction,tx:%s status :%s,logs:%d", tx.Hash, receipt.Status.BigInt().String(), len(receipt.Logs))
 
-	if l.processor.HasContract(common.HexToAddress(tx.To)) {
-		if receipt.Failed() {
-			log.Debugf("extractor,mined transaction(supported):%s is failed.", tx.Hash)
-			return l.ProcessMethod(tx, receipt, blockTime)
-		} else {
-			log.Debugf("extractor,mined transaction(supported):%s is success.", tx.Hash)
-			return l.ProcessEvent(tx, receipt, blockTime)
-		}
-	} else {
-		if l.processor.HasErc20Events(receipt) {
-			log.Debugf("extractor,mined transaction(unsupported with Erc20Event):%s is success.", tx.Hash)
-			return l.ProcessEvent(tx, receipt, blockTime)
-		} else {
-			log.Debugf("extractor,mined transaction(unsupported without Erc20Event):%s is success.", tx.Hash)
-			return l.processor.handleEthTransfer(tx, receipt.GasUsed.BigInt(), blockTime, uint8(types.TX_STATUS_SUCCESS))
-		}
+	if l.processor.SupportedEvents(receipt) {
+		return l.ProcessEvent(tx, receipt, blockTime)
 	}
+
+	if l.processor.SupportedMethod(tx) {
+		return l.ProcessMethod(tx, receipt, blockTime)
+	}
+
+	return l.processor.handleEthTransfer(tx, receipt, blockTime)
 }
 
 func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	method, ok := l.processor.GetMethod(tx)
 	if !ok {
-		l.debug("extractor,tx:%s,unsupported contract method", tx.Hash)
+		l.debug("extractor,process method,tx:%s,unsupported contract method", tx.Hash)
 		return nil
 	}
 
-	var (
-		status  uint
-		gasUsed *big.Int
-	)
-	if receipt == nil {
-		status = types.TX_STATUS_PENDING
-		gasUsed = big.NewInt(0)
-	} else if receipt.Failed() {
-		status = types.TX_STATUS_FAILED
-		gasUsed = receipt.GasUsed.BigInt()
-	} else {
-		status = types.TX_STATUS_SUCCESS
-		gasUsed = receipt.GasUsed.BigInt()
-	}
-
-	method.FullFilled(tx, gasUsed, blockTime, uint8(status))
+	gas, status := l.processor.getGasAndStatus(tx, receipt)
+	method.FullFilled(tx, gas, blockTime, status)
 	eventemitter.Emit(method.Id, method)
 
 	return nil
@@ -270,14 +245,14 @@ func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt
 	for _, evtLog := range receipt.Logs {
 		event, ok := l.processor.GetEvent(evtLog)
 		if !ok {
-			l.debug("extractor,tx:%s,unsupported contract event", tx.Hash)
+			l.debug("extractor,process event,tx:%s,unsupported contract event", tx.Hash)
 			continue
 		}
 
 		data := hexutil.MustDecode(evtLog.Data)
 		if nil != data && len(data) > 0 {
 			if err := event.CAbi.Unpack(event.Event, event.Name, data, abi.SEL_UNPACK_EVENT); nil != err {
-				log.Errorf("extractor,tx:%s unpack event error:%s", tx.Hash, err.Error())
+				log.Errorf("extractor,process event,tx:%s unpack event error:%s", tx.Hash, err.Error())
 				continue
 			}
 		}

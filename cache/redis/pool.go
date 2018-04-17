@@ -109,9 +109,12 @@ func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 		log.Errorf(" key:%s, err:%s", key, err.Error())
 		return err
 	}
-	if _, err := conn.Do("expire", key, ttl); err != nil {
-		log.Errorf(" key:%s, err:%s", key, err.Error())
-		return err
+
+	if ttl > 0 {
+		if _, err := conn.Do("expire", key, ttl); err != nil {
+			log.Errorf(" key:%s, err:%s", key, err.Error())
+			return err
+		}
 	}
 	return nil
 }

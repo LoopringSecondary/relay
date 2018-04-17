@@ -551,7 +551,7 @@ func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market
 func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
 	res, err = w.trendManager.GetTrends(query.Market, query.Interval)
 	sort.Slice(res, func(i, j int) bool {
-		return res[i].Start < res[j].Start
+		return res[i].Start > res[j].Start
 	})
 	return
 }

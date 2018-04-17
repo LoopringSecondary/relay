@@ -24,8 +24,6 @@ const (
 	DefaultCronSpec5Minute  = "0 */5 * * * *"
 )
 
-var EventPostfixs = []string{EventPostfixReq, EventPostfixRes, EventPostfixEnd}
-
 type Server struct {
 	socketio.Server
 }
