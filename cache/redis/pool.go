@@ -130,7 +130,7 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	return err
 }
 
-func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
+func (impl *RedisCacheImpl) HMSet(key string, ttl int64, args ...[]byte) error {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -145,6 +145,12 @@ func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
 	_, err := conn.Do("hmset", vs...)
 	if nil != err {
 		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
+	if ttl > 0 {
+		if _, err := conn.Do("expire", key, ttl); err != nil {
+			log.Errorf(" key:%s, err:%s", key, err.Error())
+			return err
+		}
 	}
 	return err
 }
@@ -266,7 +272,7 @@ func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
 	return false, err
 }
 
-func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
+func (impl *RedisCacheImpl) SAdd(key string, ttl int64, members ...[]byte) error {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
@@ -278,6 +284,12 @@ func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
 	_, err := conn.Do("sadd", vs...)
 	if nil != err {
 		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
+	if ttl > 0 {
+		if _, err := conn.Do("expire", key, ttl); err != nil {
+			log.Errorf(" key:%s, err:%s", key, err.Error())
+			return err
+		}
 	}
 	return err
 }

@@ -37,6 +37,7 @@ const (
 	OwnerPrefix = "matcher_owner_"
 	RingHashPrefix = "matcher_ringhash_"
 	RoundPrefix = "matcher_round_"
+	cacheTtl = 86400 * 2
 )
 
 type OrderMatchedState struct {
@@ -63,7 +64,7 @@ func (c ringCache) parseFiled(data []byte) (orderhash common.Hash, owner,token c
 }
 
 func (c ringCache) save(fields ...[]byte) error {
-	return cache.SAdd(c.cacheKey(), fields...)
+	return cache.SAdd(c.cacheKey(), cacheTtl, fields...)
 }
 
 type ownerCache struct {
@@ -89,7 +90,7 @@ func (c ownerCache) removeOrder(orderhash common.Hash) error {
 }
 
 func (c ownerCache) save(orderhash common.Hash) error {
-	return cache.SAdd(c.cacheKey(), c.cacheField(orderhash))
+	return cache.SAdd(c.cacheKey(), cacheTtl, c.cacheField(orderhash))
 }
 
 func (c ownerCache) orderhashes() ([]common.Hash, error) {
@@ -126,7 +127,7 @@ func (c orderCache) save(ringhash common.Hash, matchedState *OrderMatchedState) 
 	if matchedData,err := json.Marshal(matchedState); nil != err {
 		return err
 	} else {
-		return cache.HMSet(c.cacheKey(), []byte(strings.ToLower(ringhash.Hex())), matchedData)
+		return cache.HMSet(c.cacheKey(), cacheTtl, []byte(strings.ToLower(ringhash.Hex())), matchedData)
 	}
 }
 
