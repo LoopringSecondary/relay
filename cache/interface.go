@@ -37,11 +37,17 @@ type Cache interface {
 
 	HMGet(key string, fields ...[]byte) ([][]byte, error)
 
+	HDel(key string, fields ...[]byte) (int64, error)
+
 	HGetAll(key string) ([][]byte, error)
+
+	HVals(key string) ([][]byte, error)
 
 	HExists(key string, field []byte) (bool, error)
 
 	SAdd(key string, members ...[]byte) error
+
+	SRem(key string, members ...[]byte) (int64,error)
 
 	SMembers(key string) ([][]byte, error)
 }
@@ -69,6 +75,10 @@ func HGetAll(key string) ([][]byte, error) {
 	return cache.HGetAll(key)
 }
 
+func HVals(key string) ([][]byte, error) {
+	return cache.HVals(key)
+}
+
 func HExists(key string, field []byte) (bool, error) {
 	return cache.HExists(key, field)
 }
@@ -78,4 +88,12 @@ func SAdd(key string, members ...[]byte) error {
 
 func SMembers(key string) ([][]byte, error) {
 	return cache.SMembers(key)
+}
+
+func SRem(key string, members ...[]byte) (int64,error) {
+	return cache.SRem(key, members...)
+}
+
+func HDel(key string, fields ...[]byte) (int64, error) {
+	return cache.HDel(key, fields...)
 }

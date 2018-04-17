@@ -61,7 +61,7 @@ name = "Loopring corporation"
     raw_urls = ["http://127.0.0.1:8545"]
 
 [extractor]
-    start_block_number = 339287
+    start_block_number = 536342
     end_block_number = 0
     confirm_block_number = 5
     debug = false
@@ -82,17 +82,20 @@ name = "Loopring corporation"
     ringMaxLength = 4
     name = "miner1"
     rate_ratio_cvs_threshold = 1000000000000000
-    subsidy = 0.5
+    subsidy = 1.0
+    walletSplit = 0.8
+    minGasLimit = 1000000000
+    maxGasLimit = 100000000000
     [[miner.normal_miners]]
-        address = "0x750ad4351bb728cec7d639a9511f9d6488f1e259"
+        address = "0x48ff2269e58a373120ffdbbdee3fbcea854ac30a"
         maxPendingTtl = 40
         maxPendingCount = 20
         gasPriceLimit = 10000000000
     [miner.TimingMatcher]
-    		round_orders_count=50
-    		duration = 3
-    		delayed_number = 10
-    		max_cache_rounds_length = 100
+    		round_orders_count=2
+    		duration = 10000
+    		delayed_number = 10000
+    		max_cache_rounds_length = 1000
 
 [market]
     token_file = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/tokens.json"

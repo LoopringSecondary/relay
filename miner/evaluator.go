@@ -277,6 +277,7 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 	received = new(big.Rat)
 	legalFee := new(big.Rat)
 	for _, order := range ringState.Orders {
+		log.Debugf("lrcFee:%s, feeS:%s", order.LegalFeeS.String(), order.LegalLrcFee.String())
 		if order.LegalLrcFee.Cmp(order.LegalFeeS) < 0 {
 			legalFee.Add(legalFee, order.LegalFeeS)
 		} else {
@@ -284,6 +285,7 @@ func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.
 		}
 	}
 
+	log.Debugf("legalFee:%s", legalFee.String())
 	costLegal.Mul(costLegal, e.realCostRate)
 	received.Sub(legalFee, costLegal)
 	received.Mul(received, e.walletSplit)

@@ -633,7 +633,7 @@ func (a *AccountManager) handleTokenTransfer(input eventemitter.EventData) (err 
 	a.block.saveBalanceKey(event.Receiver, event.Protocol)
 
 	//allowance
-	if spender, nil := ethaccessor.GetSpenderAddress(event.To); nil == err {
+	if spender, err := ethaccessor.GetSpenderAddress(event.To); nil == err {
 		log.Debugf("handleTokenTransfer allowance owner:%s", event.Sender.Hex(), event.Protocol.Hex(), spender.Hex())
 		a.block.saveAllowanceKey(event.Sender, event.Protocol, spender)
 	}
@@ -715,9 +715,6 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 	accountBalances.Owner = common.HexToAddress(owner)
 	accountBalances.Balances = make(map[common.Address]Balance)
 	err = accountBalances.getOrSave()
-	for _, balance := range accountBalances.Balances {
-		log.Debugf("token:%s, owner:%s", accountBalances.Owner.Hex(), balance.Balance.BigInt().String())
-	}
 	return
 }
 

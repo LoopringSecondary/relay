@@ -98,10 +98,11 @@ func (market *Market) match() {
 					orderState := market.reduceAmountAfterFilled(filledOrder)
 					isFullFilled := market.om.IsOrderFullFinished(orderState)
 					matchedOrderHashes[filledOrder.OrderState.RawOrder.Hash] = isFullFilled
-					market.matcher.rounds.AppendFilledOrderToCurrent(filledOrder, ringForSubmit.RawRing.Hash)
+					//market.matcher.rounds.AppendFilledOrderToCurrent(filledOrder, ringForSubmit.RawRing.Hash)
 
 					list = market.reduceReceivedOfCandidateRing(list, filledOrder, isFullFilled)
 				}
+				AddMinedRing(ringForSubmit)
 				ringSubmitInfos = append(ringSubmitInfos, ringForSubmit)
 			} else {
 				log.Debugf("ring:%s will not be submitted,because of received:%s", ringForSubmit.RawRing.Hash.Hex(), ringForSubmit.Received.String())
@@ -189,6 +190,7 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 		btoAOrders = append(btoAOrders, orders...)
 	}
 
+	//log.Debugf("#### %s,%s %d,%d %d",market.TokenA.Hex(),market.TokenB.Hex(), len(atoBOrders), len(btoAOrders),market.matcher.roundOrderCount)
 	market.AtoBOrderHashesExcludeNextRound = []common.Hash{}
 	market.BtoAOrderHashesExcludeNextRound = []common.Hash{}
 
@@ -217,12 +219,13 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 
-	amountS, amountB := market.matcher.rounds.DealtAmount(orderHash)
-
-	log.Debugf("reduceRemainedAmountBeforeMatch:%s, %s, %s", orderState.RawOrder.Owner.Hex(), amountS.String(), amountB.String())
-	orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(amountB))
-	orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(amountS))
-
+	if amountS, amountB,err := DealtAmount(orderHash);nil != err {
+		log.Errorf("err:%s", err.Error())
+	} else {
+		log.Debugf("reduceRemainedAmountBeforeMatch:%s, %s, %s", orderState.RawOrder.Owner.Hex(), amountS.String(), amountB.String())
+		orderState.DealtAmountB.Add(orderState.DealtAmountB, ratToInt(amountB))
+		orderState.DealtAmountS.Add(orderState.DealtAmountS, ratToInt(amountS))
+	}
 }
 
 func (market *Market) reduceAmountAfterFilled(filledOrder *types.FilledOrder) *types.OrderState {
@@ -297,7 +300,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
 	for _, order := range orders {
 		if filledOrder, err := market.generateFilledOrder(order); nil != err {
-
+			log.Errorf("err:%s", err.Error())
 		} else {
 			filledOrders = append(filledOrders, filledOrder)
 		}

@@ -19,7 +19,6 @@
 package timing_matcher
 
 import (
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -78,25 +77,29 @@ import (
 func (matcher *TimingMatcher) listenTimingRound() {
 	stopChan := make(chan bool)
 
+	matchFunc := func() {
+		//if ethaccessor.Synced() {
+		matcher.lastRoundNumber = big.NewInt(time.Now().UnixNano() / 1e6)
+		//matcher.rounds.appendNewRoundState(matcher.lastRoundNumber)
+		var wg sync.WaitGroup
+		for _, market := range matcher.markets {
+			wg.Add(1)
+			go func(m *Market) {
+				defer func() {
+					wg.Add(-1)
+				}()
+				m.match()
+			}(market)
+		}
+		wg.Wait()
+		//}
+	}
 	go func() {
+		matchFunc()
 		for {
 			select {
 			case <-time.After(time.Duration(matcher.duration.Int64()) * time.Millisecond):
-				if ethaccessor.Synced() {
-					matcher.lastRoundNumber = big.NewInt(time.Now().UnixNano() / 1e6)
-					matcher.rounds.appendNewRoundState(matcher.lastRoundNumber)
-					var wg sync.WaitGroup
-					for _, market := range matcher.markets {
-						wg.Add(1)
-						go func(m *Market) {
-							defer func() {
-								wg.Add(-1)
-							}()
-							m.match()
-						}(market)
-					}
-					wg.Wait()
-				}
+				matchFunc()
 			case <-stopChan:
 				return
 			}
@@ -115,9 +118,12 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 		for {
 			select {
 			case minedEvent := <-submitEventChan:
-				log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s", minedEvent.RingHash.Hex())
 				if minedEvent.Status == types.TX_STATUS_FAILED || minedEvent.Status == types.TX_STATUS_SUCCESS || minedEvent.Status == types.TX_STATUS_UNKNOWN {
-					matcher.rounds.RemoveMinedRing(minedEvent.RingHash)
+					log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s, status:%d", minedEvent.RingHash.Hex(), minedEvent.Status)
+					//matcher.rounds.RemoveMinedRing(minedEvent.RingHash)
+					if err := RemoveMinedRing(minedEvent.RingHash); nil != err {
+						log.Errorf("err:%s", err.Error())
+					}
 				}
 			}
 		}
