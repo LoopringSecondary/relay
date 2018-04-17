@@ -313,6 +313,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	ringSubmitInfo.Ringhash = ringState.Hash
 
 	protocolAbi := ethaccessor.ProtocolImplAbi()
+	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
+
 	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(signer); nil != err1 {
 		return nil, err1
 	} else {
@@ -333,7 +335,6 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	}
 	//预先判断是否会提交成功
 	//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
-	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
 
 	if nil != err {
 		return nil, err
