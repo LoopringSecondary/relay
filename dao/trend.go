@@ -26,6 +26,7 @@ type Trend struct {
 	Vol        float64 `gorm:"column:vol;type:float"`
 	Amount     float64 `gorm:"column:amount;type:float"`
 	CreateTime int64   `gorm:"column:create_time;type:bigint"`
+	UpdateTime int64   `gorm:"column:update_time;type:bigint"`
 	Open       float64 `gorm:"column:open;type:float"`
 	Close      float64 `gorm:"column:close;type:float"`
 	High       float64 `gorm:"column:high;type:float"`

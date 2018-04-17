@@ -33,15 +33,21 @@ type Cache interface {
 
 	Exists(key string) (bool, error)
 
-	HMSet(key string, args ...[]byte) error
+	HMSet(key string, ttl int64, args ...[]byte) error
 
 	HMGet(key string, fields ...[]byte) ([][]byte, error)
 
+	HDel(key string, fields ...[]byte) (int64, error)
+
 	HGetAll(key string) ([][]byte, error)
+
+	HVals(key string) ([][]byte, error)
 
 	HExists(key string, field []byte) (bool, error)
 
-	SAdd(key string, members ...[]byte) error
+	SAdd(key string, ttl int64, members ...[]byte) error
+
+	SRem(key string, members ...[]byte) (int64,error)
 
 	SMembers(key string) ([][]byte, error)
 }
@@ -57,8 +63,8 @@ func Get(key string) ([]byte, error)                { return cache.Get(key) }
 func Del(key string) error                          { return cache.Del(key) }
 func Exists(key string) (bool, error)               { return cache.Exists(key) }
 
-func HMSet(key string, args ...[]byte) error {
-	return cache.HMSet(key, args...)
+func HMSet(key string, ttl int64, args ...[]byte) error {
+	return cache.HMSet(key, ttl, args...)
 }
 
 func HMGet(key string, fields ...[]byte) ([][]byte, error) {
@@ -69,13 +75,25 @@ func HGetAll(key string) ([][]byte, error) {
 	return cache.HGetAll(key)
 }
 
+func HVals(key string) ([][]byte, error) {
+	return cache.HVals(key)
+}
+
 func HExists(key string, field []byte) (bool, error) {
 	return cache.HExists(key, field)
 }
-func SAdd(key string, members ...[]byte) error {
-	return cache.SAdd(key, members...)
+func SAdd(key string, ttl int64, members ...[]byte) error {
+	return cache.SAdd(key, ttl, members...)
 }
 
 func SMembers(key string) ([][]byte, error) {
 	return cache.SMembers(key)
+}
+
+func SRem(key string, members ...[]byte) (int64,error) {
+	return cache.SRem(key, members...)
+}
+
+func HDel(key string, fields ...[]byte) (int64, error) {
+	return cache.HDel(key, fields...)
 }

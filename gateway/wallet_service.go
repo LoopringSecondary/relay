@@ -533,7 +533,7 @@ func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market
 func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
 	res, err = w.trendManager.GetTrends(query.Market, query.Interval)
 	sort.Slice(res, func(i, j int) bool {
-		return res[i].Start < res[j].Start
+		return res[i].Start > res[j].Start
 	})
 	return
 }
@@ -589,7 +589,12 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 	for symbol, balance := range balances {
 		token := Token{}
 		token.Token = symbol
-		token.Allowance = allowances[symbol].String()
+
+		if allowance,exists := allowances[symbol];exists {
+			token.Allowance = allowance.String()
+		} else {
+			token.Allowance = "0"
+		}
 		token.Balance = balance.String()
 		res.Tokens = append(res.Tokens, token)
 	}

@@ -219,7 +219,7 @@ func (n *Node) registerOrderManager() {
 }
 
 func (n *Node) registerTrendManager() {
-	n.relayNode.trendManager = market.NewTrendManager(n.rdsService)
+	n.relayNode.trendManager = market.NewTrendManager(n.rdsService, n.globalConfig.Market.CronJobLock)
 }
 
 func (n *Node) registerAccountManager() {

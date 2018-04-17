@@ -888,7 +888,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","par
         "symbol":"OMG",
         "source":"omisego",
         "deny":false,
-        "decimals":18,
+        "decimals":1000000000000000000,
         "isMarket":false
       },....
   ]

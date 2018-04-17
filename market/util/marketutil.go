@@ -35,8 +35,8 @@ import (
 )
 
 const WeiToEther = 1e18
-const SideSell = "sell"
-const SideBuy = "buy"
+const SideSell    = "sell"
+const SideBuy     = "buy"
 
 type TokenPair struct {
 	TokenS common.Address
@@ -349,15 +349,14 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	}
 
 	if GetSide(s, b) == SideBuy {
-		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
+		result.Quo(new(big.Rat).SetFrac(as, tokenB.Decimals), new(big.Rat).SetFrac(ab, tokenS.Decimals))
 	} else {
-		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
+		result.Quo(new(big.Rat).SetFrac(ab, tokenS.Decimals), new(big.Rat).SetFrac(as, tokenB.Decimals))
 	}
 
 	price, _ := result.Float64()
 	return price
 }
-
 //
 //func IsBuy(tokenB string) bool {
 //	if IsAddress(tokenB) {

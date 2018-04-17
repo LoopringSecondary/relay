@@ -28,6 +28,8 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
 )
 
 /**
@@ -35,7 +37,7 @@ import (
 */
 
 type TimingMatcher struct {
-	rounds          *RoundStates
+	//rounds          *RoundStates
 	markets         []*Market
 	submitter       *miner.RingSubmitter
 	evaluator       *miner.Evaluator
@@ -56,7 +58,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	matcher.evaluator = evaluator
 	matcher.accountManager = accountManager
 	matcher.roundOrderCount = matcherOptions.RoundOrdersCount
-	matcher.rounds = NewRoundStates(matcherOptions.MaxCacheRoundsLength)
+	//matcher.rounds = NewRoundStates(matcherOptions.MaxCacheRoundsLength)
 
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(matcherOptions.Duration)
@@ -88,13 +90,20 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 			}
 		}
 	}
-
 	return matcher
 }
 
 func (matcher *TimingMatcher) Start() {
-	matcher.listenTimingRound()
 	matcher.listenSubmitEvent()
+	syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
+		log.Debugf("TimingMatcher Start......")
+		matcher.listenTimingRound()
+		return nil
+	}}
+	eventemitter.On(eventemitter.SyncChainComplete, syncWatcher)
+	matcher.stopFuncs = append(matcher.stopFuncs, func() {
+		eventemitter.Un(eventemitter.SyncChainComplete, syncWatcher)
+	})
 }
 
 func (matcher *TimingMatcher) Stop() {
@@ -104,6 +113,7 @@ func (matcher *TimingMatcher) Stop() {
 }
 
 func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address) (*big.Rat, error) {
+	//log.Debugf("address: %s , token: %s , spender: %s", address.Hex(), tokenAddress.Hex(), spender.Hex())
 	if balance, allowance, err := matcher.accountManager.GetBalanceAndAllowance(address, tokenAddress, spender); nil != err {
 		return nil, err
 	} else {
@@ -113,7 +123,7 @@ func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, s
 			availableAmount = allowanceAmount
 		}
 
-		matchedAmountS := matcher.rounds.FilledAmountS(address, tokenAddress)
+		matchedAmountS,_ := FilledAmountS(address, tokenAddress)
 		availableAmount.Sub(availableAmount, matchedAmountS)
 
 		return availableAmount, nil
