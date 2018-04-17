@@ -782,10 +782,10 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		market := util.AliasToAddress(marketSymbol)
 		token := util.AliasToAddress(tokenSymbol)
 		switch orderQuery.Side {
-		case "sell":
+		case util.SideSell:
 			query["token_s"] = market.Hex()
 			query["token_b"] = token.Hex()
-		case "buy":
+		case util.SideBuy:
 			query["token_s"] = token.Hex()
 			query["token_b"] = market.Hex()
 		default:
