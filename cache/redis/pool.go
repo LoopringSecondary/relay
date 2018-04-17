@@ -69,7 +69,10 @@ func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
 
 	reply, err := conn.Do("get", key)
 
-	if nil == reply {
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+		return []byte{}, err
+	} else if nil == reply {
 		if nil == err {
 			err = fmt.Errorf("no this key:%s", key)
 		}
@@ -86,6 +89,7 @@ func (impl *RedisCacheImpl) Exists(key string) (bool, error) {
 	reply, err := conn.Do("exists", key)
 
 	if err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
 		return false, err
 	} else {
 		exists := reply.(int64)
@@ -102,9 +106,11 @@ func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 	defer conn.Close()
 
 	if _, err := conn.Do("set", key, value); err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
 		return err
 	}
 	if _, err := conn.Do("expire", key, ttl); err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
 		return err
 	}
 	return nil
@@ -115,7 +121,9 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	defer conn.Close()
 
 	_, err := conn.Do("del", key)
-
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
 	return err
 }
 
@@ -132,7 +140,9 @@ func (impl *RedisCacheImpl) HMSet(key string, args ...[]byte) error {
 		vs = append(vs, v)
 	}
 	_, err := conn.Do("hmset", vs...)
-
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
 	return err
 }
 
@@ -148,8 +158,9 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error
 	reply, err := conn.Do("hmget", vs...)
 
 	res := [][]byte{}
-
-	if nil == err && nil != reply {
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
 		rs := reply.([]interface{})
 		for _, r := range rs {
 			if nil == r {
@@ -158,10 +169,47 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error
 				res = append(res, r.([]byte))
 			}
 		}
-	} else {
-		log.Errorf("HMGet err:%s", err.Error())
 	}
 	return res, err
+}
+func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range fields {
+		vs = append(vs, v)
+	}
+	reply, err := conn.Do("hdel", vs...)
+
+	if err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+		return 0, err
+	} else {
+		res := reply.(int64)
+		return res, err
+	}
+}
+
+func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64,error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range members {
+		vs = append(vs, v)
+	}
+	reply, err := conn.Do("srem", vs...)
+
+	if err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+		return 0, err
+	} else {
+		res := reply.(int64)
+		return res, err
+	}
 }
 
 func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
@@ -171,7 +219,27 @@ func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
 	reply, err := conn.Do("hgetall", key)
 
 	res := [][]byte{}
-	if nil == err && nil != reply {
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			res = append(res, r.([]byte))
+		}
+	}
+	return res, err
+}
+func (impl *RedisCacheImpl) HVals(key string) ([][]byte, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	//todo:test nil result
+	reply, err := conn.Do("hvals", key)
+
+	res := [][]byte{}
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
 		rs := reply.([]interface{})
 		for _, r := range rs {
 			res = append(res, r.([]byte))
@@ -185,8 +253,9 @@ func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
 	defer conn.Close()
 
 	reply, err := conn.Do("hexists", key, field)
-
-	if nil == err && nil != reply {
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
 		exists := reply.(int64)
 		return exists > 0, nil
 	}
@@ -204,7 +273,9 @@ func (impl *RedisCacheImpl) SAdd(key string, members ...[]byte) error {
 		vs = append(vs, v)
 	}
 	_, err := conn.Do("sadd", vs...)
-
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
 	return err
 }
 
@@ -215,7 +286,9 @@ func (impl *RedisCacheImpl) SMembers(key string) ([][]byte, error) {
 	reply, err := conn.Do("smembers", key)
 
 	res := [][]byte{}
-	if nil == err && nil != reply {
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
 		rs := reply.([]interface{})
 		for _, r := range rs {
 			res = append(res, r.([]byte))
