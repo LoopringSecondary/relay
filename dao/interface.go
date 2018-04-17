@@ -111,8 +111,8 @@ type RdsService interface {
 	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
 	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
 	GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error)
-	GetMinedTransactionCount(owner string, protocol string, status []types.TxStatus) (int, error)
-	GetMinedTransactionHashs(owner string, protocol string, status []types.TxStatus, limit, offset int) ([]string, error)
+	GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error)
+	GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error)
 	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	RollBackTransaction(from, to int64) error
 

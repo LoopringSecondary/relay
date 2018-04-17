@@ -73,10 +73,9 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]Tran
 
 func (impl *TransactionViewImpl) GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
 	owner := common.HexToAddress(ownerStr)
-	protocol := symbolToProtocol(symbol)
 	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
-
-	number, err := impl.db.GetMinedTransactionCount(owner.Hex(), protocol.Hex(), status)
+	symbol = standardSymbol(symbol)
+	number, err := impl.db.GetMinedTransactionCount(owner.Hex(), symbol, status)
 	if number == 0 || err != nil {
 		return 0, ErrNonTransaction
 	}
@@ -87,10 +86,10 @@ func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, l
 	var list []TransactionJsonResult
 
 	owner := common.HexToAddress(ownerStr)
-	protocol := symbolToProtocol(symbol)
+	symbol = standardSymbol(symbol)
 	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
 
-	hashs, err := impl.db.GetMinedTransactionHashs(owner.Hex(), protocol.Hex(), status, limit, offset)
+	hashs, err := impl.db.GetMinedTransactionHashs(owner.Hex(), symbol, status, limit, offset)
 	if len(hashs) == 0 || err != nil {
 		return list, ErrNonTransaction
 	}
@@ -127,6 +126,7 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 	return list, nil
 }
 
+// 如果transaction包含多条记录,则将protocol不同的记录放到content里
 func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonResult {
 	var list []TransactionJsonResult
 	for _, v := range items {

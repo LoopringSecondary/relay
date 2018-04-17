@@ -52,6 +52,8 @@ type TransactionContent struct {
 }
 
 func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) {
+	symbol = strings.ToUpper(symbol)
+
 	switch tx.Type {
 	case types.TX_TYPE_TRANSFER:
 		if tx.From == owner {
@@ -61,7 +63,7 @@ func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner co
 		}
 
 	case types.TX_TYPE_DEPOSIT:
-		if strings.ToUpper(symbol) == strings.ToUpper(ETH_SYMBOL) {
+		if symbol == ETH_SYMBOL {
 			tx.Type = types.TX_TYPE_CONVERT_OUTCOME
 			tx.Protocol = types.NilAddress
 		} else {
@@ -69,7 +71,7 @@ func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner co
 		}
 
 	case types.TX_TYPE_WITHDRAWAL:
-		if strings.ToUpper(symbol) == strings.ToUpper(ETH_SYMBOL) {
+		if symbol == ETH_SYMBOL {
 			tx.Type = types.TX_TYPE_CONVERT_INCOME
 			tx.Protocol = types.NilAddress
 		} else {
@@ -110,6 +112,10 @@ func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner co
 	}
 }
 
+func standardSymbol(symbol string) string {
+	return strings.ToUpper(symbol)
+}
+
 func protocolToSymbol(address common.Address) string {
 	if address == types.NilAddress {
 		return ETH_SYMBOL
@@ -119,6 +125,7 @@ func protocolToSymbol(address common.Address) string {
 }
 
 func symbolToProtocol(symbol string) common.Address {
+	symbol = standardSymbol(symbol)
 	if symbol == ETH_SYMBOL {
 		return types.NilAddress
 	}

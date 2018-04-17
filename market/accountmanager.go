@@ -338,7 +338,7 @@ func (accountAllowances *AccountAllowances) syncFromEthNode(tokens, spenders []c
 	return nil
 }
 
-func (accountAllowances *AccountAllowances) getOrSave(ttl int64,tokens, spenders []common.Address) error {
+func (accountAllowances *AccountAllowances) getOrSave(ttl int64, tokens, spenders []common.Address) error {
 	if err := accountAllowances.syncFromCache(tokens, spenders); nil != err {
 		if err := accountAllowances.syncFromEthNode(tokens, spenders); nil != err {
 			return err

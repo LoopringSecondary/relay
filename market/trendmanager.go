@@ -19,9 +19,11 @@
 package market
 
 import (
+	"encoding/json"
 	"errors"
-	"github.com/Loopring/relay/dao"
+	"fmt"
 	redisCache "github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
@@ -32,8 +34,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"encoding/json"
-	"fmt"
 )
 
 const (
@@ -93,10 +93,10 @@ type Trend struct {
 }
 
 type TrendManager struct {
-	cacheReady bool
-	proofReady bool
-	rds        dao.RdsService
-	cron       *cron.Cron
+	cacheReady  bool
+	proofReady  bool
+	rds         dao.RdsService
+	cron        *cron.Cron
 	cronJobLock bool
 }
 
@@ -341,7 +341,7 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 
 	for _, data := range fills {
 
-		if data.Side  == "" {
+		if data.Side == "" {
 			data.Side = util.GetSide(data.TokenS, data.TokenB)
 		}
 
@@ -583,7 +583,7 @@ func (t *TrendManager) insertByTrendV2(interval string, start int64, mkt string)
 		amount float64 = 0
 		high   float64 = 0
 		low    float64 = 0
-		open    float64 = 0
+		open   float64 = 0
 	)
 
 	for _, t := range trends {

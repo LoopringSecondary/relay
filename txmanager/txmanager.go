@@ -121,9 +121,15 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	evt := input.(*types.ApprovalEvent)
 
-	var tx types.Transaction
+	var (
+		tx  types.Transaction
+		err error
+	)
 	tx.FromApproveEvent(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
+	tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol)
+	if err != nil {
+		return err
+	}
 	return tm.saveTransaction(&tx)
 }
 

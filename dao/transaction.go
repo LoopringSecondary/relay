@@ -27,6 +27,7 @@ import (
 type Transaction struct {
 	ID          int    `gorm:"column:id;primary_key;"`
 	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
+	Symbol      string `gorm:"column:symbol;type:varchar(20)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
@@ -50,6 +51,7 @@ type Transaction struct {
 // todo(fuk): judge nil fields
 func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Protocol = src.Protocol.Hex()
+	tx.Symbol = src.Symbol
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
 	tx.TxHash = src.TxHash.Hex()
@@ -74,6 +76,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 // convert dao/transaction to types/transaction
 func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Protocol = common.HexToAddress(tx.Protocol)
+	dst.Symbol = tx.Symbol
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.TxHash)
@@ -127,34 +130,35 @@ func (s *RdsServiceImpl) GetPendingTransactions(owner string, status types.TxSta
 	return txs, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, protocol string, status []types.TxStatus) (int, error) {
+func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error) {
 	var (
 		number int
 		err    error
 	)
 
-	err = s.db.Model(&Transaction{}).Select("distinct(tx_hash)").
+	err = s.db.Model(&Transaction{}).
 		Where("tx_from=? or tx_to=?", owner, owner).
-		Where("protocol=?", protocol).
+		Where("symbol=?", symbol).
 		Where("status in (?)", status).
 		Where("fork=?", false).
+		Select("count(distinct(tx_hash))").
 		Count(&number).Error
 
 	return number, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, protocol string, status []types.TxStatus, limit, offset int) ([]string, error) {
+func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error) {
 	var (
 		hashs []string
 		err   error
 	)
 
-	err = s.db.Model(&Transaction{}).Pluck("distinct(tx_hash)", &hashs).
-		Where("from=? or to=?", owner, owner).
-		Where("protocol=?", protocol).
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where("symbol=?", symbol).
 		Where("status in (?)", status).
 		Where("fork=?", false).
-		Limit(limit).Offset(offset).Error
+		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
 
 	return hashs, err
 }

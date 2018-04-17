@@ -42,7 +42,7 @@ func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
 func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
 	view := newTxView()
 	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
-	symbol := "LRC"
+	symbol := "weth"
 	if txs, err := view.GetMinedTransactions(owner, symbol, 3, 0); err != nil {
 		t.Fatalf(err.Error())
 	} else {

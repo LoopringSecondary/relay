@@ -590,7 +590,7 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 		token := Token{}
 		token.Token = symbol
 
-		if allowance,exists := allowances[symbol];exists {
+		if allowance, exists := allowances[symbol]; exists {
 			token.Allowance = allowance.String()
 		} else {
 			token.Allowance = "0"
