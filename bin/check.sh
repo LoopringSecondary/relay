@@ -1,4 +1,6 @@
 #!/bin/sh
+#ValidateService
+
 k=1
 RPC_PORT=8083
 WAIT_SECONDS=20
