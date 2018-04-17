@@ -782,13 +782,23 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 
 	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
+
+		tokenSymbol, marketSymbol := util.UnWrap(orderQuery.Market)
+		market := util.AliasToAddress(marketSymbol)
+		token := util.AliasToAddress(tokenSymbol)
+		switch orderQuery.Side {
+		case util.SideSell:
+			query["token_s"] = market.Hex()
+			query["token_b"] = token.Hex()
+		case util.SideBuy:
+			query["token_s"] = token.Hex()
+			query["token_b"] = market.Hex()
+		default:
+		}
 	}
 
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
-	}
-	if orderQuery.Side != "" {
-		query["side"] = orderQuery.Side
 	}
 
 	pageIndex = orderQuery.PageIndex
