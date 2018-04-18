@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
@@ -85,9 +86,12 @@ type Transaction struct {
 	UpdateTime int64          `json:"updateTime"`
 }
 
-func (tx *Transaction) StatusStr() string {
+func (tx *Transaction) TypeStr() string { return TypeStr(tx.Type) }
+func (tx *Transaction) StatusStr() string { return StatusStr(tx.Status) }
+
+func StatusStr(status TxStatus) string {
 	var ret string
-	switch tx.Status {
+	switch status {
 	case TX_STATUS_PENDING:
 		ret = "pending"
 	case TX_STATUS_SUCCESS:
@@ -117,10 +121,10 @@ func StrToTxStatus(txType string) TxStatus {
 	return ret
 }
 
-func (tx *Transaction) TypeStr() string {
+func TypeStr(typ TxType) string {
 	var ret string
 
-	switch tx.Type {
+	switch typ {
 	case TX_TYPE_APPROVE:
 		ret = "approve"
 	case TX_TYPE_SEND:
@@ -193,13 +197,6 @@ func StrToTxType(status string) TxType {
 	}
 
 	return ret
-}
-
-func (tx *Transaction) IsTransfer() bool {
-	if tx.Type == TX_TYPE_SEND || tx.Type == TX_TYPE_RECEIVE || tx.Type == TX_TYPE_TRANSFER {
-		return true
-	}
-	return false
 }
 
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {

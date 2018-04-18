@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/Loopring/relay/log"
 )
 
 type TransactionView interface {
@@ -100,6 +101,7 @@ func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, l
 	}
 
 	list = assemble(txs, owner)
+	list = combineTransferEvents(list)
 	return list, nil
 }
 
@@ -122,7 +124,7 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 
 	owner := common.HexToAddress(ownerStr)
 	list = assemble(txs, owner)
-
+	list = combineTransferEvents(list)
 	return list, nil
 }
 
@@ -130,7 +132,6 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonResult {
 	var list []TransactionJsonResult
 
-	transferCombine := make(map[common.Hash]map[int64]Transaction) // map[txhash]map[logindex]TransactionJsonResult
 	for _, v := range items {
 		var (
 			tx  types.Transaction
@@ -138,32 +139,12 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 		)
 		v.ConvertUp(&tx)
 		symbol := protocolToSymbol(tx.Protocol)
-		res.fromTransaction(tx, owner, symbol)
-
-		// 1.同一个logIndex进行过滤
-		// 2.同一个tx 如果包含某个transfer 则将其他的transfer打包到content
-		if !tx.IsTransfer() {
+		if err := res.fromTransaction(tx, owner, symbol); err != nil {
 			list = append(list, res)
-			continue
+		} else {
+			log.Debugf(err.Error())
 		}
-
-		if _, ok := txs[res.TxHash]; !ok {
-			if len(txs[res.TxHash]) == 0 {
-				txs[res.TxHash] = make(map[int64]TransactionJsonResult)
-				txs[res.TxHash][res.LogIndex] = res
-			} else {
-				for _, next := range txs[res.TxHash] {
-					if res.LogIndex == next.LogIndex {
-						continue
-					}
-					if res.Symbol == next.Symbol && res.From == next.From && res.To == next.To {
-						txs[res.TxHash][res.LogIndex].Value += res.Value
-					}
-				}
-			}
-		}
-
-		list = append(list, res)
 	}
+
 	return list
 }

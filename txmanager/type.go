@@ -23,10 +23,13 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
+	"encoding/json"
+	"fmt"
 )
 
 const (
 	ETH_SYMBOL = "ETH"
+	WETH_SYMBOL = "WETH"
 )
 
 type TransactionJsonResult struct {
@@ -51,8 +54,49 @@ type TransactionContent struct {
 	OrderHash string `json:"orderHash"`
 }
 
-func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) {
+// 过滤老版本重复数据
+func filter(tx types.Transaction, owner common.Address, symbol string) error {
+	askSymbol := strings.ToUpper(symbol)
+	answerSymbol := strings.ToUpper(tx.Symbol)
+
+	switch tx.Type {
+	case types.TX_TYPE_SEND:
+		if tx.From != owner {
+			return fmt.Errorf("transaction view:filter old version compeated send tx:%s, from:%s, to:%s, owner:%s", tx.TxHash.Hex(), tx.From.Hex(), tx.To.Hex(), owner.Hex())
+		}
+
+	case types.TX_TYPE_RECEIVE:
+		if tx.To != owner {
+			return fmt.Errorf("transaction view:filter old version compeated receive tx:%s, from:%s, to:%s, owner:%s", tx.TxHash.Hex(), tx.From.Hex(), tx.To.Hex(), owner.Hex())
+		}
+
+	case types.TX_TYPE_CONVERT_INCOME:
+		if askSymbol == ETH_SYMBOL && askSymbol != answerSymbol {
+			return fmt.Errorf("transaction view:filter old version compeated weth deposit tx:%s, ask symbol:%s, answer symbol:%s", tx.TxHash, askSymbol, answerSymbol)
+		}
+		if askSymbol == WETH_SYMBOL && askSymbol != answerSymbol {
+			return fmt.Errorf("transaction view:filter old version compeated weth withdrawal tx:%s, ask symbol:%s, answer symbol:%s", tx.TxHash, askSymbol, answerSymbol)
+		}
+
+	case types.TX_TYPE_CONVERT_OUTCOME:
+		if askSymbol == ETH_SYMBOL && askSymbol != answerSymbol {
+			return fmt.Errorf("transaction view:filter old version compeated weth deposit tx:%s, ask symbol:%s, answer symbol:%s", tx.TxHash, askSymbol, answerSymbol)
+		}
+		if askSymbol == WETH_SYMBOL && askSymbol != answerSymbol {
+			return fmt.Errorf("transaction view:filter old version compeated weth withdrawal tx:%s, ask symbol:%s, answer symbol:%s", tx.TxHash, askSymbol, answerSymbol)
+		}
+	}
+
+	return nil
+}
+
+func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) error {
 	symbol = strings.ToUpper(symbol)
+
+	// todo(fuk): 数据稳定后可以删除该代码或者加开关过滤该代码
+	if err := filter(tx, owner, symbol); err != nil {
+		return err
+	}
 
 	switch tx.Type {
 	case types.TX_TYPE_TRANSFER:
@@ -110,6 +154,51 @@ func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner co
 	} else {
 		dst.Value = tx.Value.String()
 	}
+
+	return nil
+}
+
+//// 将同一个tx里的transfer事件按照symbol&from&to进行整合
+//// 1.同一个logIndex进行过滤
+//// 2.同一个tx 如果包含某个transfer 则将其他的transfer打包到content
+func combineTransferEvents(src []TransactionJsonResult, owner common.Address) []TransactionJsonResult {
+	var (
+		list        []TransactionJsonResult
+		singleTxMap = make(map[common.Hash]TransactionJsonResult)
+		contentMap  = make(map[common.Hash][]TransactionJsonResult)
+	)
+
+	for _, current := range src {
+		if _, ok := singleTxMap[current.TxHash]; !ok {
+			singleTxMap[current.TxHash] = current
+			contentMap[current.TxHash] = make([]TransactionJsonResult, 0)
+		} else {
+			contentMap[current.TxHash] = append(contentMap[current.TxHash], current)
+		}
+	}
+
+	for _, tx := range singleTxMap {
+		if len(contentMap[tx.TxHash]) == 0 {
+			list = append(list, tx)
+			continue
+		}
+		var (
+			combineContentArray []TransactionJsonResult
+			combineContentMap = make(map[int64]TransactionJsonResult)
+		)
+		for _, evt := range contentMap[tx.TxHash] {
+			
+		}
+	}
+
+	return list
+}
+
+func (tx *TransactionJsonResult) IsTransfer() bool {
+	if tx.Type == types.TypeStr(types.TX_TYPE_SEND) || tx.Type == types.TypeStr(types.TX_TYPE_RECEIVE) {
+		return true
+	}
+	return false
 }
 
 func standardSymbol(symbol string) string {
