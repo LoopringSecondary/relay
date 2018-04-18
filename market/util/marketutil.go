@@ -340,9 +340,9 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	}
 
 	if GetSide(s, b) == SideBuy {
-		result.Quo(new(big.Rat).SetFrac(as, tokenB.Decimals), new(big.Rat).SetFrac(ab, tokenS.Decimals))
+		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
 	} else {
-		result.Quo(new(big.Rat).SetFrac(ab, tokenS.Decimals), new(big.Rat).SetFrac(as, tokenB.Decimals))
+		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
 	}
 
 	price, _ := result.Float64()

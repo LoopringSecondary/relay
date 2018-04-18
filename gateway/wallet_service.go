@@ -1042,22 +1042,6 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	return rst
 }
 
-func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersion string) {
-	queryDepth := DepthQuery{1, contractVersion, ticker.Market}
-
-	depth, err := w.GetDepth(queryDepth)
-	if err != nil {
-		log.Error("fill depth info failed")
-	} else {
-		if len(depth.Depth.Buy) > 0 {
-			ticker.Buy = depth.Depth.Buy[0][0]
-		}
-		if len(depth.Depth.Sell) > 0 {
-			ticker.Sell = depth.Depth.Sell[0][0]
-		}
-	}
-}
-
 func txStatusToUint8(txType string) int {
 	switch txType {
 	case "pending":

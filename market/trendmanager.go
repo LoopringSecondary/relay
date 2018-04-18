@@ -68,8 +68,8 @@ type Ticker struct {
 	High      float64 `json:"high"`
 	Low       float64 `json:"low"`
 	Last      float64 `json:"last"`
-	Buy       string  `json:"buy"`
-	Sell      string  `json:"sell"`
+	Buy       float64  `json:"buy"`
+	Sell      float64  `json:"sell"`
 	Change    string  `json:"change"`
 }
 
@@ -918,8 +918,15 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 			json.Unmarshal(tickerCache, &tickerMap)
 			tickers = make([]Ticker, 0)
 			for _, v := range tickerMap {
-				v.Buy = strconv.FormatFloat(v.Last, 'f', -1, 64)
-				v.Sell = strconv.FormatFloat(v.Last, 'f', -1, 64)
+				v.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Amount), 64)
+				v.Vol, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Vol), 64)
+				v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+				v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+				v.Open, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Open), 64)
+				v.Close, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Close), 64)
+				v.Last, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+				v.High, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.High), 64)
+				v.Low, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Low), 64)
 				tickers = append(tickers, v)
 			}
 
@@ -970,8 +977,8 @@ func (t *TrendManager) GetTickerByMarket(mkt string) (ticker Ticker, err error) 
 			json.Unmarshal(tickerCache, &tickerMap)
 			for k, v := range tickerMap {
 				if k == mkt {
-					v.Buy = strconv.FormatFloat(v.Last, 'f', -1, 64)
-					v.Sell = strconv.FormatFloat(v.Last, 'f', -1, 64)
+					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+					v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 					return v, err
 				}
 			}
