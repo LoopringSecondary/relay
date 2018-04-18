@@ -129,6 +129,8 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
 func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonResult {
 	var list []TransactionJsonResult
+
+	transferCombine := make(map[common.Hash]map[int64]Transaction) // map[txhash]map[logindex]TransactionJsonResult
 	for _, v := range items {
 		var (
 			tx  types.Transaction
@@ -137,6 +139,30 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 		v.ConvertUp(&tx)
 		symbol := protocolToSymbol(tx.Protocol)
 		res.fromTransaction(tx, owner, symbol)
+
+		// 1.同一个logIndex进行过滤
+		// 2.同一个tx 如果包含某个transfer 则将其他的transfer打包到content
+		if !tx.IsTransfer() {
+			list = append(list, res)
+			continue
+		}
+
+		if _, ok := txs[res.TxHash]; !ok {
+			if len(txs[res.TxHash]) == 0 {
+				txs[res.TxHash] = make(map[int64]TransactionJsonResult)
+				txs[res.TxHash][res.LogIndex] = res
+			} else {
+				for _, next := range txs[res.TxHash] {
+					if res.LogIndex == next.LogIndex {
+						continue
+					}
+					if res.Symbol == next.Symbol && res.From == next.From && res.To == next.To {
+						txs[res.TxHash][res.LogIndex].Value += res.Value
+					}
+				}
+			}
+		}
+
 		list = append(list, res)
 	}
 	return list

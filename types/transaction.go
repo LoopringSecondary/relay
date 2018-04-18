@@ -195,6 +195,13 @@ func StrToTxType(status string) TxType {
 	return ret
 }
 
+func (tx *Transaction) IsTransfer() bool {
+	if tx.Type == TX_TYPE_SEND || tx.Type == TX_TYPE_RECEIVE || tx.Type == TX_TYPE_TRANSFER {
+		return true
+	}
+	return false
+}
+
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.From = src.From
