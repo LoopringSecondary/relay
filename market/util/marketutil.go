@@ -34,7 +34,6 @@ import (
 	"strings"
 )
 
-const WeiToEther = 1e18
 const SideSell    = "sell"
 const SideBuy     = "buy"
 
@@ -47,14 +46,10 @@ var MarketBaseOrder = map[string]uint8{"BAR": 5, "LRC": 10, "WETH": 20, "DAI": 3
 
 type TokenStandard uint8
 
-const (
-	TOKEN_STANDARD_ERC20 TokenStandard = iota
-	TOKEN_STANDARD_ERC223
-)
-
-func StringToFloat(amount string) float64 {
+func StringToFloat(token string, amount string) float64 {
 	rst, _ := new(big.Rat).SetString(amount)
-	weiRat := new(big.Rat).SetInt64(WeiToEther)
+	ts, _ := AddressToToken(common.HexToAddress(token))
+	weiRat := new(big.Rat).SetInt64(ts.Decimals.Int64())
 	rst.Quo(rst, weiRat)
 	result, _ := rst.Float64()
 	return result

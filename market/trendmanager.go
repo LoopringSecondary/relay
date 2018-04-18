@@ -346,11 +346,11 @@ func calculateTicker(market string, fills []dao.FillEvent, trends []Trend, now t
 		}
 
 		if data.Side == util.SideBuy {
-			vol += util.StringToFloat(data.AmountS)
-			amount += util.StringToFloat(data.AmountB)
+			vol += util.StringToFloat(data.TokenS, data.AmountS)
+			amount += util.StringToFloat(data.TokenB, data.AmountB)
 		} else {
-			vol += util.StringToFloat(data.AmountB)
-			amount += util.StringToFloat(data.AmountS)
+			vol += util.StringToFloat(data.TokenB, data.AmountB)
+			amount += util.StringToFloat(data.TokenS, data.AmountS)
 		}
 
 		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
@@ -526,11 +526,11 @@ func (t *TrendManager) insertMinIntervalTrend(interval string, start int64, mkt 
 		}
 
 		if data.Side == util.SideBuy {
-			vol += util.StringToFloat(data.AmountS)
-			amount += util.StringToFloat(data.AmountB)
+			vol += util.StringToFloat(data.TokenS, data.AmountS)
+			amount += util.StringToFloat(data.TokenB, data.AmountB)
 		} else {
-			vol += util.StringToFloat(data.AmountB)
-			amount += util.StringToFloat(data.AmountS)
+			vol += util.StringToFloat(data.TokenB, data.AmountB)
+			amount += util.StringToFloat(data.TokenS, data.AmountS)
 		}
 
 		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
@@ -736,11 +736,11 @@ func (t *TrendManager) ScheduleUpdate() {
 						}
 
 						if data.Side == util.SideBuy {
-							vol += util.StringToFloat(data.AmountS)
-							amount += util.StringToFloat(data.AmountB)
+							vol += util.StringToFloat(data.TokenS, data.AmountS)
+							amount += util.StringToFloat(data.TokenB, data.AmountB)
 						} else {
-							vol += util.StringToFloat(data.AmountB)
-							amount += util.StringToFloat(data.AmountS)
+							vol += util.StringToFloat(data.TokenB, data.AmountB)
+							amount += util.StringToFloat(data.TokenS, data.AmountS)
 						}
 
 						price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
@@ -840,11 +840,11 @@ func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend T
 		}
 
 		if data.Side == util.SideBuy {
-			vol += util.StringToFloat(data.AmountS)
-			amount += util.StringToFloat(data.AmountB)
+			vol += util.StringToFloat(data.TokenS, data.AmountS)
+			amount += util.StringToFloat(data.TokenB, data.AmountB)
 		} else {
-			vol += util.StringToFloat(data.AmountB)
-			amount += util.StringToFloat(data.AmountS)
+			vol += util.StringToFloat(data.TokenB, data.AmountB)
+			amount += util.StringToFloat(data.TokenS, data.AmountS)
 		}
 
 		price := util.CalculatePrice(data.AmountS, data.AmountB, data.TokenS, data.TokenB)
