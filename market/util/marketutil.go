@@ -34,8 +34,8 @@ import (
 	"strings"
 )
 
-const SideSell    = "sell"
-const SideBuy     = "buy"
+const SideSell = "sell"
+const SideBuy = "buy"
 
 type TokenPair struct {
 	TokenS common.Address

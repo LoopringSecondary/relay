@@ -201,7 +201,7 @@ func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 	}
 }
 
-func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64,error) {
+func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
 
