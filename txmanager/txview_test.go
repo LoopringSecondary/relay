@@ -47,7 +47,7 @@ func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
 		t.Fatalf(err.Error())
 	} else {
 		for k, v := range txs {
-			t.Logf("%d->%s", k, v.TxHash.Hex())
+			t.Logf("%d ------> txhash:%s, symbol:%s, from:%s, to:%s, type:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type)
 		}
 	}
 }

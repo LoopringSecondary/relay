@@ -21,9 +21,9 @@ package txmanager
 import (
 	"errors"
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/log"
 )
 
 type TransactionView interface {
@@ -101,7 +101,7 @@ func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, l
 	}
 
 	list = assemble(txs, owner)
-	list = combineTransferEvents(list)
+	//list = collector(list)
 	return list, nil
 }
 
@@ -124,7 +124,7 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 
 	owner := common.HexToAddress(ownerStr)
 	list = assemble(txs, owner)
-	list = combineTransferEvents(list)
+	//list = collector(list)
 	return list, nil
 }
 
@@ -139,11 +139,15 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 		)
 		v.ConvertUp(&tx)
 		symbol := protocolToSymbol(tx.Protocol)
-		if err := res.fromTransaction(tx, owner, symbol); err != nil {
-			list = append(list, res)
-		} else {
+
+		// todo(fuk): 数据稳定后可以删除该代码或者加开关过滤该代码
+		if err := filter(&tx, owner, symbol); err != nil {
 			log.Debugf(err.Error())
+			continue
 		}
+
+		res.fromTransaction(&tx, owner, symbol)
+		list = append(list, res)
 	}
 
 	return list

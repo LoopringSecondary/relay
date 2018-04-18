@@ -19,16 +19,16 @@
 package txmanager
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"strings"
-	"encoding/json"
-	"fmt"
 )
 
 const (
-	ETH_SYMBOL = "ETH"
+	ETH_SYMBOL  = "ETH"
 	WETH_SYMBOL = "WETH"
 )
 
@@ -49,13 +49,26 @@ type TransactionJsonResult struct {
 	Nonce       string             `json:"nonce"`
 }
 
+func (tx1 *TransactionJsonResult) addTransferValue(tx2 *TransactionJsonResult) {
+	v1, _ := new(big.Int).SetString(tx1.Value, 0)
+	v2, _ := new(big.Int).SetString(tx2.Value, 0)
+	tx1.Value = new(big.Int).Add(v1, v2).String()
+}
+
+func (tx *TransactionJsonResult) IsTransfer() bool {
+	if tx.Type == types.TypeStr(types.TX_TYPE_SEND) || tx.Type == types.TypeStr(types.TX_TYPE_RECEIVE) {
+		return true
+	}
+	return false
+}
+
 type TransactionContent struct {
 	Market    string `json:"market"`
 	OrderHash string `json:"orderHash"`
 }
 
 // 过滤老版本重复数据
-func filter(tx types.Transaction, owner common.Address, symbol string) error {
+func filter(tx *types.Transaction, owner common.Address, symbol string) error {
 	askSymbol := strings.ToUpper(symbol)
 	answerSymbol := strings.ToUpper(tx.Symbol)
 
@@ -90,13 +103,8 @@ func filter(tx types.Transaction, owner common.Address, symbol string) error {
 	return nil
 }
 
-func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner common.Address, symbol string) error {
+func (dst *TransactionJsonResult) fromTransaction(tx *types.Transaction, owner common.Address, symbol string) {
 	symbol = strings.ToUpper(symbol)
-
-	// todo(fuk): 数据稳定后可以删除该代码或者加开关过滤该代码
-	if err := filter(tx, owner, symbol); err != nil {
-		return err
-	}
 
 	switch tx.Type {
 	case types.TX_TYPE_TRANSFER:
@@ -154,52 +162,70 @@ func (dst *TransactionJsonResult) fromTransaction(tx types.Transaction, owner co
 	} else {
 		dst.Value = tx.Value.String()
 	}
-
-	return nil
 }
 
+//type MultiTransferContent struct {
+//	symbol string
+//	send []TransactionJsonResult
+//	receive []TransactionJsonResult
+//}
+//
 //// 将同一个tx里的transfer事件按照symbol&from&to进行整合
 //// 1.同一个logIndex进行过滤
 //// 2.同一个tx 如果包含某个transfer 则将其他的transfer打包到content
-func combineTransferEvents(src []TransactionJsonResult, owner common.Address) []TransactionJsonResult {
-	var (
-		list        []TransactionJsonResult
-		singleTxMap = make(map[common.Hash]TransactionJsonResult)
-		contentMap  = make(map[common.Hash][]TransactionJsonResult)
-	)
-
-	for _, current := range src {
-		if _, ok := singleTxMap[current.TxHash]; !ok {
-			singleTxMap[current.TxHash] = current
-			contentMap[current.TxHash] = make([]TransactionJsonResult, 0)
-		} else {
-			contentMap[current.TxHash] = append(contentMap[current.TxHash], current)
-		}
-	}
-
-	for _, tx := range singleTxMap {
-		if len(contentMap[tx.TxHash]) == 0 {
-			list = append(list, tx)
-			continue
-		}
-		var (
-			combineContentArray []TransactionJsonResult
-			combineContentMap = make(map[int64]TransactionJsonResult)
-		)
-		for _, evt := range contentMap[tx.TxHash] {
-			
-		}
-	}
-
-	return list
-}
-
-func (tx *TransactionJsonResult) IsTransfer() bool {
-	if tx.Type == types.TypeStr(types.TX_TYPE_SEND) || tx.Type == types.TypeStr(types.TX_TYPE_RECEIVE) {
-		return true
-	}
-	return false
-}
+//func collector(src []TransactionJsonResult, owner common.Address, askSymbol string) []TransactionJsonResult {
+//	var (
+//		list         []TransactionJsonResult
+//		txCombineMap = make(map[common.Hash]map[string][]TransactionJsonResult)
+//		askSymbol    = standardSymbol(askSymbol)
+//	)
+//
+//	for _, current := range src {
+//		if _, ok := txCombineMap[current.TxHash]; !ok {
+//			txCombineMap[current.TxHash] = make(map[string][]TransactionJsonResult)
+//		}
+//		if _, ok := txCombineMap[current.TxHash][current.Symbol]; !ok {
+//			txCombineMap[current.TxHash][current.Symbol] = make([]TransactionJsonResult, 0)
+//		}
+//		txCombineMap[current.TxHash][current.Symbol] = append(txCombineMap[current.TxHash][current.Symbol], current)
+//	}
+//
+//	for _, symbolCombineMap := range txCombineMap {
+//		for symbol, resArr := range symbolCombineMap {
+//
+//			var (
+//				res TransactionJsonResult
+//				send = make(map[common.Address]TransactionJsonResult)
+//				recv = make(map[common.Address]TransactionJsonResult)
+//			)
+//
+//			for _, tx := range resArr {
+//				if tx.Type == types.TypeStr(types.TX_TYPE_SEND) && owner == tx.From{
+//					if _, ok := send[tx.To]; !ok {
+//						send[tx.To] = tx
+//					} else {
+//						send[tx.To].addTransferValue(&tx)
+//					}
+//				}
+//				if tx.Type == types.TypeStr(types.TX_TYPE_RECEIVE) && owner == tx.To {
+//					if _, ok := recv[tx.From]; !ok {
+//						recv[tx.From] = tx
+//					} else {
+//						recv[tx.From].addTransferValue(&tx)
+//					}
+//				}
+//			}
+//
+//			if symbol == askSymbol {
+//				res =
+//			}
+//		}
+//
+//		list = append(list, all...)
+//	}
+//
+//	return list
+//}
 
 func standardSymbol(symbol string) string {
 	return strings.ToUpper(symbol)

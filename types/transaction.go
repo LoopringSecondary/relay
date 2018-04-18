@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
@@ -86,7 +85,7 @@ type Transaction struct {
 	UpdateTime int64          `json:"updateTime"`
 }
 
-func (tx *Transaction) TypeStr() string { return TypeStr(tx.Type) }
+func (tx *Transaction) TypeStr() string   { return TypeStr(tx.Type) }
 func (tx *Transaction) StatusStr() string { return StatusStr(tx.Status) }
 
 func StatusStr(status TxStatus) string {

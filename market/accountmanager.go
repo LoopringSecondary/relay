@@ -154,7 +154,7 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 			if len(balancesData) > 0 {
 				idx := 0
 				for idx < len(balancesData) {
-					if err := accountBalances.applyData(balancesData[idx], balancesData[idx +1]);nil != err {
+					if err := accountBalances.applyData(balancesData[idx], balancesData[idx+1]); nil != err {
 						return err
 					}
 					idx = idx + 2
