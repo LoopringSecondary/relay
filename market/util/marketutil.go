@@ -199,9 +199,9 @@ func Initialize(options config.MarketOptions, contracts map[string]string) {
 
 	// StartRefreshCron(rds)
 
-	tokenRegisterWatcher := &eventemitter.Watcher{false, TokenRegister}
+	//tokenRegisterWatcher := &eventemitter.Watcher{false, TokenRegister}
 	tokenUnRegisterWatcher := &eventemitter.Watcher{false, TokenUnRegister}
-	eventemitter.On(eventemitter.TokenRegistered, tokenRegisterWatcher)
+	//eventemitter.On(eventemitter.TokenRegistered, tokenRegisterWatcher)
 	eventemitter.On(eventemitter.TokenUnRegistered, tokenUnRegisterWatcher)
 }
 

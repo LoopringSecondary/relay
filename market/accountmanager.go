@@ -111,19 +111,20 @@ func (accountBalances AccountBalances) applyData(cachedFieldData, balanceData []
 	if len(balanceData) <= 0 {
 		return errors.New("not in cache")
 	} else {
-		key := parseCacheField(cachedFieldData)
+		tokenAddress := parseCacheField(cachedFieldData)
 		balance := Balance{}
 		if err := json.Unmarshal(balanceData, &balance); nil != err {
 			log.Errorf("accountmanager, syncFromCache err:%s", err.Error())
 			return err
 		} else {
-			accountBalances.Balances[key] = balance
+			accountBalances.Balances[tokenAddress] = balance
 		}
 		return nil
 	}
 }
 
 func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) error {
+	missedTokens := []common.Address{}
 	if len(tokens) > 0 {
 		tokensBytes := [][]byte{}
 		for _, token := range tokens {
@@ -134,8 +135,12 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 		} else {
 			if len(balancesData) > 0 {
 				for idx, data := range balancesData {
-					if err := accountBalances.applyData(tokensBytes[idx], data); nil != err {
-						return err
+					if len(data) > 0 {
+						if err := accountBalances.applyData(tokensBytes[idx], data); nil != err {
+							missedTokens = append(missedTokens, tokens[idx])
+						}
+					} else {
+						missedTokens = append(missedTokens, tokens[idx])
 					}
 				}
 			} else {
@@ -147,10 +152,12 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 			return err
 		} else {
 			if len(balancesData) > 0 {
-				i := 0
-				for i < len(balancesData) {
-					accountBalances.applyData(balancesData[i], balancesData[i+1])
-					i = i + 2
+				idx := 0
+				for idx < len(balancesData) {
+					if err := accountBalances.applyData(balancesData[idx], balancesData[idx +1]);nil != err {
+						return err
+					}
+					idx = idx + 2
 				}
 			} else {
 				return errors.New("this address not in cache")
@@ -590,6 +597,8 @@ func (a *AccountManager) GetAllowanceWithSymbolResult(owner, spender common.Addr
 				}
 			}
 		}
+	} else {
+		log.Errorf("err:%s", err.Error())
 	}
 
 	return res, err
