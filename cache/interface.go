@@ -47,7 +47,7 @@ type Cache interface {
 
 	SAdd(key string, ttl int64, members ...[]byte) error
 
-	SRem(key string, members ...[]byte) (int64,error)
+	SRem(key string, members ...[]byte) (int64, error)
 
 	SMembers(key string) ([][]byte, error)
 }
@@ -90,7 +90,7 @@ func SMembers(key string) ([][]byte, error) {
 	return cache.SMembers(key)
 }
 
-func SRem(key string, members ...[]byte) (int64,error) {
+func SRem(key string, members ...[]byte) (int64, error) {
 	return cache.SRem(key, members...)
 }
 

@@ -608,7 +608,7 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 		token := Token{}
 		token.Token = symbol
 
-		if allowance,exists := allowances[symbol];exists {
+		if allowance, exists := allowances[symbol]; exists {
 			token.Allowance = allowance.String()
 		} else {
 			token.Allowance = "0"
@@ -788,11 +788,12 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		token := util.AliasToAddress(tokenSymbol)
 		switch orderQuery.Side {
 		case util.SideSell:
-			query["token_s"] = market.Hex()
-			query["token_b"] = token.Hex()
-		case util.SideBuy:
 			query["token_s"] = token.Hex()
 			query["token_b"] = market.Hex()
+
+		case util.SideBuy:
+			query["token_b"] = token.Hex()
+			query["token_s"] = market.Hex()
 		default:
 		}
 	}
