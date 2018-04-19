@@ -114,13 +114,13 @@ func TestRedisCacheImpl_HMSet(t *testing.T) {
 	cache.NewCache(test.Cfg().Redis)
 
 	start := time.Now().UnixNano()
-	for i := 0 ;i < 100000; i++ {
-		if err := cache.HMSet("test_hmset", []byte("balance_" + strconv.Itoa(i)),[]byte(strconv.Itoa(i)));nil != err {
+	for i := 0; i < 100000; i++ {
+		if err := cache.HMSet("test_hmset", []byte("balance_"+strconv.Itoa(i)), []byte(strconv.Itoa(i))); nil != err {
 			t.Errorf(err.Error())
 		}
 	}
 	end := time.Now().UnixNano()
-	t.Logf("time1: %d", (end-start))
+	t.Logf("time1: %d", (end - start))
 
 	cache.HGetAll("test1")
 

@@ -26,10 +26,10 @@ import (
 
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
-	marketLib "github.com/Loopring/relay/market"
-	marketUtilLib "github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	marketLib "github.com/Loopring/relay/market"
+	marketUtilLib "github.com/Loopring/relay/market/util"
 )
 
 /**
@@ -123,7 +123,7 @@ func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, s
 			availableAmount = allowanceAmount
 		}
 
-		matchedAmountS,_ := FilledAmountS(address, tokenAddress)
+		matchedAmountS, _ := FilledAmountS(address, tokenAddress)
 		availableAmount.Sub(availableAmount, matchedAmountS)
 
 		return availableAmount, nil

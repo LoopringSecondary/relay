@@ -8,13 +8,13 @@ import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/gateway"
 	"github.com/Loopring/relay/market"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/usermanager"
 	common2 "github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/Loopring/relay/market/util"
 	"time"
 )
 
@@ -26,7 +26,7 @@ func TestGetPow(t *testing.T) {
 
 	globalConfig := test.LoadConfig()
 
-	fmt.Println(util.CalculatePrice("23399999899980370", "2027934200000000" , "0xfe5aFA7BfF3394359af2D277aCc9f00065CdBe2f", "0x639687b7f8501f174356D3aCb1972f749021CCD0"))
+	fmt.Println(util.CalculatePrice("23399999899980370", "2027934200000000", "0xfe5aFA7BfF3394359af2D277aCc9f00065CdBe2f", "0x639687b7f8501f174356D3aCb1972f749021CCD0"))
 	fmt.Println(util.GetSide("0xfe5aFA7BfF3394359af2D277aCc9f00065CdBe2f", "0x639687b7f8501f174356D3aCb1972f749021CCD0"))
 
 	rds := dao.NewRdsService(globalConfig.Mysql)
@@ -60,11 +60,11 @@ func TestGetPow(t *testing.T) {
 	ore.Status = types.TX_STATUS_SUCCESS
 	ore.AmountS = big.NewInt(23399999899980370)
 	ore.AmountB = big.NewInt(2027934200000000)
-	ore.FillIndex  = big.NewInt(1)
+	ore.FillIndex = big.NewInt(1)
 	//trendm.ProofRead()
 	time.Sleep(time.Minute * 10)
 	trendm.HandleOrderFilled(ore)
-	fmt.Println(ws.GetTrend(gateway.TrendQuery{Market:"LRC-WETH", Interval:"1Hr"}))
+	fmt.Println(ws.GetTrend(gateway.TrendQuery{Market: "LRC-WETH", Interval: "1Hr"}))
 	//fmt.Println(ws.GetTrend(gateway.TrendQuery{Market:"LRC-WETH", Interval:"2Hr"}))
 	fmt.Println(ws.GetTicker(gateway.SingleContractVersion{"v1.4"}))
 

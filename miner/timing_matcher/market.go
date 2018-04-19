@@ -219,7 +219,7 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 func (market *Market) reduceRemainedAmountBeforeMatch(orderState *types.OrderState) {
 	orderHash := orderState.RawOrder.Hash
 
-	if amountS, amountB,err := DealtAmount(orderHash);nil != err {
+	if amountS, amountB, err := DealtAmount(orderHash); nil != err {
 		log.Errorf("err:%s", err.Error())
 	} else {
 		log.Debugf("reduceRemainedAmountBeforeMatch:%s, %s, %s", orderState.RawOrder.Owner.Hex(), amountS.String(), amountB.String())

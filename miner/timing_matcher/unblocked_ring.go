@@ -19,13 +19,13 @@
 package timing_matcher
 
 import (
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/types"
-	"github.com/Loopring/relay/cache"
-	"strings"
 	"encoding/json"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+	"strings"
 )
 
 //orderhash ringhash matchedstate
@@ -34,18 +34,17 @@ import (
 //round orderhash
 const (
 	OrderHashPrefix = "matcher_orderhash_"
-	OwnerPrefix = "matcher_owner_"
-	RingHashPrefix = "matcher_ringhash_"
-	RoundPrefix = "matcher_round_"
-	cacheTtl = 86400 * 2
+	OwnerPrefix     = "matcher_owner_"
+	RingHashPrefix  = "matcher_ringhash_"
+	RoundPrefix     = "matcher_round_"
+	cacheTtl        = 86400 * 2
 )
 
 type OrderMatchedState struct {
 	//ringHash      common.Hash `json:"ringhash"`
-	FilledAmountS *types.Rat    `json:"filled_amount_s"`
-	FilledAmountB *types.Rat    `json:"filled_amount_b"`
+	FilledAmountS *types.Rat `json:"filled_amount_s"`
+	FilledAmountB *types.Rat `json:"filled_amount_b"`
 }
-
 
 type ringCache struct {
 	ringhash common.Hash
@@ -55,11 +54,11 @@ func (c ringCache) cacheKey() string {
 	return RingHashPrefix + strings.ToLower(c.ringhash.Hex())
 }
 
-func (c ringCache) cacheFiled(orderhash common.Hash, owner,token common.Address) []byte {
+func (c ringCache) cacheFiled(orderhash common.Hash, owner, token common.Address) []byte {
 	return append(append(orderhash.Bytes(), owner.Bytes()...), token.Bytes()...)
 }
 
-func (c ringCache) parseFiled(data []byte) (orderhash common.Hash, owner,token common.Address) {
+func (c ringCache) parseFiled(data []byte) (orderhash common.Hash, owner, token common.Address) {
 	return common.BytesToHash(data[0:32]), common.BytesToAddress(data[32:52]), common.BytesToAddress(data[52:72])
 }
 
@@ -68,7 +67,7 @@ func (c ringCache) save(fields ...[]byte) error {
 }
 
 type ownerCache struct {
-	owner common.Address
+	owner  common.Address
 	tokenS common.Address
 }
 
@@ -80,12 +79,12 @@ func (c ownerCache) cacheField(orderhash common.Hash) []byte {
 	return []byte(strings.ToLower(orderhash.Hex()))
 }
 
-func (c ownerCache) parseField(data []byte) common.Hash  {
+func (c ownerCache) parseField(data []byte) common.Hash {
 	return common.HexToHash(string(data))
 }
 
 func (c ownerCache) removeOrder(orderhash common.Hash) error {
-	_,err := cache.SRem(c.cacheKey(), c.cacheField(orderhash))
+	_, err := cache.SRem(c.cacheKey(), c.cacheField(orderhash))
 	return err
 }
 
@@ -95,10 +94,10 @@ func (c ownerCache) save(orderhash common.Hash) error {
 
 func (c ownerCache) orderhashes() ([]common.Hash, error) {
 	hashes := []common.Hash{}
-	if hashesData,err := cache.SMembers(c.cacheKey());nil != err {
+	if hashesData, err := cache.SMembers(c.cacheKey()); nil != err {
 		return hashes, err
 	} else {
-		for _,data := range hashesData {
+		for _, data := range hashesData {
 			orderhash := c.parseField(data)
 			hashes = append(hashes, orderhash)
 		}
@@ -119,12 +118,12 @@ func (c orderCache) cacheField(ringhash common.Hash) []byte {
 }
 
 func (c orderCache) removeRinghash(ringhash common.Hash) error {
-	_,err := cache.HDel(c.cacheKey(), c.cacheField(ringhash))
+	_, err := cache.HDel(c.cacheKey(), c.cacheField(ringhash))
 	return err
 }
 
 func (c orderCache) save(ringhash common.Hash, matchedState *OrderMatchedState) error {
-	if matchedData,err := json.Marshal(matchedState); nil != err {
+	if matchedData, err := json.Marshal(matchedState); nil != err {
 		return err
 	} else {
 		return cache.HMSet(c.cacheKey(), cacheTtl, []byte(strings.ToLower(ringhash.Hex())), matchedData)
@@ -133,29 +132,29 @@ func (c orderCache) save(ringhash common.Hash, matchedState *OrderMatchedState) 
 
 func (c orderCache) matchedStates() ([]*OrderMatchedState, error) {
 	states := []*OrderMatchedState{}
-	if filledData,err := cache.HVals(c.cacheKey()); nil != err {
+	if filledData, err := cache.HVals(c.cacheKey()); nil != err {
 		log.Errorf("matchedStates orderhash:%s, err:%s", c.orderhash.Hex(), err.Error())
 		return states, err
 	} else {
-		for _,data := range filledData {
+		for _, data := range filledData {
 			matchedState := &OrderMatchedState{}
 			if err := json.Unmarshal(data, matchedState); nil == err {
 				states = append(states, matchedState)
 			} else {
-				log.Errorf("matchedStates orderhash:%s, err:%s",c.orderhash.Hex(), err.Error())
+				log.Errorf("matchedStates orderhash:%s, err:%s", c.orderhash.Hex(), err.Error())
 			}
 		}
 	}
-	return states,nil
+	return states, nil
 }
-func (c orderCache) dealtAmount() (dealtAmountS *big.Rat,dealtAmountB *big.Rat, err error) {
+func (c orderCache) dealtAmount() (dealtAmountS *big.Rat, dealtAmountB *big.Rat, err error) {
 	dealtAmountS = big.NewRat(int64(0), int64(1))
 	dealtAmountB = big.NewRat(int64(0), int64(1))
-	if states,err := c.matchedStates(); nil != err {
+	if states, err := c.matchedStates(); nil != err {
 		log.Errorf("orderhash:%s err:%s", c.orderhash.Hex(), err.Error())
 		return dealtAmountS, dealtAmountB, err
 	} else {
-		for _,state := range states {
+		for _, state := range states {
 			dealtAmountS.Add(dealtAmountS, state.FilledAmountS.BigRat())
 			dealtAmountB.Add(dealtAmountB, state.FilledAmountB.BigRat())
 		}
@@ -168,11 +167,11 @@ func RemoveMinedRing(ringhash common.Hash) error {
 	c.ringhash = ringhash
 
 	cacheKey := c.cacheKey()
-	if data,err := cache.SMembers(cacheKey);nil != err {
+	if data, err := cache.SMembers(cacheKey); nil != err {
 		return err
 	} else {
-		for _,d := range data {
-			orderhash,owner,tokenS := c.parseFiled(d)
+		for _, d := range data {
+			orderhash, owner, tokenS := c.parseFiled(d)
 			ordCache := orderCache{}
 			ordCache.orderhash = orderhash
 			if err := ordCache.removeRinghash(ringhash); nil != err {
@@ -199,7 +198,7 @@ func AddMinedRing(ringState *types.RingSubmitInfo) {
 	ringC := ringCache{}
 	ringC.ringhash = ringState.RawRing.Hash
 	ringFieldData := [][]byte{}
-	for _,filledOrder := range ringState.RawRing.Orders {
+	for _, filledOrder := range ringState.RawRing.Orders {
 		orderhash := filledOrder.OrderState.RawOrder.Hash
 		owner := filledOrder.OrderState.RawOrder.Owner
 		tokenS := filledOrder.OrderState.RawOrder.TokenS
@@ -226,13 +225,13 @@ func FilledAmountS(owner, tokenS common.Address) (filledAmountS *big.Rat, err er
 	ownerC.owner = owner
 	ownerC.tokenS = tokenS
 
-	if orderhashes,err := ownerC.orderhashes(); nil != err {
+	if orderhashes, err := ownerC.orderhashes(); nil != err {
 		return filledAmountS, err
 	} else {
-		for _,hash := range orderhashes {
+		for _, hash := range orderhashes {
 			ordC := orderCache{}
 			ordC.orderhash = hash
-			if dealtAmountS,_,err := ordC.dealtAmount(); nil == err {
+			if dealtAmountS, _, err := ordC.dealtAmount(); nil == err {
 				filledAmountS.Add(filledAmountS, dealtAmountS)
 			} else {
 				log.Errorf("FilledAmount err:%s", err.Error())
@@ -243,9 +242,8 @@ func FilledAmountS(owner, tokenS common.Address) (filledAmountS *big.Rat, err er
 	}
 }
 
-func DealtAmount(orderhash common.Hash) (dealtAmountS, dealtAmountB *big.Rat,err error) {
+func DealtAmount(orderhash common.Hash) (dealtAmountS, dealtAmountB *big.Rat, err error) {
 	ordC := orderCache{}
 	ordC.orderhash = orderhash
 	return ordC.dealtAmount()
 }
-

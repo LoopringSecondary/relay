@@ -154,7 +154,7 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 			if len(balancesData) > 0 {
 				idx := 0
 				for idx < len(balancesData) {
-					if err := accountBalances.applyData(balancesData[idx], balancesData[idx +1]);nil != err {
+					if err := accountBalances.applyData(balancesData[idx], balancesData[idx+1]); nil != err {
 						return err
 					}
 					idx = idx + 2
@@ -345,7 +345,7 @@ func (accountAllowances *AccountAllowances) syncFromEthNode(tokens, spenders []c
 	return nil
 }
 
-func (accountAllowances *AccountAllowances) getOrSave(ttl int64,tokens, spenders []common.Address) error {
+func (accountAllowances *AccountAllowances) getOrSave(ttl int64, tokens, spenders []common.Address) error {
 	if err := accountAllowances.syncFromCache(tokens, spenders); nil != err {
 		if err := accountAllowances.syncFromEthNode(tokens, spenders); nil != err {
 			return err
