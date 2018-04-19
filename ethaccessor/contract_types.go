@@ -417,7 +417,7 @@ type ProtocolAddress struct {
 
 	TokenRegistryAddress common.Address
 
-	NameRegistryAddress common.Address
+	//NameRegistryAddress common.Address
 
 	DelegateAddress common.Address
 }

@@ -145,7 +145,6 @@ type ProtocolOptions struct {
 	ImplAbi          string
 	DelegateAbi      string
 	TokenRegistryAbi string
-	NameRegistryAbi  string
 }
 
 type CommonOptions struct {

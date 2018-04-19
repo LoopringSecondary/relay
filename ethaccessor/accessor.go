@@ -246,10 +246,10 @@ func TokenRegistryAbi() *abi.ABI {
 func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
 }
-
-func NameRegistryAbi() *abi.ABI {
-	return accessor.NameRegistryAbi
-}
+//
+//func NameRegistryAbi() *abi.ABI {
+//	return accessor.NameRegistryAbi
+//}
 
 func Initialize(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) error {
 	var err error
@@ -292,11 +292,11 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		accessor.TokenRegistryAbi = tokenRegistryAbi
 	}
 
-	if nameRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.NameRegistryAbi); nil != err {
-		return err
-	} else {
-		accessor.NameRegistryAbi = nameRegistryAbi
-	}
+	//if nameRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.NameRegistryAbi); nil != err {
+	//	return err
+	//} else {
+	//	accessor.NameRegistryAbi = nameRegistryAbi
+	//}
 
 	for version, address := range commonOptions.ProtocolImpl.Address {
 		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
@@ -320,12 +320,12 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			log.Debugf("version:%s, contract:%s, delegateAddress:%s", version, address, addr)
 			impl.DelegateAddress = common.HexToAddress(addr)
 		}
-		if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
-			return err
-		} else {
-			log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
-			impl.NameRegistryAddress = common.HexToAddress(addr)
-		}
+		//if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
+		//	return err
+		//} else {
+		//	log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
+		//	impl.NameRegistryAddress = common.HexToAddress(addr)
+		//}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 		accessor.DelegateAddresses[impl.DelegateAddress] = true
 	}
