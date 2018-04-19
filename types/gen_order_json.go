@@ -19,7 +19,6 @@ func (o Order) MarshalJSON() ([]byte, error) {
 		DelegateAddress       common.Address             `json:"delegateAddress" gencodec:"required"`
 		AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
-		WalletId              *Big                       `json:"walletId" gencodec:"required"`
 		WalletAddress         common.Address             `json:"walletAddress" gencodec:"required"`
 		TokenS                common.Address             `json:"tokenS" gencodec:"required"`
 		TokenB                common.Address             `json:"tokenB" gencodec:"required"`
@@ -46,7 +45,6 @@ func (o Order) MarshalJSON() ([]byte, error) {
 	enc.DelegateAddress = o.DelegateAddress
 	enc.AuthAddr = o.AuthAddr
 	enc.AuthPrivateKey = o.AuthPrivateKey
-	enc.WalletId = (*Big)(o.WalletId)
 	enc.WalletAddress = o.WalletAddress
 	enc.TokenS = o.TokenS
 	enc.TokenB = o.TokenB
@@ -76,7 +74,6 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		DelegateAddress       *common.Address             `json:"delegateAddress" gencodec:"required"`
 		AuthAddr              *common.Address             `json:"authAddr" gencodec:"required"`
 		AuthPrivateKey        *crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
-		WalletId              *Big                        `json:"walletId" gencodec:"required"`
 		WalletAddress         *common.Address             `json:"walletAddress" gencodec:"required"`
 		TokenS                *common.Address             `json:"tokenS" gencodec:"required"`
 		TokenB                *common.Address             `json:"tokenB" gencodec:"required"`
@@ -118,10 +115,6 @@ func (o *Order) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'authPrivateKey' for Order")
 	}
 	o.AuthPrivateKey = *dec.AuthPrivateKey
-	if dec.WalletId == nil {
-		return errors.New("missing required field 'walletId' for Order")
-	}
-	o.WalletId = (*big.Int)(dec.WalletId)
 	if dec.WalletAddress == nil {
 		return errors.New("missing required field 'walletAddress' for Order")
 	}

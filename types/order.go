@@ -90,7 +90,6 @@ type orderMarshaling struct {
 	AmountB    *Big
 	ValidSince *Big
 	ValidUntil *Big
-	WalletId   *Big
 	LrcFee     *Big
 }
 
