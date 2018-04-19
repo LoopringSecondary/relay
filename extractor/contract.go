@@ -494,6 +494,11 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	contract := input.(MethodData)
 	contractEvent := contract.Method.(*ethaccessor.CancelOrderMethod)
 
+	if contract.DelegateAddress == types.NilAddress {
+		log.Errorf("extractor,tx:%s cancelOrder method cann't get delegate address", contract.TxHash.Hex())
+		return nil
+	}
+
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(contractEvent, contract.Name, data); err != nil {
 		log.Errorf("extractor,tx:%s cancelOrder method unpack error:%s", contract.TxHash.Hex(), err.Error())
@@ -504,7 +509,6 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	order.Protocol = contract.Protocol
 	order.DelegateAddress = contract.DelegateAddress
 	order.Hash = order.GenerateHash()
-
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
 	// 发送到txmanager
