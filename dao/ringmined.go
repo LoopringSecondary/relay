@@ -28,6 +28,7 @@ import (
 type RingMinedEvent struct {
 	ID                 int    `gorm:"column:id;primary_key" json:"id"`
 	Protocol           string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
+	DelegateAddress      string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
 	RingIndex          string `gorm:"column:ring_index;type:varchar(40);unique_index" json:"ringIndex"`
 	RingHash           string `gorm:"column:ring_hash;type:varchar(82)" json:"ringHash"`
 	TxHash             string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
@@ -45,6 +46,7 @@ func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.RingIndex = event.RingIndex.String()
 	r.TotalLrcFee = event.TotalLrcFee.String()
 	r.Protocol = event.Protocol.Hex()
+	r.DelegateAddress = event.DelegateAddress.Hex()
 	r.Miner = event.Miner.Hex()
 	r.FeeRecipient = event.FeeRecipient.Hex()
 	r.RingHash = event.Ringhash.Hex()
@@ -67,6 +69,8 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.BlockNumber = big.NewInt(r.BlockNumber)
 	event.BlockTime = r.Time
 	event.TradeAmount = r.TradeAmount
+	event.Protocol = common.HexToAddress(r.Protocol)
+	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)
 
 	return nil
 }

@@ -90,8 +90,8 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 				return nil, errors.New("owner must be applied")
 			}
 		case "balance":
-			balanceQuery := CommonTokenRequest{ContractVersion: req["contractVersion"], Owner: req["owner"]}
-			return walletService.GetBalance(balanceQuery)
+			//balanceQuery := CommonTokenRequest{ContractVersion: req["contractVersion"], Owner: req["owner"]}
+			//return walletService.GetBalance(balanceQuery)
 		case "tickers":
 			return walletService.GetTickers(SingleMarket{req["market"]})
 		case "transactions":
@@ -102,9 +102,9 @@ func (c *SocketClient) handler(req WebsocketRequest) (interface{}, error) {
 		case "marketcap":
 			return walletService.GetPriceQuote(PriceQuoteQuery{req["currency"]})
 		case "depth":
-			length, _ := strconv.Atoi(req["length"])
-			depthQuery := DepthQuery{Length: length, Market: req["market"], ContractVersion: req["contractVersion"]}
-			return walletService.GetDepth(depthQuery)
+			//length, _ := strconv.Atoi(req["length"])
+			//depthQuery := DepthQuery{Length: length, Market: req["market"], ContractVersion: req["contractVersion"]}
+			//return walletService.GetDepth(depthQuery)
 		case "trends":
 			query := TrendQuery{Market: req["market"]}
 			return walletService.GetTrend(query)

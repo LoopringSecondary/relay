@@ -28,6 +28,7 @@ import (
 type FillEvent struct {
 	ID            int    `gorm:"column:id;primary_key;" json:"id"`
 	Protocol      string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
+	DelegateAddress      string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
 	Owner         string `gorm:"column:owner;type:varchar(42)" json:"owner"`
 	RingIndex     int64  `gorm:"column:ring_index;" json:"ringIndex"`
 	BlockNumber   int64  `gorm:"column:block_number" json:"blockNumber"`
@@ -61,6 +62,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.SplitS = src.SplitS.String()
 	f.SplitB = src.SplitB.String()
 	f.Protocol = src.Protocol.Hex()
+	f.DelegateAddress = src.DelegateAddress.Hex()
 	f.RingIndex = src.RingIndex.Int64()
 	f.BlockNumber = src.BlockNumber.Int64()
 	f.CreateTime = src.BlockTime
@@ -88,6 +90,7 @@ func (f *FillEvent) ConvertUp(dst *types.OrderFilledEvent) error {
 	dst.SplitS, _ = new(big.Int).SetString(f.SplitS, 0)
 	dst.SplitB, _ = new(big.Int).SetString(f.SplitB, 0)
 	dst.Protocol = common.HexToAddress(f.Protocol)
+	dst.DelegateAddress = common.HexToAddress(f.DelegateAddress)
 	dst.RingIndex = big.NewInt(f.RingIndex)
 	dst.BlockNumber = big.NewInt(f.BlockNumber)
 	dst.BlockTime = f.CreateTime

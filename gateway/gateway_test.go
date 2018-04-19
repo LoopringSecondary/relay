@@ -66,7 +66,7 @@ func TestGetPow(t *testing.T) {
 	trendm.HandleOrderFilled(ore)
 	fmt.Println(ws.GetTrend(gateway.TrendQuery{Market: "LRC-WETH", Interval: "1Hr"}))
 	//fmt.Println(ws.GetTrend(gateway.TrendQuery{Market:"LRC-WETH", Interval:"2Hr"}))
-	fmt.Println(ws.GetTicker(gateway.SingleContractVersion{"v1.4"}))
+	fmt.Println(ws.GetTicker(gateway.SingleDelegateAddress{"v1.4"}))
 
 	//q := make(map[string]interface{})
 	//q["side"] = "buy"

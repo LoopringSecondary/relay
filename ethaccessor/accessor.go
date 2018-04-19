@@ -211,6 +211,22 @@ func ProtocolAddresses() map[common.Address]*ProtocolAddress {
 	return accessor.ProtocolAddresses
 }
 
+func DelegateAddresses() map[common.Address]bool {
+	return accessor.DelegateAddresses
+}
+
+func SupportedDelegateAddress(delegate common.Address) bool {
+	return accessor.DelegateAddresses[delegate]
+}
+
+func IsRelateProtocol(protocol, delegate common.Address) bool {
+	protocolAddress, ok := accessor.ProtocolAddresses[protocol]; if ok {
+		return protocolAddress.DelegateAddress == delegate
+	} else {
+		return false
+	}
+}
+
 func ProtocolImplAbi() *abi.ABI {
 	return accessor.ProtocolImplAbi
 }
