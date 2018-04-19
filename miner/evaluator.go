@@ -151,7 +151,9 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	}
 
 	//compute the fee of this ring and orders, and set the feeSelection
-	e.computeFeeOfRingAndOrder(ringState)
+	if err := e.computeFeeOfRingAndOrder(ringState); nil != err {
+		return err
+	}
 
 	//cvs
 	cvs, err := PriceRateCVSquare(ringState)
@@ -166,8 +168,9 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	}
 }
 
-func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
+func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 
+	var err error
 	for _, filledOrder := range ringState.Orders {
 		var lrcAddress common.Address
 		if implAddress, exists := ethaccessor.ProtocolAddresses()[filledOrder.OrderState.RawOrder.Protocol]; exists {
@@ -185,13 +188,20 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenS, filledOrder.FeeS)
+			legalAmountOfSaving,err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenS, filledOrder.FeeS)
+			if nil != err {
+				return err
+			}
+
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenB, filledOrder.FeeS)
+			legalAmountOfSaving,err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenB, filledOrder.FeeS)
+			if nil != err {
+				return err
+			}
 		}
 
 		//compute lrcFee
@@ -203,8 +213,15 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 			filledOrder.LrcFee = filledOrder.AvailableLrcBalance
 		}
 
-		legalAmountOfLrc := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
-		log.Debugf("raw.lrc:%s, AvailableLrcBalance:%s, legalAmountOfLrc:%s saving:%s", filledOrder.OrderState.RawOrder.LrcFee.String(), filledOrder.AvailableLrcBalance.FloatString(0), legalAmountOfLrc.String(), legalAmountOfSaving.String())
+		legalAmountOfLrc,err1 := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
+		if nil != err1 {
+			return err1
+		}
+		log.Debugf("orderhash:%s, raw.lrc:%s, AvailableLrcBalance:%s,  legalAmountOfLrc:%s saving:%s",
+			filledOrder.OrderState.RawOrder.Hash.Hex(),
+			filledOrder.OrderState.RawOrder.LrcFee.String(),
+			filledOrder.AvailableLrcBalance.FloatString(0),
+			legalAmountOfLrc.String())
 		filledOrder.LegalLrcFee = legalAmountOfLrc
 
 		splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
@@ -212,6 +229,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) {
 		filledOrder.LegalFeeS = legalAmountOfSaving
 	}
 
+	return nil
 }
 
 //成环之后才可计算能否成交，否则不需计算，判断是否能够成交，不能使用除法计算
@@ -262,9 +280,8 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Rat) *big.Rat {
-	c, _ := e.marketCapProvider.LegalCurrencyValue(tokenAddress, amount)
-	return c
+func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Rat) (*big.Rat,error) {
+	return e.marketCapProvider.LegalCurrencyValue(tokenAddress, amount)
 }
 
 func (e *Evaluator) EvaluateReceived(ringState *types.Ring) (gas, gasPrice *big.Int, costLegal, received *big.Rat) {
