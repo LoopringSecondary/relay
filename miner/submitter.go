@@ -63,6 +63,12 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	submitter := &RingSubmitter{}
 	submitter.maxGasLimit = big.NewInt(options.MaxGasLimit)
 	submitter.minGasLimit = big.NewInt(options.MinGasLimit)
+	if common.IsHexAddress(options.FeeReceipt) {
+		submitter.miner = common.HexToAddress(options.FeeReceipt)
+	} else {
+		return submitter, errors.New("miner.feeReceipt must be a address")
+	}
+
 	for _, addr := range options.NormalMiners {
 		var nonce types.Big
 		normalAddr := common.HexToAddress(addr.Address)
@@ -77,7 +83,6 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 		miner.Nonce = nonce.BigInt()
 		submitter.normalMinerAddresses = append(submitter.normalMinerAddresses, miner)
 
-		submitter.miner = miner.Address
 	}
 
 	for _, addr := range options.PercentMiners {
