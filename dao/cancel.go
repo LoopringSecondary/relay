@@ -27,6 +27,7 @@ import (
 type CancelEvent struct {
 	ID              int    `gorm:"column:id;primary_key;"`
 	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
+	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)"`
 	OrderHash       string `gorm:"column:order_hash;type:varchar(82)"`
 	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
 	BlockNumber     int64  `gorm:"column:block_number"`
@@ -42,6 +43,7 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.OrderHash = src.OrderHash.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Protocol = src.Protocol.Hex()
+	e.DelegateAddress = src.DelegateAddress.Hex()
 	e.CreateTime = src.BlockTime
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.LogIndex = src.LogIndex
@@ -55,6 +57,7 @@ func (e *CancelEvent) ConvertUp(dst *types.OrderCancelledEvent) error {
 	dst.OrderHash = common.HexToHash(e.OrderHash)
 	dst.TxHash = common.HexToHash(e.TxHash)
 	dst.Protocol = common.HexToAddress(e.Protocol)
+	dst.DelegateAddress = common.HexToAddress(e.DelegateAddress)
 	dst.BlockTime = e.CreateTime
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
 	dst.LogIndex = e.LogIndex
