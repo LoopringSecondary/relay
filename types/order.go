@@ -59,10 +59,10 @@ const (
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address             `json:"protocol" gencodec:"required"`       // 智能合约地址
-	DelegateAddress      common.Address             `json:"delegateAddress" gencodec:"required"`       // 智能合约地址
-	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`       //
-	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
+	Protocol              common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress       common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
 	WalletAddress         common.Address             `json:"walletAddress" gencodec:"required"`
 	TokenS                common.Address             `json:"tokenS" gencodec:"required"`     // 卖出erc20代币智能合约地址
 	TokenB                common.Address             `json:"tokenB" gencodec:"required"`     // 买入erc20代币智能合约地址
@@ -95,17 +95,17 @@ type orderMarshaling struct {
 
 //go:generate gencodec -type OrderJsonRequest -field-override orderJsonRequestMarshaling -out gen_order_request_json.go
 type OrderJsonRequest struct {
-	Protocol       common.Address             `json:"protocol" gencodec:"required"`       // 智能合约地址
-	DelegateAddress      common.Address       `json:"delegateAddress" gencodec:"required"`       // 智能合约地址
-	TokenS         common.Address             `json:"tokenS" gencodec:"required"`         // 卖出erc20代币智能合约地址
-	TokenB         common.Address             `json:"tokenB" gencodec:"required"`         // 买入erc20代币智能合约地址
-	AuthAddr       common.Address             `json:"authAddr" gencodec:"required"`       //
-	AuthPrivateKey crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
-	WalletAddress  common.Address             `json:"walletAddress" gencodec:"required"`
-	AmountS        *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
-	AmountB        *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
-	ValidSince     *big.Int                   `json:"validSince" gencodec:"required"` //
-	ValidUntil     *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
+	Protocol        common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	TokenS          common.Address             `json:"tokenS" gencodec:"required"`          // 卖出erc20代币智能合约地址
+	TokenB          common.Address             `json:"tokenB" gencodec:"required"`          // 买入erc20代币智能合约地址
+	AuthAddr        common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	WalletAddress   common.Address             `json:"walletAddress" gencodec:"required"`
+	AmountS         *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
+	AmountB         *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
+	ValidSince      *big.Int                   `json:"validSince" gencodec:"required"` //
+	ValidUntil      *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
 	// Salt                  int64          `json:"salt" gencodec:"required"`
 	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`

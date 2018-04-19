@@ -58,9 +58,6 @@ func TestSingleOrder(t *testing.T) {
 	cyp := crypto.NewKSCrypto(true, ks)
 	crypto.Initialize(cyp)
 
-	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
-
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
@@ -69,7 +66,6 @@ func TestSingleOrder(t *testing.T) {
 		walletId,
 		tokenAddressA,
 		tokenAddressB,
-		protocol,
 		account.Address,
 		amountS1,
 		amountB1,
@@ -97,8 +93,6 @@ func TestRing(t *testing.T) {
 
 	privkey := entity.PrivateKey
 
-	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 	for i := 0; i < 1; i++ {
 		walletId := big.NewInt(int64(i))
 
@@ -111,7 +105,6 @@ func TestRing(t *testing.T) {
 			walletId,
 			eth,
 			lrc,
-			protocol,
 			account1.Address,
 			amountS1,
 			amountB1,
@@ -128,7 +121,6 @@ func TestRing(t *testing.T) {
 			walletId,
 			lrc,
 			eth,
-			protocol,
 			account2.Address,
 			amountS2,
 			amountB2,
@@ -154,9 +146,6 @@ func TestBatchRing(t *testing.T) {
 	walletId := big.NewInt(1)
 	privkey := entity.PrivateKey
 
-	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
-
 	// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
 	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("30000"+suffix, 0)
@@ -166,7 +155,6 @@ func TestBatchRing(t *testing.T) {
 		walletId,
 		eth,
 		lrc,
-		protocol,
 		account1.Address,
 		amountS1,
 		amountB1,
@@ -183,7 +171,6 @@ func TestBatchRing(t *testing.T) {
 		walletId,
 		eth,
 		lrc,
-		protocol,
 		account1.Address,
 		amountS3,
 		amountB3,
@@ -200,7 +187,6 @@ func TestBatchRing(t *testing.T) {
 		walletId,
 		lrc,
 		eth,
-		protocol,
 		account2.Address,
 		amountS2,
 		amountB2,
@@ -273,9 +259,6 @@ func TestMatcher_Case1(t *testing.T) {
 	t.Logf("before match, addressA:%s -> tokenA:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressA.Hex(), tokenAmountA.BigInt().String())
 	t.Logf("before match, addressA:%s -> tokenB:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressB.Hex(), tokenAmountB.BigInt().String())
 
-	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
-
 	amountS1, _ := new(big.Int).SetString("1"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
@@ -287,7 +270,6 @@ func TestMatcher_Case1(t *testing.T) {
 		walletId,
 		tokenAddressA,
 		tokenAddressB,
-		protocol,
 		entity.Accounts[0].Address,
 		amountS1,
 		amountB1,
@@ -303,7 +285,6 @@ func TestMatcher_Case1(t *testing.T) {
 		walletId,
 		tokenAddressB,
 		tokenAddressA,
-		protocol,
 		entity.Accounts[1].Address,
 		amountS2,
 		amountB2,
@@ -344,9 +325,6 @@ func TestMatcher_Case2(t *testing.T) {
 	t.Logf("before match, addressA:%s -> tokenA:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressA.Hex(), tokenAmountA.BigInt().String())
 	t.Logf("before match, addressA:%s -> tokenB:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressB.Hex(), tokenAmountB.BigInt().String())
 
-	// set order and marshal to json
-	protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
-
 	amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
 	amountB1, _ := new(big.Int).SetString("100"+suffix, 0)
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20))
@@ -358,7 +336,6 @@ func TestMatcher_Case2(t *testing.T) {
 		walletId,
 		tokenAddressA,
 		tokenAddressB,
-		protocol,
 		entity.Accounts[0].Address,
 		amountS1,
 		amountB1,
@@ -375,7 +352,6 @@ func TestMatcher_Case2(t *testing.T) {
 		walletId,
 		tokenAddressB,
 		tokenAddressA,
-		protocol,
 		entity.Accounts[1].Address,
 		amountS2,
 		amountB2,

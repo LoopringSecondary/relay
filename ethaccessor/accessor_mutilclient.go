@@ -198,10 +198,10 @@ func (mc *MutilClient) Synced() bool {
 }
 
 type ethNodeAccessor struct {
-	Erc20Abi          *abi.ABI
-	ProtocolImplAbi   *abi.ABI
-	DelegateAbi       *abi.ABI
-	TokenRegistryAbi  *abi.ABI
+	Erc20Abi         *abi.ABI
+	ProtocolImplAbi  *abi.ABI
+	DelegateAbi      *abi.ABI
+	TokenRegistryAbi *abi.ABI
 	//NameRegistryAbi   *abi.ABI
 	WethAbi           *abi.ABI
 	WethAddress       common.Address

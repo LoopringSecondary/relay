@@ -56,12 +56,12 @@ func StringToFloat(token string, amount string) float64 {
 }
 
 var (
-	SupportTokens         map[string]types.Token // token symbol to entity
-	AllTokens             map[string]types.Token
-	SupportMarkets        map[string]types.Token // token symbol to contract hex address
-	AllMarkets            []string
-	AllTokenPairs         []TokenPair
-	SymbolTokenMap        map[common.Address]string
+	SupportTokens  map[string]types.Token // token symbol to entity
+	AllTokens      map[string]types.Token
+	SupportMarkets map[string]types.Token // token symbol to contract hex address
+	AllMarkets     []string
+	AllTokenPairs  []TokenPair
+	SymbolTokenMap map[common.Address]string
 )
 
 func StartRefreshCron(option config.MarketOptions) {

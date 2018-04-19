@@ -37,10 +37,11 @@ import (
 type Order struct {
 	ID                    int     `gorm:"column:id;primary_key;"`
 	Protocol              string  `gorm:"column:protocol;type:varchar(42)"`
+	DelegateAddress       string  `gorm:"column:delegate_address;type:varchar(42)"`
 	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
 	AuthAddress           string  `gorm:"column:auth_address;type:varchar(42)"`
 	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
-	WalletId              string  `gorm:"column:wallet_id;varchar(40)"`
+	WalletAddress         string  `gorm:"column:wallet_address;type:varchar(42)"`
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
@@ -87,12 +88,13 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
+	o.DelegateAddress = src.DelegateAddress.Hex()
 	o.Owner = src.Owner.Hex()
 
 	auth, _ := src.AuthPrivateKey.MarshalText()
 	o.PrivateKey = string(auth)
 	o.AuthAddress = src.AuthAddr.Hex()
-	//o.WalletId = state.RawOrder.WalletId.String()
+	o.WalletAddress = src.WalletAddress.Hex()
 
 	o.OrderHash = src.Hash.Hex()
 	o.TokenB = src.TokenB.Hex()
@@ -131,6 +133,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 
 	state.RawOrder.Price = new(big.Rat).SetFloat64(o.Price)
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
+	state.RawOrder.DelegateAddress = common.HexToAddress(o.DelegateAddress)
 	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
 	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
 	state.RawOrder.ValidSince = big.NewInt(o.ValidSince)
@@ -140,7 +143,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
 	}
 	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
-	//state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
+	state.RawOrder.WalletAddress = common.HexToAddress(o.WalletAddress)
 
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	state.RawOrder.MarginSplitPercentage = o.MarginSplitPercentage
@@ -198,7 +201,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
+	err = s.db.Where("delegate_address = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
 		Where("valid_since < ?", nowtime).
 		Where("valid_until >= ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
@@ -271,7 +274,7 @@ func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash, blockNumbe
 	return err
 }
 
-func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error) {
+func (s *RdsServiceImpl) GetOrderBook(delegate, tokenS, tokenB common.Address, length int) ([]Order, error) {
 	var (
 		list []Order
 		err  error
@@ -279,7 +282,7 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 
 	filterStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 	nowtime := time.Now().Unix()
-	err = s.db.Where("protocol = ?", protocol.Hex()).
+	err = s.db.Where("delegate_address = ?", delegate.Hex()).
 		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
 		Where("status in (?)", filterStatus).
 		Where("valid_since < ?", nowtime).

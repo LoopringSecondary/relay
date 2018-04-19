@@ -220,7 +220,8 @@ func SupportedDelegateAddress(delegate common.Address) bool {
 }
 
 func IsRelateProtocol(protocol, delegate common.Address) bool {
-	protocolAddress, ok := accessor.ProtocolAddresses[protocol]; if ok {
+	protocolAddress, ok := accessor.ProtocolAddresses[protocol]
+	if ok {
 		return protocolAddress.DelegateAddress == delegate
 	} else {
 		return false
@@ -246,6 +247,7 @@ func TokenRegistryAbi() *abi.ABI {
 func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
 }
+
 //
 //func NameRegistryAbi() *abi.ABI {
 //	return accessor.NameRegistryAbi
