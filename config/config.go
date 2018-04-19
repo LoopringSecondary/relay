@@ -189,6 +189,7 @@ type MinerOptions struct {
 	RateRatioCVSThreshold int64
 	MinGasLimit           int64
 	MaxGasLimit           int64
+	FeeReceipt string
 }
 
 type MarketOptions struct {
