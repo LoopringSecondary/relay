@@ -158,15 +158,16 @@ type RingMinedQuery struct {
 }
 
 type RawOrderJsonResult struct {
-	Protocol   string `json:"protocol"` // 智能合约地址
-	Owner      string `json:"address"`
-	Hash       string `json:"hash"`
-	TokenS     string `json:"tokenS"`  // 卖出erc20代币智能合约地址
-	TokenB     string `json:"tokenB"`  // 买入erc20代币智能合约地址
-	AmountS    string `json:"amountS"` // 卖出erc20代币数量上限
-	AmountB    string `json:"amountB"` // 买入erc20代币数量上限
-	ValidSince string `json:"validSince"`
-	ValidUntil string `json:"validUntil"` // 订单过期时间
+	Protocol        string `json:"protocol"`        // 智能合约地址
+	DelegateAddress string `json:"delegateAddress"` // 智能合约地址
+	Owner           string `json:"address"`
+	Hash            string `json:"hash"`
+	TokenS          string `json:"tokenS"`  // 卖出erc20代币智能合约地址
+	TokenB          string `json:"tokenB"`  // 买入erc20代币智能合约地址
+	AmountS         string `json:"amountS"` // 卖出erc20代币数量上限
+	AmountB         string `json:"amountB"` // 买入erc20代币数量上限
+	ValidSince      string `json:"validSince"`
+	ValidUntil      string `json:"validUntil"` // 订单过期时间
 	//Salt                  string `json:"salt"`
 	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool   `json:"buyNoMoreThanAmountB"`
@@ -232,6 +233,7 @@ type RingMinedDetail struct {
 type RingMinedInfo struct {
 	ID                 int                 `json:"id"`
 	Protocol           string              `json:"protocol"`
+	DelegateAddress    string              `json:"delegateAddress"`
 	RingIndex          string              `json:"ringIndex"`
 	RingHash           string              `json:"ringHash"`
 	TxHash             string              `json:"txHash"`
@@ -268,7 +270,7 @@ type WalletServiceImpl struct {
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
-	capProvider marketcap.MarketCapProvider, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string, protocols map[string]string) *WalletServiceImpl {
+	capProvider marketcap.MarketCapProvider, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string) *WalletServiceImpl {
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
@@ -755,7 +757,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		query["owner"] = orderQuery.Owner
 	}
 	if common.IsHexAddress(orderQuery.DelegateAddress) {
-		query["protocol"] = orderQuery.DelegateAddress
+		query["delegate_address"] = orderQuery.DelegateAddress
 	}
 
 	if orderQuery.Market != "" {
@@ -984,9 +986,10 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rst.CancelledAmountS = types.BigintToHex(src.CancelledAmountS)
 	rst.Status = getStringStatus(src)
 	rawOrder := RawOrderJsonResult{}
-	rawOrder.Protocol = src.RawOrder.Protocol.String()
-	rawOrder.Owner = src.RawOrder.Owner.String()
-	rawOrder.Hash = src.RawOrder.Hash.String()
+	rawOrder.Protocol = src.RawOrder.Protocol.Hex()
+	rawOrder.DelegateAddress = src.RawOrder.DelegateAddress.Hex()
+	rawOrder.Owner = src.RawOrder.Owner.Hex()
+	rawOrder.Hash = src.RawOrder.Hash.Hex()
 	rawOrder.TokenS = util.AddressToAlias(src.RawOrder.TokenS.String())
 	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
 	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
@@ -1095,6 +1098,7 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 	ringInfo.RingHash = ring.RingHash
 	ringInfo.BlockNumber = ring.BlockNumber
 	ringInfo.Protocol = ring.Protocol
+	ringInfo.DelegateAddress = ring.DelegateAddress
 	ringInfo.TxHash = ring.TxHash
 	ringInfo.Time = ring.Time
 	ringInfo.RingIndex = ring.RingIndex

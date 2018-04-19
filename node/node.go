@@ -241,7 +241,7 @@ func (n *Node) registerTickerCollector() {
 
 func (n *Node) registerWalletService() {
 	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
-		n.accountManager, n.marketCapProvider, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address)
+		n.accountManager, n.marketCapProvider, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress)
 }
 
 func (n *Node) registerJsonRpcService() {

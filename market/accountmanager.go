@@ -141,6 +141,7 @@ func (accountBalances AccountBalances) syncFromCache(tokens ...common.Address) e
 						}
 					} else {
 						missedTokens = append(missedTokens, tokens[idx])
+						return errors.New("this address not in cache")
 					}
 				}
 			} else {
@@ -295,12 +296,16 @@ func (accountAllowances *AccountAllowances) syncFromCache(tokens, spenders []com
 		} else {
 			if len(allowanceData) > 0 {
 				for idx, data := range allowanceData {
-					if err := accountAllowances.applyData(fields[idx], data); nil != err {
-						return err
+					if len(data) > 0 {
+						if err := accountAllowances.applyData(fields[idx], data); nil != err {
+							return err
+						}
+					} else {
+						return errors.New("allowance of this address not in cache")
 					}
 				}
 			} else {
-				return errors.New("this address not in cache")
+				return errors.New("allowance of this address not in cache")
 			}
 		}
 	} else {
