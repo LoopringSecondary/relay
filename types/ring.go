@@ -75,37 +75,37 @@ func (ring *Ring) GenerateUniqueId() common.Hash {
 	return ring.UniqueId
 }
 
-func (ring *Ring) GenerateHash(nameInfo *NameRegistryInfo) common.Hash {
+func (ring *Ring) GenerateHash(miner common.Address) common.Hash {
 	hashBytes := crypto.GenerateHash(
 		ring.GenerateUniqueId().Bytes(),
-		common.LeftPadBytes(nameInfo.ParticipantId.Bytes(), 32),
+		miner.Bytes(),
 		common.LeftPadBytes(ring.FeeSelections().Bytes(), 2),
 	)
 	return common.BytesToHash(hashBytes)
 }
 
-func (ring *Ring) GenerateAndSetSignature(nameInfo *NameRegistryInfo) error {
-	if IsZeroHash(ring.Hash) {
-		ring.Hash = ring.GenerateHash(nameInfo)
-	}
+//func (ring *Ring) GenerateAndSetSignature(miner common.Address) error {
+//	if IsZeroHash(ring.Hash) {
+//		ring.Hash = ring.GenerateHash(miner)
+//	}
+//
+//	if sig, err := crypto.Sign(ring.Hash.Bytes(), miner); nil != err {
+//		return err
+//	} else {
+//		v, r, s := crypto.SigToVRS(sig)
+//		ring.V = uint8(v)
+//		ring.R = BytesToBytes32(r)
+//		ring.S = BytesToBytes32(s)
+//		return nil
+//	}
+//}
 
-	if sig, err := crypto.Sign(ring.Hash.Bytes(), nameInfo.Signer); nil != err {
-		return err
-	} else {
-		v, r, s := crypto.SigToVRS(sig)
-		ring.V = uint8(v)
-		ring.R = BytesToBytes32(r)
-		ring.S = BytesToBytes32(s)
-		return nil
-	}
-}
-
-func (ring *Ring) GenerateSubmitArgs(nameInfo *NameRegistryInfo) (*RingSubmitInputs, error) {
-	ringSubmitArgs := emptyRingSubmitArgs(nameInfo)
+func (ring *Ring) GenerateSubmitArgs(miner common.Address) (*RingSubmitInputs, error) {
+	ringSubmitArgs := emptyRingSubmitArgs(miner)
 	authVList := []uint8{}
 	authRList := []Bytes32{}
 	authSList := []Bytes32{}
-	ring.Hash = ring.GenerateHash(nameInfo)
+	ring.Hash = ring.GenerateHash(miner)
 	for _, filledOrder := range ring.Orders {
 		order := filledOrder.OrderState.RawOrder
 		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [3]common.Address{order.Owner, order.TokenS, order.AuthAddr})
@@ -134,14 +134,14 @@ func (ring *Ring) GenerateSubmitArgs(nameInfo *NameRegistryInfo) (*RingSubmitInp
 	ringSubmitArgs.RList = append(ringSubmitArgs.RList, authRList...)
 	ringSubmitArgs.SList = append(ringSubmitArgs.SList, authSList...)
 
-	if err := ring.GenerateAndSetSignature(nameInfo); nil != err {
-		return nil, err
-	} else {
-		ringSubmitArgs.FeeSelections = ring.FeeSelections()
-		ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
-		ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
-		ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
-	}
+	ringSubmitArgs.FeeSelections = ring.FeeSelections()
+	//if err := ring.GenerateAndSetSignature(miner); nil != err {
+	//	return nil, err
+	//} else {
+	//	ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
+	//	ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
+	//	ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
+	//}
 
 	return ringSubmitArgs, nil
 }
@@ -172,11 +172,11 @@ type RingSubmitInputs struct {
 	VList                    []uint8
 	RList                    []Bytes32
 	SList                    []Bytes32
-	Miner                    *NameRegistryInfo
+	Miner                    common.Address
 	FeeSelections            *big.Int
 }
 
-func emptyRingSubmitArgs(nameInfo *NameRegistryInfo) *RingSubmitInputs {
+func emptyRingSubmitArgs(miner common.Address) *RingSubmitInputs {
 	return &RingSubmitInputs{
 		AddressList:              [][3]common.Address{},
 		UintArgsList:             [][7]*big.Int{},
@@ -185,7 +185,7 @@ func emptyRingSubmitArgs(nameInfo *NameRegistryInfo) *RingSubmitInputs {
 		VList: []uint8{},
 		RList: []Bytes32{},
 		SList: []Bytes32{},
-		Miner: nameInfo,
+		Miner: miner,
 	}
 }
 
