@@ -57,7 +57,7 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	}
 
 	// check order finished status
-	settleOrderStatus(state, mc)
+	settleOrderStatus(state, mc, ORDER_FROM_FILL)
 
 	if blockNumber == nil {
 		state.UpdatedBlock = big.NewInt(0)
@@ -77,21 +77,38 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 }
 
 // 写入订单状态
-func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) {
+type OrderFillOrCancelType string
+
+const (
+	ORDER_FROM_FILL   OrderFillOrCancelType = "fill"
+	ORDER_FROM_CANCEL OrderFillOrCancelType = "cancel"
+)
+
+func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider, source OrderFillOrCancelType) {
 	zero := big.NewInt(0)
 	finishAmountS := big.NewInt(0).Add(state.CancelledAmountS, state.DealtAmountS)
 	totalAmountS := big.NewInt(0).Add(finishAmountS, state.SplitAmountS)
 	finishAmountB := big.NewInt(0).Add(state.CancelledAmountB, state.DealtAmountB)
 	totalAmountB := big.NewInt(0).Add(finishAmountB, state.SplitAmountB)
 	totalAmount := big.NewInt(0).Add(totalAmountS, totalAmountB)
+
 	if totalAmount.Cmp(zero) <= 0 {
 		state.Status = types.ORDER_NEW
-	} else {
-		if isOrderFullFinished(state, mc) {
-			state.Status = types.ORDER_FINISHED
-		} else {
-			state.Status = types.ORDER_PARTIAL
-		}
+		return
+	}
+
+	if !isOrderFullFinished(state, mc) {
+		state.Status = types.ORDER_PARTIAL
+		return
+	}
+
+	if source == ORDER_FROM_FILL {
+		state.Status = types.ORDER_FINISHED
+		return
+	}
+	if source == ORDER_FROM_CANCEL {
+		state.Status = types.ORDER_CANCEL
+		return
 	}
 }
 

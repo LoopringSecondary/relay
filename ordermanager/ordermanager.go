@@ -46,7 +46,6 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	IsValueDusted(tokenAddress common.Address, value *big.Rat) bool
-	SetOrderCancelled(state *types.OrderState)
 	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
@@ -233,7 +232,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	settleOrderStatus(state, om.mc)
+	settleOrderStatus(state, om.mc, ORDER_FROM_FILL)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -287,7 +286,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	settleOrderStatus(state, om.mc)
+	settleOrderStatus(state, om.mc, ORDER_FROM_CANCEL)
 	state.UpdatedBlock = event.BlockNumber
 
 	// update rds.Order
@@ -455,7 +454,6 @@ func (om *OrderManagerImpl) GetOrderBook(protocol, tokenS, tokenB common.Address
 		if err := v.ConvertUp(&state); err != nil {
 			continue
 		}
-		om.SetOrderCancelled(&state)
 		list = append(list, state)
 	}
 
@@ -486,7 +484,6 @@ func (om *OrderManagerImpl) GetOrders(query map[string]interface{}, statusList [
 			log.Debug("convertUp error occurs " + err.Error())
 			continue
 		}
-		om.SetOrderCancelled(&state)
 		pageRes.Data = append(pageRes.Data, state)
 	}
 	return pageRes, nil
@@ -502,8 +499,6 @@ func (om *OrderManagerImpl) GetOrderByHash(hash common.Hash) (orderState *types.
 	if err := order.ConvertUp(&result); err != nil {
 		return nil, err
 	}
-
-	om.SetOrderCancelled(&result)
 
 	return &result, nil
 }
@@ -526,12 +521,6 @@ func (om *OrderManagerImpl) RingMinedPageQuery(query map[string]interface{}, pag
 
 func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool {
 	return om.cutoffCache.IsOrderCutoff(protocol, owner, token1, token2, validsince)
-}
-
-func (om *OrderManagerImpl) SetOrderCancelled(state *types.OrderState) {
-	if isOrderCancelled(state, om.mc) {
-		state.Status = types.ORDER_CANCEL
-	}
 }
 
 func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error) {
