@@ -28,7 +28,7 @@ import (
 type FillEvent struct {
 	ID            int    `gorm:"column:id;primary_key;" json:"id"`
 	Protocol      string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
-	DelegateAddress      string `gorm:"column:delegate_address;type:varchar(42)" json:"protocol"`
+	DelegateAddress      string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
 	Owner         string `gorm:"column:owner;type:varchar(42)" json:"owner"`
 	RingIndex     int64  `gorm:"column:ring_index;" json:"ringIndex"`
 	BlockNumber   int64  `gorm:"column:block_number" json:"blockNumber"`

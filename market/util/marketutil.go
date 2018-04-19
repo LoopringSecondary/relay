@@ -61,7 +61,6 @@ var (
 	SupportMarkets        map[string]types.Token // token symbol to contract hex address
 	AllMarkets            []string
 	AllTokenPairs         []TokenPair
-	ContractVersionConfig = map[string]string{}
 	SymbolTokenMap        map[common.Address]string
 )
 
@@ -386,19 +385,6 @@ func GetSide(s, b string) string {
 
 func IsAddress(token string) bool {
 	return strings.HasPrefix(token, "0x")
-}
-
-func getContractVersion(address string) string {
-	for k, v := range ContractVersionConfig {
-		if strings.ToLower(v) == strings.ToLower(address) {
-			return k
-		}
-	}
-	return ""
-}
-
-func IsSupportedContract(address string) bool {
-	return getContractVersion(address) != ""
 }
 
 func GetSymbolWithAddress(address common.Address) (string, error) {

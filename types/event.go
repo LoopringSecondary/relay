@@ -108,6 +108,7 @@ type CutoffPairEvent struct {
 
 type RingMinedEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	RingIndex    *big.Int
 	TotalLrcFee  *big.Int
 	TradeAmount  int

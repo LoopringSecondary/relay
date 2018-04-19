@@ -454,7 +454,7 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	length := query.Length
 
 	if mkt == "" || !common.IsHexAddress(delegateAddress) {
-		err = errors.New("market and correct contract must be applied")
+		err = errors.New("market and correct contract address must be applied")
 		return
 	}
 
@@ -531,13 +531,7 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 }
 
 func (w *WalletServiceImpl) GetTicker(query SingleDelegateAddress) (res []market.Ticker, err error) {
-	res, err = w.trendManager.GetTicker()
-
-	//for i, t := range res {
-	//	w.fillBuyAndSell(&t, query.ContractVersion)
-	//	res[i] = t
-	//}
-	return
+	return w.trendManager.GetTicker()
 }
 
 func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
@@ -931,8 +925,8 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	} else {
 		ps = q.PageSize
 	}
-	if q.ContractVersion != "" {
-		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
+	if common.IsHexAddress(q.DelegateAddress) {
+		rst["delegate_address"] = q.DelegateAddress
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner
@@ -964,8 +958,8 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	} else {
 		ps = q.PageSize
 	}
-	if q.ContractVersion != "" {
-		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
+	if common.IsHexAddress(q.DelegateAddress) {
+		rst["delegate_address"] = q.DelegateAddress
 	}
 	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) >= 0 {
 		rst["ring_index"] = q.RingIndex.BigInt().String()
