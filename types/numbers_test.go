@@ -19,17 +19,28 @@
 package types_test
 
 import (
-	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/ethaccessor"
 	"testing"
 )
 
 func TestBig_UnmarshalText(t *testing.T) {
-	n := types.NewBigWithInt(100)
-	bs, _ := n.MarshalText()
+	//n := types.NewBigWithInt(100)
+	//bs, _ := n.MarshalText()
+	//
+	//if err := n.UnmarshalText(bs); err != nil {
+	//	t.Fatalf(err.Error())
+	//}
+	//
+	//t.Log(n.BigInt().String())
+	var b ethaccessor.TransactionReceipt
 
-	if err := n.UnmarshalText(bs); err != nil {
-		t.Fatalf(err.Error())
-	}
+	println(b.Status.IsNil())
+	//if b.Status {
+	//	t.Log("#####")
+	//} else if b.BigInt() == nil {
+	//	t.Log("!!!!")
+	//} else {
+	//	t.Log("iiiiiii")
+	//}
 
-	t.Log(n.BigInt().String())
 }

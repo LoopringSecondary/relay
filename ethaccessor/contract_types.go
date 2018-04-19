@@ -292,7 +292,7 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.ValidUntil = m.UintArgsList[i][3]
 		order.LrcFee = m.UintArgsList[i][4]
 		// order.rateAmountS
-		order.WalletId = m.UintArgsList[i][6]
+		//order.WalletId = m.UintArgsList[i][6]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
@@ -332,7 +332,7 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	order.ValidSince = m.OrderValues[2]
 	order.ValidUntil = m.OrderValues[3]
 	order.LrcFee = m.OrderValues[4]
-	order.WalletId = m.OrderValues[5]
+	//order.WalletId = m.OrderValues[5]
 	cancelAmount := m.OrderValues[6]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
