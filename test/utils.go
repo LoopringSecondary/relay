@@ -75,7 +75,7 @@ func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
 	cache.NewCache(cfg.Redis)
-	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
+	util.Initialize(cfg.Market)
 	entity = loadTestData()
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()

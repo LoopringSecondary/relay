@@ -181,7 +181,7 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	return
 }
 
-func Initialize(options config.MarketOptions, contracts map[string]string) {
+func Initialize(options config.MarketOptions) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
@@ -189,8 +189,6 @@ func Initialize(options config.MarketOptions, contracts map[string]string) {
 	SymbolTokenMap = make(map[common.Address]string)
 
 	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs, SymbolTokenMap = getTokenAndMarketFromDB(options.TokenFile)
-
-	ContractVersionConfig = contracts
 
 	// StartRefreshCron(rds)
 

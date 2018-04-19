@@ -63,6 +63,7 @@ type ApprovalEvent struct {
 
 type OrderFilledEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	Ringhash      common.Hash
 	PreOrderHash  common.Hash
 	OrderHash     common.Hash
