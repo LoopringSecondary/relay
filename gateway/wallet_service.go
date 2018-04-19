@@ -999,7 +999,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.V = types.BigintToHex(big.NewInt(int64(src.RawOrder.V)))
 	rawOrder.R = src.RawOrder.R.Hex()
 	rawOrder.S = src.RawOrder.S.Hex()
-	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
+	//rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
 	//rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
