@@ -128,7 +128,7 @@ func (p *CapProvider_CoinMarketCap) GetMarketCapByCurrency(tokenAddress common.A
 		err := errors.New("not found tokenCap:" + tokenAddress.Hex())
 		res := new(big.Rat).SetInt64(int64(1))
 		if nil != err {
-			log.Errorf("get MarketCap of token:%, occurs error:%s. the value will be default value:%s", tokenAddress.Hex(), err.Error(), res.String())
+			log.Errorf("get MarketCap of token:%s, occurs error:%s. the value will be default value:%s", tokenAddress.Hex(), err.Error(), res.String())
 		}
 		return res, err
 	}

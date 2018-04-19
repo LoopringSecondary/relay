@@ -41,7 +41,6 @@ func main() {
 
 	app.Commands = []cli.Command{
 		accountCommands(),
-		nameRegistryCommands(),
 	}
 
 	sort.Sort(cli.CommandsByName(app.Commands))

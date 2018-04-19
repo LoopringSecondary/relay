@@ -46,7 +46,7 @@ type Market struct {
 }
 
 func (market *Market) match() {
-	market.getOrdersForMatching(market.protocolImpl.ContractAddress)
+	market.getOrdersForMatching(market.protocolImpl.DelegateAddress)
 	matchedOrderHashes := make(map[common.Hash]bool) //true:fullfilled, false:partfilled
 	ringSubmitInfos := []*types.RingSubmitInfo{}
 	candidateRingList := CandidateRingList{}
@@ -167,7 +167,7 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 /**
 get orders from ordermanager
 */
-func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
+func (market *Market) getOrdersForMatching(delegateAddress common.Address) {
 	market.AtoBOrders = make(map[common.Hash]*types.OrderState)
 	market.BtoAOrders = make(map[common.Hash]*types.OrderState)
 
@@ -175,18 +175,18 @@ func (market *Market) getOrdersForMatching(protocolAddress common.Address) {
 	currentRoundNumber := market.matcher.lastRoundNumber.Int64()
 	deleyedNumber := market.matcher.delayedNumber + currentRoundNumber
 
-	atoBOrders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, int64(0), currentRoundNumber, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
+	atoBOrders := market.om.MinerOrders(delegateAddress, market.TokenA, market.TokenB, market.matcher.roundOrderCount, int64(0), currentRoundNumber, &types.OrderDelayList{OrderHash: market.AtoBOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 
 	if len(atoBOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(atoBOrders)
-		orders := market.om.MinerOrders(protocolAddress, market.TokenA, market.TokenB, orderCount, currentRoundNumber+1, currentRoundNumber+market.matcher.delayedNumber)
+		orders := market.om.MinerOrders(delegateAddress, market.TokenA, market.TokenB, orderCount, currentRoundNumber+1, currentRoundNumber+market.matcher.delayedNumber)
 		atoBOrders = append(atoBOrders, orders...)
 	}
 
-	btoAOrders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, int64(0), currentRoundNumber, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
+	btoAOrders := market.om.MinerOrders(delegateAddress, market.TokenB, market.TokenA, market.matcher.roundOrderCount, int64(0), currentRoundNumber, &types.OrderDelayList{OrderHash: market.BtoAOrderHashesExcludeNextRound, DelayedCount: deleyedNumber})
 	if len(btoAOrders) < market.matcher.roundOrderCount {
 		orderCount := market.matcher.roundOrderCount - len(btoAOrders)
-		orders := market.om.MinerOrders(protocolAddress, market.TokenB, market.TokenA, orderCount, currentRoundNumber+1, currentRoundNumber+market.matcher.delayedNumber)
+		orders := market.om.MinerOrders(delegateAddress, market.TokenB, market.TokenA, orderCount, currentRoundNumber+1, currentRoundNumber+market.matcher.delayedNumber)
 		btoAOrders = append(btoAOrders, orders...)
 	}
 
