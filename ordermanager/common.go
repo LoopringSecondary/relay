@@ -41,6 +41,8 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	state.CancelledAmountB = big.NewInt(0)
 	state.CancelledAmountS = big.NewInt(0)
 
+	state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
+
 	cancelAmount, dealtAmount, getAmountErr := getCancelledAndDealtAmount(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr)
 	if getAmountErr != nil {
 		return nil, getAmountErr

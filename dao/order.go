@@ -112,7 +112,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.R = src.R.Hex()
 	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
-	o.Side = util.GetSide(o.TokenS, o.TokenB)
+	o.Side = state.RawOrder.Side
 
 	return nil
 }
