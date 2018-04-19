@@ -86,12 +86,14 @@ type OrderFilledEvent struct {
 
 type OrderCancelledEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	OrderHash       common.Hash
 	AmountCancelled *big.Int
 }
 
 type CutoffEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	Owner         common.Address
 	Cutoff        *big.Int
 	OrderHashList []common.Hash
@@ -99,6 +101,7 @@ type CutoffEvent struct {
 
 type CutoffPairEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	Owner         common.Address
 	Token1        common.Address
 	Token2        common.Address
