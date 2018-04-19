@@ -539,13 +539,7 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 }
 
 func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market.Ticker, err error) {
-	res, err = w.trendManager.GetTicker()
-
-	//for i, t := range res {
-	//	w.fillBuyAndSell(&t, query.ContractVersion)
-	//	res[i] = t
-	//}
-	return
+	return w.trendManager.GetTicker()
 }
 
 func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {

@@ -1048,6 +1048,7 @@ func (t *TrendManager) HandleOrderFilled(input eventemitter.EventData) (err erro
 			//t.c.Set(trendKeyPre+strings.ToLower(OneHour), newCache, cache.NoExpiration)
 			t.reCalTicker(market)
 		}
+		eventemitter.Emit(eventemitter.LoopringTickerUpdated, nil)
 	} else {
 		err = errors.New("cache is not ready , please access later")
 	}

@@ -6,11 +6,12 @@ import (
 	"github.com/googollee/go-socket.io"
 	"github.com/robfig/cron"
 	"gopkg.in/googollee/go-engine.io.v1"
-	"log"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/eventemiter"
 )
 
 type BusinessType int
@@ -22,6 +23,12 @@ const (
 	DefaultCronSpec3Second  = "0/3 * * * * *"
 	DefaultCronSpec10Second = "0/10 * * * * *"
 	DefaultCronSpec5Minute  = "0 */5 * * * *"
+)
+
+const (
+	emitTypeByEvent = 1
+	emitTypeByCron = 2
+
 )
 
 type Server struct {
@@ -57,20 +64,35 @@ func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type InvokeInfo struct {
 	MethodName  string
 	Query       interface{}
-	IsBroadcast bool
+	isBroadcast bool
+	emitType    int
 	spec        string
 }
 
+const (
+	eventKeyTickers = "tickers"
+	eventKeyLoopringTickers = "loopringTickers"
+	eventKeyTrends = "trends"
+	eventKeyPortfolio = "portfolio"
+	eventKeyMarketCap = "marketcap"
+	eventKeyBalance = "balance"
+	eventKeyTransaction = "transaction"
+	eventKeyPendingTx = "pendingTx"
+	eventKeyDepth = "depth"
+)
+
 var EventTypeRoute = map[string]InvokeInfo{
-	"tickers":         {"GetTickers", SingleMarket{}, true, DefaultCronSpec3Second},
-	"loopringTickers": {"GetAllMarketTickers", nil, true, DefaultCronSpec3Second},
-	"trends":          {"GetTrend", TrendQuery{}, true, DefaultCronSpec3Second},
-	"portfolio":       {"GetPortfolio", SingleOwner{}, false, DefaultCronSpec3Second},
-	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}, true, DefaultCronSpec5Minute},
-	"balance":         {"GetBalance", CommonTokenRequest{}, false, DefaultCronSpec3Second},
-	"transaction":     {"GetTransactions", TransactionQuery{}, false, DefaultCronSpec3Second},
-	"pendingTx":       {"GetPendingTransactions", SingleOwner{}, false, DefaultCronSpec10Second},
-	"depth":           {"GetDepth", DepthQuery{}, true, DefaultCronSpec3Second},
+	eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec3Second},
+	eventKeyLoopringTickers: {"GetAllMarketTickers", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	// portfolio has been remove from loopr2
+	// eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
+	eventKeyMarketCap:       {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
+	eventKeyBalance:         {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTransaction:     {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyPendingTx:       {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
+	eventKeyDepth:           {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
@@ -93,6 +115,14 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	so.connBusinessKeyMap = make(map[string]socketio.Conn)
 	so.connIdMap = sync.Map{}
 	so.cron = cron.New()
+
+	// init event watcher
+	loopringTickerWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastLoopringTicker}
+	eventemitter.On(eventemitter.LoopringTickerUpdated, loopringTickerWatcher)
+	trendsWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastTrends}
+	eventemitter.On(eventemitter.TrendUpdated, trendsWatcher)
+	portfolioWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePortfolioUpdate}
+	eventemitter.On(eventemitter.TrendUpdated, portfolioWatcher)
 	return so
 }
 
@@ -102,7 +132,7 @@ func (so *SocketIOServiceImpl) Start() {
 		PingTimeout:  time.Second * 60 * 60,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf(err.Error())
 	}
 	server.OnConnect("/", func(s socketio.Conn) error {
 		so.connIdMap.Store(s.ID(), s)
@@ -141,8 +171,12 @@ func (so *SocketIOServiceImpl) Start() {
 	for k, events := range EventTypeRoute {
 		copyOfK := k
 		spec := events.spec
-		so.cron.AddFunc(spec, func() {
 
+		if events.emitType == emitTypeByEvent {
+			continue
+		}
+
+		so.cron.AddFunc(spec, func() {
 			so.connIdMap.Range(func(key, value interface{}) bool {
 				v := value.(socketio.Conn)
 				if v.Context() != nil {
@@ -179,15 +213,17 @@ func (so *SocketIOServiceImpl) Start() {
 	})
 
 	server.OnDisconnect("/", func(s socketio.Conn, msg string) {
+		s.Close()
+		so.connIdMap.Delete(s.ID())
 		fmt.Println("closed", msg)
 	})
 	go server.Serve()
 	defer server.Close()
 
 	http.Handle("/socket.io/", NewServer(*server))
-	log.Println("Serving at localhost: " + so.port)
-	log.Fatal(http.ListenAndServe(":"+so.port, nil))
-	log.Println("finished listen socket io....")
+	log.Info("Serving at localhost: " + so.port)
+	log.Fatal(http.ListenAndServe(":"+so.port, nil).Error())
+	log.Info("finished listen socket io....")
 
 }
 
@@ -197,7 +233,7 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 	}
 }
 
-func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) string {
+func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, ctx string) string {
 
 	results := make([]reflect.Value, 0)
 	var err error
@@ -209,7 +245,7 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 		queryClone := reflect.New(queryType)
 		err = json.Unmarshal([]byte(ctx), queryClone.Interface())
 		if err != nil {
-			log.Println("unmarshal error " + err.Error())
+			log.Info("unmarshal error " + err.Error())
 			errJson, _ := json.Marshal(SocketIOJsonResp{Error: err.Error()})
 			return string(errJson[:])
 
@@ -236,6 +272,75 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 }
 
 func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) {
-	result := so.handleWith(eventType, query, methodName, conn, ctx)
+	result := so.handleWith(eventType, query, methodName, ctx)
 	conn.Emit(eventType+EventPostfixRes, result)
+}
+
+func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventData) (err error) {
+
+	resp := SocketIOJsonResp{}
+	tickers, err := so.walletService.GetTicker(SingleContractVersion{})
+
+	if err != nil {
+		resp = SocketIOJsonResp{Error: err.Error()}
+	} else {
+		resp.Data = tickers
+	}
+
+	respJson, _ := json.Marshal(resp)
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			_, ok := businesses[eventKeyLoopringTickers]
+			if ok {
+				log.Info("emit loopring ticker info")
+				v.Emit(eventKeyLoopringTickers + EventPostfixRes, respJson)
+			}
+		}
+		return true
+	})
+	return nil
+}
+
+func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (err error) {
+
+	req := input.(TrendQuery)
+	resp := SocketIOJsonResp{}
+	trends, err := so.walletService.GetTrend(req)
+
+	if err != nil {
+		resp = SocketIOJsonResp{Error: err.Error()}
+	} else {
+		resp.Data = trends
+	}
+
+	respJson, _ := json.Marshal(resp)
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyTrends]
+
+			if ok {
+				trendQuery := &TrendQuery{}
+				err = json.Unmarshal([]byte(ctx), trendQuery)
+				if err != nil {
+					log.Error("trend query unmarshal error, " + err.Error())
+				} else if req.Market == trendQuery.Market && req.Interval == trendQuery.Interval {
+					log.Info("emit trend " + ctx)
+					v.Emit(eventKeyTrends + EventPostfixRes, respJson)
+				}
+			}
+		}
+		return true
+	})
+	return nil
+}
+
+// portfolio has removed from loopr2
+func (so *SocketIOServiceImpl) handlePortfolioUpdate(input eventemitter.EventData) (err error) {
+	return nil
 }
