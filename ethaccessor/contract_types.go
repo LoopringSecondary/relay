@@ -260,14 +260,14 @@ func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
 }
 
 type SubmitRingMethod struct {
-	AddressList        [][3]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
-	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS, and walletId.
+	AddressList        [][4]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
+	UintArgsList       [][6]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS.
 	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
 	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
 	VList              []uint8             `fieldName:"vList" fieldId:"4"`
 	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
 	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
-	MinerId            *big.Int            `fieldName:"minerId" fieldId:"7"`
+	Miner              common.Address      `fieldName:"miner" fieldId:"7"`
 	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
 	Protocol           common.Address
 }
@@ -293,7 +293,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		} else {
 			order.TokenB = m.AddressList[i+1][1]
 		}
-		order.AuthAddr = m.AddressList[i][2]
+		order.WalletAddress = m.AddressList[i][2]
+		order.AuthAddr = m.AddressList[i][3]
 
 		order.AmountS = m.UintArgsList[i][0]
 		order.AmountB = m.UintArgsList[i][1]
@@ -301,7 +302,6 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.ValidUntil = m.UintArgsList[i][3]
 		order.LrcFee = m.UintArgsList[i][4]
 		// order.rateAmountS
-		//order.WalletId = m.UintArgsList[i][6]
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
@@ -318,8 +318,8 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 }
 
 type CancelOrderMethod struct {
-	AddressList    [4]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
-	OrderValues    [7]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, walletId, and cancelAmount
+	AddressList    [5]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
+	OrderValues    [6]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, and cancelAmount
 	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB" fieldId:"2"`
 	MarginSplit    uint8             `fieldName:"marginSplitPercentage" fieldId:"3"`
 	V              uint8             `fieldName:"v" fieldId:"4"`
@@ -334,15 +334,15 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	order.Owner = m.AddressList[0]
 	order.TokenS = m.AddressList[1]
 	order.TokenB = m.AddressList[2]
-	order.AuthAddr = m.AddressList[3]
+	order.WalletAddress = m.AddressList[3]
+	order.AuthAddr = m.AddressList[4]
 
 	order.AmountS = m.OrderValues[0]
 	order.AmountB = m.OrderValues[1]
 	order.ValidSince = m.OrderValues[2]
 	order.ValidUntil = m.OrderValues[3]
 	order.LrcFee = m.OrderValues[4]
-	//order.WalletId = m.OrderValues[5]
-	cancelAmount := m.OrderValues[6]
+	cancelAmount := m.OrderValues[5]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit

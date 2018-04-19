@@ -31,7 +31,6 @@ func TestRdsServiceImpl_NewOrder(t *testing.T) {
 	o.Protocol = "0xC01172a87f6cC20E1E3b9aD13a9E715Fbc2D5AA9"
 	o.Owner = "0x48ff2269e58a373120FFdBBdEE3FBceA854AC30A"
 	o.PrivateKey = "acfe437a8e0f65124c44647737c0471b8adc9a0763f139df76766f46d6af8e15"
-	o.WalletId = "1"
 	o.OrderHash = "0xcbb02f5df389993aea21e98e7ade8ae9f34e57eeb639dcd754ba79a0223d51e5"
 	o.TokenS = "0x2956356cD2a2bf3202F771F50D3D14A367b48070"
 	o.TokenB = "0xEF68e7C694F40c8202821eDF525dE3782458639f"

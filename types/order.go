@@ -41,22 +41,6 @@ const (
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 )
 
-//订单原始信息
-//struct Order {
-//address owner;
-//address tokenS;
-//address tokenB;
-//address authAddr;
-//uint    validSince;
-//uint    validUntil;
-//uint    amountS;
-//uint    amountB;
-//uint    lrcFee;
-//bool    buyNoMoreThanAmountB;
-//uint    walletId;
-//uint8   marginSplitPercentage;
-//}
-
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
 	Protocol              common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址

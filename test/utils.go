@@ -209,7 +209,7 @@ func GenerateAccountManager() market.AccountManager {
 	return market.NewAccountManager()
 }
 
-func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
+func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
 	order.DelegateAddress = delegate
