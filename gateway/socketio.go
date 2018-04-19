@@ -63,7 +63,7 @@ type InvokeInfo struct {
 
 var EventTypeRoute = map[string]InvokeInfo{
 	"tickers":         {"GetTickers", SingleMarket{}, true, DefaultCronSpec3Second},
-	"loopringTickers": {"GetAllMarketTickers", nil, true, DefaultCronSpec3Second},
+	"loopringTickers": {"GetTicker", nil, true, DefaultCronSpec3Second},
 	"trends":          {"GetTrend", TrendQuery{}, true, DefaultCronSpec3Second},
 	"portfolio":       {"GetPortfolio", SingleOwner{}, false, DefaultCronSpec3Second},
 	"marketcap":       {"GetPriceQuote", PriceQuoteQuery{}, true, DefaultCronSpec5Minute},
