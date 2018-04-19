@@ -386,10 +386,6 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err error) {
-	return w.trendManager.GetTicker()
-}
-
 func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err error) {
 	if len(owner.Owner) == 0 {
 		return "", errors.New("owner can't be null string")
@@ -530,7 +526,7 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetTicker(query SingleDelegateAddress) (res []market.Ticker, err error) {
+func (w *WalletServiceImpl) GetTicker() (res []market.Ticker, err error) {
 	return w.trendManager.GetTicker()
 }
 
