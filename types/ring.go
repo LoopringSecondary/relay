@@ -165,8 +165,8 @@ type RingSubmitInfo struct {
 }
 
 type RingSubmitInputs struct {
-	AddressList              [][3]common.Address
-	UintArgsList             [][7]*big.Int
+	AddressList              [][4]common.Address
+	UintArgsList             [][6]*big.Int
 	Uint8ArgsList            [][1]uint8
 	BuyNoMoreThanAmountBList []bool
 	VList                    []uint8
@@ -178,8 +178,8 @@ type RingSubmitInputs struct {
 
 func emptyRingSubmitArgs(miner common.Address) *RingSubmitInputs {
 	return &RingSubmitInputs{
-		AddressList:              [][3]common.Address{},
-		UintArgsList:             [][7]*big.Int{},
+		AddressList:              [][4]common.Address{},
+		UintArgsList:             [][6]*big.Int{},
 		Uint8ArgsList:            [][1]uint8{},
 		BuyNoMoreThanAmountBList: []bool{},
 		VList: []uint8{},
