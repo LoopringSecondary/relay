@@ -112,7 +112,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.R = src.R.Hex()
 	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
-	o.Side = util.GetSide(o.TokenS, o.TokenB)
+	o.Side = state.RawOrder.Side
 
 	return nil
 }
@@ -336,8 +336,7 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 				return pageResult, err
 			}
 
-			err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
-			if err != nil {
+			err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error; if err != nil {
 				return pageResult, err
 			}
 		}
@@ -347,8 +346,7 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 			statusStrList = append(statusStrList, strconv.Itoa(s))
 		}
 
-		queryOpened := allContain(statusList, openedStatus)
-		if queryOpened {
+		queryOpened := allContain(statusList, openedStatus); if queryOpened {
 			if err = s.db.Where(query).
 				Where("status in (?)", statusStrList).
 				Where("valid_since < ?", now).
@@ -384,8 +382,7 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList
 			return pageResult, err
 		}
 
-		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
-		if err != nil {
+		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error; if err != nil {
 			return pageResult, err
 		}
 	}
