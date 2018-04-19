@@ -416,13 +416,13 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 			}
 		}
 	}
-	protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
-
-	costEth := new(big.Rat).SetInt(protocolCost)
-	costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
-	ringSubmitInfo.LegalCost = costLegal
-	received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
-	ringSubmitInfo.Received = received
+	//protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
+	//
+	//costEth := new(big.Rat).SetInt(protocolCost)
+	//costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
+	//ringSubmitInfo.LegalCost = costLegal
+	//received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
+	//ringSubmitInfo.Received = received
 
 	return nil
 }
