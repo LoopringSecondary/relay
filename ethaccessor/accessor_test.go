@@ -383,65 +383,6 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	}
 }
 
-// 注册&取消注册都不能连续性重复调用
-// 同一个地址不能注册同一个名字多次
-func TestEthNodeAccessor_NameRegistry(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	name := test.Cfg().Miner.Name
-	if result, err := callMethod(miner.Address, "registerName", gas, gasPrice, nil, name); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("registerName:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_AddParticipant(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	feeReceipt := miner.Address
-	signer := miner.Address
-
-	if result, err := callMethod(miner.Address, "addParticipant", gas, gasPrice, nil, feeReceipt, signer); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("addParticipant:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	name := test.Cfg().Miner.Name
-	if result, err := callMethod(miner.Address, "unregisterName", gas, gasPrice, nil, name); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("unregisterName:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
-	creator := miner.Address
-	var result string
-	if err := callMethod(&result, "nameMap", "latest", creator); nil != err {
-		t.Fatalf("call method nameMap error:%s", err.Error())
-	} else {
-		t.Logf("name:%s-> address:%s", result, creator.Hex())
-	}
-}
-
 func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 	const (
 		startBlock = 5444365

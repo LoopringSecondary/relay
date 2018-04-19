@@ -26,31 +26,31 @@ import (
 )
 
 type FillEvent struct {
-	ID            int    `gorm:"column:id;primary_key;" json:"id"`
-	Protocol      string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
-	DelegateAddress      string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
-	Owner         string `gorm:"column:owner;type:varchar(42)" json:"owner"`
-	RingIndex     int64  `gorm:"column:ring_index;" json:"ringIndex"`
-	BlockNumber   int64  `gorm:"column:block_number" json:"blockNumber"`
-	CreateTime    int64  `gorm:"column:create_time" json:"createTime"`
-	RingHash      string `gorm:"column:ring_hash;varchar(82)" json:"ringHash"`
-	FillIndex     int64  `gorm:"column:fill_index" json:"fillIndex"`
-	TxHash        string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
-	PreOrderHash  string `gorm:"column:pre_order_hash;varchar(82)" json:"preOrderHash"`
-	NextOrderHash string `gorm:"column:next_order_hash;varchar(82)" json:"nextOrderHash"`
-	OrderHash     string `gorm:"column:order_hash;type:varchar(82)" json:"orderHash"`
-	AmountS       string `gorm:"column:amount_s;type:varchar(40)" json:"amountS"`
-	AmountB       string `gorm:"column:amount_b;type:varchar(40)" json:"amountB"`
-	TokenS        string `gorm:"column:token_s;type:varchar(42)" json:"tokenS"`
-	TokenB        string `gorm:"column:token_b;type:varchar(42)" json:"tokenB"`
-	LrcReward     string `gorm:"column:lrc_reward;type:varchar(40)" json:"lrcReward"`
-	LrcFee        string `gorm:"column:lrc_fee;type:varchar(40)" json:"lrcFee"`
-	SplitS        string `gorm:"column:split_s;type:varchar(40)" json:"splitS"`
-	SplitB        string `gorm:"column:split_b;type:varchar(40)" json:"splitB"`
-	Market        string `gorm:"column:market;type:varchar(42)" json:"market"`
-	LogIndex      int64  `gorm:"column:log_index"`
-	Fork          bool   `gorm:"column:fork"`
-	Side          string `json:"side"`
+	ID              int    `gorm:"column:id;primary_key;" json:"id"`
+	Protocol        string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
+	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
+	Owner           string `gorm:"column:owner;type:varchar(42)" json:"owner"`
+	RingIndex       int64  `gorm:"column:ring_index;" json:"ringIndex"`
+	BlockNumber     int64  `gorm:"column:block_number" json:"blockNumber"`
+	CreateTime      int64  `gorm:"column:create_time" json:"createTime"`
+	RingHash        string `gorm:"column:ring_hash;varchar(82)" json:"ringHash"`
+	FillIndex       int64  `gorm:"column:fill_index" json:"fillIndex"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
+	PreOrderHash    string `gorm:"column:pre_order_hash;varchar(82)" json:"preOrderHash"`
+	NextOrderHash   string `gorm:"column:next_order_hash;varchar(82)" json:"nextOrderHash"`
+	OrderHash       string `gorm:"column:order_hash;type:varchar(82)" json:"orderHash"`
+	AmountS         string `gorm:"column:amount_s;type:varchar(40)" json:"amountS"`
+	AmountB         string `gorm:"column:amount_b;type:varchar(40)" json:"amountB"`
+	TokenS          string `gorm:"column:token_s;type:varchar(42)" json:"tokenS"`
+	TokenB          string `gorm:"column:token_b;type:varchar(42)" json:"tokenB"`
+	LrcReward       string `gorm:"column:lrc_reward;type:varchar(40)" json:"lrcReward"`
+	LrcFee          string `gorm:"column:lrc_fee;type:varchar(40)" json:"lrcFee"`
+	SplitS          string `gorm:"column:split_s;type:varchar(40)" json:"splitS"`
+	SplitB          string `gorm:"column:split_b;type:varchar(40)" json:"splitB"`
+	Market          string `gorm:"column:market;type:varchar(42)" json:"market"`
+	LogIndex        int64  `gorm:"column:log_index"`
+	Fork            bool   `gorm:"column:fork"`
+	Side            string `json:"side"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill

@@ -69,10 +69,10 @@ func (accessor *ethNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spen
 
 func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
 		return nil, err
 	}
@@ -82,10 +82,10 @@ func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 
 func (accessor *ethNodeAccessor) GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(&amount, "cancelled", blockNumStr, orderhash); err != nil {
 		return nil, err
 	}
@@ -94,10 +94,10 @@ func (accessor *ethNodeAccessor) GetCancelled(contractAddress common.Address, or
 }
 
 func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(result, "cutoffs", blockNumStr, owner); err != nil {
 		return err
 	}
@@ -105,10 +105,10 @@ func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, 
 }
 
 func (accessor *ethNodeAccessor) GetCutoffPair(result interface{}, contractAddress, owner, token1, token2 common.Address, blockNumStr string) error {
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(result, "getTradingPairCutoffs", blockNumStr, owner, token1, token2); err != nil {
 		return err
 	}

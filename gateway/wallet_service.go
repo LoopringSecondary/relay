@@ -151,7 +151,7 @@ type FillQuery struct {
 }
 
 type RingMinedQuery struct {
-	DelegateAddress string `json:"delegateAddress"`
+	DelegateAddress string    `json:"delegateAddress"`
 	RingIndex       types.Big `json:"ringIndex"`
 	PageIndex       int       `json:"pageIndex"`
 	PageSize        int       `json:"pageSize"`
@@ -252,19 +252,19 @@ type Token struct {
 }
 
 type AccountJson struct {
-	DelegateAddress string `json:"delegateAddress"`
+	DelegateAddress string  `json:"delegateAddress"`
 	Address         string  `json:"owner"`
 	Tokens          []Token `json:"tokens"`
 }
 
 type WalletServiceImpl struct {
-	trendManager           market.TrendManager
-	orderManager           ordermanager.OrderManager
-	accountManager         market.AccountManager
-	marketCap              marketcap.MarketCapProvider
-	tickerCollector        market.CollectorImpl
-	rds                    dao.RdsService
-	oldWethAddress         string
+	trendManager    market.TrendManager
+	orderManager    ordermanager.OrderManager
+	accountManager  market.AccountManager
+	marketCap       marketcap.MarketCapProvider
+	tickerCollector market.CollectorImpl
+	rds             dao.RdsService
+	oldWethAddress  string
 }
 
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,

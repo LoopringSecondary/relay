@@ -69,6 +69,7 @@ var (
 	orderAccounts = []accounts.Account{}
 	creator       accounts.Account
 	protocol      common.Address
+	delegate      common.Address
 )
 
 func init() {
@@ -80,6 +81,7 @@ func init() {
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
+	delegate = ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
 }
 
 func loadConfig() *config.GlobalConfig {
@@ -207,9 +209,10 @@ func GenerateAccountManager() market.AccountManager {
 	return market.NewAccountManager()
 }
 
-func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
+func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
+	order.DelegateAddress = delegate
 	order.TokenS = tokenS
 	order.TokenB = tokenB
 	order.AmountS = amountS
@@ -224,6 +227,7 @@ func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, token
 	order.AuthPrivateKey = privateKey
 	order.AuthAddr = order.AuthPrivateKey.Address()
 	order.WalletId = walletId
+	order.WalletAddress = owner
 	order.Hash = order.GenerateHash()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		log.Fatalf(err.Error())
