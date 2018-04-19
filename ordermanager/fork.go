@@ -133,7 +133,7 @@ func (p *ForkProcessor) RollBackSingleCancel(evt *types.OrderCancelledEvent) err
 	}
 
 	// update order status
-	settleOrderStatus(state, p.mc, ORDER_FROM_CANCEL)
+	settleOrderStatus(state, p.mc, ORDER_FROM_FILL)
 	state.UpdatedBlock = evt.BlockNumber
 
 	// update rds.Order
