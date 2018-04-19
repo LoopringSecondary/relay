@@ -233,7 +233,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	log.Debugf("order manager,handle order filled event orderhash:%s,dealAmountS:%s,dealtAmountB:%s", state.RawOrder.Hash.Hex(), state.DealtAmountS.String(), state.DealtAmountB.String())
 
 	// update order status
-	settleOrderStatus(state, om.mc)
+	settleOrderStatus(state, om.mc, ORDER_FROM_FILL)
 
 	// update rds.Order
 	if err := model.ConvertDown(state); err != nil {
@@ -287,7 +287,7 @@ func (om *OrderManagerImpl) handleOrderCancelled(input eventemitter.EventData) e
 	}
 
 	// update order status
-	settleOrderStatus(state, om.mc)
+	settleOrderStatus(state, om.mc, ORDER_FROM_CANCEL)
 	state.UpdatedBlock = event.BlockNumber
 
 	// update rds.Order
