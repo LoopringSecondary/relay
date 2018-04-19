@@ -207,8 +207,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	account := accounts.Account{Address: state.RawOrder.Owner}
 
 	// create cancel order contract function parameters
-	addresses := [4]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.AuthAddr}
-	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, state.RawOrder.WalletId, cancelAmount}
+	addresses := [5]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.WalletAddress, state.RawOrder.AuthAddr}
+	values := [6]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, cancelAmount}
 	buyNoMoreThanB := state.RawOrder.BuyNoMoreThanAmountB
 	marginSplitPercentage := state.RawOrder.MarginSplitPercentage
 	v := state.RawOrder.V

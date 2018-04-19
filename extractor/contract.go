@@ -104,6 +104,12 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
 
+	if impl, ok := ethaccessor.ProtocolAddresses()[txinfo.To]; ok {
+		txinfo.DelegateAddress = impl.DelegateAddress
+	} else {
+		txinfo.DelegateAddress = types.NilAddress
+	}
+
 	return txinfo
 }
 

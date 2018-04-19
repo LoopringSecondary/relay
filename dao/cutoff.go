@@ -29,6 +29,7 @@ import (
 type CutOffEvent struct {
 	ID            int    `gorm:"column:id;primary_key;"`
 	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)"`
 	Owner         string `gorm:"column:owner;type:varchar(42)"`
 	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
 	OrderHashList string `gorm:"column:order_hash_list;type:text"`
@@ -43,6 +44,7 @@ type CutOffEvent struct {
 func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.Protocol.Hex()
+	e.DelegateAddress = src.DelegateAddress.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Cutoff = src.Cutoff.Int64()
 	e.LogIndex = src.LogIndex
@@ -63,6 +65,7 @@ func (e *CutOffEvent) ConvertDown(src *types.CutoffEvent) error {
 func (e *CutOffEvent) ConvertUp(dst *types.CutoffEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
 	dst.Protocol = common.HexToAddress(e.Protocol)
+	dst.DelegateAddress = common.HexToAddress(e.DelegateAddress)
 	dst.TxHash = common.HexToHash(e.TxHash)
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
 	dst.LogIndex = e.LogIndex

@@ -175,7 +175,7 @@ type RawOrderJsonResult struct {
 	V                     string `json:"v"`
 	R                     string `json:"r"`
 	S                     string `json:"s"`
-	WalletId              string `json:"walletId" gencodec:"required"`
+	WalletAddress         string `json:"walletAddress" gencodec:"required"`
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
 	Market                string `json:"market"`
@@ -1002,10 +1002,9 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.V = types.BigintToHex(big.NewInt(int64(src.RawOrder.V)))
 	rawOrder.R = src.RawOrder.R.Hex()
 	rawOrder.S = src.RawOrder.S.Hex()
-	//rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
+	rawOrder.WalletAddress = src.RawOrder.WalletAddress.Hex()
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
-	//rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
