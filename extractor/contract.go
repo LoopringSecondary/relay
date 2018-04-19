@@ -95,6 +95,7 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.BlockTime = blockTime.Int64()
 	txinfo.BlockHash = common.HexToHash(tx.BlockHash)
 	txinfo.TxHash = common.HexToHash(tx.Hash)
+	txinfo.TxIndex = tx.TransactionIndex.Int64()
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)

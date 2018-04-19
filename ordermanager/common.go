@@ -157,6 +157,9 @@ func blockNumberToString(blockNumber *big.Int) string {
 }
 
 func getCancelledAndDealtAmount(protocol common.Address, orderhash common.Hash, blockNumberStr string) (*big.Int, *big.Int, error) {
+	// TODO(fuk): 系统暂时只会从gateway接收新订单,而不会有部分成交的订单
+	return big.NewInt(0), big.NewInt(0), nil
+
 	var (
 		cancelled, cancelOrFilled, dealt *big.Int
 		err                              error

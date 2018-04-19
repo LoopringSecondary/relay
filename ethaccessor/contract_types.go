@@ -63,13 +63,22 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	return evt
 }
 
+/// @dev Event to emit if a ring is successfully mined.
+/// _amountsList is an array of:
+/// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
+//event RingMined(
+//	uint                _ringIndex,
+//	bytes32     indexed _ringHash,
+//	address             _feeRecipient,
+//	bytes32[]           _orderHashList,
+//	uint[6][]           _amountsList
+//);
 type RingMinedEvent struct {
 	RingIndex     *big.Int       `fieldName:"_ringIndex" fieldId:"0"`
 	RingHash      common.Hash    `fieldName:"_ringhash" fieldId:"1"`
-	Miner         common.Address `fieldName:"_miner" fieldId:"2"`
-	FeeRecipient  common.Address `fieldName:"_feeRecipient" fieldId:"3"`
-	OrderHashList [][32]uint8    `fieldName:"_orderHashList" fieldId:"4"`
-	AmountsList   [][6]*big.Int  `fieldName:"_amountsList" fieldId:"5"`
+	FeeRecipient  common.Address `fieldName:"_feeRecipient" fieldId:"2"`
+	OrderHashList [][32]uint8    `fieldName:"_orderHashList" fieldId:"3"`
+	AmountsList   [][6]*big.Int  `fieldName:"_amountsList" fieldId:"4"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
@@ -82,7 +91,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt := &types.RingMinedEvent{}
 	evt.RingIndex = e.RingIndex
 	evt.Ringhash = e.RingHash
-	evt.Miner = e.Miner
+	evt.Miner = e.FeeRecipient
 	evt.FeeRecipient = e.FeeRecipient
 
 	var list []*types.OrderFilledEvent

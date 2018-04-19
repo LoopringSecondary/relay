@@ -34,6 +34,7 @@ type Transaction struct {
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
+	TxIndex     int64  `gorm:"column:tx_index"`
 	LogIndex    int64  `gorm:"column:tx_log_index"`
 	Value       string `gorm:"column:amount;type:varchar(64)"`
 	Type        uint8  `gorm:"column:tx_type"`
@@ -60,6 +61,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Value = src.Value.String()
 	tx.Type = src.Type
 	tx.Status = src.Status
+	tx.TxIndex = src.TxIndex
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
 	tx.UpdateTime = src.UpdateTime
@@ -82,6 +84,7 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.TxHash = common.HexToHash(tx.TxHash)
 	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
+	dst.TxIndex = tx.TxIndex
 	dst.LogIndex = tx.LogIndex
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
 	dst.Type = tx.Type

@@ -86,24 +86,27 @@ type OrderFilledEvent struct {
 
 type OrderCancelledEvent struct {
 	TxInfo
+	DelegateAddress common.Address
 	OrderHash       common.Hash
 	AmountCancelled *big.Int
 }
 
 type CutoffEvent struct {
 	TxInfo
-	Owner         common.Address
-	Cutoff        *big.Int
-	OrderHashList []common.Hash
+	DelegateAddress common.Address
+	Owner           common.Address
+	Cutoff          *big.Int
+	OrderHashList   []common.Hash
 }
 
 type CutoffPairEvent struct {
 	TxInfo
-	Owner         common.Address
-	Token1        common.Address
-	Token2        common.Address
-	Cutoff        *big.Int
-	OrderHashList []common.Hash
+	DelegateAddress common.Address
+	Owner           common.Address
+	Token1          common.Address
+	Token2          common.Address
+	Cutoff          *big.Int
+	OrderHashList   []common.Hash
 }
 
 type RingMinedEvent struct {
