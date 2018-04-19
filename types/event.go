@@ -63,61 +63,56 @@ type ApprovalEvent struct {
 
 type OrderFilledEvent struct {
 	TxInfo
-	DelegateAddress common.Address
-	Ringhash        common.Hash
-	PreOrderHash    common.Hash
-	OrderHash       common.Hash
-	NextOrderHash   common.Hash
-	Owner           common.Address
-	TokenS          common.Address
-	TokenB          common.Address
-	SellTo          common.Address
-	BuyFrom         common.Address
-	RingIndex       *big.Int
-	AmountS         *big.Int
-	AmountB         *big.Int
-	LrcReward       *big.Int
-	LrcFee          *big.Int
-	SplitS          *big.Int
-	SplitB          *big.Int
-	Market          string
-	FillIndex       *big.Int
+	Ringhash      common.Hash
+	PreOrderHash  common.Hash
+	OrderHash     common.Hash
+	NextOrderHash common.Hash
+	Owner         common.Address
+	TokenS        common.Address
+	TokenB        common.Address
+	SellTo        common.Address
+	BuyFrom       common.Address
+	RingIndex     *big.Int
+	AmountS       *big.Int
+	AmountB       *big.Int
+	LrcReward     *big.Int
+	LrcFee        *big.Int
+	SplitS        *big.Int
+	SplitB        *big.Int
+	Market        string
+	FillIndex     *big.Int
 }
 
 type OrderCancelledEvent struct {
 	TxInfo
-	DelegateAddress common.Address
 	OrderHash       common.Hash
 	AmountCancelled *big.Int
 }
 
 type CutoffEvent struct {
 	TxInfo
-	DelegateAddress common.Address
-	Owner           common.Address
-	Cutoff          *big.Int
-	OrderHashList   []common.Hash
+	Owner         common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type CutoffPairEvent struct {
 	TxInfo
-	DelegateAddress common.Address
-	Owner           common.Address
-	Token1          common.Address
-	Token2          common.Address
-	Cutoff          *big.Int
-	OrderHashList   []common.Hash
+	Owner         common.Address
+	Token1        common.Address
+	Token2        common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type RingMinedEvent struct {
 	TxInfo
-	DelegateAddress common.Address
-	RingIndex       *big.Int
-	TotalLrcFee     *big.Int
-	TradeAmount     int
-	Ringhash        common.Hash
-	Miner           common.Address
-	FeeRecipient    common.Address
+	RingIndex    *big.Int
+	TotalLrcFee  *big.Int
+	TradeAmount  int
+	Ringhash     common.Hash
+	Miner        common.Address
+	FeeRecipient common.Address
 }
 
 type WethDepositEvent struct {
