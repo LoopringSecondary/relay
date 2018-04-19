@@ -502,6 +502,7 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 
 	order, cancelAmount, _ := contractEvent.ConvertDown()
 	order.Protocol = contract.Protocol
+	order.DelegateAddress = contract.DelegateAddress
 	order.Hash = order.GenerateHash()
 
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())

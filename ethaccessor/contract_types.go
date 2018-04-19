@@ -317,6 +317,29 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	return list, nil
 }
 
+/// @dev Cancel a order. cancel amount(amountS or amountB) can be specified
+///      in orderValues.
+/// @param addresses          owner, tokenS, tokenB, wallet, authAddr
+/// @param orderValues        amountS, amountB, validSince (second),
+///                           validUntil (second), lrcFee, and cancelAmount.
+/// @param buyNoMoreThanAmountB -
+///                           This indicates when a order should be considered
+///                           as 'completely filled'.
+/// @param marginSplitPercentage -
+///                           Percentage of margin split to share with miner.
+/// @param v                  Order ECDSA signature parameter v.
+/// @param r                  Order ECDSA signature parameters r.
+/// @param s                  Order ECDSA signature parameters s.
+//function cancelOrder(
+//address[5] addresses,
+//uint[6]    orderValues,
+//bool       buyNoMoreThanAmountB,
+//uint8      marginSplitPercentage,
+//uint8      v,
+//bytes32    r,
+//bytes32    s
+//)
+//external;
 type CancelOrderMethod struct {
 	AddressList    [5]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
 	OrderValues    [6]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, and cancelAmount
