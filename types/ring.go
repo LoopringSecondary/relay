@@ -108,9 +108,9 @@ func (ring *Ring) GenerateSubmitArgs(miner common.Address) (*RingSubmitInputs, e
 	ring.Hash = ring.GenerateHash(miner)
 	for _, filledOrder := range ring.Orders {
 		order := filledOrder.OrderState.RawOrder
-		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [3]common.Address{order.Owner, order.TokenS, order.AuthAddr})
+		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [4]common.Address{order.Owner, order.TokenS, order.WalletAddress, order.AuthAddr})
 		rateAmountS, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
-		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [7]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS, order.WalletId})
+		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [6]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS})
 		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [1]uint8{order.MarginSplitPercentage})
 
 		ringSubmitArgs.BuyNoMoreThanAmountBList = append(ringSubmitArgs.BuyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)

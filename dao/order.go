@@ -92,7 +92,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	auth, _ := src.AuthPrivateKey.MarshalText()
 	o.PrivateKey = string(auth)
 	o.AuthAddress = src.AuthAddr.Hex()
-	o.WalletId = state.RawOrder.WalletId.String()
+	//o.WalletId = state.RawOrder.WalletId.String()
 
 	o.OrderHash = src.Hash.Hex()
 	o.TokenB = src.TokenB.Hex()
@@ -140,7 +140,7 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
 	}
 	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
-	state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
+	//state.RawOrder.WalletId, _ = new(big.Int).SetString(o.WalletId, 0)
 
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	state.RawOrder.MarginSplitPercentage = o.MarginSplitPercentage
