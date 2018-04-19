@@ -27,17 +27,17 @@ import (
 
 // todo(fuk): rename table
 type CutOffEvent struct {
-	ID            int    `gorm:"column:id;primary_key;"`
-	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	ID              int    `gorm:"column:id;primary_key;"`
+	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
 	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)"`
-	Owner         string `gorm:"column:owner;type:varchar(42)"`
-	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
-	OrderHashList string `gorm:"column:order_hash_list;type:text"`
-	BlockNumber   int64  `gorm:"column:block_number"`
-	Cutoff        int64  `gorm:"column:cutoff"`
-	LogIndex      int64  `gorm:"column:log_index"`
-	Fork          bool   `gorm:"column:fork"`
-	CreateTime    int64  `gorm:"column:create_time"`
+	Owner           string `gorm:"column:owner;type:varchar(42)"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList   string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber     int64  `gorm:"column:block_number"`
+	Cutoff          int64  `gorm:"column:cutoff"`
+	LogIndex        int64  `gorm:"column:log_index"`
+	Fork            bool   `gorm:"column:fork"`
+	CreateTime      int64  `gorm:"column:create_time"`
 }
 
 // convert types/cutoffEvent to dao/CancelEvent
