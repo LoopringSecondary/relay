@@ -503,7 +503,7 @@ Get order fill history. This history consists of OrderFilled events.
 ```js
 params: {
   "market" : "LRC-WETH",
-  "contractVersion" : "v1.2",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
   "orderHash" : "0xee0b482d9b704070c970df1e69297392a8bb73f4ed91213ae5c1725d4d1923fd",
   "ringHash" : "0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
@@ -646,7 +646,7 @@ Get all mined rings.
 ```js
 params: {
   "ringHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
-  "contractVersion" : "v1.2"
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
 }
@@ -710,7 +710,7 @@ Get cut off time of the address.
 ```js
 params: [{
   "address": "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "contractVersion": "v1.4",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "blockNumber": "latest"
 }]
 ```
@@ -1151,10 +1151,10 @@ Get user's balance and token allowance info.
 ##### Parameters
 
 - `owner` - The wallet address
-- `contractVersion` - The loopring contract version you selected.
+- `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ```js
-socketio.emit("balance_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",   "contractVersion" : "v1.4"}', function(data) {
+socketio.emit("balance_req", '{"owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1", "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B"}', function(data) {
   // your business code
 });
 socketio.on("balance_res", function(data) {
@@ -1174,12 +1174,12 @@ socketio.on("balance_res", function(data) {
 // Request
 {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.4"
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B"
 }
 
 // Result
 {
-    "contractVersion":"v1.4",
+    "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
     "tokens": [
       {
           "token": "LRC",
@@ -1209,7 +1209,7 @@ Get 24hr merged tickers info from loopring relay.
 NULL
 
 ```js
-socketio.emit("loopringTickers_req", '{"contractVersion" : "v1.4"}', function(data) {
+socketio.emit("loopringTickers_req", '{}', function(data) {
   // your business code
 });
 socketio.on("loopringTickers_res", function(data) {
@@ -1533,14 +1533,14 @@ socketio.on("depth_res", function(data) {
 
 1. `depth` - The depth data, every depth element is a three length of array, which contain price, amount A and B in market A-B in order.
 2. `market` - The market pair.
-3. `contractVersion` - The loopring protocol version.
+3. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ##### Example
 ```js
 // Request
 {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.4",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "length" : 10 // defalut is 50
 }
 
@@ -1555,7 +1555,7 @@ socketio.on("depth_res", function(data) {
       ]
     },
     "market" : "LRC-WETH",
-    "contractVersion": "v1.4",
+    "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   }
 }
 ```
