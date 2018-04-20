@@ -197,17 +197,25 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 		hashLength = 32
 	)
 
-	balances, err := gateway.am.GetBalanceWithSymbolResult(o.Owner)
 
-	if b, ok := balances["LRC"]; ok {
-		lrcHold := big.NewInt(f.MinLrcHold)
-		lrcHold = lrcHold.Mul(lrcHold, util.AllTokens["LRC"].Decimals)
-		if b.Cmp(lrcHold) < 1 {
+	if o.TokenB != util.AliasToAddress("LRC") {
+		balances, err := gateway.am.GetBalanceWithSymbolResult(o.Owner)
+
+		if err != nil {
 			return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
 		}
 
-	} else {
-		return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
+		if b, ok := balances["LRC"]; ok {
+			lrcHold := big.NewInt(f.MinLrcHold)
+			lrcHold = lrcHold.Mul(lrcHold, util.AllTokens["LRC"].Decimals)
+			if b.Cmp(lrcHold) < 1 {
+				return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
+			}
+
+		} else {
+			return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
+		}
+
 	}
 
 	if len(o.Hash) != hashLength {
