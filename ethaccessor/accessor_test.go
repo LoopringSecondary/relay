@@ -478,6 +478,16 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
+	var count types.Big
+	user := common.HexToAddress("0x71c079107b5af8619d54537a93dbf16e5aab4900")
+	if err := ethaccessor.GetTransactionCount(&count, user, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("transaction count:%d", count.Int64())
+	}
+}
+
 // 使用rpc.client调用eth call时应该使用 arg参数应该指针 保证unmarshal的正确性
 func TestEthNodeAccessor_Call(t *testing.T) {
 	var (
