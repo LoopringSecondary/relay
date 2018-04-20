@@ -441,8 +441,8 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 		log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 		eventemitter.Emit(eventemitter.PendingTransaction, tx)
 		log.Info("emit transaction info " + tx.Hash)
+		return tx.Hash, nil
 	}
-	return
 }
 
 func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res string, err error) {
