@@ -117,9 +117,9 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
+	n.registerAccountManager()
 	n.registerGateway()
 	n.registerCrypto(nil)
-	n.registerAccountManager()
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
@@ -269,7 +269,7 @@ func (n *Node) registerMiner() {
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager, n.marketCapProvider)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager, n.marketCapProvider, n.accountManager)
 }
 
 func (n *Node) registerUserManager() {

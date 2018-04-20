@@ -110,6 +110,7 @@ name = "Loopring corporation"
 [gateway_filters]
     [gateway_filters.base_filter]
         min_lrc_fee = 10
+        min_lrc_hold = 10000
         max_price = 1000000000000
         min_split_percentage = 0.0
         max_split_percentage = 1.0

@@ -67,12 +67,12 @@ Get user's balance and token allowance info.
 ##### Parameters
 
 - `owner` - The address, if is null, will query all orders.
-- `contractVersion` - The loopring contract version you selected.
+- `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ```js
 params: {
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-  "contractVersion" : "v1.2"
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B"
 }
 ```
 
@@ -80,7 +80,7 @@ params: {
 
 `Account` - Account balance info object.
 
-1. `contractVersion` - The loopring contract version you selected.
+- `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 2. `tokens` - All token balance and allowance info array.
 
 ##### Example
@@ -93,7 +93,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getBalance","params":{s
   "id":64,
   "jsonrpc": "2.0",
   "result": {
-    "contractVersion":"v1.2",
+    "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
     "tokens": [
       {
           "token": "LRC",
@@ -120,6 +120,8 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
 
 `JSON Object` - The order object(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
   - `protocol` - Loopring contract address
+  - `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
+  - `walletAddress` - The wallet margin address.
   - `owner` - user's wallet address
   - `tokenS` - Token to sell.
   - `tokenB` - Token to buy.
@@ -137,7 +139,9 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
 ```js
 params: [{
   "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "walletAddress" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "tokenS" : "Eth",
   "tokenB" : "Lrc",
   "amountS" : "0x0001234d234",
@@ -181,7 +185,7 @@ Get loopring order list.
 - `owner` - The address, if is null, will query all orders.
 - `orderHash` - The order hash.
 - `status` - order status enum string.(status collection is : ORDER_OPENED(include ORDER_NEW and ORDER_PARTIAL), ORDER_NEW, ORDER_PARTIAL, ORDER_FINISHED, ORDER_CANCEL, ORDER_CUTOFF)
-- `contractVersion` - the loopring contract version you selected.
+- `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 - `market` - The market of the order.(format is LRC-WETH)
 - `side` - The side of order. only support "buy" and "sell".
 - `pageIndex` - The page want to query, default is 1.
@@ -193,7 +197,7 @@ params: [{
   "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
   "status" : "ORDER_CANCEL",
   "side" : "buy",
-  "contractVersion" : "v1.2",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "market" : "coss-weth",
   "pageIndex" : 2,
   "pageSize" : 40
@@ -207,9 +211,10 @@ params: [{
 1. `data` 
   - `orginalOrder` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
   - `status` - The current order status.
-  - `protocol` - loopring protocol address.
   - `dealtAmountS` - Dealt amount of token S.
   - `dealtAmountB` - Dealt amount of token B.
+  - `cancelledAmountS` - cancelled amount of token S.
+  - `cancelledAmountB` - cancelled amount of token B.
 
 2. `total` - Total amount of orders.
 3. `pageIndex` - Index of page.
@@ -229,6 +234,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params
       {
           "orginalOrder" : {
               "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+              "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
               "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
               "tokenS" : "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
               "tokenB" : "0xef68e7c694f40c8202821edf525de3782458639f",
@@ -247,6 +253,8 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params
           "status" : "ORDER_CANCEL",
           "dealtAmountB" : "0x1a055690d9db80000",
           "dealtAmountS" : "0x1a055690d9db80000",
+          "cancelledAmountS" : "0x1a055690d9db80000",
+          "cancelledAmountB" : "0x1a055690d9db80000",
       }
     ]
     "total" : 12,
@@ -265,23 +273,23 @@ Get depth and accuracy by token pair
 ##### Parameters
 
 1. `market` - The market pair.
-2. `contractVersion` - The loopring protocol version.
+2 `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 3. `length` - The length of the depth data. default is 20.
 
 
 ```js
 params: {
   "market" : "LRC-WETH",
-  "contractVersion": "v1.2",
+  "delegateAddress": "0x5567ee920f7E62274284985D793344351A00142B",
   "length" : 10 // defalut is 50
 }
 ```
 
 ##### Returns
 
-1. `depth` - 1. `depth` - The depth data, every depth element is a three length of array, which contain price, amount A and B in market A-B in order.
+1. `depth` - The depth data, every depth element is a three length of array, which contain price, amount A and B in market A-B in order.
 2. `market` - The market pair.
-3. `contractVersion` - The loopring protocol version.
+3. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ##### Example
 ```js
@@ -302,7 +310,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
       ]
     },
     "market" : "LRC-WETH",
-    "contractVersion": "v1.2",
+    "delegateAddress": "0x5567ee920f7E62274284985D793344351A00142B",
   }
 }
 ```
@@ -315,13 +323,11 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getDepth","params":{see
 Get loopring 24hr merged tickers info from loopring relay.
 
 ##### Parameters
-1. `contractVersion` - The loopring protocol version.
+NULL
 
 
 ```js
-params: {
-    "contractVersion" : "v1.2"
-}
+params: [{}]
 ```
 
 ##### Returns
@@ -338,7 +344,7 @@ params: {
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":{see above}},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[{see above}],"id":64}'
 
 // Result
 {
@@ -488,7 +494,7 @@ Get order fill history. This history consists of OrderFilled events.
 
 1. `market` - The market of the order.(format is LRC-WETH)
 2. `owner` - The address, if is null, will query all orders.
-3. `contractVersion` - the loopring contract version you selected.
+3. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 4. `orderHash` - The order hash.
 5. `ringHash` - The order fill related ring's hash.
 6. `pageIndex` - The page want to query, default is 1.
@@ -633,7 +639,7 @@ Get all mined rings.
 ##### Parameters
 
 1. `ringHash` - The ring hash, if is null, will query all rings.
-2. `contractVersion` - The loopring contract version.
+2. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 3. `pageIndex` - The page want to query, default is 1.
 4. `pageSize` - The size per page, default is 50.
 
@@ -698,7 +704,7 @@ Get cut off time of the address.
 ##### Parameters
 
 1. `address` - The address.
-2. `contractVersion` - contract version of loopring protocol.
+2. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 3. `blockNumber` - "earliest", "latest" or "pending", default is "latest".
 
 ```js
@@ -1160,7 +1166,7 @@ socketio.on("balance_res", function(data) {
 
 `Account` - Account balance info object.
 
-1. `contractVersion` - The loopring contract version you selected.
+1. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 2. `tokens` - All token balance and allowance info array.
 
 ##### Example
@@ -1200,7 +1206,7 @@ Get 24hr merged tickers info from loopring relay.
 - loopringTickers_end : emit this event to stop receive push message.
 
 ##### Parameters
-1. `contractVersion` - The loopring protocol version.
+NULL
 
 ```js
 socketio.emit("loopringTickers_req", '{"contractVersion" : "v1.4"}', function(data) {
@@ -1226,7 +1232,7 @@ socketio.on("loopringTickers_res", function(data) {
 ```js
 // Request
 
-{"contractVersion" : "v1.4"}
+{}
 
 // Result
 [
@@ -1510,7 +1516,7 @@ Get depth and accuracy by token pair.
 ##### Parameters
 
 1. `market` - The market pair.
-2. `contractVersion` - The loopring protocol version.
+2. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 3. `length` - The length of the depth data. default is 20.
 
 

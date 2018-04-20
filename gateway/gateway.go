@@ -32,11 +32,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"github.com/Loopring/relay/market"
 )
 
 type Gateway struct {
 	filters          []Filter
 	om               ordermanager.OrderManager
+	am               market.AccountManager
 	isBroadcast      bool
 	maxBroadcastTime int
 	ipfsPubService   IPFSPubService
@@ -49,12 +51,12 @@ type Filter interface {
 	filter(o *types.Order) (bool, error)
 }
 
-func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager, marketCap marketcap.MarketCapProvider) {
+func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.GateWayOptions, ipfsOptions *config.IpfsOptions, om ordermanager.OrderManager, marketCap marketcap.MarketCapProvider, am market.AccountManager) {
 	// add gateway watcher
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
 	eventemitter.On(eventemitter.GatewayNewOrder, gatewayWatcher)
 
-	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime}
+	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime, am:am}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	gateway.marketCap = marketCap
@@ -65,6 +67,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	// new base filter
 	baseFilter := &BaseFilter{
 		MinLrcFee:             big.NewInt(filterOptions.BaseFilter.MinLrcFee),
+		MinLrcHold:            filterOptions.BaseFilter.MinLrcHold,
 		MaxPrice:              big.NewInt(filterOptions.BaseFilter.MaxPrice),
 		MinSplitPercentage:    filterOptions.BaseFilter.MinSplitPercentage,
 		MaxSplitPercentage:    filterOptions.BaseFilter.MaxSplitPercentage,
@@ -179,6 +182,7 @@ func generatePrice(order *types.Order) error {
 
 type BaseFilter struct {
 	MinLrcFee             *big.Int
+	MinLrcHold            int64
 	MinSplitPercentage    float64
 	MaxSplitPercentage    float64
 	MaxPrice              *big.Int
@@ -192,6 +196,19 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 		addrLength = 20
 		hashLength = 32
 	)
+
+	balances, err := gateway.am.GetBalanceWithSymbolResult(o.Owner)
+
+	if b, ok := balances["LRC"]; ok {
+		lrcHold := big.NewInt(f.MinLrcHold)
+		lrcHold = lrcHold.Mul(lrcHold, util.AllTokens["LRC"].Decimals)
+		if b.Cmp(lrcHold) < 1 {
+			return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
+		}
+
+	} else {
+		return false, fmt.Errorf("gateway,base filter,owner holds lrc less than %d ", f.MinLrcHold)
+	}
 
 	if len(o.Hash) != hashLength {
 		return false, fmt.Errorf("gateway,base filter,order %s length error", o.Hash.Hex())
