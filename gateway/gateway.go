@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
@@ -32,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
-	"github.com/Loopring/relay/market"
 )
 
 type Gateway struct {
@@ -56,7 +56,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gatewayWatcher := &eventemitter.Watcher{Concurrent: false, Handle: HandleOrder}
 	eventemitter.On(eventemitter.GatewayNewOrder, gatewayWatcher)
 
-	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime, am:am}
+	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime, am: am}
 	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	gateway.marketCap = marketCap

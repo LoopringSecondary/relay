@@ -19,10 +19,11 @@
 package extractor
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"log"
 	"math/big"
 )
 
@@ -58,23 +59,22 @@ func newForkDetector(db dao.RdsService, startBlockConfig *big.Int) *forkDetector
 	return detector
 }
 
-func (detector *forkDetector) Detect(currentBlock *types.Block) *types.ForkedEvent {
+func (detector *forkDetector) Detect(currentBlock *types.Block) (*types.ForkedEvent, error) {
 	// filter invalid block
 	if types.IsZeroHash(currentBlock.ParentHash) || types.IsZeroHash(currentBlock.BlockHash) {
-		log.Debugf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
-		return nil
+		return nil, fmt.Errorf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
 	}
 
 	// no fork
 	if detector.latestBlock.BlockHash == currentBlock.BlockHash || detector.latestBlock.BlockHash == currentBlock.ParentHash {
 		detector.latestBlock = currentBlock
-		return nil
+		return nil, nil
 	}
 
 	// find forked root block
 	forkBlock, err := detector.getForkedBlock(currentBlock)
 	if err != nil {
-		log.Fatalf("extractor,get forked block failed :%s,node should be shut down...", err.Error())
+		return nil, fmt.Errorf("extractor,get forked block failed :%s,node should be shut down...", err.Error())
 	}
 	detector.latestBlock = forkBlock
 
@@ -89,10 +89,10 @@ func (detector *forkDetector) Detect(currentBlock *types.Block) *types.ForkedEve
 	model := dao.Block{}
 	model.ConvertDown(forkBlock)
 	if err := detector.db.SetForkBlock(forkEvent.ForkBlock, forkEvent.DetectedBlock); err != nil {
-		log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+		return nil, fmt.Errorf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
 	}
 
-	return &forkEvent
+	return &forkEvent, nil
 }
 
 func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, error) {
