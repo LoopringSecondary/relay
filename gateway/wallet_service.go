@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -36,6 +37,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/ethereum/go-ethereum/rlp"
+	"encoding/hex"
 )
 
 const DefaultCapCurrency = "CNY"
@@ -93,7 +96,8 @@ type SingleOwner struct {
 }
 
 type TxNotify struct {
-	TxHash string `json:"txHash"`
+	Owner string `json:"owner"`
+	RawTx string `json:"rawTx"`
 }
 
 type PriceQuoteQuery struct {
@@ -402,17 +406,41 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 }
 
 func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
-	if len(txNotify.TxHash) == 0 {
-		return "", errors.New("txHash can't be null string")
+	if len(txNotify.RawTx) == 0 {
+		return "", errors.New("raw tx can't be null string")
 	}
-	log.Info(">>>>>>>>>received tx notify " + txNotify.TxHash)
-	tx := &ethaccessor.Transaction{}
-	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
-	if err == nil {
+	if !common.IsHexAddress(txNotify.Owner) {
+		return "", errors.New("owner address is illegal")
+	}
+
+	if strings.HasPrefix(txNotify.RawTx, "0x") {
+		txNotify.RawTx = strings.TrimLeft(txNotify.RawTx, "0x")
+	}
+
+	ethTx := &ethTypes.Transaction{}
+	rawTx, err := hex.DecodeString(txNotify.RawTx)
+	if err != nil {
+		return "", err
+	}
+	err = rlp.DecodeBytes(rawTx, ethTx)
+	if err != nil {
+		return "", errors.New("decode raw tx error" + err.Error())
+	} else {
+		tx := &ethaccessor.Transaction{}
+		tx.Hash = ethTx.Hash().Hex()
+		tx.Input = string(ethTx.Data())
+		tx.From = txNotify.Owner
+		tx.To = ethTx.To().Hex()
+		tx.Gas = *types.NewBigPtr(ethTx.Gas())
+		tx.GasPrice = *types.NewBigPtr(ethTx.GasPrice())
+		tx.Nonce = *types.NewBigWithInt(int(ethTx.Nonce()))
+		tx.BlockNumber = *types.NewBigWithInt(0)
+		tx.BlockHash = ""
+		tx.TransactionIndex = *types.NewBigWithInt(0)
+
+		log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 		eventemitter.Emit(eventemitter.PendingTransaction, tx)
 		log.Info("emit transaction info " + tx.Hash)
-	} else {
-		log.Error(">>>>>>>>getTransaction error : " + err.Error())
 	}
 	return
 }
