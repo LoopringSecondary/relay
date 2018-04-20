@@ -154,6 +154,8 @@ type BlockEvent struct {
 	BlockHash   common.Hash
 }
 
+type ExtractorWarningEvent struct{}
+
 type TransactionEvent struct {
 	Tx Transaction
 }

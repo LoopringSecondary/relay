@@ -58,8 +58,13 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
+<<<<<<< HEAD
 	tx.Type = uint8(src.Type)
 	tx.Status = uint8(src.Status)
+=======
+	tx.Type = src.Type
+	tx.Status = src.Status
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 	tx.TxIndex = src.TxIndex
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime

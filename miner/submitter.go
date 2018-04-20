@@ -33,13 +33,13 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"strings"
 )
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
 	minerAccountForSign accounts.Account
-	minerNameInfos      map[common.Address][]*types.NameRegistryInfo
+	//minerNameInfos      map[common.Address][]*types.NameRegistryInfo
+	miner common.Address
 
 	maxGasLimit *big.Int
 	minGasLimit *big.Int
@@ -63,6 +63,12 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	submitter := &RingSubmitter{}
 	submitter.maxGasLimit = big.NewInt(options.MaxGasLimit)
 	submitter.minGasLimit = big.NewInt(options.MinGasLimit)
+	if common.IsHexAddress(options.FeeReceipt) {
+		submitter.miner = common.HexToAddress(options.FeeReceipt)
+	} else {
+		return submitter, errors.New("miner.feeReceipt must be a address")
+	}
+
 	for _, addr := range options.NormalMiners {
 		var nonce types.Big
 		normalAddr := common.HexToAddress(addr.Address)
@@ -76,6 +82,7 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 		miner.MaxPendingTtl = addr.MaxPendingTtl
 		miner.Nonce = nonce.BigInt()
 		submitter.normalMinerAddresses = append(submitter.normalMinerAddresses, miner)
+
 	}
 
 	for _, addr := range options.PercentMiners {
@@ -94,55 +101,6 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
-
-	submitter.minerNameInfos = make(map[common.Address][]*types.NameRegistryInfo)
-	//获取signer与feerecipient
-	for addr, protocolAddr := range ethaccessor.ProtocolAddresses() {
-		var resHex string
-		callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), protocolAddr.NameRegistryAddress)
-		err := callMethod(&resHex, "getParticipantIds", "latest", options.Name, big.NewInt(int64(0)), big.NewInt(int64(1000)))
-		if nil != err {
-			return nil, err
-		} else {
-			participantIds := []*big.Int{}
-			err1 := ethaccessor.NameRegistryAbi().Unpack(&participantIds, "getParticipantIds", common.Hex2Bytes(strings.TrimPrefix(resHex, "0x")), 1)
-			if nil != err1 {
-				return nil, err1
-			} else if len(participantIds) <= 0 {
-				return nil, errors.New("miner hasn't been registerd. you can use `relay nameRegistry` to register it first.")
-			}
-			nameInfos := []*types.NameRegistryInfo{}
-			for _, id := range participantIds {
-				var nameRegistryHex string
-				err := callMethod(&nameRegistryHex, "getParticipantById", "latest", id)
-
-				if nil == err {
-					nameInfo := &types.NameRegistryInfo{}
-					err2 := ethaccessor.NameRegistryAbi().Unpack(nameInfo, "getParticipantById", common.Hex2Bytes(strings.TrimPrefix(nameRegistryHex, "0x")), 1)
-					if nil == err2 {
-						nameInfo.ParticipantId = new(big.Int)
-						nameInfo.ParticipantId.Set(id)
-						nameInfos = append(nameInfos, nameInfo)
-
-						//if crypto.IsKSAccountUnlocked(nameInfo.Signer) {
-						//	nameInfos = append(nameInfos, nameInfo)
-						//} else {
-						//	log.Errorf("the signer address: %s participantId: %s hasn't been unlocked.", nameInfo.Signer.Hex(), id.String())
-						//}
-					} else {
-						log.Errorf("init submitter----unpack method:getParticipantById error:%s", err.Error())
-					}
-				} else {
-					log.Errorf("init submitter error:%s", err.Error())
-				}
-			}
-			if len(nameInfos) <= 0 {
-				return nil, errors.New("there isn't useable nameinfo.")
-			} else {
-				submitter.minerNameInfos[addr] = nameInfos
-			}
-		}
-	}
 
 	submitter.stopFuncs = []func(){}
 	return submitter, nil
@@ -287,25 +245,16 @@ func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, statu
 //}
 
 func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, gas, gasPrice *big.Int, received *big.Rat) (*types.RingSubmitInfo, error) {
+	//todo:change to advice protocolAddress
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	var (
-		signer *types.NameRegistryInfo
-		err    error
+		//signer *types.NameRegistryInfo
+		err error
 	)
 
 	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, Received: received, ProtocolGasPrice: gasPrice, ProtocolGas: gas}
 	if types.IsZeroHash(ringState.Hash) {
-		if signers, exists := submitter.minerNameInfos[protocolAddress]; exists {
-			if len(signers) > 0 {
-				//todo:use the first one
-				signer = signers[0]
-				ringState.Hash = ringState.GenerateHash(signer)
-			} else {
-				return nil, errors.New("err:there isn't a address to sign")
-			}
-		} else {
-			return nil, errors.New("err:there isn't a address to sign.")
-		}
+		ringState.Hash = ringState.GenerateHash(submitter.miner)
 	}
 
 	ringSubmitInfo.ProtocolAddress = protocolAddress
@@ -315,7 +264,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	protocolAbi := ethaccessor.ProtocolImplAbi()
 	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
 
-	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(signer); nil != err1 {
+	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.miner); nil != err1 {
 		return nil, err1
 	} else {
 		ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",
@@ -326,7 +275,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 			ringSubmitArgs.VList,
 			ringSubmitArgs.RList,
 			ringSubmitArgs.SList,
-			ringSubmitArgs.Miner.ParticipantId,
+			ringSubmitArgs.Miner,
 			uint16(ringSubmitArgs.FeeSelections.Uint64()),
 		)
 	}
@@ -386,8 +335,8 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 	ringState.LegalFee = new(big.Rat).SetInt(big.NewInt(int64(0)))
 	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
 	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
-	lrcAddress := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol].LrcTokenAddress
-	spenderAddress := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol].DelegateAddress
+	lrcAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].LrcTokenAddress
+	spenderAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].DelegateAddress
 	useSplit := false
 	//for _,splitMiner := range submitter.splitMinerAddresses {
 	//	//todo:optimize it
@@ -420,6 +369,11 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 	minerAddresses := submitter.availabeMinerAddress()
 	if !useSplit {
 		for _, normalMinerAddress := range minerAddresses {
+			//if bigger than maxpendingcount, change a minerAddress to last address
+			//var pendingCount,txCount  types.Big
+			//ethaccessor.GetTransactionCount(&pendingCount, normalMinerAddress, "pending")
+			//ethaccessor.GetTransactionCount(&txCount, normalMinerAddress, "latest")
+
 			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
 			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
 			feeSelections := []uint8{}
@@ -462,13 +416,13 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 			}
 		}
 	}
-	protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
-
-	costEth := new(big.Rat).SetInt(protocolCost)
-	costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
-	ringSubmitInfo.LegalCost = costLegal
-	received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
-	ringSubmitInfo.Received = received
+	//protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
+	//
+	//costEth := new(big.Rat).SetInt(protocolCost)
+	//costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
+	//ringSubmitInfo.LegalCost = costLegal
+	//received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
+	//ringSubmitInfo.Received = received
 
 	return nil
 }
@@ -476,5 +430,3 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 func (submitter *RingSubmitter) SetMatcher(matcher Matcher) {
 	submitter.matcher = matcher
 }
-
-// TODO(hongyu): 初始化submmitter之前需要确认是否nameRegistry&addParticipant

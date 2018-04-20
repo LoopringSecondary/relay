@@ -41,7 +41,10 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	state.CancelledAmountB = big.NewInt(0)
 	state.CancelledAmountS = big.NewInt(0)
 
-	cancelAmount, dealtAmount, getAmountErr := getCancelledAndDealtAmount(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr)
+	state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
+
+	protocol := state.RawOrder.DelegateAddress
+	cancelAmount, dealtAmount, getAmountErr := getCancelledAndDealtAmount(protocol, state.RawOrder.Hash, blockNumberStr)
 	if getAmountErr != nil {
 		return nil, getAmountErr
 	}
@@ -55,7 +58,7 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	}
 
 	// check order finished status
-	settleOrderStatus(state, mc)
+	settleOrderStatus(state, mc, ORDER_FROM_FILL)
 
 	if blockNumber == nil {
 		state.UpdatedBlock = big.NewInt(0)
@@ -75,21 +78,38 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 }
 
 // 写入订单状态
-func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) {
+type OrderFillOrCancelType string
+
+const (
+	ORDER_FROM_FILL   OrderFillOrCancelType = "fill"
+	ORDER_FROM_CANCEL OrderFillOrCancelType = "cancel"
+)
+
+func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider, source OrderFillOrCancelType) {
 	zero := big.NewInt(0)
 	finishAmountS := big.NewInt(0).Add(state.CancelledAmountS, state.DealtAmountS)
 	totalAmountS := big.NewInt(0).Add(finishAmountS, state.SplitAmountS)
 	finishAmountB := big.NewInt(0).Add(state.CancelledAmountB, state.DealtAmountB)
 	totalAmountB := big.NewInt(0).Add(finishAmountB, state.SplitAmountB)
 	totalAmount := big.NewInt(0).Add(totalAmountS, totalAmountB)
+
 	if totalAmount.Cmp(zero) <= 0 {
 		state.Status = types.ORDER_NEW
-	} else {
-		if isOrderFullFinished(state, mc) {
-			state.Status = types.ORDER_FINISHED
-		} else {
-			state.Status = types.ORDER_PARTIAL
-		}
+		return
+	}
+
+	if !isOrderFullFinished(state, mc) {
+		state.Status = types.ORDER_PARTIAL
+		return
+	}
+
+	if source == ORDER_FROM_FILL {
+		state.Status = types.ORDER_FINISHED
+		return
+	}
+	if source == ORDER_FROM_CANCEL {
+		state.Status = types.ORDER_CANCEL
+		return
 	}
 }
 
@@ -137,6 +157,9 @@ func blockNumberToString(blockNumber *big.Int) string {
 }
 
 func getCancelledAndDealtAmount(protocol common.Address, orderhash common.Hash, blockNumberStr string) (*big.Int, *big.Int, error) {
+	// TODO(fuk): 系统暂时只会从gateway接收新订单,而不会有部分成交的订单
+	return big.NewInt(0), big.NewInt(0), nil
+
 	var (
 		cancelled, cancelOrFilled, dealt *big.Int
 		err                              error

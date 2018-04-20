@@ -55,7 +55,7 @@ type PageResult struct {
 }
 
 type Depth struct {
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	Market          string `json:"market"`
 	Depth           AskBid `json:"depth"`
 }
@@ -72,12 +72,12 @@ type DepthElement struct {
 }
 
 type CommonTokenRequest struct {
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	Owner           string `json:"owner"`
 }
 
-type SingleContractVersion struct {
-	ContractVersion string `json:"contractVersion"`
+type SingleDelegateAddress struct {
+	DelegateAddress string `json:"delegateAddress"`
 }
 
 type SingleMarket struct {
@@ -103,7 +103,7 @@ type PriceQuoteQuery struct {
 
 type CutoffRequest struct {
 	Address         string `json:"address"`
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	BlockNumber     string `json:"blockNumber"`
 }
 
@@ -127,7 +127,7 @@ type OrderQuery struct {
 	Status          string `json:"status"`
 	PageIndex       int    `json:"pageIndex"`
 	PageSize        int    `json:"pageSize"`
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	Owner           string `json:"owner"`
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
@@ -136,12 +136,12 @@ type OrderQuery struct {
 
 type DepthQuery struct {
 	Length          int    `json:"length"`
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	Market          string `json:"market"`
 }
 
 type FillQuery struct {
-	ContractVersion string `json:"contractVersion"`
+	DelegateAddress string `json:"delegateAddress"`
 	Market          string `json:"market"`
 	Owner           string `json:"owner"`
 	OrderHash       string `json:"orderHash"`
@@ -152,22 +152,23 @@ type FillQuery struct {
 }
 
 type RingMinedQuery struct {
-	ContractVersion string    `json:"contractVersion"`
+	DelegateAddress string    `json:"delegateAddress"`
 	RingIndex       types.Big `json:"ringIndex"`
 	PageIndex       int       `json:"pageIndex"`
 	PageSize        int       `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
-	Protocol   string `json:"protocol"` // 智能合约地址
-	Owner      string `json:"address"`
-	Hash       string `json:"hash"`
-	TokenS     string `json:"tokenS"`  // 卖出erc20代币智能合约地址
-	TokenB     string `json:"tokenB"`  // 买入erc20代币智能合约地址
-	AmountS    string `json:"amountS"` // 卖出erc20代币数量上限
-	AmountB    string `json:"amountB"` // 买入erc20代币数量上限
-	ValidSince string `json:"validSince"`
-	ValidUntil string `json:"validUntil"` // 订单过期时间
+	Protocol        string `json:"protocol"`        // 智能合约地址
+	DelegateAddress string `json:"delegateAddress"` // 智能合约地址
+	Owner           string `json:"address"`
+	Hash            string `json:"hash"`
+	TokenS          string `json:"tokenS"`  // 卖出erc20代币智能合约地址
+	TokenB          string `json:"tokenB"`  // 买入erc20代币智能合约地址
+	AmountS         string `json:"amountS"` // 卖出erc20代币数量上限
+	AmountB         string `json:"amountB"` // 买入erc20代币数量上限
+	ValidSince      string `json:"validSince"`
+	ValidUntil      string `json:"validUntil"` // 订单过期时间
 	//Salt                  string `json:"salt"`
 	LrcFee                string `json:"lrcFee"` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool   `json:"buyNoMoreThanAmountB"`
@@ -175,7 +176,7 @@ type RawOrderJsonResult struct {
 	V                     string `json:"v"`
 	R                     string `json:"r"`
 	S                     string `json:"s"`
-	WalletId              string `json:"walletId" gencodec:"required"`
+	WalletAddress         string `json:"walletAddress" gencodec:"required"`
 	AuthAddr              string `json:"authAddr" gencodec:"required"`       //
 	AuthPrivateKey        string `json:"authPrivateKey" gencodec:"required"` //
 	Market                string `json:"market"`
@@ -210,6 +211,7 @@ type RingMinedDetail struct {
 type RingMinedInfo struct {
 	ID                 int                 `json:"id"`
 	Protocol           string              `json:"protocol"`
+	DelegateAddress    string              `json:"delegateAddress"`
 	RingIndex          string              `json:"ringIndex"`
 	RingHash           string              `json:"ringHash"`
 	TxHash             string              `json:"txHash"`
@@ -230,12 +232,13 @@ type Token struct {
 }
 
 type AccountJson struct {
-	ContractVersion string  `json:"contractVersion"`
+	DelegateAddress string  `json:"delegateAddress"`
 	Address         string  `json:"owner"`
 	Tokens          []Token `json:"tokens"`
 }
 
 type WalletServiceImpl struct {
+<<<<<<< HEAD
 	trendManager           market.TrendManager
 	orderManager           ordermanager.OrderManager
 	accountManager         market.AccountManager
@@ -251,21 +254,36 @@ type WalletServiceImpl struct {
 func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
 	capProvider marketcap.MarketCapProvider, ethForwarder *EthForwarder, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string, protocols map[string]string,
 	txview txmanager.TransactionView) *WalletServiceImpl {
+=======
+	trendManager    market.TrendManager
+	orderManager    ordermanager.OrderManager
+	accountManager  market.AccountManager
+	marketCap       marketcap.MarketCapProvider
+	tickerCollector market.CollectorImpl
+	rds             dao.RdsService
+	oldWethAddress  string
+}
+
+func NewWalletService(trendManager market.TrendManager, orderManager ordermanager.OrderManager, accountManager market.AccountManager,
+	capProvider marketcap.MarketCapProvider, collector market.CollectorImpl, rds dao.RdsService, oldWethAddress string) *WalletServiceImpl {
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 	w := &WalletServiceImpl{}
 	w.trendManager = trendManager
 	w.orderManager = orderManager
 	w.accountManager = accountManager
 	w.marketCap = capProvider
-	w.ethForwarder = ethForwarder
 	w.tickerCollector = collector
 	w.rds = rds
 	w.oldWethAddress = oldWethAddress
+<<<<<<< HEAD
 	w.transactionView = txview
 	// select first contract version to default
 	for k := range protocols {
 		w.defaultContractVersion = k
 		break
 	}
+=======
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 	return w
 }
 
@@ -376,10 +394,6 @@ func (w *WalletServiceImpl) GetTickers(mkt SingleMarket) (result map[string]mark
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetAllMarketTickers() (result []market.Ticker, err error) {
-	return w.trendManager.GetTicker()
-}
-
 func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err error) {
 	if len(owner.Owner) == 0 {
 		return "", errors.New("owner can't be null string")
@@ -440,11 +454,11 @@ func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err er
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
 	mkt := strings.ToUpper(query.Market)
-	protocol := query.ContractVersion
+	delegateAddress := query.DelegateAddress
 	length := query.Length
 
-	if mkt == "" || protocol == "" || util.ContractVersionConfig[protocol] == "" {
-		err = errors.New("market and correct contract version must be applied")
+	if mkt == "" || !common.IsHexAddress(delegateAddress) {
+		err = errors.New("market and correct contract address must be applied")
 		return
 	}
 
@@ -466,11 +480,11 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		empty[i] = make([]string, 0)
 	}
 	askBid := AskBid{Buy: empty, Sell: empty}
-	depth := Depth{ContractVersion: util.ContractVersionConfig[protocol], Market: mkt, Depth: askBid}
+	depth := Depth{DelegateAddress: delegateAddress, Market: mkt, Depth: askBid}
 
 	//(TODO) 考虑到需要聚合的情况，所以每次取2倍的数据，先聚合完了再cut, 不是完美方案，后续再优化
 	asks, askErr := w.orderManager.GetOrderBook(
-		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		common.HexToAddress(delegateAddress),
 		util.AllTokens[a].Protocol,
 		util.AllTokens[b].Protocol, length*2)
 
@@ -482,7 +496,7 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	depth.Depth.Sell = calculateDepth(asks, length, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
 
 	bids, bidErr := w.orderManager.GetOrderBook(
-		common.HexToAddress(util.ContractVersionConfig[protocol]),
+		common.HexToAddress(delegateAddress),
 		util.AllTokens[b].Protocol,
 		util.AllTokens[a].Protocol, length*2)
 
@@ -520,14 +534,8 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetTicker(query SingleContractVersion) (res []market.Ticker, err error) {
-	res, err = w.trendManager.GetTicker()
-
-	//for i, t := range res {
-	//	w.fillBuyAndSell(&t, query.ContractVersion)
-	//	res[i] = t
-	//}
-	return
+func (w *WalletServiceImpl) GetTicker() (res []market.Ticker, err error) {
+	return w.trendManager.GetTicker()
 }
 
 func (w *WalletServiceImpl) GetTrend(query TrendQuery) (res []market.Trend, err error) {
@@ -571,19 +579,15 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 	if !common.IsHexAddress(balanceQuery.Owner) {
 		return res, errors.New("owner can't be null")
 	}
+	if !common.IsHexAddress(balanceQuery.DelegateAddress) {
+		return res, errors.New("delegate must be address")
+	}
 	owner := common.HexToAddress(balanceQuery.Owner)
-	if len(balanceQuery.ContractVersion) == 0 {
-		return res, errors.New("contract version can't be null")
-	}
-
 	balances, _ := w.accountManager.GetBalanceWithSymbolResult(owner)
-	allowances := make(map[string]*big.Int)
-	if spender, err := ethaccessor.GetSpenderAddress(common.HexToAddress(util.ContractVersionConfig[balanceQuery.ContractVersion])); nil == err {
-		allowances, _ = w.accountManager.GetAllowanceWithSymbolResult(owner, spender)
-	}
+	allowances, _ := w.accountManager.GetAllowanceWithSymbolResult(owner, common.HexToAddress(balanceQuery.DelegateAddress))
 
 	res = AccountJson{}
-	res.ContractVersion = balanceQuery.ContractVersion
+	res.DelegateAddress = balanceQuery.DelegateAddress
 	res.Address = balanceQuery.Owner
 	res.Tokens = []Token{}
 	for symbol, balance := range balances {
@@ -603,7 +607,7 @@ func (w *WalletServiceImpl) GetBalance(balanceQuery CommonTokenRequest) (res Acc
 }
 
 func (w *WalletServiceImpl) GetCutoff(query CutoffRequest) (result int64, err error) {
-	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(util.ContractVersionConfig[query.ContractVersion]), common.HexToAddress(query.Address), query.BlockNumber)
+	cutoff, err := ethaccessor.GetCutoff(common.HexToAddress(query.DelegateAddress), common.HexToAddress(query.Address), query.BlockNumber)
 	if err != nil {
 		return 0, err
 	}
@@ -711,25 +715,16 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 	if orderQuery.Owner != "" {
 		query["owner"] = orderQuery.Owner
 	}
-	if util.ContractVersionConfig[orderQuery.ContractVersion] != "" {
-		query["protocol"] = util.ContractVersionConfig[orderQuery.ContractVersion]
+	if common.IsHexAddress(orderQuery.DelegateAddress) {
+		query["delegate_address"] = orderQuery.DelegateAddress
 	}
 
 	if orderQuery.Market != "" {
 		query["market"] = orderQuery.Market
+	}
 
-		tokenSymbol, marketSymbol := util.UnWrap(orderQuery.Market)
-		market := util.AliasToAddress(marketSymbol)
-		token := util.AliasToAddress(tokenSymbol)
-		switch orderQuery.Side {
-		case util.SideSell:
-			query["token_s"] = market.Hex()
-			query["token_b"] = token.Hex()
-		case util.SideBuy:
-			query["token_s"] = token.Hex()
-			query["token_b"] = market.Hex()
-		default:
-		}
+	if orderQuery.Side != "" {
+		query["side"] = orderQuery.Side
 	}
 
 	if orderQuery.OrderHash != "" {
@@ -887,8 +882,8 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 	} else {
 		ps = q.PageSize
 	}
-	if q.ContractVersion != "" {
-		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
+	if common.IsHexAddress(q.DelegateAddress) {
+		rst["delegate_address"] = q.DelegateAddress
 	}
 	if q.Owner != "" {
 		rst["owner"] = q.Owner
@@ -920,8 +915,8 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	} else {
 		ps = q.PageSize
 	}
-	if q.ContractVersion != "" {
-		rst["contract_address"] = util.ContractVersionConfig[q.ContractVersion]
+	if common.IsHexAddress(q.DelegateAddress) {
+		rst["delegate_address"] = q.DelegateAddress
 	}
 	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) >= 0 {
 		rst["ring_index"] = q.RingIndex.BigInt().String()
@@ -950,9 +945,10 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rst.CancelledAmountS = types.BigintToHex(src.CancelledAmountS)
 	rst.Status = getStringStatus(src)
 	rawOrder := RawOrderJsonResult{}
-	rawOrder.Protocol = src.RawOrder.Protocol.String()
-	rawOrder.Owner = src.RawOrder.Owner.String()
-	rawOrder.Hash = src.RawOrder.Hash.String()
+	rawOrder.Protocol = src.RawOrder.Protocol.Hex()
+	rawOrder.DelegateAddress = src.RawOrder.DelegateAddress.Hex()
+	rawOrder.Owner = src.RawOrder.Owner.Hex()
+	rawOrder.Hash = src.RawOrder.Hash.Hex()
 	rawOrder.TokenS = util.AddressToAlias(src.RawOrder.TokenS.String())
 	rawOrder.TokenB = util.AddressToAlias(src.RawOrder.TokenB.String())
 	rawOrder.AmountS = types.BigintToHex(src.RawOrder.AmountS)
@@ -965,10 +961,9 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.V = types.BigintToHex(big.NewInt(int64(src.RawOrder.V)))
 	rawOrder.R = src.RawOrder.R.Hex()
 	rawOrder.S = src.RawOrder.S.Hex()
-	rawOrder.WalletId = types.BigintToHex(src.RawOrder.WalletId)
+	rawOrder.WalletAddress = src.RawOrder.WalletAddress.Hex()
 	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
 	rawOrder.Market = src.RawOrder.Market
-	//rawOrder.Side = util.GetSide(rawOrder.TokenS, rawOrder.TokenB)
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
@@ -977,6 +972,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	return rst
 }
 
+<<<<<<< HEAD
 func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersion string) {
 	queryDepth := DepthQuery{1, contractVersion, ticker.Market}
 
@@ -991,6 +987,83 @@ func (w *WalletServiceImpl) fillBuyAndSell(ticker *market.Ticker, contractVersio
 			ticker.Sell = depth.Depth.Sell[0][0]
 		}
 	}
+=======
+func txStatusToUint8(txType string) int {
+	switch txType {
+	case "pending":
+		return 1
+	case "success":
+		return 2
+	case "failed":
+		return 3
+	default:
+		return -1
+	}
+}
+
+func txTypeToUint8(status string) int {
+	switch status {
+	case "approve":
+		return 1
+	case "send":
+		return 2
+	case "receive":
+		return 3
+	case "sell":
+		return 4
+	case "buy":
+		return 5
+	case "convert":
+		return 7
+	case "cancel_order":
+		return 8
+	case "cutoff":
+		return 9
+	case "cutoff_trading_pair":
+		return 10
+	default:
+		return -1
+	}
+}
+
+func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
+	dst := TransactionJsonResult{}
+	dst.Protocol = tx.Protocol
+	dst.Owner = tx.Owner
+	dst.From = tx.From
+	dst.To = tx.To
+	dst.TxHash = tx.TxHash
+
+	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
+		ctx, err := tx.GetCutoffPairContent()
+		if err == nil && ctx != nil {
+			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
+			if err == nil {
+				dst.Content = TransactionContent{Market: mkt}
+			}
+		}
+	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
+		ctx, err := tx.GetCancelOrderHash()
+		if err == nil && ctx != "" {
+			dst.Content = TransactionContent{OrderHash: ctx}
+		}
+	}
+
+	dst.BlockNumber = tx.BlockNumber.Int64()
+	dst.LogIndex = tx.LogIndex
+	if tx.Value == nil {
+		dst.Value = "0"
+	} else {
+		dst.Value = tx.Value.String()
+	}
+	dst.Type = tx.TypeStr()
+	dst.Status = tx.StatusStr()
+	dst.CreateTime = tx.CreateTime
+	dst.UpdateTime = tx.UpdateTime
+	dst.Symbol = tx.Symbol
+	dst.Nonce = tx.TxInfo.Nonce.String()
+	return dst
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 }
 
 func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDetail, err error) {
@@ -1000,6 +1073,7 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 	ringInfo.RingHash = ring.RingHash
 	ringInfo.BlockNumber = ring.BlockNumber
 	ringInfo.Protocol = ring.Protocol
+	ringInfo.DelegateAddress = ring.DelegateAddress
 	ringInfo.TxHash = ring.TxHash
 	ringInfo.Time = ring.Time
 	ringInfo.RingIndex = ring.RingIndex

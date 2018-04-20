@@ -7,9 +7,11 @@ GOROOT=/usr/lib/go-1.9
 export PATH=$PATH:$GOROOT/bin
 export GOPATH=/opt/loopring/go-src
 
-#cp svc config to svc
-sudo cp -rf $WORK_DIR/src/bin/svc/* $SVC_DIR
-sudo chmod -R 755 $SVC_DIR
+#cp svc config to svc if this node is not miner
+if [ ! -d /opt/loopring/miner ]; then
+    sudo cp -rf $WORK_DIR/src/bin/svc/* $SVC_DIR
+    sudo chmod -R 755 $SVC_DIR
+fi
 
 SRC_DIR=$GOPATH/src/github.com/Loopring/relay
 if [ ! -d $SRC_DIR ]; then

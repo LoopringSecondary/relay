@@ -41,28 +41,13 @@ const (
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 )
 
-//订单原始信息
-//struct Order {
-//address owner;
-//address tokenS;
-//address tokenB;
-//address authAddr;
-//uint    validSince;
-//uint    validUntil;
-//uint    amountS;
-//uint    amountB;
-//uint    lrcFee;
-//bool    buyNoMoreThanAmountB;
-//uint    walletId;
-//uint8   marginSplitPercentage;
-//}
-
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address             `json:"protocol" gencodec:"required"`       // 智能合约地址
-	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`       //
-	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
-	WalletId              *big.Int                   `json:"walletId" gencodec:"required"`
+	Protocol              common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress       common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	WalletAddress         common.Address             `json:"walletAddress" gencodec:"required"`
 	TokenS                common.Address             `json:"tokenS" gencodec:"required"`     // 卖出erc20代币智能合约地址
 	TokenB                common.Address             `json:"tokenB" gencodec:"required"`     // 买入erc20代币智能合约地址
 	AmountS               *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
@@ -89,22 +74,22 @@ type orderMarshaling struct {
 	AmountB    *Big
 	ValidSince *Big
 	ValidUntil *Big
-	WalletId   *Big
 	LrcFee     *Big
 }
 
 //go:generate gencodec -type OrderJsonRequest -field-override orderJsonRequestMarshaling -out gen_order_request_json.go
 type OrderJsonRequest struct {
-	Protocol       common.Address             `json:"protocol" gencodec:"required"`       // 智能合约地址
-	TokenS         common.Address             `json:"tokenS" gencodec:"required"`         // 卖出erc20代币智能合约地址
-	TokenB         common.Address             `json:"tokenB" gencodec:"required"`         // 买入erc20代币智能合约地址
-	AuthAddr       common.Address             `json:"authAddr" gencodec:"required"`       //
-	AuthPrivateKey crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"` //
-	WalletId       *big.Int                   `json:"walletId" gencodec:"required"`
-	AmountS        *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
-	AmountB        *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
-	ValidSince     *big.Int                   `json:"validSince" gencodec:"required"` //
-	ValidUntil     *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
+	Protocol        common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	TokenS          common.Address             `json:"tokenS" gencodec:"required"`          // 卖出erc20代币智能合约地址
+	TokenB          common.Address             `json:"tokenB" gencodec:"required"`          // 买入erc20代币智能合约地址
+	AuthAddr        common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	WalletAddress   common.Address             `json:"walletAddress" gencodec:"required"`
+	AmountS         *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
+	AmountB         *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
+	ValidSince      *big.Int                   `json:"validSince" gencodec:"required"` //
+	ValidUntil      *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
 	// Salt                  int64          `json:"salt" gencodec:"required"`
 	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
@@ -125,7 +110,6 @@ type orderJsonRequestMarshaling struct {
 	AmountB    *Big
 	ValidSince *Big
 	ValidUntil *Big
-	WalletId   *Big
 	LrcFee     *Big
 }
 
@@ -138,10 +122,11 @@ func (o *Order) GenerateHash() common.Hash {
 	}
 
 	hashBytes := crypto.GenerateHash(
-		o.Protocol.Bytes(),
+		o.DelegateAddress.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
+		o.WalletAddress.Bytes(),
 		o.AuthAddr.Bytes(),
 		common.LeftPadBytes(o.AmountS.Bytes(), 32),
 		common.LeftPadBytes(o.AmountB.Bytes(), 32),
@@ -149,12 +134,10 @@ func (o *Order) GenerateHash() common.Hash {
 		common.LeftPadBytes(o.ValidUntil.Bytes(), 32),
 		common.LeftPadBytes(o.LrcFee.Bytes(), 32),
 		[]byte{buyNoMoreThanAmountB},
-		common.LeftPadBytes(o.WalletId.Bytes(), 32),
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
 
 	h.SetBytes(hashBytes)
-
 	return *h
 }
 
@@ -405,6 +388,7 @@ func (state *OrderState) DealtAndSplitAmount() (totalAmountS *big.Rat, totalAmou
 func ToOrder(request *OrderJsonRequest) *Order {
 	order := &Order{}
 	order.Protocol = request.Protocol
+	order.DelegateAddress = request.DelegateAddress
 	order.TokenS = request.TokenS
 	order.TokenB = request.TokenB
 	order.AmountS = request.AmountS
@@ -413,7 +397,6 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.ValidUntil = request.ValidUntil
 	order.AuthAddr = request.AuthAddr
 	order.AuthPrivateKey = request.AuthPrivateKey
-	// order.Salt = big.NewInt(request.Salt)
 	order.LrcFee = request.LrcFee
 	order.BuyNoMoreThanAmountB = request.BuyNoMoreThanAmountB
 	order.MarginSplitPercentage = request.MarginSplitPercentage
@@ -421,7 +404,7 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.R = request.R
 	order.S = request.S
 	order.Owner = request.Owner
-	order.WalletId = request.WalletId
+	order.WalletAddress = request.WalletAddress
 	order.PowNonce = request.PowNonce
 	return order
 }

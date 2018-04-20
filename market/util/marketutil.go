@@ -34,7 +34,10 @@ import (
 	"strings"
 )
 
+<<<<<<< HEAD
 const WeiToEther = 1e18
+=======
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 const SideSell = "sell"
 const SideBuy = "buy"
 
@@ -47,27 +50,22 @@ var MarketBaseOrder = map[string]uint8{"BAR": 5, "LRC": 10, "WETH": 20, "DAI": 3
 
 type TokenStandard uint8
 
-const (
-	TOKEN_STANDARD_ERC20 TokenStandard = iota
-	TOKEN_STANDARD_ERC223
-)
-
-func StringToFloat(amount string) float64 {
+func StringToFloat(token string, amount string) float64 {
 	rst, _ := new(big.Rat).SetString(amount)
-	weiRat := new(big.Rat).SetInt64(WeiToEther)
+	ts, _ := AddressToToken(common.HexToAddress(token))
+	weiRat := new(big.Rat).SetInt64(ts.Decimals.Int64())
 	rst.Quo(rst, weiRat)
 	result, _ := rst.Float64()
 	return result
 }
 
 var (
-	SupportTokens         map[string]types.Token // token symbol to entity
-	AllTokens             map[string]types.Token
-	SupportMarkets        map[string]types.Token // token symbol to contract hex address
-	AllMarkets            []string
-	AllTokenPairs         []TokenPair
-	ContractVersionConfig = map[string]string{}
-	SymbolTokenMap        map[common.Address]string
+	SupportTokens  map[string]types.Token // token symbol to entity
+	AllTokens      map[string]types.Token
+	SupportMarkets map[string]types.Token // token symbol to contract hex address
+	AllMarkets     []string
+	AllTokenPairs  []TokenPair
+	SymbolTokenMap map[common.Address]string
 )
 
 func StartRefreshCron(option config.MarketOptions) {
@@ -186,7 +184,7 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	return
 }
 
-func Initialize(options config.MarketOptions, contracts map[string]string) {
+func Initialize(options config.MarketOptions) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
@@ -194,8 +192,6 @@ func Initialize(options config.MarketOptions, contracts map[string]string) {
 	SymbolTokenMap = make(map[common.Address]string)
 
 	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs, SymbolTokenMap = getTokenAndMarketFromDB(options.TokenFile)
-
-	ContractVersionConfig = contracts
 
 	// StartRefreshCron(rds)
 
@@ -349,9 +345,9 @@ func CalculatePrice(amountS, amountB string, s, b string) float64 {
 	}
 
 	if GetSide(s, b) == SideBuy {
-		result.Quo(new(big.Rat).SetFrac(as, tokenB.Decimals), new(big.Rat).SetFrac(ab, tokenS.Decimals))
+		result.Quo(new(big.Rat).SetFrac(as, tokenS.Decimals), new(big.Rat).SetFrac(ab, tokenB.Decimals))
 	} else {
-		result.Quo(new(big.Rat).SetFrac(ab, tokenS.Decimals), new(big.Rat).SetFrac(as, tokenB.Decimals))
+		result.Quo(new(big.Rat).SetFrac(ab, tokenB.Decimals), new(big.Rat).SetFrac(as, tokenS.Decimals))
 	}
 
 	price, _ := result.Float64()
@@ -397,19 +393,6 @@ func GetSide(s, b string) string {
 
 func IsAddress(token string) bool {
 	return strings.HasPrefix(token, "0x")
-}
-
-func getContractVersion(address string) string {
-	for k, v := range ContractVersionConfig {
-		if strings.ToLower(v) == strings.ToLower(address) {
-			return k
-		}
-	}
-	return ""
-}
-
-func IsSupportedContract(address string) bool {
-	return getContractVersion(address) != ""
 }
 
 func GetSymbolWithAddress(address common.Address) (string, error) {

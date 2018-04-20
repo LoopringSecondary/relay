@@ -58,20 +58,21 @@ const (
 // todo(fuk): mark,transaction不包含sell&buy
 
 type TxInfo struct {
-	Protocol    common.Address `json:"protocol"`
-	From        common.Address `json:"from"`
-	To          common.Address `json:"to"`
-	TxHash      common.Hash    `json:"txHash"`
-	BlockHash   common.Hash    `json:"symbol"`
-	TxIndex     int64          `json:txIndex`
-	LogIndex    int64          `json:"logIndex"`
-	BlockNumber *big.Int       `json:"blockNumber"`
-	BlockTime   int64          `json:"block_time"`
-	Status      TxStatus       `json:"status"`
-	GasLimit    *big.Int       `json:"gas_limit"`
-	GasUsed     *big.Int       `json:"gas_used"`
-	GasPrice    *big.Int       `json:"gas_price"`
-	Nonce       *big.Int       `json:"nonce"`
+	Protocol        common.Address `json:"protocol"`
+	DelegateAddress common.Address `json:"delegate_address"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	TxHash          common.Hash    `json:"txHash"`
+	BlockHash       common.Hash    `json:"symbol"`
+	TxIndex         int64          `json:txIndex`
+	LogIndex        int64          `json:"logIndex"`
+	BlockNumber     *big.Int       `json:"blockNumber"`
+	BlockTime       int64          `json:"block_time"`
+	Status          TxStatus          `json:"status"`
+	GasLimit        *big.Int       `json:"gas_limit"`
+	GasUsed         *big.Int       `json:"gas_used"`
+	GasPrice        *big.Int       `json:"gas_price"`
+	Nonce           *big.Int       `json:"nonce"`
 }
 
 type Transaction struct {

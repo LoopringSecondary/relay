@@ -191,7 +191,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0x48c761b9faa61adbc541a025e4c1286aef5af97a95132988f3cce529833444b9")
+		orderhash    = common.HexToHash("0xb341b0b3d924ad628e5f8142af1679c92db23e74dbeb8259f1cd08e28f3da202")
 		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
@@ -207,8 +207,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 	account := accounts.Account{Address: state.RawOrder.Owner}
 
 	// create cancel order contract function parameters
-	addresses := [4]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.AuthAddr}
-	values := [7]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, state.RawOrder.WalletId, cancelAmount}
+	addresses := [5]common.Address{state.RawOrder.Owner, state.RawOrder.TokenS, state.RawOrder.TokenB, state.RawOrder.WalletAddress, state.RawOrder.AuthAddr}
+	values := [6]*big.Int{state.RawOrder.AmountS, state.RawOrder.AmountB, state.RawOrder.ValidSince, state.RawOrder.ValidUntil, state.RawOrder.LrcFee, cancelAmount}
 	buyNoMoreThanB := state.RawOrder.BuyNoMoreThanAmountB
 	marginSplitPercentage := state.RawOrder.MarginSplitPercentage
 	v := state.RawOrder.V
@@ -383,65 +383,6 @@ func TestEthNodeAccessor_TokenAddress(t *testing.T) {
 	}
 }
 
-// 注册&取消注册都不能连续性重复调用
-// 同一个地址不能注册同一个名字多次
-func TestEthNodeAccessor_NameRegistry(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	name := test.Cfg().Miner.Name
-	if result, err := callMethod(miner.Address, "registerName", gas, gasPrice, nil, name); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("registerName:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_AddParticipant(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	feeReceipt := miner.Address
-	signer := miner.Address
-
-	if result, err := callMethod(miner.Address, "addParticipant", gas, gasPrice, nil, feeReceipt, signer); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("addParticipant:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_NameUnRegistry(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	nameRegistryAbi := ethaccessor.NameRegistryAbi()
-	callMethod := ethaccessor.ContractSendTransactionMethod("latest", nameRegistryAbi, nameRegistryAddress)
-
-	name := test.Cfg().Miner.Name
-	if result, err := callMethod(miner.Address, "unregisterName", gas, gasPrice, nil, name); err != nil {
-		t.Fatal(err)
-	} else {
-		t.Logf("unregisterName:%s", result)
-	}
-}
-
-func TestEthNodeAccessor_GetRegistryName(t *testing.T) {
-	protocol := test.Protocol()
-	nameRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].NameRegistryAddress
-	callMethod := ethaccessor.ContractCallMethod(ethaccessor.NameRegistryAbi(), nameRegistryAddress)
-	creator := miner.Address
-	var result string
-	if err := callMethod(&result, "nameMap", "latest", creator); nil != err {
-		t.Fatalf("call method nameMap error:%s", err.Error())
-	} else {
-		t.Logf("name:%s-> address:%s", result, creator.Hex())
-	}
-}
-
 func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 	const (
 		startBlock = 5444365
@@ -539,6 +480,16 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 		}
 	} else {
 		t.Fatalf(err.Error())
+	}
+}
+
+func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
+	var count types.Big
+	user := common.HexToAddress("0x71c079107b5af8619d54537a93dbf16e5aab4900")
+	if err := ethaccessor.GetTransactionCount(&count, user, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("transaction count:%d", count.Int64())
 	}
 }
 
