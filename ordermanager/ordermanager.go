@@ -65,6 +65,7 @@ type OrderManagerImpl struct {
 	cutoffPairWatcher   *eventemitter.Watcher
 	forkWatcher         *eventemitter.Watcher
 	syncWatcher         *eventemitter.Watcher
+	warningWatcher      *eventemitter.Watcher
 	ordersValidForMiner bool
 }
 
@@ -98,6 +99,7 @@ func (om *OrderManagerImpl) Start() {
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
 	om.syncWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSync}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
+	om.warningWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleWarning}
 
 	eventemitter.On(eventemitter.NewOrder, om.newOrderWatcher)
 	eventemitter.On(eventemitter.RingMined, om.ringMinedWatcher)
@@ -107,6 +109,7 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.CutoffPair, om.cutoffPairWatcher)
 	eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, om.forkWatcher)
+	eventemitter.On(eventemitter.ExtractorWarning, om.warningWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
@@ -117,6 +120,7 @@ func (om *OrderManagerImpl) Stop() {
 	eventemitter.Un(eventemitter.CutoffAll, om.cutoffOrderWatcher)
 	eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, om.forkWatcher)
+	eventemitter.Un(eventemitter.ExtractorWarning, om.warningWatcher)
 
 	om.ordersValidForMiner = false
 }
@@ -139,6 +143,12 @@ func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	}
 	om.Start()
 
+	return nil
+}
+
+func (om *OrderManagerImpl) handleWarning(input eventemitter.EventData) error {
+	log.Debugf("order manager processing extractor warning")
+	om.Stop()
 	return nil
 }
 

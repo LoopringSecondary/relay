@@ -72,6 +72,7 @@ const (
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
 	ChainForkDetected = "ChainForkDetected"
+	ExtractorWarning  = "ExtractorWarning"
 
 	// Transaction
 	TransactionEvent   = "TransactionEvent"
