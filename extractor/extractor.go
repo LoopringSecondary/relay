@@ -147,8 +147,12 @@ func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.Eve
 
 func (l *ExtractorServiceImpl) ProcessBlock() {
 	inter, err := l.iterator.Next()
-	if err != nil {
-		log.Fatalf("extractor,iterator next error:%s", err.Error())
+
+	switch err.Level {
+	case types.ErrorLevelFatal:
+		log.Fatalf("extractor,iterator next error:%s", err.Msg)
+	case types.ErrorLevelWaiting:
+		log.Warnf("extractor,iterator next waring:%s", err.Msg)
 	}
 
 	// get current block

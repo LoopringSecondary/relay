@@ -380,14 +380,14 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 	}
 }
 
-func (iterator *BlockIterator) Next() (interface{}, error) {
+func (iterator *BlockIterator) Next() (interface{}, types.ErrorMsg) {
 	if nil != iterator.endNumber && iterator.endNumber.Cmp(big.NewInt(0)) > 0 && iterator.endNumber.Cmp(iterator.currentNumber) < 0 {
-		return nil, errors.New("finished")
+		return nil, types.NewError("iteractor finished", types.ErrIteratorValidate, types.ErrorLevelFatal)
 	}
 
 	var blockNumber types.Big
 	if err := iterator.ethClient.RetryCall("latest", 2, &blockNumber, "eth_blockNumber"); nil != err {
-		return nil, err
+		return nil, types.NewError(err.Error(), types.ErrIteratorRetryCall, types.ErrorLevelWarning)
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
 		if blockNumber.Uint64() < confirmNumber {
@@ -408,7 +408,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 	if nil == err {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
 	}
-	return block, err
+	return block, types.NewError(err.Error(), types.ErrIteractorGetBlock, types.ErrorLevelWarning)
 }
 
 func (accessor *ethNodeAccessor) getFullBlockFromCacheByHash(hash string) (*BlockWithTxAndReceipt, error) {
