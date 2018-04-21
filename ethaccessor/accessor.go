@@ -34,7 +34,7 @@ import (
 var accessor *ethNodeAccessor
 
 func BlockNumber(result interface{}) error {
-	return accessor.RetryCall("latest", 2, result, "eth_blockNumber")
+	return accessor.RetryCall("latest", 5, result, "eth_blockNumber")
 }
 
 func GetBalance(result interface{}, address common.Address, blockNumber string) error {
@@ -91,7 +91,7 @@ func EstimateGasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
 }
 
 func GetBlockTransactionCountByHash(result interface{}, blockHash string, blockParameter string) error {
-	return accessor.RetryCall("latest", 2, result, "eth_getBlockTransactionCountByHash", blockHash)
+	return accessor.RetryCall("latest", 5, result, "eth_getBlockTransactionCountByHash", blockHash)
 
 }
 
@@ -211,6 +211,23 @@ func ProtocolAddresses() map[common.Address]*ProtocolAddress {
 	return accessor.ProtocolAddresses
 }
 
+func DelegateAddresses() map[common.Address]bool {
+	return accessor.DelegateAddresses
+}
+
+func SupportedDelegateAddress(delegate common.Address) bool {
+	return accessor.DelegateAddresses[delegate]
+}
+
+func IsRelateProtocol(protocol, delegate common.Address) bool {
+	protocolAddress, ok := accessor.ProtocolAddresses[protocol]
+	if ok {
+		return protocolAddress.DelegateAddress == delegate
+	} else {
+		return false
+	}
+}
+
 func ProtocolImplAbi() *abi.ABI {
 	return accessor.ProtocolImplAbi
 }
@@ -231,9 +248,10 @@ func DelegateAbi() *abi.ABI {
 	return accessor.DelegateAbi
 }
 
-func NameRegistryAbi() *abi.ABI {
-	return accessor.NameRegistryAbi
-}
+//
+//func NameRegistryAbi() *abi.ABI {
+//	return accessor.NameRegistryAbi
+//}
 
 func Initialize(accessorOptions config.AccessorOptions, commonOptions config.CommonOptions, wethAddress common.Address) error {
 	var err error
@@ -276,11 +294,11 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		accessor.TokenRegistryAbi = tokenRegistryAbi
 	}
 
-	if nameRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.NameRegistryAbi); nil != err {
-		return err
-	} else {
-		accessor.NameRegistryAbi = nameRegistryAbi
-	}
+	//if nameRegistryAbi, err := NewAbi(commonOptions.ProtocolImpl.NameRegistryAbi); nil != err {
+	//	return err
+	//} else {
+	//	accessor.NameRegistryAbi = nameRegistryAbi
+	//}
 
 	for version, address := range commonOptions.ProtocolImpl.Address {
 		impl := &ProtocolAddress{Version: version, ContractAddress: common.HexToAddress(address)}
@@ -304,12 +322,12 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 			log.Debugf("version:%s, contract:%s, delegateAddress:%s", version, address, addr)
 			impl.DelegateAddress = common.HexToAddress(addr)
 		}
-		if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
-			return err
-		} else {
-			log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
-			impl.NameRegistryAddress = common.HexToAddress(addr)
-		}
+		//if err := callMethod(&addr, "nameRegistryAddress", "latest"); nil != err {
+		//	return err
+		//} else {
+		//	log.Debugf("version:%s, contract:%s, nameRegistryAddress:%s", version, address, addr)
+		//	impl.NameRegistryAddress = common.HexToAddress(addr)
+		//}
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 		accessor.DelegateAddresses[impl.DelegateAddress] = true
 	}

@@ -95,6 +95,7 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.BlockTime = blockTime.Int64()
 	txinfo.BlockHash = common.HexToHash(tx.BlockHash)
 	txinfo.TxHash = common.HexToHash(tx.Hash)
+	txinfo.TxIndex = tx.TransactionIndex.Int64()
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
@@ -102,6 +103,12 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
+
+	if impl, ok := ethaccessor.ProtocolAddresses()[txinfo.To]; ok {
+		txinfo.DelegateAddress = impl.DelegateAddress
+	} else {
+		txinfo.DelegateAddress = types.NilAddress
+	}
 
 	return txinfo
 }
@@ -487,6 +494,11 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 	contract := input.(MethodData)
 	contractEvent := contract.Method.(*ethaccessor.CancelOrderMethod)
 
+	if contract.DelegateAddress == types.NilAddress {
+		log.Errorf("extractor,tx:%s cancelOrder method cann't get delegate address", contract.TxHash.Hex())
+		return nil
+	}
+
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(contractEvent, contract.Name, data); err != nil {
 		log.Errorf("extractor,tx:%s cancelOrder method unpack error:%s", contract.TxHash.Hex(), err.Error())
@@ -495,8 +507,8 @@ func (processor *AbiProcessor) handleCancelOrderMethod(input eventemitter.EventD
 
 	order, cancelAmount, _ := contractEvent.ConvertDown()
 	order.Protocol = contract.Protocol
+	order.DelegateAddress = contract.DelegateAddress
 	order.Hash = order.GenerateHash()
-
 	log.Debugf("extractor,tx:%s cancelOrder method order tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", contract.TxHash.Hex(), order.TokenS.Hex(), order.TokenB.Hex(), order.AmountS.String(), order.AmountB.String())
 
 	// 发送到txmanager
@@ -651,11 +663,13 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	}
 	ringmined.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s ringMined event ringhash:%s, ringIndex:%s, tx:%s",
+	log.Debugf("extractor,tx:%s ringMined event  delegate:%s, ringhash:%s, ringIndex:%s, tx:%s",
 		contractData.TxHash.Hex(),
+		ringmined.DelegateAddress.Hex(),
 		ringmined.Ringhash.Hex(),
 		ringmined.RingIndex.String(),
-		ringmined.TxHash.Hex())
+		ringmined.TxHash.Hex(),
+		ringmined.DelegateAddress.Hex())
 
 	eventemitter.Emit(eventemitter.RingMined, ringmined)
 
@@ -666,8 +680,9 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	for _, fill := range fills {
 		fill.TxInfo = contractData.TxInfo
 
-		log.Debugf("extractor,tx:%s orderFilled event ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
+		log.Debugf("extractor,tx:%s orderFilled event delegate:%s, ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
 			contractData.TxHash.Hex(),
+			fill.DelegateAddress.Hex(),
 			fill.Ringhash.Hex(),
 			fill.AmountS.String(),
 			fill.AmountB.String(),
@@ -734,7 +749,7 @@ func (processor *AbiProcessor) handleOrderCancelledEvent(input eventemitter.Even
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s orderCancelled event orderhash:%s, cancelAmount:%s", contractData.TxHash.Hex(), evt.OrderHash.Hex(), evt.AmountCancelled.String())
+	log.Debugf("extractor,tx:%s orderCancelled event delegate:%s, orderhash:%s, cancelAmount:%s", contractData.TxHash.Hex(), evt.DelegateAddress.Hex(), evt.OrderHash.Hex(), evt.AmountCancelled.String())
 
 	eventemitter.Emit(eventemitter.CancelOrder, evt)
 
@@ -754,7 +769,7 @@ func (processor *AbiProcessor) handleCutoffEvent(input eventemitter.EventData) e
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffTimestampChanged event ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
+	log.Debugf("extractor,tx:%s cutoffTimestampChanged event delegate:%s, ownerAddress:%s, cutOffTime:%s, status:%d", contractData.TxHash.Hex(), evt.DelegateAddress.Hex(), evt.Owner.Hex(), evt.Cutoff.String(), evt.Status)
 
 	eventemitter.Emit(eventemitter.CutoffAll, evt)
 
@@ -774,7 +789,7 @@ func (processor *AbiProcessor) handleCutoffPairEvent(input eventemitter.EventDat
 	evt := contractEvent.ConvertDown()
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s cutoffPair event ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
+	log.Debugf("extractor,tx:%s cutoffPair event delegate:%s, ownerAddress:%s, token1:%s, token2:%s, cutOffTime:%s", contractData.TxHash.Hex(), evt.DelegateAddress.Hex(), evt.Owner.Hex(), evt.Token1.Hex(), evt.Token2.Hex(), evt.Cutoff.String())
 
 	eventemitter.Emit(eventemitter.CutoffPair, evt)
 

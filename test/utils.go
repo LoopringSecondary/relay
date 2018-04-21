@@ -58,7 +58,7 @@ type TestEntity struct {
 }
 
 const (
-	Version   = "v1.4"
+	Version   = "v1.5"
 	DebugFile = "debug.toml"
 )
 
@@ -69,17 +69,19 @@ var (
 	orderAccounts = []accounts.Account{}
 	creator       accounts.Account
 	protocol      common.Address
+	delegate      common.Address
 )
 
 func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
 	cache.NewCache(cfg.Redis)
-	util.Initialize(cfg.Market, cfg.Common.ProtocolImpl.Address)
+	util.Initialize(cfg.Market)
 	entity = loadTestData()
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
+	delegate = ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
 }
 
 func loadConfig() *config.GlobalConfig {
@@ -207,9 +209,10 @@ func GenerateAccountManager() market.AccountManager {
 	return market.NewAccountManager()
 }
 
-func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, tokenS, tokenB, protocol, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
+func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	order := &types.Order{}
 	order.Protocol = protocol
+	order.DelegateAddress = delegate
 	order.TokenS = tokenS
 	order.TokenB = tokenB
 	order.AmountS = amountS
@@ -223,7 +226,7 @@ func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, walletId *big.Int, token
 	order.PowNonce = 1
 	order.AuthPrivateKey = privateKey
 	order.AuthAddr = order.AuthPrivateKey.Address()
-	order.WalletId = walletId
+	order.WalletAddress = owner
 	order.Hash = order.GenerateHash()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		log.Fatalf(err.Error())

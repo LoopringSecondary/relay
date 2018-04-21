@@ -145,7 +145,6 @@ type ProtocolOptions struct {
 	ImplAbi          string
 	DelegateAbi      string
 	TokenRegistryAbi string
-	NameRegistryAbi  string
 }
 
 type CommonOptions struct {
@@ -190,6 +189,7 @@ type MinerOptions struct {
 	RateRatioCVSThreshold int64
 	MinGasLimit           int64
 	MaxGasLimit           int64
+	FeeReceipt            string
 }
 
 type MarketOptions struct {
@@ -207,6 +207,7 @@ type MarketCapOptions struct {
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
 		MinLrcFee             int64
+		MinLrcHold            int64
 		MaxPrice              int64
 		MinSplitPercentage    float64
 		MaxSplitPercentage    float64

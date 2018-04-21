@@ -54,7 +54,6 @@ func TestOrder_GenerateHash(t *testing.T) {
 		c := crypto.NewKSCrypto(true, nil)
 		crypto.Initialize(c)
 		o := types.ToOrder(oJson)
-		t.Log(o.WalletId.String())
 		t.Log(o.ValidUntil.String())
 		t.Log(o.GenerateHash().Hex())
 	}

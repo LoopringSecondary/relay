@@ -110,16 +110,16 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMysql()
 	cache.NewCache(n.globalConfig.Redis)
 
-	util.Initialize(n.globalConfig.Market, n.globalConfig.Common.ProtocolImpl.Address)
+	util.Initialize(n.globalConfig.Market)
 	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()
 	n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
+	n.registerAccountManager()
 	n.registerGateway()
 	n.registerCrypto(nil)
-	n.registerAccountManager()
 
 	if "relay" == globalConfig.Mode {
 		n.registerRelayNode()
@@ -240,9 +240,8 @@ func (n *Node) registerTickerCollector() {
 }
 
 func (n *Node) registerWalletService() {
-	ethForwarder := gateway.EthForwarder{}
 	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
-		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address)
+		n.accountManager, n.marketCapProvider, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress)
 }
 
 func (n *Node) registerJsonRpcService() {
@@ -270,7 +269,7 @@ func (n *Node) registerMiner() {
 }
 
 func (n *Node) registerGateway() {
-	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager, n.marketCapProvider)
+	gateway.Initialize(&n.globalConfig.GatewayFilters, &n.globalConfig.Gateway, &n.globalConfig.Ipfs, n.orderManager, n.marketCapProvider, n.accountManager)
 }
 
 func (n *Node) registerUserManager() {

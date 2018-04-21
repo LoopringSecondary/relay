@@ -26,24 +26,26 @@ import (
 )
 
 type CutOffPairEvent struct {
-	ID            int    `gorm:"column:id;primary_key;"`
-	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
-	Owner         string `gorm:"column:owner;type:varchar(42)"`
-	Token1        string `gorm:"column:token1;type:varchar(42)"`
-	Token2        string `gorm:"column:token2;type:varchar(42)"`
-	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
-	OrderHashList string `gorm:"column:order_hash_list;type:text"`
-	BlockNumber   int64  `gorm:"column:block_number"`
-	LogIndex      int64  `gorm:"column:log_index"`
-	Cutoff        int64  `gorm:"column:cutoff"`
-	CreateTime    int64  `gorm:"column:create_time"`
-	Fork          bool   `gorm:"column:fork"`
+	ID              int    `gorm:"column:id;primary_key;"`
+	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
+	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)"`
+	Owner           string `gorm:"column:owner;type:varchar(42)"`
+	Token1          string `gorm:"column:token1;type:varchar(42)"`
+	Token2          string `gorm:"column:token2;type:varchar(42)"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList   string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber     int64  `gorm:"column:block_number"`
+	LogIndex        int64  `gorm:"column:log_index"`
+	Cutoff          int64  `gorm:"column:cutoff"`
+	CreateTime      int64  `gorm:"column:create_time"`
+	Fork            bool   `gorm:"column:fork"`
 }
 
 // convert types/cutoffPairEvent to dao/cutoffPairEvent
 func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.Owner = src.Owner.Hex()
 	e.Protocol = src.Protocol.Hex()
+	e.DelegateAddress = src.DelegateAddress.Hex()
 	e.TxHash = src.TxHash.Hex()
 	e.Token1 = src.Token1.Hex()
 	e.Token2 = src.Token2.Hex()
@@ -66,6 +68,7 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Owner = common.HexToAddress(e.Owner)
 	dst.Protocol = common.HexToAddress(e.Protocol)
+	dst.DelegateAddress = common.HexToAddress(e.DelegateAddress)
 	dst.TxHash = common.HexToHash(e.TxHash)
 	dst.Token1 = common.HexToAddress(e.Token1)
 	dst.Token2 = common.HexToAddress(e.Token2)

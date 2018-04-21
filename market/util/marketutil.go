@@ -56,13 +56,12 @@ func StringToFloat(token string, amount string) float64 {
 }
 
 var (
-	SupportTokens         map[string]types.Token // token symbol to entity
-	AllTokens             map[string]types.Token
-	SupportMarkets        map[string]types.Token // token symbol to contract hex address
-	AllMarkets            []string
-	AllTokenPairs         []TokenPair
-	ContractVersionConfig = map[string]string{}
-	SymbolTokenMap        map[common.Address]string
+	SupportTokens  map[string]types.Token // token symbol to entity
+	AllTokens      map[string]types.Token
+	SupportMarkets map[string]types.Token // token symbol to contract hex address
+	AllMarkets     []string
+	AllTokenPairs  []TokenPair
+	SymbolTokenMap map[common.Address]string
 )
 
 func StartRefreshCron(option config.MarketOptions) {
@@ -181,7 +180,7 @@ func getTokenAndMarketFromDB(tokenfile string) (
 	return
 }
 
-func Initialize(options config.MarketOptions, contracts map[string]string) {
+func Initialize(options config.MarketOptions) {
 
 	SupportTokens = make(map[string]types.Token)
 	SupportMarkets = make(map[string]types.Token)
@@ -189,8 +188,6 @@ func Initialize(options config.MarketOptions, contracts map[string]string) {
 	SymbolTokenMap = make(map[common.Address]string)
 
 	SupportTokens, SupportMarkets, AllTokens, AllMarkets, AllTokenPairs, SymbolTokenMap = getTokenAndMarketFromDB(options.TokenFile)
-
-	ContractVersionConfig = contracts
 
 	// StartRefreshCron(rds)
 
@@ -388,19 +385,6 @@ func GetSide(s, b string) string {
 
 func IsAddress(token string) bool {
 	return strings.HasPrefix(token, "0x")
-}
-
-func getContractVersion(address string) string {
-	for k, v := range ContractVersionConfig {
-		if strings.ToLower(v) == strings.ToLower(address) {
-			return k
-		}
-	}
-	return ""
-}
-
-func IsSupportedContract(address string) bool {
-	return getContractVersion(address) != ""
 }
 
 func GetSymbolWithAddress(address common.Address) (string, error) {

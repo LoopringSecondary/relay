@@ -279,7 +279,7 @@ func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface
 func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventData) (err error) {
 
 	resp := SocketIOJsonResp{}
-	tickers, err := so.walletService.GetTicker(SingleContractVersion{})
+	tickers, err := so.walletService.GetTicker()
 
 	if err != nil {
 		resp = SocketIOJsonResp{Error: err.Error()}
