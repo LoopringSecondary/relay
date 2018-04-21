@@ -149,7 +149,18 @@ func TestExtractorServiceImpl_UnpackApproveMethod(t *testing.T) {
 	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Value.String())
 }
 
-func TestExtractorServiceImpl_UnpackTransfer(t *testing.T) {
+func TestExtractorServiceImpl_UnpackTransferMethod(t *testing.T) {
+	input := "0xa9059cbb0000000000000000000000008311804426a24495bd4306daf5f595a443a52e32000000000000000000000000000000000000000000000000000000174876e800"
+	data := hexutil.MustDecode("0x" + input[10:])
+	var method ethaccessor.TransferMethod
+	if err := ethaccessor.Erc20Abi().UnpackMethodInput(&method, "transfer", data); err != nil {
+		t.Fatalf(err.Error())
+	}
+	transfer := method.ConvertDown()
+	t.Logf("transfer receiver:%s, value:%s", transfer.Receiver.Hex(), transfer.Value.String())
+}
+
+func TestExtractorServiceImpl_UnpackTransferEvent(t *testing.T) {
 	inputs := []string{
 		"0x00000000000000000000000000000000000000000000001d2666491321fc5651",
 		"0x0000000000000000000000000000000000000000000000008ac7230489e80000",

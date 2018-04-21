@@ -197,7 +197,6 @@ func (f *BaseFilter) filter(o *types.Order) (bool, error) {
 		hashLength = 32
 	)
 
-
 	if o.TokenB != util.AliasToAddress("LRC") {
 		balances, err := gateway.am.GetBalanceWithSymbolResult(o.Owner)
 
