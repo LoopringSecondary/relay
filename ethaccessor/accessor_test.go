@@ -393,14 +393,19 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 		blockNumber := big.NewInt(int64(i))
 
 	blockMark:
-		var blockWithTxHash ethaccessor.BlockWithTxHash
+		var (
+			blockWithTxHash ethaccessor.BlockWithTxHash
+			bn              types.Big
+		)
+		ethaccessor.BlockNumber(&bn)
+
 		if err := ethaccessor.GetBlockByNumber(&blockWithTxHash, blockNumber, false); err != nil {
 			time.Sleep(1 * time.Second)
-			fmt.Printf("........err:%s nil\n", err.Error())
+			fmt.Printf("kindA........currentBlockNumber:%s requestBlockNumber:%s txNumber:%d err:%s\n", bn.BigInt().String(), blockNumber.String(), len(blockWithTxHash.Transactions), err.Error())
 			goto blockMark
 		} else if len(blockWithTxHash.Transactions) == 0 {
 			time.Sleep(1 * time.Second)
-			fmt.Printf("........tx 0\n")
+			fmt.Printf("kindB........currentBlockNumber:%s requestBlockNumber:%s txNumber:%d\n", bn.BigInt().String(), blockNumber.String(), len(blockWithTxHash.Transactions))
 			goto blockMark
 		}
 

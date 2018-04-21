@@ -53,6 +53,8 @@ type Node struct {
 	ipfsSubService    gateway.IPFSSubService
 	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
+	txManager         txmanager.TransactionManager
+	txView            txmanager.TransactionView
 	userManager       usermanager.UserManager
 	marketCapProvider marketcap.MarketCapProvider
 	accountManager    market.AccountManager
@@ -71,23 +73,18 @@ type RelayNode struct {
 	websocketService gateway.WebsocketServiceImpl
 	socketIOService  gateway.SocketIOServiceImpl
 	walletService    gateway.WalletServiceImpl
-	txManager        txmanager.TransactionManager
 }
 
 func (n *RelayNode) Start() {
-	n.txManager.Start()
-
 	//gateway.NewJsonrpcService("8080").Start()
 	fmt.Println("step in relay node start")
 	n.tickerCollector.Start()
 	go n.jsonRpcService.Start()
 	//n.websocketService.Start()
 	go n.socketIOService.Start()
-
 }
 
 func (n *RelayNode) Stop() {
-	n.txManager.Stop()
 }
 
 type MineNode struct {
@@ -116,6 +113,8 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerUserManager()
 	n.registerIPFSSubService()
 	n.registerOrderManager()
+	n.registerTransactionManager()
+	n.registerTransactionView()
 	n.registerExtractor()
 	n.registerAccountManager()
 	n.registerGateway()
@@ -135,7 +134,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
-	n.registerTransactionManager()
 	n.registerTrendManager()
 	n.registerTickerCollector()
 	n.registerWalletService()
@@ -153,13 +151,10 @@ func (n *Node) registerMineNode() {
 
 func (n *Node) Start() {
 	n.orderManager.Start()
+	n.txManager.Start()
 	n.extractorService.Start()
 	n.marketCapProvider.Start()
 	n.ipfsSubService.Start()
-
-	// todo delete after test
-	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
-	//txManager.Start()
 
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
@@ -232,7 +227,11 @@ func (n *Node) registerAccountManager() {
 }
 
 func (n *Node) registerTransactionManager() {
-	n.relayNode.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager)
+	n.txManager = txmanager.NewTxManager(n.rdsService, &n.accountManager, n.globalConfig.TransactionManager)
+}
+
+func (n *Node) registerTransactionView() {
+	n.txView = txmanager.NewTxView(n.rdsService)
 }
 
 func (n *Node) registerTickerCollector() {
@@ -241,7 +240,12 @@ func (n *Node) registerTickerCollector() {
 
 func (n *Node) registerWalletService() {
 	n.relayNode.walletService = *gateway.NewWalletService(n.relayNode.trendManager, n.orderManager,
+<<<<<<< HEAD
+		n.accountManager, n.marketCapProvider, &ethForwarder, n.relayNode.tickerCollector, n.rdsService,
+		n.globalConfig.Market.OldVersionWethAddress, n.globalConfig.Common.ProtocolImpl.Address, n.txView)
+=======
 		n.accountManager, n.marketCapProvider, n.relayNode.tickerCollector, n.rdsService, n.globalConfig.Market.OldVersionWethAddress)
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 }
 
 func (n *Node) registerJsonRpcService() {

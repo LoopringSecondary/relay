@@ -34,6 +34,10 @@ import (
 	"strings"
 )
 
+<<<<<<< HEAD
+const WeiToEther = 1e18
+=======
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 const SideSell = "sell"
 const SideBuy = "buy"
 
@@ -294,7 +298,11 @@ func isSupportedToken(token string) bool {
 }
 
 func AliasToAddress(t string) common.Address {
-	return AllTokens[t].Protocol
+	token, ok := AllTokens[t]
+	if !ok {
+		return types.NilAddress
+	}
+	return token.Protocol
 }
 
 func AddressToAlias(t string) string {

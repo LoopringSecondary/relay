@@ -26,25 +26,33 @@ import (
 )
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
+
+type (
+	TxStatus uint8
+	TxType   uint8
+)
+
 const (
-	TX_STATUS_UNKNOWN = 0
-	TX_STATUS_PENDING = 1
-	TX_STATUS_SUCCESS = 2
-	TX_STATUS_FAILED  = 3
+	TX_STATUS_UNKNOWN TxStatus = 0
+	TX_STATUS_PENDING TxStatus = 1
+	TX_STATUS_SUCCESS TxStatus = 2
+	TX_STATUS_FAILED  TxStatus = 3
 
-	TX_TYPE_APPROVE = 1
-	TX_TYPE_SEND    = 2 // SEND
-	TX_TYPE_RECEIVE = 3
-	TX_TYPE_SELL    = 4 // SELL
-	TX_TYPE_BUY     = 5
-	//TX_TYPE_WRAP         = 6 // WETH DEPOSIT
-	TX_TYPE_CONVERT_INCOME  = 7 // WETH WITHDRAWAL
-	TX_TYPE_CONVERT_OUTCOME = 8
-	TX_TYPE_CANCEL_ORDER    = 9
-	TX_TYPE_CUTOFF          = 10
-	TX_TYPE_CUTOFF_PAIR     = 11
-
-	TX_TYPE_UNSUPPORTED_CONTRACT = 12
+	TX_TYPE_UNKNOWN              TxType = 0
+	TX_TYPE_APPROVE              TxType = 1
+	TX_TYPE_SEND                 TxType = 2 // SEND
+	TX_TYPE_RECEIVE              TxType = 3
+	TX_TYPE_SELL                 TxType = 4 // SELL
+	TX_TYPE_BUY                  TxType = 5
+	TX_TYPE_CONVERT_INCOME       TxType = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT_OUTCOME      TxType = 8
+	TX_TYPE_CANCEL_ORDER         TxType = 9
+	TX_TYPE_CUTOFF               TxType = 10
+	TX_TYPE_CUTOFF_PAIR          TxType = 11
+	TX_TYPE_UNSUPPORTED_CONTRACT TxType = 12
+	TX_TYPE_TRANSFER             TxType = 101
+	TX_TYPE_DEPOSIT              TxType = 102
+	TX_TYPE_WITHDRAWAL           TxType = 103
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -60,7 +68,7 @@ type TxInfo struct {
 	LogIndex        int64          `json:"logIndex"`
 	BlockNumber     *big.Int       `json:"blockNumber"`
 	BlockTime       int64          `json:"block_time"`
-	Status          uint8          `json:"status"`
+	Status          TxStatus          `json:"status"`
 	GasLimit        *big.Int       `json:"gas_limit"`
 	GasUsed         *big.Int       `json:"gas_used"`
 	GasPrice        *big.Int       `json:"gas_price"`
@@ -71,32 +79,52 @@ type Transaction struct {
 	TxInfo
 	Symbol     string         `json:"symbol"`
 	Protocol   common.Address `json:"protocol"`
-	Owner      common.Address `json:"owner"`
 	Content    []byte         `json:"content"`
 	Value      *big.Int       `json:"value"`
-	Type       uint8          `json:"type"`
+	Type       TxType         `json:"type"`
 	CreateTime int64          `json:"createTime"`
 	UpdateTime int64          `json:"updateTime"`
 }
 
-func (tx *Transaction) StatusStr() string {
+func (tx *Transaction) TypeStr() string   { return TypeStr(tx.Type) }
+func (tx *Transaction) StatusStr() string { return StatusStr(tx.Status) }
+
+func StatusStr(status TxStatus) string {
 	var ret string
-	switch tx.Status {
+	switch status {
 	case TX_STATUS_PENDING:
 		ret = "pending"
 	case TX_STATUS_SUCCESS:
 		ret = "success"
 	case TX_STATUS_FAILED:
 		ret = "failed"
+	default:
+		ret = "unknown"
 	}
 
 	return ret
 }
 
-func (tx *Transaction) TypeStr() string {
+func StrToTxStatus(txType string) TxStatus {
+	var ret TxStatus
+	switch txType {
+	case "pending":
+		ret = TX_STATUS_PENDING
+	case "success":
+		ret = TX_STATUS_SUCCESS
+	case "failed":
+		ret = TX_STATUS_FAILED
+	default:
+		ret = TX_STATUS_UNKNOWN
+	}
+
+	return ret
+}
+
+func TypeStr(typ TxType) string {
 	var ret string
 
-	switch tx.Type {
+	switch typ {
 	case TX_TYPE_APPROVE:
 		ret = "approve"
 	case TX_TYPE_SEND:
@@ -119,52 +147,60 @@ func (tx *Transaction) TypeStr() string {
 		ret = "cutoff_trading_pair"
 	case TX_TYPE_UNSUPPORTED_CONTRACT:
 		ret = "unsupported_contract"
+	case TX_TYPE_TRANSFER:
+		ret = "transfer"
+	case TX_TYPE_DEPOSIT:
+		ret = "deposit"
+	case TX_TYPE_WITHDRAWAL:
+		ret = "withdrawal"
+	default:
+		ret = "unknown"
 	}
 
 	return ret
 }
 
-func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype uint8) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.Type = txtype
-	if txtype == TX_TYPE_SELL {
-		tx.From = src.BuyFrom
-		tx.To = src.SellTo
-		tx.Value = src.AmountS
-	} else {
-		tx.From = src.SellTo
-		tx.To = src.BuyFrom
-		tx.Value = src.AmountB
+func StrToTxType(status string) TxType {
+	var ret TxType
+
+	switch status {
+	case "approve":
+		ret = TX_TYPE_APPROVE
+	case "send":
+		ret = TX_TYPE_SEND
+	case "receive":
+		ret = TX_TYPE_RECEIVE
+	case "sell":
+		ret = TX_TYPE_SELL
+	case "buy":
+		ret = TX_TYPE_BUY
+	case "convert_income":
+		ret = TX_TYPE_CONVERT_INCOME
+	case "convert_outcome":
+		ret = TX_TYPE_CONVERT_OUTCOME
+	case "cancel_order":
+		ret = TX_TYPE_CANCEL_ORDER
+	case "cutoff":
+		ret = TX_TYPE_CUTOFF
+	case "cutoff_trading_pair":
+		ret = TX_TYPE_CUTOFF_PAIR
+	case "unsupported_contract":
+		ret = TX_TYPE_UNSUPPORTED_CONTRACT
+	case "transfer":
+		ret = TX_TYPE_TRANSFER
+	case "deposit":
+		ret = TX_TYPE_DEPOSIT
+	case "withdrawal":
+		ret = TX_TYPE_WITHDRAWAL
+	default:
+		ret = TX_TYPE_UNKNOWN
 	}
-	tx.Content = []byte(src.OrderHash.Hex())
 
-	return nil
-}
-
-func (tx *Transaction) GetFillContent() (common.Hash, error) {
-	if tx.Type == TX_TYPE_SELL || tx.Type == TX_TYPE_BUY {
-		return common.HexToHash(string(tx.Content)), nil
-	} else {
-		return NilHash, fmt.Errorf("get fill salt,transaction type error:%d", tx.Type)
-	}
-}
-
-func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.From
-	tx.From = src.From
-	tx.To = src.To
-	tx.Type = TX_TYPE_CANCEL_ORDER
-	tx.Value = src.AmountCancelled
-	tx.Content = []byte(src.OrderHash.Hex())
-
-	return nil
+	return ret
 }
 
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
@@ -176,7 +212,6 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 
 func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF
@@ -192,7 +227,6 @@ type CutoffPairSalt struct {
 
 func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
@@ -230,39 +264,28 @@ func (tx *Transaction) GetCancelOrderHash() (string, error) {
 }
 
 // 充值和提现from和to都是用户钱包自己的地址，因为合约限制了发送方msg.sender
-func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent, isIncome bool) error {
+func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Dst
 	tx.From = src.Dst
 	tx.To = src.Dst
 	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
+	tx.Type = TX_TYPE_DEPOSIT
 
 	return nil
 }
 
-func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent, isIncome bool) error {
+func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Src
 	tx.From = src.Src
 	tx.To = src.Src
 	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
+	tx.Type = TX_TYPE_WITHDRAWAL
 
 	return nil
 }
 
 func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.Spender
 	tx.Value = src.Value
@@ -271,17 +294,12 @@ func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8) error {
+func (tx *Transaction) FromTransferEvent(src *TransferEvent) error {
 	tx.fullFilled(src.TxInfo)
-	if sendOrReceive == TX_TYPE_SEND {
-		tx.Owner = src.Sender
-	} else {
-		tx.Owner = src.Receiver
-	}
 	tx.From = src.Sender
 	tx.To = src.Receiver
 	tx.Value = src.Value
-	tx.Type = sendOrReceive
+	tx.Type = TX_TYPE_TRANSFER
 
 	return nil
 }

@@ -47,6 +47,9 @@ name = "Loopring corporation"
     cutoff_cache_clean_time = 0
     dust_order_value = 1
 
+[transaction_manager]
+    open = true
+
 [ipfs]
     server = "127.0.0.1"
     port = 5001

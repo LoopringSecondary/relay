@@ -80,7 +80,7 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status uint8) {
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus) {
 	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
@@ -88,6 +88,7 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, block
 	method.Status = status
 }
 
+// todo pending 的transaction txindex是否为nil
 func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.TxInfo {
 	var txinfo types.TxInfo
 
@@ -95,7 +96,11 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.BlockTime = blockTime.Int64()
 	txinfo.BlockHash = common.HexToHash(tx.BlockHash)
 	txinfo.TxHash = common.HexToHash(tx.Hash)
+<<<<<<< HEAD
+	txinfo.TxIndex = tx.TransactionIndex.BigInt().Int64()
+=======
 	txinfo.TxIndex = tx.TransactionIndex.Int64()
+>>>>>>> 30c0ee570eb42ac45753fa6cab0cc55f53ca9b5c
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
@@ -142,7 +147,6 @@ type AbiProcessor struct {
 	methods        map[string]MethodData
 	erc20Events    map[common.Hash]bool
 	protocols      map[common.Address]string
-	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
 	db             dao.RdsService
 }
@@ -156,7 +160,6 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 	processor.erc20Events = make(map[common.Hash]bool)
 	processor.methods = make(map[string]MethodData)
 	processor.protocols = make(map[common.Address]string)
-	processor.delegates = make(map[common.Address]string)
 	processor.db = db
 
 	processor.loadProtocolAddress()
@@ -241,12 +244,6 @@ func (processor *AbiProcessor) SupportedMethod(tx *ethaccessor.Transaction) bool
 		return false
 	}
 	_, ok := processor.methods[id]
-	return ok
-}
-
-// HasSpender check approve spender address have ever been load
-func (processor *AbiProcessor) HasSpender(spender common.Address) bool {
-	_, ok := processor.delegates[spender]
 	return ok
 }
 
@@ -972,10 +969,10 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 	return nil
 }
 
-func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, uint8) {
+func (processor *AbiProcessor) getGasAndStatus(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt) (*big.Int, types.TxStatus) {
 	var (
 		gasUsed *big.Int
-		status  uint8
+		status  types.TxStatus
 	)
 	if receipt == nil {
 		gasUsed = big.NewInt(0)
