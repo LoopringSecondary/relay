@@ -28,7 +28,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -37,8 +36,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/ethereum/go-ethereum/rlp"
-	"encoding/hex"
 )
 
 const DefaultCapCurrency = "CNY"
@@ -96,8 +93,17 @@ type SingleOwner struct {
 }
 
 type TxNotify struct {
-	Owner string `json:"owner"`
-	RawTx string `json:"rawTx"`
+	Hash     string `json:"hash"`
+	Nonce    string `json:"nonce"`
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Value    string `json:"value"`
+	GasPrice string `json:"gasPrice"`
+	Gas      string `json:"gas"`
+	Input    string `json:"input"`
+	R        string `json:"r"`
+	S        string `json:"s"`
+	V        string `json:"v"`
 }
 
 type PriceQuoteQuery struct {
@@ -405,44 +411,40 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 	}
 }
 
-func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
-	if len(txNotify.RawTx) == 0 {
+func NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
+	if len(txNotify.Hash) == 0 {
 		return "", errors.New("raw tx can't be null string")
 	}
-	if !common.IsHexAddress(txNotify.Owner) {
-		return "", errors.New("owner address is illegal")
+	if !common.IsHexAddress(txNotify.From) || !common.IsHexAddress(txNotify.To) {
+		return "", errors.New("from or to address is illegal")
 	}
 
-	if strings.HasPrefix(txNotify.RawTx, "0x") {
-		txNotify.RawTx = strings.TrimLeft(txNotify.RawTx, "0x")
+	tx := &ethaccessor.Transaction{}
+	tx.Hash = txNotify.Hash
+	tx.Input = txNotify.Input
+	tx.From = txNotify.From
+	tx.To = txNotify.To
+	tx.Gas = *types.NewBigPtr(types.HexToBigint(txNotify.Gas))
+	tx.GasPrice = *types.NewBigPtr(types.HexToBigint(txNotify.GasPrice))
+	tx.Nonce = *types.NewBigPtr(types.HexToBigint(txNotify.Nonce))
+	tx.Value = *types.NewBigPtr(types.HexToBigint(txNotify.Value))
+	if len(txNotify.V) > 0 {
+		tx.V = txNotify.V
 	}
+	if len(txNotify.R) > 0 {
+		tx.R = txNotify.R
+	}
+	if len(txNotify.S) > 0 {
+		tx.S = txNotify.S
+	}
+	tx.BlockNumber = *types.NewBigWithInt(0)
+	tx.BlockHash = ""
+	tx.TransactionIndex = *types.NewBigWithInt(0)
 
-	ethTx := &ethTypes.Transaction{}
-	rawTx, err := hex.DecodeString(txNotify.RawTx)
-	if err != nil {
-		return "", err
-	}
-	err = rlp.DecodeBytes(rawTx, ethTx)
-	if err != nil {
-		return "", errors.New("decode raw tx error" + err.Error())
-	} else {
-		tx := &ethaccessor.Transaction{}
-		tx.Hash = ethTx.Hash().Hex()
-		tx.Input = string(ethTx.Data())
-		tx.From = txNotify.Owner
-		tx.To = ethTx.To().Hex()
-		tx.Gas = *types.NewBigPtr(ethTx.Gas())
-		tx.GasPrice = *types.NewBigPtr(ethTx.GasPrice())
-		tx.Nonce = *types.NewBigWithInt(int(ethTx.Nonce()))
-		tx.BlockNumber = *types.NewBigWithInt(0)
-		tx.BlockHash = ""
-		tx.TransactionIndex = *types.NewBigWithInt(0)
-
-		log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
-		eventemitter.Emit(eventemitter.PendingTransaction, tx)
-		log.Info("emit transaction info " + tx.Hash)
-		return tx.Hash, nil
-	}
+	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
+	eventemitter.Emit(eventemitter.PendingTransaction, tx)
+	log.Info("emit transaction info " + tx.Hash)
+	return tx.Hash, nil
 }
 
 func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res string, err error) {
