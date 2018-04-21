@@ -75,6 +75,10 @@ func NewExtractorService(options config.ExtractorOptions,
 	l.stop = make(chan bool, 1)
 
 	l.setBlockNumberRange()
+
+	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
+	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
+
 	return &l
 }
 
@@ -85,9 +89,6 @@ func (l *ExtractorServiceImpl) Start() {
 
 	log.Info("extractor start...")
 	l.syncComplete = false
-
-	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
-	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
@@ -107,7 +108,6 @@ func (l *ExtractorServiceImpl) Stop() {
 		return
 	}
 
-	eventemitter.Un(eventemitter.PendingTransaction, l.pendingTxWatcher)
 	l.stop <- true
 }
 
