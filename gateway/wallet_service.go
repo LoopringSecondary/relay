@@ -411,7 +411,7 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 	}
 }
 
-func NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
+func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
 	if len(txNotify.Hash) == 0 {
 		return "", errors.New("raw tx can't be null string")
 	}
