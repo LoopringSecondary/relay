@@ -28,10 +28,23 @@ func newTxView() txmanager.TransactionView {
 	return txmanager.NewTxView(test.Rds())
 }
 
+func TestTransactionViewImpl_GetPendingTransactions(t *testing.T) {
+	view := newTxView()
+	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+	list, err := view.GetPendingTransactions(owner)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	for _, v := range list {
+		t.Logf("tx:%s, from:%s, to:%s, type:%s, status:%s", v.TxHash.Hex(), v.From.Hex(), v.To.Hex(), v.Type, v.Status)
+	}
+}
+
 func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
 	view := newTxView()
 	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
-	symbol := "LRC"
+	symbol := "ETH"
 	if number, err := view.GetMinedTransactionCount(owner, symbol); err != nil {
 		t.Fatalf(err.Error())
 	} else {
@@ -42,12 +55,13 @@ func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
 func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
 	view := newTxView()
 	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
-	symbol := "weth"
-	if txs, err := view.GetMinedTransactions(owner, symbol, 3, 0); err != nil {
+	symbol := "eth"
+
+	txs, err := view.GetMinedTransactions(owner, symbol, 2, 6)
+	if err != nil {
 		t.Fatalf(err.Error())
-	} else {
-		for k, v := range txs {
-			t.Logf("%d ------> txhash:%s, symbol:%s, from:%s, to:%s, type:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type)
-		}
+	}
+	for k, v := range txs {
+		t.Logf("%d >>>>>> txhash:%s, symbol:%s, from:%s, to:%s, type:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type)
 	}
 }
