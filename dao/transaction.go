@@ -220,7 +220,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		return nil
 	}
 
-	err := s.db.Where(query, args...).Where("fork=?", false).Find(&current).Error
+	err := s.db.Where(query, args...).Where("nonce=?", latest.Nonce).Where("fork=?", false).Find(&current).Error
 	if err != nil {
 		return s.db.Create(latest).Error
 	}
@@ -300,6 +300,15 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 	var txs []Transaction
 	err := s.db.Where(query).Where("fork=?", false).Find(&txs).Error
 	return txs, err
+}
+
+func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error {
+	return s.db.Model(&Transaction{}).
+		Where("raw_from=?", owner.Hex()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("nonce=?", nonce.String()).
+		Where("fork=?", false).
+		Update("status", status).Error
 }
 
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {
