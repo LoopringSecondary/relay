@@ -46,6 +46,7 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 	var tm TransactionManager
 	tm.db = db
 	tm.accountmanager = accountmanager
+
 	return tm
 }
 
@@ -290,8 +291,20 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 	model.ConvertDown(tx)
 
 	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
-		return tm.db.SaveTransaction(&model)
+		if err := tm.db.SaveTransaction(&model); err != nil {
+			log.Errorf(err.Error())
+		}
+		if err := tm.updatePrevPendingTx(tx); err != nil {
+			log.Errorf(err.Error())
+		}
 	}
 
 	return nil
+}
+
+func (tm *TransactionManager) updatePrevPendingTx(tx *types.Transaction) error {
+	if tx.Status == types.TX_STATUS_PENDING {
+		return nil
+	}
+	return tm.db.UpdatePendingTransactionsByOwner(tx.Owner, uint8(types.TX_STATUS_FAILED))
 }
