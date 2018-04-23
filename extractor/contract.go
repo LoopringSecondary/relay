@@ -99,6 +99,8 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
+	txinfo.RawFrom = common.HexToAddress(tx.From)
+	txinfo.RawTo = common.HexToAddress(tx.To)
 	txinfo.GasLimit = tx.Gas.BigInt()
 	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
