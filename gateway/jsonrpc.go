@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
-	"net"
 	"github.com/rs/cors"
+	"net"
 	"net/http"
 )
 
@@ -81,10 +81,10 @@ func newCorsHandler(srv *rpc.Server, allowedOrigins []string) http.Handler {
 	}
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: allowedOrigins,
-		AllowedMethods: []string{"POST", "GET"},
-		MaxAge:         600,
-		AllowedHeaders: []string{"*"},
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   []string{"POST", "GET"},
+		MaxAge:           600,
+		AllowedHeaders:   []string{"*"},
 		AllowCredentials: true,
 	})
 	return c.Handler(srv)
