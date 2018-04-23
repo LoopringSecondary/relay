@@ -50,6 +50,11 @@ type Cache interface {
 	SRem(key string, members ...[]byte) (int64, error)
 
 	SMembers(key string) ([][]byte, error)
+
+	ZAdd(key string, ttl int64, args ...[]byte) error
+
+	ZRange(key string, start, stop int64, withScores bool) ([][]byte, error)
+	ZRemRangeByScore(key string, start, stop int64) (int64, error)
 }
 
 func NewCache(cfg interface{}) {
@@ -96,4 +101,15 @@ func SRem(key string, members ...[]byte) (int64, error) {
 
 func HDel(key string, fields ...[]byte) (int64, error) {
 	return cache.HDel(key, fields...)
+}
+
+func ZAdd(key string, ttl int64, args ...[]byte) error {
+	return cache.ZAdd(key, ttl, args...)
+}
+
+func ZRange(key string, start, stop int64, withScores bool) ([][]byte, error) {
+	return cache.ZRange(key, start, stop, withScores)
+}
+func ZRemRangeByScore(key string, start, stop int64) (int64, error) {
+	return cache.ZRemRangeByScore(key, start, stop)
 }

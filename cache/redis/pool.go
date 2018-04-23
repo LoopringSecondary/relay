@@ -155,6 +155,31 @@ func (impl *RedisCacheImpl) HMSet(key string, ttl int64, args ...[]byte) error {
 	return err
 }
 
+func (impl *RedisCacheImpl) ZAdd(key string, ttl int64, args ...[]byte) error {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	if len(args)%2 != 0 {
+		return errors.New("the length of `args` must be even")
+	}
+	vs := []interface{}{}
+	vs = append(vs, key)
+	for _, v := range args {
+		vs = append(vs, v)
+	}
+	_, err := conn.Do("zadd", vs...)
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	}
+	if ttl > 0 {
+		if _, err := conn.Do("expire", key, ttl); err != nil {
+			log.Errorf(" key:%s, err:%s", key, err.Error())
+			return err
+		}
+	}
+	return err
+}
+
 func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -181,6 +206,34 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error
 	}
 	return res, err
 }
+
+func (impl *RedisCacheImpl) ZRange(key string, start, stop int64, withScores bool) ([][]byte, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key, start, stop)
+	if withScores {
+		vs = append(vs, []byte("WITHSCORES"))
+	}
+	reply, err := conn.Do("ZRANGE", vs...)
+
+	res := [][]byte{}
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+	} else if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			if nil == r {
+				res = append(res, []byte{})
+			} else {
+				res = append(res, r.([]byte))
+			}
+		}
+	}
+	return res, err
+}
+
 func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -191,6 +244,24 @@ func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 		vs = append(vs, v)
 	}
 	reply, err := conn.Do("hdel", vs...)
+
+	if err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+		return 0, err
+	} else {
+		res := reply.(int64)
+		return res, err
+	}
+}
+
+func (impl *RedisCacheImpl) ZRemRangeByScore(key string, start, stop int64) (int64, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key, start, stop)
+
+	reply, err := conn.Do("ZREMRANGEBYSCORE", vs...)
 
 	if err != nil {
 		log.Errorf(" key:%s, err:%s", key, err.Error())

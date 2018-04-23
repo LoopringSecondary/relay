@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/test"
+	"github.com/lydy/go-ethereum/common"
 	"os/exec"
 	"strconv"
 	"sync"
@@ -85,17 +86,6 @@ func TestRedisCacheImpl_SetStruct(t *testing.T) {
 func TestRedisCacheImpl_SAdd(t *testing.T) {
 	cache.NewCache(test.Cfg().Redis)
 
-	//type user struct {
-	//	Name   string `json:name`
-	//	Height int    `json:height`
-	//}
-	//
-	//u1 := user{Name: "tom2", Height: 181}
-	//u2 := user{Name: "tom1", Height: 182}
-	//
-	//u1Data, _ := json.Marshal(u1)
-	//u2Data, _ := json.Marshal(u2)
-
 	//err := cache.HMSet("test1", []byte("k1"), []byte("v1"), []byte("k2"), []byte("v2"))
 
 	repl, err := cache.HGetAll("test1")
@@ -115,7 +105,7 @@ func TestRedisCacheImpl_HMSet(t *testing.T) {
 
 	start := time.Now().UnixNano()
 	for i := 0; i < 100000; i++ {
-		if err := cache.HMSet("test_hmset", []byte("balance_"+strconv.Itoa(i)), []byte(strconv.Itoa(i))); nil != err {
+		if err := cache.HMSet("test_hmset", 0, []byte("balance_"+strconv.Itoa(i)), []byte(strconv.Itoa(i))); nil != err {
 			t.Errorf(err.Error())
 		}
 	}

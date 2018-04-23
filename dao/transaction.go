@@ -220,7 +220,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		return nil
 	}
 
-	err := s.db.Where(query, args...).Where("fork=?", false).Find(&current).Error
+	err := s.db.Where(query, args...).Where("nonce=?", latest.Nonce).Where("fork=?", false).Find(&current).Error
 	if err != nil {
 		return s.db.Create(latest).Error
 	}
@@ -237,22 +237,17 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 }
 
 func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
-	var (
-		current Transaction
-	)
+	var current Transaction
 
-	// delete pending then create new item
-	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Find(&current).Error; err == nil {
-		s.db.Delete(&current)
+	// add pending then create new item
+	// todo hash相同时 nonce可能不同?
+	if err := s.db.Where("tx_hash=? and owner=? and `status`=? and nonce=?", latest.TxHash, latest.Owner, uint8(types.TX_STATUS_PENDING), latest.Nonce).Find(&current).Error; err != nil {
 		return s.db.Create(latest).Error
 	}
 
 	// select mined transaction then create or update
-	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Find(&current).Error
-	if err == nil {
-		latest.ID = current.ID
-		return s.db.Save(latest).Error
-	}
+	// todo 最好能区分多个transfer和单个transfer 做到只删一次
+	s.db.Where("raw_from=? and owner=? and nonce=? and `status`=?", latest.RawFrom, latest.Owner, latest.Nonce, uint8(types.TX_STATUS_PENDING)).Delete(&Transaction{})
 	return s.db.Create(latest).Error
 }
 
@@ -302,8 +297,11 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 	return txs, err
 }
 
-func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, status uint8) error {
-	return s.db.Model(&Transaction{}).Where("raw_from=?", owner.Hex()).Where("status=?", uint8(types.TX_STATUS_PENDING)).
+func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error {
+	return s.db.Model(&Transaction{}).
+		Where("raw_from=?", owner.Hex()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("nonce=?", nonce.String()).
 		Where("fork=?", false).
 		Update("status", status).Error
 }

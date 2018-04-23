@@ -956,6 +956,9 @@ Get user's latest transactions by owner.
 
 - `owner` - The owner address, must be applied.
 - `thxHash` - The transaction hash.
+- `symbol` - The token symbol like LRC,WETH.
+- `status` - The transaction status, enum is (pending|success|failed).
+- `txType` - The transaction type, enum is (send|receive|enable|convert).
 - `pageIndex` - The page want to query, default is 1.
 - `pageSize` - The size per page, default is 10.
 
@@ -964,6 +967,9 @@ Get user's latest transactions by owner.
 params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "thxHash" : "0xc7756d5d556383b2f965094464bdff3ebe658f263f552858cc4eff4ed0aeafeb",
+  "symbol" : "RDN",
+  "status" : "pending",
+  "txType" : "receive",
   "pageIndex" : 2, // default is 1
   "pageSize" : 20 // default is 20
 }]

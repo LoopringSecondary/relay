@@ -98,13 +98,15 @@ func (b AccountBalances) batchReqs(tokens ...common.Address) ethaccessor.BatchBa
 func (accountBalances AccountBalances) save(ttl int64) error {
 	data := [][]byte{}
 	for token, balance := range accountBalances.Balances {
+		log.Debugf("balance %s, %s", token.Hex(), balance.Balance.BigInt().String())
 		if balanceData, err := json.Marshal(balance); nil == err {
 			data = append(data, balanceCacheField(token), balanceData)
 		} else {
 			log.Errorf("accountmanager er:%s", err.Error())
 		}
 	}
-	return rcache.HMSet(balanceCacheKey(accountBalances.Owner), ttl, data...)
+	err := rcache.HMSet(balanceCacheKey(accountBalances.Owner), ttl, data...)
+	return err
 }
 
 func (accountBalances AccountBalances) applyData(cachedFieldData, balanceData []byte) error {

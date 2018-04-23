@@ -100,21 +100,75 @@ func TestEthNodeAccessor_EthBalance(t *testing.T) {
 	account := account1
 
 	var balance types.Big
-	if err := ethaccessor.GetBalance(&balance, account, "latest"); err != nil {
+	if err := ethaccessor.GetBalance(&balance, common.HexToAddress("0x8311804426A24495bD4306DAf5f595A443a52E32"), "0x53ca90"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		amount := new(big.Rat).SetFrac(balance.BigInt(), big.NewInt(1e18)).FloatString(2)
 		t.Logf("eth account:%s amount:%s", account.Hex(), amount)
 	}
+
+	//time.Sleep(5 * time.Second)
 }
 
 func TestEthNodeAccessor_SetTokenBalance(t *testing.T) {
-	accounts := []common.Address{account1, account2}
-	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(6000000))
-	token := lrcTokenAddress
+	reqs := ethaccessor.BatchBalanceReqs{}
+	for _, v := range util.AllTokens {
+		req := &ethaccessor.BatchBalanceReq{}
+		req.BlockParameter = "latest"
+		req.Token = v.Protocol
+		req.Owner = common.HexToAddress("0xA44282dB26EC80C6cfdd748ec09f386a64D645bD")
+		reqs = append(reqs, req)
+	}
+	//if err := ethaccessor.BatchErc20Balance("latest", reqs); nil != err {
+	//	t.Errorf("err:%s", err.Error())
+	//} else {
+	//	for _,req := range reqs {
+	//		if req.BalanceErr != nil {
+	//			t.Errorf("eeeee:%s", req.BalanceErr.Error())
+	//		} else {
+	//			t.Logf("ddd:%s", req.Balance.BigInt().String())
+	//		}
+	//	}
+	//}
 
-	for _, account := range accounts {
-		test.SetTokenBalance(account, token, amount)
+	reqs1 := ethaccessor.BatchErc20AllowanceReqs{}
+	for _, v := range util.AllTokens {
+		for _, impl := range ethaccessor.ProtocolAddresses() {
+			req := &ethaccessor.BatchErc20AllowanceReq{}
+			req.BlockParameter = "latest"
+			req.Spender = impl.DelegateAddress
+			req.Token = v.Protocol
+			req.Owner = common.HexToAddress("0xA44282dB26EC80C6cfdd748ec09f386a64D645bD")
+			reqs1 = append(reqs1, req)
+		}
+	}
+
+	reqs2 := []ethaccessor.BatchReq{reqs, reqs1}
+	if err := ethaccessor.BatchCall("latest", reqs2); nil != err {
+		t.Errorf("err:%s", err.Error())
+	} else {
+		for _, reqs3_ := range reqs2 {
+			if reqs3, ok := reqs3_.(ethaccessor.BatchErc20AllowanceReqs); ok {
+
+				for _, req := range reqs3 {
+
+					if req.AllowanceErr != nil {
+						t.Errorf("eeeee:%s", req.AllowanceErr.Error())
+					} else {
+						t.Logf("ddd:%s", req.Allowance.BigInt().String())
+					}
+				}
+			} else {
+				reqs3 := reqs3_.(ethaccessor.BatchBalanceReqs)
+				for _, req := range reqs3 {
+					if req.BalanceErr != nil {
+						t.Errorf("eeeee:%s", req.BalanceErr.Error())
+					} else {
+						t.Logf("ddd:%s", req.Balance.BigInt().String())
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -170,6 +224,8 @@ func TestEthNodeAccessor_Approval(t *testing.T) {
 func TestEthNodeAccessor_Allowance(t *testing.T) {
 	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
 	accounts := []common.Address{account1, account2}
+	//tokens := []common.Address{common.HexToAddress("0xb5f64747127be058Ee7239b363269FC8cF3F4A87")}
+	//accounts := []common.Address{common.HexToAddress("0x8311804426A24495bD4306DAf5f595A443a52E32")}
 	spender := delegateAddress
 
 	for _, tokenAddress := range tokens {
@@ -456,7 +512,7 @@ func TestEthNodeAccessor_BlockTransactionStatus(t *testing.T) {
 
 func TestEthNodeAccessor_GetTransaction(t *testing.T) {
 	tx := &ethaccessor.Transaction{}
-	if err := ethaccessor.GetTransactionByHash(tx, "0x26383249d29e13c4c5f73505775813829875d0b0bf496f2af2867548e2bf8108", "latest"); err == nil {
+	if err := ethaccessor.GetTransactionByHash(tx, "0x26383249d29e13c4c5f73505775813829875d0b0bf496f2af2867548e2bf8108", "pending"); err == nil {
 		t.Logf("tx blockNumber:%s, from:%s, to:%s, gas:%s value:%s", tx.BlockNumber.BigInt().String(), tx.From, tx.To, tx.Gas.BigInt().String(), tx.Value.BigInt().String())
 		t.Logf("tx input:%s", tx.Input)
 	} else {
@@ -532,4 +588,9 @@ func TestEthNodeAccessor_Call(t *testing.T) {
 	}
 
 	t.Log(res2)
+}
+
+func TestAccessor_MutilClient(t *testing.T) {
+	test.Delegate()
+
 }
