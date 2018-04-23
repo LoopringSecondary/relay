@@ -135,7 +135,7 @@ type SubmitRingMethodEvent struct {
 type RingSubmitResultEvent struct {
 	RingHash    common.Hash
 	TxHash      common.Hash
-	Status      uint8
+	Status      TxStatus
 	RingIndex   *big.Int
 	BlockNumber *big.Int
 	UsedGas     *big.Int
