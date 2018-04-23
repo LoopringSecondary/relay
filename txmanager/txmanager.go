@@ -307,5 +307,5 @@ func (tm *TransactionManager) updatePrevPendingTx(tx *types.Transaction) error {
 	if tx.Status == types.TX_STATUS_PENDING {
 		return nil
 	}
-	return tm.db.UpdatePendingTransactionsByOwner(tx.Owner, uint8(types.TX_STATUS_FAILED))
+	return tm.db.UpdatePendingTransactionsByOwner(tx.Owner, tx.Nonce, uint8(types.TX_STATUS_FAILED))
 }
