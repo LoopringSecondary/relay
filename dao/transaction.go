@@ -237,22 +237,17 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 }
 
 func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
-	var (
-		current Transaction
-	)
+	var current Transaction
 
-	// delete pending then create new item
-	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Where("nonce=?", latest.Nonce).Find(&current).Error; err == nil {
-		s.db.Delete(&current)
+	// add pending then create new item
+	// todo hash相同时 nonce可能不同?
+	if err := s.db.Where("tx_hash=? and owner=? and `status`=? and nonce=?", latest.TxHash, latest.Owner, uint8(types.TX_STATUS_PENDING), latest.Nonce).Find(&current).Error; err != nil {
 		return s.db.Create(latest).Error
 	}
 
 	// select mined transaction then create or update
-	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Where("nonce=?", latest.Nonce).Find(&current).Error
-	if err == nil {
-		latest.ID = current.ID
-		return s.db.Save(latest).Error
-	}
+	// todo 最好能区分多个transfer和单个transfer 做到只删一次
+	s.db.Where("raw_from=? and owner=? and nonce=? and `status`=?", latest.RawFrom, latest.Owner, latest.Nonce, uint8(types.TX_STATUS_PENDING)).Delete(&Transaction{})
 	return s.db.Create(latest).Error
 }
 
