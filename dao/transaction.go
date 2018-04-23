@@ -302,15 +302,6 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 	return txs, err
 }
 
-func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error {
-	return s.db.Model(&Transaction{}).
-		Where("raw_from=?", owner.Hex()).
-		Where("status=?", uint8(types.TX_STATUS_PENDING)).
-		Where("nonce=?", nonce.String()).
-		Where("fork=?", false).
-		Update("status", status).Error
-}
-
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {
 	return s.db.Model(&Transaction{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
