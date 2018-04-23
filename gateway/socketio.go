@@ -131,6 +131,8 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	eventemitter.On(eventemitter.BalanceUpdated, balanceWatcher)
 	depthWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastDepth}
 	eventemitter.On(eventemitter.DepthUpdated, depthWatcher)
+	transactionWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleTransactionUpdate}
+	eventemitter.On(eventemitter.TransactionEvent, transactionWatcher)
 	return so
 }
 
@@ -164,6 +166,7 @@ func (so *SocketIOServiceImpl) Start() {
 			context[aliasOfV] = msg
 			s.SetContext(context)
 			so.connIdMap.Store(s.ID(), s)
+			log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
@@ -180,7 +183,7 @@ func (so *SocketIOServiceImpl) Start() {
 		copyOfK := k
 		spec := events.spec
 
-		if events.emitType == emitTypeByEvent {
+		if events.emitType != emitTypeByCron {
 			continue
 		}
 
@@ -191,6 +194,7 @@ func (so *SocketIOServiceImpl) Start() {
 					businesses := v.Context().(map[string]string)
 					eventContext, ok := businesses[copyOfK]
 					if ok {
+						log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
 						so.EmitNowByEventType(copyOfK, v, eventContext)
 					}
 				}
@@ -286,6 +290,8 @@ func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface
 
 func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventData) (err error) {
 
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] ticker input. %s", input)
+
 	resp := SocketIOJsonResp{}
 	tickers, err := so.walletService.GetTicker()
 
@@ -313,6 +319,8 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 }
 
 func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (err error) {
+
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] trend input. %s", input)
 
 	req := input.(TrendQuery)
 	resp := SocketIOJsonResp{}
@@ -354,6 +362,8 @@ func (so *SocketIOServiceImpl) handlePortfolioUpdate(input eventemitter.EventDat
 }
 
 func (so *SocketIOServiceImpl) handleBalanceUpdate(input eventemitter.EventData) (err error) {
+
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] balance input. %s", input)
 
 	req := input.(types.BalanceUpdateEvent)
 	if len(req.Owner) == 0 {
@@ -400,6 +410,8 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 
 func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
 
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] depth input. %s", input)
+
 	req := input.(types.DepthUpdateEvent)
 	resp := SocketIOJsonResp{}
 	depths, err := so.walletService.GetDepth(DepthQuery{req.DelegateAddress, req.DelegateAddress})
@@ -431,5 +443,85 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 		}
 		return true
 	})
+	return nil
+}
+
+func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventData) (err error) {
+
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input. %s", input)
+
+	req := input.(types.TransactionEvent)
+	tx := req.Tx
+	owner := tx.Owner.Hex()
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyTransaction]
+
+			if ok {
+				txQuery := &TransactionQuery{}
+				err = json.Unmarshal([]byte(ctx), txQuery)
+				if err != nil {
+					log.Error("tx query unmarshal error, " + err.Error())
+				} else if owner == txQuery.Owner {
+					log.Info("emit trend " + ctx)
+
+					txs, err := so.walletService.GetTransactions(*txQuery)
+					resp := SocketIOJsonResp{}
+
+					if err != nil {
+						resp = SocketIOJsonResp{Error: err.Error()}
+					} else {
+						resp.Data = txs
+					}
+					respJson, _ := json.Marshal(resp)
+					v.Emit(eventKeyDepth + EventPostfixRes, respJson)
+				}
+			}
+		}
+		return true
+	})
+
+	return nil
+}
+
+func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.EventData) (err error) {
+
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input (for pending). %s", input)
+
+	req := input.(types.TransactionEvent)
+	tx := req.Tx
+	owner := tx.Owner.Hex()
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyPendingTx]
+
+			if ok {
+				txQuery := &SingleOwner{}
+				err = json.Unmarshal([]byte(ctx), txQuery)
+				if err != nil {
+					log.Error("tx query unmarshal error, " + err.Error())
+				} else if owner == txQuery.Owner {
+					log.Info("emit tx pending " + ctx)
+
+					txs, err := so.walletService.GetPendingTransactions(SingleOwner{owner})
+					resp := SocketIOJsonResp{}
+
+					if err != nil {
+						resp = SocketIOJsonResp{Error: err.Error()}
+					} else {
+						resp.Data = txs
+					}
+					respJson, _ := json.Marshal(resp)
+					v.Emit(eventKeyPendingTx + EventPostfixRes, respJson)
+				}
+			}
+		}
+		return true
+	})
+
 	return nil
 }
