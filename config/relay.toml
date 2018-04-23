@@ -61,7 +61,7 @@ name = "Loopring corporation"
     raw_urls = ["http://127.0.0.1:8545"]
 
 [extractor]
-    start_block_number = 550510
+    start_block_number = 5354906
     end_block_number = 0
     confirm_block_number = 5
     debug = false
