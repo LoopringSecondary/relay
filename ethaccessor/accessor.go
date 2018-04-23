@@ -100,14 +100,14 @@ func GetBlockTransactionCountByNumber(result interface{}, blockNumber string) er
 
 }
 
-func Synced() bool {
-	for _, c := range accessor.clients {
-		if c.syncingResult.isSynced() {
-			return true
-		}
-	}
-	return false
-}
+//func Synced() bool {
+//	for _, c := range accessor.clients {
+//		if c.syncingResult.isSynced() {
+//			return true
+//		}
+//	}
+//	return false
+//}
 
 func EstimateGas(callData []byte, to common.Address, blockNumber string) (gas, gasPrice *big.Int, err error) {
 	return accessor.EstimateGas(blockNumber, callData, to)
@@ -258,8 +258,7 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	accessor = &ethNodeAccessor{}
 	accessor.mtx = sync.RWMutex{}
 	accessor.AddressNonce = make(map[common.Address]*big.Int)
-	accessor.MutilClient = &MutilClient{}
-	accessor.MutilClient.Dail(accessorOptions.RawUrls)
+	accessor.MutilClient = NewMutilClient(accessorOptions.RawUrls)
 	if nil != err {
 		return err
 	}
@@ -331,7 +330,8 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 		accessor.ProtocolAddresses[impl.ContractAddress] = impl
 		accessor.DelegateAddresses[impl.DelegateAddress] = true
 	}
-	accessor.MutilClient.startSyncStatus()
+
+	accessor.MutilClient.startSyncBlockNumber()
 
 	return nil
 }
