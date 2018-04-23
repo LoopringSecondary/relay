@@ -13,7 +13,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/eventemiter"
 	"errors"
-	"github.com/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/types"
 )
