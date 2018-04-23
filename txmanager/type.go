@@ -34,6 +34,7 @@ const (
 
 type TransactionJsonResult struct {
 	Protocol    common.Address     `json:"protocol"`
+	Owner       common.Address     `json:"owner"`
 	From        common.Address     `json:"from"`
 	To          common.Address     `json:"to"`
 	TxHash      common.Hash        `json:"txHash"`
@@ -49,6 +50,11 @@ type TransactionJsonResult struct {
 	Nonce       string             `json:"nonce"`
 }
 
+type TransactionContent struct {
+	Market    string `json:"market"`
+	OrderHash string `json:"orderHash"`
+}
+
 func (tx1 *TransactionJsonResult) addTransferValue(tx2 *TransactionJsonResult) {
 	v1, _ := new(big.Int).SetString(tx1.Value, 0)
 	v2, _ := new(big.Int).SetString(tx2.Value, 0)
@@ -60,11 +66,6 @@ func (tx *TransactionJsonResult) IsTransfer() bool {
 		return true
 	}
 	return false
-}
-
-type TransactionContent struct {
-	Market    string `json:"market"`
-	OrderHash string `json:"orderHash"`
 }
 
 // 过滤老版本重复数据
