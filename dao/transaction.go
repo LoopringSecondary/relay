@@ -242,13 +242,13 @@ func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
 	)
 
 	// delete pending then create new item
-	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Find(&current).Error; err == nil {
+	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Where("nonce=?", latest.Nonce).Find(&current).Error; err == nil {
 		s.db.Delete(&current)
 		return s.db.Create(latest).Error
 	}
 
 	// select mined transaction then create or update
-	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Find(&current).Error
+	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Where("nonce=?", latest.Nonce).Find(&current).Error
 	if err == nil {
 		latest.ID = current.ID
 		return s.db.Save(latest).Error
