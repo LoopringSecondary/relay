@@ -70,10 +70,10 @@ Get user's balance and token allowance info.
 - `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B"
-}
+}]
 ```
 
 ##### Returns
@@ -278,11 +278,11 @@ Get depth and accuracy by token pair
 
 
 ```js
-params: {
+params: [{
   "market" : "LRC-WETH",
   "delegateAddress": "0x5567ee920f7E62274284985D793344351A00142B",
   "length" : 10 // defalut is 50
-}
+}]
 ```
 
 ##### Returns
@@ -412,9 +412,9 @@ Get all market 24hr merged tickers info from loopring relay.
 
 
 ```js
-params: {
+params: [{
     "market" : "LRC-WETH"
-}
+}]
 ```
 
 ##### Returns
@@ -501,7 +501,7 @@ Get order fill history. This history consists of OrderFilled events.
 7. `pageSize` - The size per page, default is 50.
 
 ```js
-params: {
+params: [{
   "market" : "LRC-WETH",
   "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
@@ -509,7 +509,7 @@ params: {
   "ringHash" : "0x2794f8e4d2940a2695c7ecc68e10e4f479b809601fa1d07f5b4ce03feec289d5",
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
-}
+}]
 ```
 
 ##### Returns
@@ -644,12 +644,12 @@ Get all mined rings.
 4. `pageSize` - The size per page, default is 50.
 
 ```js
-params: {
+params: [{
   "ringHash" : "0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238",
   "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "pageIndex" : 1,
   "pageSize" : 20 // max size is 50.
-}
+}]
 ```
 
 ##### Returns
@@ -740,7 +740,7 @@ Get the USD/CNY/BTC quoted price of tokens
 1. `curreny` - The base currency want to query, supported types is `CNY`, `USD`.
 
 ```js
-params: { "currency" : "CNY" }
+params: [{ "currency" : "CNY" }]
 ```
 
 ##### Returns
@@ -815,9 +815,9 @@ Get the total frozen lrcFee of all unfinished orders
 1. `owner` - The address, if is null, will query all orders.
 
 ```js
-params: {
+params: [{
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
-}
+}]
 ```
 
 ##### Returns
@@ -911,9 +911,9 @@ Get user's portfolio info.
 - `owner` - The owner address.
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1"
-}
+}]
 ```
 
 ##### Returns
@@ -961,12 +961,12 @@ Get user's latest transactions by owner.
 
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "thxHash" : "0xc7756d5d556383b2f965094464bdff3ebe658f263f552858cc4eff4ed0aeafeb",
   "pageIndex" : 2, // default is 1
   "pageSize" : 20 // default is 20
-}
+}]
 ```
 
 ##### Returns
@@ -1028,9 +1028,9 @@ Tell the relay the unlocked wallet info.
 - `owner` - The address, if is null, will query all orders.
 
 ```js
-params: {
+params: [{
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-}
+}]
 ```
 
 ##### Returns
@@ -1060,9 +1060,9 @@ wallet should notify relay there was a transaction sending to eth network, then 
 - `txHash` - The txHash.
 
 ```js
-params: {
+params: [{
   "txHash" : "0xf462c63f46a4e1dc87a7256d40c5e2ec8262cd006fe98ac0839d1aae61818f84",
-}
+}]
 ```
 
 ##### Returns

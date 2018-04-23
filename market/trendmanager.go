@@ -781,7 +781,7 @@ func (t *TrendManager) ScheduleUpdate() {
 		wgInterval.Done()
 	}
 	wgInterval.Wait()
-	//t.wupdateCache()
+	t.LoadCache()
 }
 
 func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend Trend, err error) {
@@ -1048,7 +1048,6 @@ func (t *TrendManager) HandleOrderFilled(input eventemitter.EventData) (err erro
 			//t.c.Set(trendKeyPre+strings.ToLower(OneHour), newCache, cache.NoExpiration)
 			t.reCalTicker(market)
 		}
-		eventemitter.Emit(eventemitter.LoopringTickerUpdated, nil)
 	} else {
 		err = errors.New("cache is not ready , please access later")
 	}
@@ -1079,6 +1078,7 @@ func setTrendCache(interval, market string, mktCache Cache, ttl int64) {
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
 	} else {
+		eventemitter.Emit(eventemitter.TrendUpdated, market)
 		redisCache.Set(cacheKey, tickerByte, ttl)
 	}
 }
@@ -1088,6 +1088,7 @@ func setLprTickerCache(tickers map[string]Ticker, ttl int64) {
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
 	} else {
+		eventemitter.Emit(eventemitter.LoopringTickerUpdated, nil)
 		redisCache.Set(tickerKey, tickerByte, ttl)
 	}
 }

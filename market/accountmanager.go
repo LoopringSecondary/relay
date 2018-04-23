@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
+	"github.com/Loopring/relay/gateway"
 )
 
 const (
@@ -367,6 +368,7 @@ type ChangedOfBlock struct {
 }
 
 func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
+	eventemitter.Emit(eventemitter.BalanceUpdated, gateway.CommonTokenRequest{Owner:owner.Hex()})
 	return rcache.SAdd(b.cacheBalanceKey(), int64(0), b.cacheBalanceField(owner, token))
 }
 
@@ -394,6 +396,7 @@ func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner, token, sp
 }
 
 func (b *ChangedOfBlock) saveAllowanceKey(owner, token, spender common.Address) error {
+	eventemitter.Emit(eventemitter.BalanceUpdated, gateway.CommonTokenRequest{Owner:owner.Hex(), DelegateAddress: spender.Hex()})
 	return rcache.SAdd(b.cacheAllowanceKey(), int64(0), b.cacheAllowanceField(owner, token, spender))
 }
 

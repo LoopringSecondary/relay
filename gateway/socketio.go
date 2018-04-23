@@ -12,6 +12,9 @@ import (
 	"time"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/eventemiter"
+	"errors"
+	"github.com/go-ethereum/common"
+	"github.com/Loopring/relay/ethaccessor"
 )
 
 type BusinessType int
@@ -122,7 +125,7 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	trendsWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastTrends}
 	eventemitter.On(eventemitter.TrendUpdated, trendsWatcher)
 	portfolioWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePortfolioUpdate}
-	eventemitter.On(eventemitter.TrendUpdated, portfolioWatcher)
+	eventemitter.On(eventemitter.PortfolioUpdated, portfolioWatcher)
 	balanceWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleBalanceUpdate}
 	eventemitter.On(eventemitter.BalanceUpdated, balanceWatcher)
 	depthWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastDepth}
@@ -352,6 +355,22 @@ func (so *SocketIOServiceImpl) handlePortfolioUpdate(input eventemitter.EventDat
 func (so *SocketIOServiceImpl) handleBalanceUpdate(input eventemitter.EventData) (err error) {
 
 	req := input.(CommonTokenRequest)
+	if len(req.Owner) == 0 {
+		return errors.New("owner can't be nil")
+	}
+
+	if common.IsHexAddress(req.DelegateAddress) {
+		so.notifyBalanceUpdateByDelegateAddress(req.Owner, req.DelegateAddress)
+	} else {
+		for k := range ethaccessor.DelegateAddresses() {
+			so.notifyBalanceUpdateByDelegateAddress(req.Owner, k.Hex())
+		}
+	}
+	return nil
+}
+
+func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, delegateAddress string) (err error) {
+	req := CommonTokenRequest{owner, delegateAddress}
 	resp := SocketIOJsonResp{}
 	balance, err := so.walletService.GetBalance(req)
 
