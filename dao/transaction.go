@@ -59,8 +59,8 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
-	tx.Type = src.Type
-	tx.Status = src.Status
+	tx.Type = src.TypeValue()
+	tx.Status = src.StatusValue()
 	tx.TxIndex = src.TxIndex
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
@@ -87,8 +87,8 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.TxIndex = tx.TxIndex
 	dst.LogIndex = tx.LogIndex
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
-	dst.Type = tx.Type
-	dst.Status = tx.Status
+	dst.Type = types.TxType(tx.Type)
+	dst.Status = types.TxStatus(tx.Status)
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
 	dst.Symbol = tx.Symbol
@@ -108,7 +108,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args    []interface{}
 	)
 
-	switch latest.Type {
+	switch types.TxType(latest.Type) {
 	case types.TX_TYPE_SELL, types.TX_TYPE_BUY:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
