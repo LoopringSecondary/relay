@@ -107,6 +107,75 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 }
 
 // value,status可能会变更
+func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (Transaction, error) {
+	var (
+		tx  Transaction
+		err error
+	)
+
+	err = s.db.Where("tx_hash=?", txhash).First(&tx).Error
+	return tx, err
+}
+
+func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error) {
+	var (
+		tx  Transaction
+		err error
+	)
+
+	err = s.db.Where("tx_hash=? and tx_log_index=?", txhash, logIndex).First(&tx).Error
+	return tx, err
+}
+
+func (s *RdsServiceImpl) GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error) {
+	var txs []Transaction
+
+	err := s.db.Where("from = ? or to = ?", owner, owner).
+		Where("status=?", status).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
+func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error) {
+	var (
+		number int
+		err    error
+	)
+
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where("symbol=?", symbol).
+		Where("status in (?)", status).
+		Where("fork=?", false).
+		Select("count(distinct(tx_hash))").
+		Count(&number).Error
+
+	return number, err
+}
+
+func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error) {
+	var (
+		hashs []string
+		err   error
+	)
+
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where("symbol=?", symbol).
+		Where("status in (?)", status).
+		Where("fork=?", false).
+		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
+
+	return hashs, err
+}
+
+////////////////////////////////////////////////////////
+// add while optimize
+////////////////////////////////////////////////////////
+
+// value,status可能会变更
 func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	var (
 		current Transaction
