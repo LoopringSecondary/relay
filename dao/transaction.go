@@ -130,7 +130,7 @@ func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int
 func (s *RdsServiceImpl) GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error) {
 	var txs []Transaction
 
-	err := s.db.Where("from = ? or to = ?", owner, owner).
+	err := s.db.Where("tx_from = ? or tx_to = ?", owner, owner).
 		Where("status=?", status).
 		Where("fork=?", false).
 		Find(&txs).Error

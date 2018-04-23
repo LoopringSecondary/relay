@@ -92,8 +92,6 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
-const ETH_SYMBOL = "ETH"
-
 func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	log.Debugf("txmanager,processing chain fork......")
 
@@ -291,6 +289,9 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 	model.ConvertDown(tx)
 
 	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
+		// emit transaction before saving
+		eventemitter.Emit(eventemitter.TransactionEvent, tx)
+
 		if err := tm.db.SaveTransaction(&model); err != nil {
 			log.Errorf(err.Error())
 		}
