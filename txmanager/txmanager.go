@@ -291,21 +291,8 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
 		// emit transaction before saving
 		eventemitter.Emit(eventemitter.TransactionEvent, tx)
-
-		if err := tm.db.SaveTransaction(&model); err != nil {
-			log.Errorf(err.Error())
-		}
-		if err := tm.updatePrevPendingTx(tx); err != nil {
-			log.Errorf(err.Error())
-		}
+		return tm.db.SaveTransaction(&model)
 	}
 
 	return nil
-}
-
-func (tm *TransactionManager) updatePrevPendingTx(tx *types.Transaction) error {
-	if tx.Status == types.TX_STATUS_PENDING {
-		return nil
-	}
-	return tm.db.UpdatePendingTransactionsByOwner(tx.Owner, uint8(types.TX_STATUS_FAILED))
 }
