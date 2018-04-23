@@ -236,7 +236,7 @@ func (n *Node) registerTransactionManager() {
 }
 
 func (n *Node) registerTickerCollector() {
-	n.relayNode.tickerCollector = *market.NewCollector()
+	n.relayNode.tickerCollector = *market.NewCollector(n.globalConfig.Market.CronJobLock)
 }
 
 func (n *Node) registerWalletService() {

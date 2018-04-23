@@ -146,10 +146,10 @@ func NewCollector(cronJobLock bool) *CollectorImpl {
 
 func (c *CollectorImpl) Start() {
 	// create cron job and exec sync
-	updateBinanceCache()
-	updateOkexCache()
-	updateHuobiCache()
 	if c.cronJobLock {
+		updateBinanceCache()
+		updateOkexCache()
+		updateHuobiCache()
 		c.cron.AddFunc("@every 20s", updateBinanceCache)
 		c.cron.AddFunc("@every 5s", updateOkexCache)
 		c.cron.AddFunc("@every 5s", updateHuobiCache)

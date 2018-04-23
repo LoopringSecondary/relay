@@ -15,6 +15,7 @@ import (
 	"errors"
 	"github.com/go-ethereum/common"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/types"
 )
 
 type BusinessType int
@@ -354,7 +355,7 @@ func (so *SocketIOServiceImpl) handlePortfolioUpdate(input eventemitter.EventDat
 
 func (so *SocketIOServiceImpl) handleBalanceUpdate(input eventemitter.EventData) (err error) {
 
-	req := input.(CommonTokenRequest)
+	req := input.(types.BalanceUpdateEvent)
 	if len(req.Owner) == 0 {
 		return errors.New("owner can't be nil")
 	}
@@ -399,9 +400,9 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 
 func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
 
-	req := input.(DepthQuery)
+	req := input.(types.DepthUpdateEvent)
 	resp := SocketIOJsonResp{}
-	depths, err := so.walletService.GetDepth(req)
+	depths, err := so.walletService.GetDepth(DepthQuery{req.DelegateAddress, req.DelegateAddress})
 
 	if err != nil {
 		resp = SocketIOJsonResp{Error: err.Error()}
