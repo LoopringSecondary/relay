@@ -289,6 +289,9 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 	model.ConvertDown(tx)
 
 	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
+		// emit transaction before saving
+		eventemitter.Emit(eventemitter.TransactionEvent, tx)
+
 		if err := tm.db.SaveTransaction(&model); err != nil {
 			log.Errorf(err.Error())
 		}
