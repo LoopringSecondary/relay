@@ -64,6 +64,8 @@ type TxInfo struct {
 	DelegateAddress common.Address `json:"delegate_address"`
 	From            common.Address `json:"from"`
 	To              common.Address `json:"to"`
+	RawFrom         common.Address `json:"raw_from"`
+	RawTo           common.Address `json:"raw_to"`
 	TxHash          common.Hash    `json:"txHash"`
 	BlockHash       common.Hash    `json:"symbol"`
 	TxIndex         int64          `json:txIndex`

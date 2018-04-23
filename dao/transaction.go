@@ -31,6 +31,8 @@ type Transaction struct {
 	Owner       string `gorm:"column:owner;type:varchar(42)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
+	RawFrom     string `gorm:"column:raw_from;type:varchar(42)"`
+	RawTo       string `gorm:"column:raw_to;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
@@ -55,6 +57,8 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Owner = src.Owner.Hex()
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
+	tx.RawFrom = src.RawFrom.Hex()
+	tx.RawTo = src.RawTo.Hex()
 	tx.TxHash = src.TxHash.Hex()
 	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
@@ -81,6 +85,8 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Owner = common.HexToAddress(tx.Owner)
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
+	dst.RawFrom = common.HexToAddress(tx.RawFrom)
+	dst.RawTo = common.HexToAddress(tx.RawTo)
 	dst.TxHash = common.HexToHash(tx.TxHash)
 	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
@@ -228,7 +234,7 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 }
 
 func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, status uint8) error {
-	return s.db.Model(&Transaction{}).Where("owner=?", owner.Hex()).Where("status=?", uint8(types.TX_STATUS_PENDING)).
+	return s.db.Model(&Transaction{}).Where("raw_from=?", owner.Hex()).Where("status=?", uint8(types.TX_STATUS_PENDING)).
 		Where("fork=?", false).
 		Update("status", status).Error
 }
