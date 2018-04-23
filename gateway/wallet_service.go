@@ -144,7 +144,6 @@ type OrderQuery struct {
 }
 
 type DepthQuery struct {
-	Length          int    `json:"length"`
 	DelegateAddress string `json:"delegateAddress"`
 	Market          string `json:"market"`
 }
@@ -477,17 +476,14 @@ func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err er
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
+	defaultDepthLength := 10
+
 	mkt := strings.ToUpper(query.Market)
 	delegateAddress := query.DelegateAddress
-	length := query.Length
 
 	if mkt == "" || !common.IsHexAddress(delegateAddress) {
 		err = errors.New("market and correct contract address must be applied")
 		return
-	}
-
-	if length <= 0 || length > 20 {
-		length = 20
 	}
 
 	a, b := util.UnWrap(mkt)
@@ -510,26 +506,26 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 	asks, askErr := w.orderManager.GetOrderBook(
 		common.HexToAddress(delegateAddress),
 		util.AllTokens[a].Protocol,
-		util.AllTokens[b].Protocol, length*2)
+		util.AllTokens[b].Protocol, defaultDepthLength*2)
 
 	if askErr != nil {
 		err = errors.New("get depth error , please refresh again")
 		return
 	}
 
-	depth.Depth.Sell = calculateDepth(asks, length, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
+	depth.Depth.Sell = calculateDepth(asks, defaultDepthLength, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
 
 	bids, bidErr := w.orderManager.GetOrderBook(
 		common.HexToAddress(delegateAddress),
 		util.AllTokens[b].Protocol,
-		util.AllTokens[a].Protocol, length*2)
+		util.AllTokens[a].Protocol, defaultDepthLength*2)
 
 	if bidErr != nil {
 		err = errors.New("get depth error , please refresh again")
 		return
 	}
 
-	depth.Depth.Buy = calculateDepth(bids, length, false, util.AllTokens[b].Decimals, util.AllTokens[a].Decimals)
+	depth.Depth.Buy = calculateDepth(bids, defaultDepthLength, false, util.AllTokens[b].Decimals, util.AllTokens[a].Decimals)
 
 	return depth, err
 }

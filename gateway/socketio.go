@@ -123,6 +123,10 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	eventemitter.On(eventemitter.TrendUpdated, trendsWatcher)
 	portfolioWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePortfolioUpdate}
 	eventemitter.On(eventemitter.TrendUpdated, portfolioWatcher)
+	balanceWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleBalanceUpdate}
+	eventemitter.On(eventemitter.BalanceUpdated, balanceWatcher)
+	depthWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastDepth}
+	eventemitter.On(eventemitter.DepthUpdated, depthWatcher)
 	return so
 }
 
@@ -342,5 +346,70 @@ func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (er
 
 // portfolio has removed from loopr2
 func (so *SocketIOServiceImpl) handlePortfolioUpdate(input eventemitter.EventData) (err error) {
+	return nil
+}
+
+func (so *SocketIOServiceImpl) handleBalanceUpdate(input eventemitter.EventData) (err error) {
+
+	req := input.(CommonTokenRequest)
+	resp := SocketIOJsonResp{}
+	balance, err := so.walletService.GetBalance(req)
+
+	if err != nil {
+		resp = SocketIOJsonResp{Error: err.Error()}
+	} else {
+		resp.Data = balance
+	}
+
+	respJson, _ := json.Marshal(resp)
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			_, ok := businesses[eventKeyBalance]
+			if ok {
+				log.Info("emit balance info")
+				v.Emit(eventKeyBalance + EventPostfixRes, respJson)
+			}
+		}
+		return true
+	})
+	return nil
+}
+
+func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
+
+	req := input.(DepthQuery)
+	resp := SocketIOJsonResp{}
+	depths, err := so.walletService.GetDepth(req)
+
+	if err != nil {
+		resp = SocketIOJsonResp{Error: err.Error()}
+	} else {
+		resp.Data = depths
+	}
+
+	respJson, _ := json.Marshal(resp)
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyDepth]
+
+			if ok {
+				depthQuery := &DepthQuery{}
+				err = json.Unmarshal([]byte(ctx), depthQuery)
+				if err != nil {
+					log.Error("depth query unmarshal error, " + err.Error())
+				} else if req.DelegateAddress == depthQuery.DelegateAddress && req.Market == depthQuery.Market {
+					log.Info("emit trend " + ctx)
+					v.Emit(eventKeyDepth + EventPostfixRes, respJson)
+				}
+			}
+		}
+		return true
+	})
 	return nil
 }

@@ -30,6 +30,7 @@ import (
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"github.com/Loopring/relay/gateway"
 )
 
 type OrderManager interface {
@@ -163,6 +164,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		return err
 	}
 
+	eventemitter.Emit(eventemitter.DepthUpdated, gateway.DepthQuery{DelegateAddress:model.DelegateAddress, Market:model.Market})
 	return om.rds.Add(model)
 }
 
