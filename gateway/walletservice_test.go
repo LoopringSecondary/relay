@@ -160,7 +160,6 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	//s, _ := crypto.NewPrivateKeyCrypto(false, "0x7d0a1121fb170361b6483d922d72258e6d4da9aa65234ac7ba0c9c833e6adc71")
 	//fmt.Println(s.Address().Hex())
 
-
 	txNotify := gateway.TxNotify{}
 	txNotify.Hash = "0x0ceff977a5335b34eb6a5e16f29c7ba815d30d20e061f3e0a0b1dcbacfeed9b4"
 	txNotify.From = "0x71c079107b5af8619d54537a93dbf16e5aab4900"
@@ -172,7 +171,7 @@ func TestWalletServiceImpl_GetPortfolio(t *testing.T) {
 	txNotify.V = "0x25"
 	txNotify.R = "0x94b92f2068f8e41b8c2987d8f184345a016505addbda340261feebaedab38dc4"
 	txNotify.S = "0x6e8029ad29eeb0a1368b352de54dc452cef1bf1efe36b2327ccb06ae5c29b7ba"
-	txNotify.Input= "0xa9059cbb0000000000000000000000008311804426a24495bd4306daf5f595a443a52e32000000000000000000000000000000000000000000000000000000174876e800"
+	txNotify.Input = "0xa9059cbb0000000000000000000000008311804426a24495bd4306daf5f595a443a52e32000000000000000000000000000000000000000000000000000000174876e800"
 	gateway.NotifyTransactionSubmitted(txNotify)
 
 	//ethTx := &ethTypes.Transaction{}
