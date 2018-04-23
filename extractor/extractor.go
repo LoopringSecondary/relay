@@ -19,6 +19,7 @@
 package extractor
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -74,6 +75,10 @@ func NewExtractorService(options config.ExtractorOptions,
 	l.stop = make(chan bool, 1)
 
 	l.setBlockNumberRange()
+
+	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
+	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
+
 	return &l
 }
 
@@ -84,9 +89,6 @@ func (l *ExtractorServiceImpl) Start() {
 
 	log.Info("extractor start...")
 	l.syncComplete = false
-
-	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
-	eventemitter.On(eventemitter.PendingTransaction, l.pendingTxWatcher)
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
 	go func() {
@@ -106,13 +108,15 @@ func (l *ExtractorServiceImpl) Stop() {
 		return
 	}
 
-	eventemitter.Un(eventemitter.PendingTransaction, l.pendingTxWatcher)
 	l.stop <- true
 }
 
 // 重启(分叉)时先关停subscribeEvents，然后关
 func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
-	forkEvent := l.detector.Detect(currentBlock)
+	forkEvent, err := l.detector.Detect(currentBlock)
+	if err != nil {
+		l.Warning(err)
+	}
 	if forkEvent == nil {
 		return
 	}
@@ -128,7 +132,7 @@ func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
 func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
 	var syncBlock types.Big
 	if err := ethaccessor.BlockNumber(&syncBlock); err != nil {
-		log.Fatalf("extractor,Sync chain block,get ethereum node current block number error:%s", err.Error())
+		l.Warning(fmt.Errorf("extractor,Sync chain block,get ethereum node current block number error:%s", err.Error()))
 	}
 	currentBlockNumber := new(big.Int).Add(blockNumber, big.NewInt(int64(l.options.ConfirmBlockNumber)))
 	if syncBlock.BigInt().Cmp(currentBlockNumber) <= 0 {
@@ -140,6 +144,14 @@ func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
 	}
 }
 
+// Warning 当发生严重错误时需关停extractor，并通知其他模块
+func (l *ExtractorServiceImpl) Warning(err error) {
+	l.Stop()
+	log.Warnf("extractor, warning:%s", err.Error())
+	var event types.ExtractorWarningEvent
+	eventemitter.Emit(eventemitter.ExtractorWarning, &event)
+}
+
 func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.EventData) error {
 	tx := input.(*ethaccessor.Transaction)
 	return l.ProcessPendingTransaction(tx)
@@ -148,7 +160,7 @@ func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.Eve
 func (l *ExtractorServiceImpl) ProcessBlock() {
 	inter, err := l.iterator.Next()
 	if err != nil {
-		log.Fatalf("extractor,iterator next error:%s", err.Error())
+		l.Warning(fmt.Errorf("extractor,iterator next error:%s", err.Error()))
 	}
 
 	// get current block
@@ -182,12 +194,12 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 
 	var txcnt types.Big
 	if err := ethaccessor.GetBlockTransactionCountByHash(&txcnt, block.Hash.Hex(), block.Number.BigInt().String()); err != nil {
-		log.Fatalf("extractor,getBlockTransactionCountByHash error:%s", err.Error())
+		l.Warning(fmt.Errorf("extractor,getBlockTransactionCountByHash error:%s", err.Error()))
 	}
 	txcntinblock := len(block.Transactions)
 	if txcntinblock > 0 {
 		if txcnt.Int() != txcntinblock {
-			log.Fatalf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock)
+			l.Warning(fmt.Errorf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock))
 		}
 
 		for idx, transaction := range block.Transactions {

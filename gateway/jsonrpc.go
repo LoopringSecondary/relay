@@ -22,7 +22,9 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/cors"
 	"net"
+	"net/http"
 )
 
 func (*JsonrpcServiceImpl) Ping(val string, val2 int) (res string, err error) {
@@ -63,8 +65,27 @@ func (j *JsonrpcServiceImpl) Start() {
 	if listener, err = net.Listen("tcp", ":"+j.port); err != nil {
 		return
 	}
-	go rpc.NewHTTPServer([]string{"*"}, handler).Serve(listener)
+	//httpServer := rpc.NewHTTPServer([]string{"*"}, handler)
+	httpServer := &http.Server{Handler: newCorsHandler(handler, []string{"*"})}
+	//httpServer.Handler = newCorsHandler(handler, []string{"*"})
+	go httpServer.Serve(listener)
 	log.Info(fmt.Sprintf("HTTP endpoint opened on " + j.port))
 
 	return
+}
+
+func newCorsHandler(srv *rpc.Server, allowedOrigins []string) http.Handler {
+	// disable CORS support if user has not specified a custom CORS configuration
+	if len(allowedOrigins) == 0 {
+		return srv
+	}
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   []string{"POST", "GET"},
+		MaxAge:           600,
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+	return c.Handler(srv)
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/txmanager"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -93,7 +94,17 @@ type SingleOwner struct {
 }
 
 type TxNotify struct {
-	TxHash string `json:"txHash"`
+	Hash     string `json:"hash"`
+	Nonce    string `json:"nonce"`
+	From     string `json:"from"`
+	To       string `json:"to"`
+	Value    string `json:"value"`
+	GasPrice string `json:"gasPrice"`
+	Gas      string `json:"gas"`
+	Input    string `json:"input"`
+	R        string `json:"r"`
+	S        string `json:"s"`
+	V        string `json:"v"`
 }
 
 type PriceQuoteQuery struct {
@@ -190,29 +201,6 @@ type OrderJsonResult struct {
 	CancelledAmountS string             `json:"cancelledAmountS"`
 	CancelledAmountB string             `json:"cancelledAmountB"`
 	Status           string             `json:"status"`
-}
-
-type TransactionJsonResult struct {
-	Protocol    common.Address     `json:"protocol"`
-	Owner       common.Address     `json:"owner"`
-	From        common.Address     `json:"from"`
-	To          common.Address     `json:"to"`
-	TxHash      common.Hash        `json:"txHash"`
-	Symbol      string             `json:"symbol"`
-	Content     TransactionContent `json:"content"`
-	BlockNumber int64              `json:"blockNumber"`
-	Value       string             `json:"value"`
-	LogIndex    int64              `json:"logIndex"`
-	Type        string             `json:"type"`
-	Status      string             `json:"status"`
-	CreateTime  int64              `json:"createTime"`
-	UpdateTime  int64              `json:"updateTime"`
-	Nonce       string             `json:"nonce"`
-}
-
-type TransactionContent struct {
-	Market    string `json:"market"`
-	OrderHash string `json:"orderHash"`
 }
 
 type PriceQuote struct {
@@ -402,19 +390,39 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 }
 
 func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
-	if len(txNotify.TxHash) == 0 {
-		return "", errors.New("txHash can't be null string")
+	if len(txNotify.Hash) == 0 {
+		return "", errors.New("raw tx can't be null string")
 	}
-	log.Info(">>>>>>>>>received tx notify " + txNotify.TxHash)
+	if !common.IsHexAddress(txNotify.From) || !common.IsHexAddress(txNotify.To) {
+		return "", errors.New("from or to address is illegal")
+	}
+
 	tx := &ethaccessor.Transaction{}
-	err = ethaccessor.GetTransactionByHash(tx, txNotify.TxHash, "pending")
-	if err == nil {
-		eventemitter.Emit(eventemitter.PendingTransaction, tx)
-		log.Info("emit transaction info " + tx.Hash)
-	} else {
-		log.Error(">>>>>>>>getTransaction error : " + err.Error())
+	tx.Hash = txNotify.Hash
+	tx.Input = txNotify.Input
+	tx.From = txNotify.From
+	tx.To = txNotify.To
+	tx.Gas = *types.NewBigPtr(types.HexToBigint(txNotify.Gas))
+	tx.GasPrice = *types.NewBigPtr(types.HexToBigint(txNotify.GasPrice))
+	tx.Nonce = *types.NewBigPtr(types.HexToBigint(txNotify.Nonce))
+	tx.Value = *types.NewBigPtr(types.HexToBigint(txNotify.Value))
+	if len(txNotify.V) > 0 {
+		tx.V = txNotify.V
 	}
-	return
+	if len(txNotify.R) > 0 {
+		tx.R = txNotify.R
+	}
+	if len(txNotify.S) > 0 {
+		tx.S = txNotify.S
+	}
+	tx.BlockNumber = *types.NewBigWithInt(0)
+	tx.BlockHash = ""
+	tx.TransactionIndex = *types.NewBigWithInt(0)
+
+	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
+	eventemitter.Emit(eventemitter.PendingTransaction, tx)
+	log.Info("emit transaction info " + tx.Hash)
+	return tx.Hash, nil
 }
 
 func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res string, err error) {
@@ -699,7 +707,7 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 	return rst, nil
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []TransactionJsonResult, err error) {
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
 
 	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
 
@@ -707,7 +715,7 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 		return nil, err
 	}
 
-	result = make([]TransactionJsonResult, 0)
+	result = make([]txmanager.TransactionJsonResult, 0)
 	for _, r := range rst {
 		tr := types.Transaction{}
 		err = r.ConvertUp(&tr)
@@ -720,7 +728,7 @@ func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (resul
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []TransactionJsonResult, err error) {
+func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txmanager.TransactionJsonResult, err error) {
 
 	if len(query.Owner) == 0 {
 		return nil, errors.New("owner can't be null")
@@ -736,7 +744,7 @@ func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []
 		return nil, err
 	}
 
-	result = make([]TransactionJsonResult, 0)
+	result = make([]txmanager.TransactionJsonResult, 0)
 	for _, r := range rst {
 		tr := types.Transaction{}
 		err = r.ConvertUp(&tr)
@@ -1051,8 +1059,8 @@ func txTypeToUint8(status string) int {
 	}
 }
 
-func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
-	dst := TransactionJsonResult{}
+func toTxJsonResult(tx types.Transaction) txmanager.TransactionJsonResult {
+	dst := txmanager.TransactionJsonResult{}
 	dst.Protocol = tx.Protocol
 	dst.Owner = tx.Owner
 	dst.From = tx.From
@@ -1064,13 +1072,13 @@ func toTxJsonResult(tx types.Transaction) TransactionJsonResult {
 		if err == nil && ctx != nil {
 			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
 			if err == nil {
-				dst.Content = TransactionContent{Market: mkt}
+				dst.Content = txmanager.TransactionContent{Market: mkt}
 			}
 		}
 	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
 		ctx, err := tx.GetCancelOrderHash()
 		if err == nil && ctx != "" {
-			dst.Content = TransactionContent{OrderHash: ctx}
+			dst.Content = txmanager.TransactionContent{OrderHash: ctx}
 		}
 	}
 

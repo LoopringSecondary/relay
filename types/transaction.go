@@ -25,26 +25,36 @@ import (
 	"math/big"
 )
 
+type (
+	TxStatus uint8
+	TxType   uint8
+)
+
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
 const (
-	TX_STATUS_UNKNOWN = 0
-	TX_STATUS_PENDING = 1
-	TX_STATUS_SUCCESS = 2
-	TX_STATUS_FAILED  = 3
+	TX_STATUS_UNKNOWN TxStatus = 0
+	TX_STATUS_PENDING TxStatus = 1
+	TX_STATUS_SUCCESS TxStatus = 2
+	TX_STATUS_FAILED  TxStatus = 3
 
-	TX_TYPE_APPROVE = 1
-	TX_TYPE_SEND    = 2 // SEND
-	TX_TYPE_RECEIVE = 3
-	TX_TYPE_SELL    = 4 // SELL
-	TX_TYPE_BUY     = 5
-	//TX_TYPE_WRAP         = 6 // WETH DEPOSIT
-	TX_TYPE_CONVERT_INCOME  = 7 // WETH WITHDRAWAL
-	TX_TYPE_CONVERT_OUTCOME = 8
-	TX_TYPE_CANCEL_ORDER    = 9
-	TX_TYPE_CUTOFF          = 10
-	TX_TYPE_CUTOFF_PAIR     = 11
+	TX_TYPE_UNKNOWN TxType = 0
+	TX_TYPE_APPROVE TxType = 1
+	TX_TYPE_SEND    TxType = 2 // SEND
+	TX_TYPE_RECEIVE TxType = 3
+	TX_TYPE_SELL    TxType = 4 // SELL
+	TX_TYPE_BUY     TxType = 5
+	//TX_TYPE_WRAP         TxType= 6 // WETH DEPOSIT
+	TX_TYPE_CONVERT_INCOME  TxType = 7 // WETH WITHDRAWAL
+	TX_TYPE_CONVERT_OUTCOME TxType = 8
+	TX_TYPE_CANCEL_ORDER    TxType = 9
+	TX_TYPE_CUTOFF          TxType = 10
+	TX_TYPE_CUTOFF_PAIR     TxType = 11
 
-	TX_TYPE_UNSUPPORTED_CONTRACT = 12
+	TX_TYPE_UNSUPPORTED_CONTRACT TxType = 12
+
+	TX_TYPE_TRANSFER   TxType = 21
+	TX_TYPE_DEPOSIT    TxType = 22
+	TX_TYPE_WITHDRAWAL TxType = 23
 )
 
 // todo(fuk): mark,transaction不包含sell&buy
@@ -54,13 +64,15 @@ type TxInfo struct {
 	DelegateAddress common.Address `json:"delegate_address"`
 	From            common.Address `json:"from"`
 	To              common.Address `json:"to"`
+	RawFrom         common.Address `json:"raw_from"`
+	RawTo           common.Address `json:"raw_to"`
 	TxHash          common.Hash    `json:"txHash"`
 	BlockHash       common.Hash    `json:"symbol"`
 	TxIndex         int64          `json:txIndex`
 	LogIndex        int64          `json:"logIndex"`
 	BlockNumber     *big.Int       `json:"blockNumber"`
 	BlockTime       int64          `json:"block_time"`
-	Status          uint8          `json:"status"`
+	Status          TxStatus       `json:"status"`
 	GasLimit        *big.Int       `json:"gas_limit"`
 	GasUsed         *big.Int       `json:"gas_used"`
 	GasPrice        *big.Int       `json:"gas_price"`
@@ -74,29 +86,52 @@ type Transaction struct {
 	Owner      common.Address `json:"owner"`
 	Content    []byte         `json:"content"`
 	Value      *big.Int       `json:"value"`
-	Type       uint8          `json:"type"`
+	Type       TxType         `json:"type"`
 	CreateTime int64          `json:"createTime"`
 	UpdateTime int64          `json:"updateTime"`
 }
 
-func (tx *Transaction) StatusStr() string {
+func (tx *Transaction) TypeStr() string    { return TypeStr(tx.Type) }
+func (tx *Transaction) StatusStr() string  { return StatusStr(tx.Status) }
+func (tx *Transaction) TypeValue() uint8   { return uint8(tx.Type) }
+func (tx *Transaction) StatusValue() uint8 { return uint8(tx.Status) }
+
+func StatusStr(status TxStatus) string {
 	var ret string
-	switch tx.Status {
+	switch status {
 	case TX_STATUS_PENDING:
 		ret = "pending"
 	case TX_STATUS_SUCCESS:
 		ret = "success"
 	case TX_STATUS_FAILED:
 		ret = "failed"
+	default:
+		ret = "unknown"
 	}
 
 	return ret
 }
 
-func (tx *Transaction) TypeStr() string {
+func StrToTxStatus(txType string) TxStatus {
+	var ret TxStatus
+	switch txType {
+	case "pending":
+		ret = TX_STATUS_PENDING
+	case "success":
+		ret = TX_STATUS_SUCCESS
+	case "failed":
+		ret = TX_STATUS_FAILED
+	default:
+		ret = TX_STATUS_UNKNOWN
+	}
+
+	return ret
+}
+
+func TypeStr(typ TxType) string {
 	var ret string
 
-	switch tx.Type {
+	switch typ {
 	case TX_TYPE_APPROVE:
 		ret = "approve"
 	case TX_TYPE_SEND:
@@ -119,12 +154,58 @@ func (tx *Transaction) TypeStr() string {
 		ret = "cutoff_trading_pair"
 	case TX_TYPE_UNSUPPORTED_CONTRACT:
 		ret = "unsupported_contract"
+	case TX_TYPE_TRANSFER:
+		ret = "transfer"
+	case TX_TYPE_DEPOSIT:
+		ret = "deposit"
+	case TX_TYPE_WITHDRAWAL:
+		ret = "withdrawal"
+	default:
+		ret = "unknown"
 	}
 
 	return ret
 }
 
-func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype uint8) error {
+func StrToTxType(status string) TxType {
+	var ret TxType
+	switch status {
+	case "approve":
+		ret = TX_TYPE_APPROVE
+	case "send":
+		ret = TX_TYPE_SEND
+	case "receive":
+		ret = TX_TYPE_RECEIVE
+	case "sell":
+		ret = TX_TYPE_SELL
+	case "buy":
+		ret = TX_TYPE_BUY
+	case "convert_income":
+		ret = TX_TYPE_CONVERT_INCOME
+	case "convert_outcome":
+		ret = TX_TYPE_CONVERT_OUTCOME
+	case "cancel_order":
+		ret = TX_TYPE_CANCEL_ORDER
+	case "cutoff":
+		ret = TX_TYPE_CUTOFF
+	case "cutoff_trading_pair":
+		ret = TX_TYPE_CUTOFF_PAIR
+	case "unsupported_contract":
+		ret = TX_TYPE_UNSUPPORTED_CONTRACT
+	case "transfer":
+		ret = TX_TYPE_TRANSFER
+	case "deposit":
+		ret = TX_TYPE_DEPOSIT
+	case "withdrawal":
+		ret = TX_TYPE_WITHDRAWAL
+	default:
+		ret = TX_TYPE_UNKNOWN
+	}
+
+	return ret
+}
+
+func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype TxType) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Owner = src.Owner
 	tx.Type = txtype
@@ -271,7 +352,7 @@ func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive uint8) error {
+func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive TxType) error {
 	tx.fullFilled(src.TxInfo)
 	if sendOrReceive == TX_TYPE_SEND {
 		tx.Owner = src.Sender

@@ -247,8 +247,8 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0x58ddf82fccec5463f50c0b74e3ed6cc18973d33b49571aee052a5eeb7b7eef24")
-		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(20000))
+		orderhash    = common.HexToHash("0xb341b0b3d924ad628e5f8142af1679c92db23e74dbeb8259f1cd08e28f3da202")
+		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
 	// get order
@@ -531,6 +531,16 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 		}
 	} else {
 		t.Fatalf(err.Error())
+	}
+}
+
+func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
+	var count types.Big
+	user := common.HexToAddress("0x71c079107b5af8619d54537a93dbf16e5aab4900")
+	if err := ethaccessor.GetTransactionCount(&count, user, "latest"); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("transaction count:%d", count.Int64())
 	}
 }
 

@@ -31,6 +31,8 @@ type Transaction struct {
 	Owner       string `gorm:"column:owner;type:varchar(42)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
+	RawFrom     string `gorm:"column:raw_from;type:varchar(42)"`
+	RawTo       string `gorm:"column:raw_to;type:varchar(42)"`
 	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
 	Content     string `gorm:"column:content;type:text"`
 	BlockNumber int64  `gorm:"column:block_number"`
@@ -55,12 +57,14 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Owner = src.Owner.Hex()
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
+	tx.RawFrom = src.RawFrom.Hex()
+	tx.RawTo = src.RawTo.Hex()
 	tx.TxHash = src.TxHash.Hex()
 	tx.Content = string(src.Content)
 	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.Value = src.Value.String()
-	tx.Type = src.Type
-	tx.Status = src.Status
+	tx.Type = src.TypeValue()
+	tx.Status = src.StatusValue()
 	tx.TxIndex = src.TxIndex
 	tx.LogIndex = src.LogIndex
 	tx.CreateTime = src.CreateTime
@@ -81,14 +85,16 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Owner = common.HexToAddress(tx.Owner)
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
+	dst.RawFrom = common.HexToAddress(tx.RawFrom)
+	dst.RawTo = common.HexToAddress(tx.RawTo)
 	dst.TxHash = common.HexToHash(tx.TxHash)
 	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
 	dst.TxIndex = tx.TxIndex
 	dst.LogIndex = tx.LogIndex
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
-	dst.Type = tx.Type
-	dst.Status = tx.Status
+	dst.Type = types.TxType(tx.Type)
+	dst.Status = types.TxStatus(tx.Status)
 	dst.CreateTime = tx.CreateTime
 	dst.UpdateTime = tx.UpdateTime
 	dst.Symbol = tx.Symbol
@@ -101,6 +107,75 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 }
 
 // value,status可能会变更
+func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (Transaction, error) {
+	var (
+		tx  Transaction
+		err error
+	)
+
+	err = s.db.Where("tx_hash=?", txhash).First(&tx).Error
+	return tx, err
+}
+
+func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error) {
+	var (
+		tx  Transaction
+		err error
+	)
+
+	err = s.db.Where("tx_hash=? and tx_log_index=?", txhash, logIndex).First(&tx).Error
+	return tx, err
+}
+
+func (s *RdsServiceImpl) GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error) {
+	var txs []Transaction
+
+	err := s.db.Where("tx_from = ? or tx_to = ?", owner, owner).
+		Where("status=?", status).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
+func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error) {
+	var (
+		number int
+		err    error
+	)
+
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where("symbol=?", symbol).
+		Where("status in (?)", status).
+		Where("fork=?", false).
+		Select("count(distinct(tx_hash))").
+		Count(&number).Error
+
+	return number, err
+}
+
+func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error) {
+	var (
+		hashs []string
+		err   error
+	)
+
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where("symbol=?", symbol).
+		Where("status in (?)", status).
+		Where("fork=?", false).
+		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
+
+	return hashs, err
+}
+
+////////////////////////////////////////////////////////
+// add while optimize
+////////////////////////////////////////////////////////
+
+// value,status可能会变更
 func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 	var (
 		current Transaction
@@ -108,7 +183,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		args    []interface{}
 	)
 
-	switch latest.Type {
+	switch types.TxType(latest.Type) {
 	case types.TX_TYPE_SELL, types.TX_TYPE_BUY:
 		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
 		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
@@ -145,7 +220,7 @@ func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
 		return nil
 	}
 
-	err := s.db.Where(query, args...).Where("fork=?", false).Find(&current).Error
+	err := s.db.Where(query, args...).Where("nonce=?", latest.Nonce).Where("fork=?", false).Find(&current).Error
 	if err != nil {
 		return s.db.Create(latest).Error
 	}
@@ -167,13 +242,13 @@ func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
 	)
 
 	// delete pending then create new item
-	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Find(&current).Error; err == nil {
+	if err := s.db.Where("tx_hash=? and owner=? and `status`=?", latest.TxHash, latest.Owner, types.TX_STATUS_PENDING).Where("nonce=?", latest.Nonce).Find(&current).Error; err == nil {
 		s.db.Delete(&current)
 		return s.db.Create(latest).Error
 	}
 
 	// select mined transaction then create or update
-	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Find(&current).Error
+	err := s.db.Where("tx_hash=? and owner=? and tx_log_index=?", latest.TxHash, latest.Owner, latest.LogIndex).Where("nonce=?", latest.Nonce).Find(&current).Error
 	if err == nil {
 		latest.ID = current.ID
 		return s.db.Save(latest).Error
@@ -225,6 +300,15 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 	var txs []Transaction
 	err := s.db.Where(query).Where("fork=?", false).Find(&txs).Error
 	return txs, err
+}
+
+func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error {
+	return s.db.Model(&Transaction{}).
+		Where("raw_from=?", owner.Hex()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("nonce=?", nonce.String()).
+		Where("fork=?", false).
+		Update("status", status).Error
 }
 
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {

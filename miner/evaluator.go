@@ -188,7 +188,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			savingAmount.Mul(filledOrder.FillAmountB, sPrice)
 			savingAmount.Sub(savingAmount, filledOrder.FillAmountS)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving,err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenS, filledOrder.FeeS)
+			legalAmountOfSaving, err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenS, filledOrder.FeeS)
 			if nil != err {
 				return err
 			}
@@ -198,7 +198,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
 			savingAmount.Sub(filledOrder.FillAmountB, savingAmount)
 			filledOrder.FeeS = savingAmount
-			legalAmountOfSaving,err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenB, filledOrder.FeeS)
+			legalAmountOfSaving, err = e.getLegalCurrency(filledOrder.OrderState.RawOrder.TokenB, filledOrder.FeeS)
 			if nil != err {
 				return err
 			}
@@ -213,7 +213,7 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			filledOrder.LrcFee = filledOrder.AvailableLrcBalance
 		}
 
-		legalAmountOfLrc,err1 := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
+		legalAmountOfLrc, err1 := e.getLegalCurrency(lrcAddress, filledOrder.LrcFee)
 		if nil != err1 {
 			return err1
 		}
@@ -280,7 +280,7 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
 
-func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Rat) (*big.Rat,error) {
+func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Rat) (*big.Rat, error) {
 	return e.marketCapProvider.LegalCurrencyValue(tokenAddress, amount)
 }
 

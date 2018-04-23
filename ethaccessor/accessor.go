@@ -34,7 +34,7 @@ import (
 var accessor *ethNodeAccessor
 
 func BlockNumber(result interface{}) error {
-	return accessor.RetryCall("latest", 2, result, "eth_blockNumber")
+	return accessor.RetryCall("latest", 5, result, "eth_blockNumber")
 }
 
 func GetBalance(result interface{}, address common.Address, blockNumber string) error {
@@ -91,7 +91,7 @@ func EstimateGasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
 }
 
 func GetBlockTransactionCountByHash(result interface{}, blockHash string, blockParameter string) error {
-	return accessor.RetryCall("latest", 2, result, "eth_getBlockTransactionCountByHash", blockHash)
+	return accessor.RetryCall("latest", 5, result, "eth_getBlockTransactionCountByHash", blockHash)
 
 }
 

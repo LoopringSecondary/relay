@@ -26,19 +26,19 @@ import (
 )
 
 type CutOffPairEvent struct {
-	ID            int    `gorm:"column:id;primary_key;"`
-	Protocol      string `gorm:"column:contract_address;type:varchar(42)"`
+	ID              int    `gorm:"column:id;primary_key;"`
+	Protocol        string `gorm:"column:contract_address;type:varchar(42)"`
 	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)"`
-	Owner         string `gorm:"column:owner;type:varchar(42)"`
-	Token1        string `gorm:"column:token1;type:varchar(42)"`
-	Token2        string `gorm:"column:token2;type:varchar(42)"`
-	TxHash        string `gorm:"column:tx_hash;type:varchar(82)"`
-	OrderHashList string `gorm:"column:order_hash_list;type:text"`
-	BlockNumber   int64  `gorm:"column:block_number"`
-	LogIndex      int64  `gorm:"column:log_index"`
-	Cutoff        int64  `gorm:"column:cutoff"`
-	CreateTime    int64  `gorm:"column:create_time"`
-	Fork          bool   `gorm:"column:fork"`
+	Owner           string `gorm:"column:owner;type:varchar(42)"`
+	Token1          string `gorm:"column:token1;type:varchar(42)"`
+	Token2          string `gorm:"column:token2;type:varchar(42)"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)"`
+	OrderHashList   string `gorm:"column:order_hash_list;type:text"`
+	BlockNumber     int64  `gorm:"column:block_number"`
+	LogIndex        int64  `gorm:"column:log_index"`
+	Cutoff          int64  `gorm:"column:cutoff"`
+	CreateTime      int64  `gorm:"column:create_time"`
+	Fork            bool   `gorm:"column:fork"`
 }
 
 // convert types/cutoffPairEvent to dao/cutoffPairEvent

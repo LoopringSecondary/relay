@@ -108,10 +108,17 @@ type RdsService interface {
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
+	UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error
 
 	// transactions
 	SaveTransaction(latest *Transaction) error
 	RollBackTransaction(from, to int64) error
+	/////add while optimize tx manager
+	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
+	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
+	GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error)
+	GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error)
+	GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error)
 
 	// checkpoint
 	QueryCheckPointByType(businessType string) (point CheckPoint, err error)
