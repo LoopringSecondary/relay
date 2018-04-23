@@ -110,8 +110,6 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	evt := input.(*types.ApprovalEvent)
 
-	log.Debugf("txmanager:tx:%s SaveApproveEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
 	var tx types.Transaction
 	tx.FromApproveEvent(evt)
 	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
@@ -120,8 +118,6 @@ func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) err
 
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
 	evt := input.(*types.OrderCancelledEvent)
-
-	log.Debugf("txmanager:tx:%s SaveOrderCancelledEvent from:%s, to:%s, orderhash:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.OrderHash.Hex())
 
 	var tx types.Transaction
 	tx.FromCancelEvent(evt)
@@ -132,8 +128,6 @@ func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventDa
 func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffEvent)
 
-	log.Debugf("txmanager:tx:%s SaveCutoffAllEvent from:%s, to:%s, cutofftime:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Cutoff.String())
-
 	var tx types.Transaction
 	tx.FromCutoffEvent(evt)
 	tx.Symbol = ETH_SYMBOL
@@ -142,8 +136,6 @@ func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) e
 
 func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) error {
 	evt := input.(*types.CutoffPairEvent)
-
-	log.Debugf("txmanager:tx:%s SaveCutoffPairEvent from:%s, to:%s, cutofftime:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Cutoff.String())
 
 	var tx types.Transaction
 	tx.FromCutoffPairEvent(evt)
@@ -154,8 +146,6 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
 	evt := input.(*types.WethDepositEvent)
 	var tx1, tx2 types.Transaction
-
-	log.Debugf("txmanager:tx:%s SaveWethDepositEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
 	// save weth
 	tx1.FromWethDepositEvent(evt, true)
@@ -178,8 +168,6 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
 	evt := input.(*types.WethWithdrawalEvent)
 	var tx1, tx2 types.Transaction
-
-	log.Debugf("txmanager:tx:%s SaveWethWithdrawalEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
 	// save weth
 	tx1.FromWethWithdrawalEvent(evt, false)
@@ -211,8 +199,6 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 		return nil
 	}
 
-	log.Debugf("txmanager:tx:%s SaveTransferEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
-
 	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
 	tx2.Symbol = tx1.Symbol
 	if err := tm.saveTransaction(&tx1); err != nil {
@@ -227,8 +213,6 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
 	evt := input.(*types.OrderFilledEvent)
-
-	log.Debugf("txmanager:tx:%s SaveOrderFilledEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex())
 
 	var tx1, tx2 types.Transaction
 	tx1.FromFillEvent(evt, types.TX_TYPE_BUY)
@@ -247,8 +231,6 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 // 当value等于0时认为是调用系统不支持的合约,默认使用fromTransferEvent/send type为unsupported_contract
 func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData) error {
 	evt := input.(*types.TransferEvent)
-
-	log.Debugf("txmanager:tx:%s SaveEthTransferEvent from:%s, to:%s, value:%s", evt.TxHash.Hex(), evt.From.Hex(), evt.To.Hex(), evt.Value.String())
 
 	if evt.Value.Cmp(big.NewInt(0)) > 0 {
 		var tx1, tx2 types.Transaction
@@ -289,6 +271,8 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 	model.ConvertDown(tx)
 
 	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
+		log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s, to:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), tx.To.Hex())
+
 		// emit transaction before saving
 		eventemitter.Emit(eventemitter.TransactionEvent, tx)
 
