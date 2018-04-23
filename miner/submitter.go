@@ -187,7 +187,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 						if nil != event.Err {
 							err1 = errors.New("failed to execute ring:" + event.Err.Error())
 						} else {
-							err1 = errors.New("failed to execute ring")
+							err1 = errors.New("success")
 						}
 
 						for _, ringhash := range ringhashes {
