@@ -369,11 +369,6 @@ func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *ty
 	minerAddresses := submitter.availabeMinerAddress()
 	if !useSplit {
 		for _, normalMinerAddress := range minerAddresses {
-			//if bigger than maxpendingcount, change a minerAddress to last address
-			//var pendingCount,txCount  types.Big
-			//ethaccessor.GetTransactionCount(&pendingCount, normalMinerAddress, "pending")
-			//ethaccessor.GetTransactionCount(&txCount, normalMinerAddress, "latest")
-
 			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
 			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
 			feeSelections := []uint8{}

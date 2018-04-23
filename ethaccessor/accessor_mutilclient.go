@@ -19,6 +19,8 @@
 package ethaccessor
 
 import (
+	"errors"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -26,34 +28,27 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"math/big"
 	"math/rand"
-	"sort"
 	"strings"
 	"sync"
 	"time"
 )
 
+const (
+	USAGE_CLIENT_BLOCK = "usage_client_block_"
+	BLOCKS             = "blocks_"
+	blocks_count       = int64(10)
+	cacheDuration      = 86400 * 3
+)
+
 type MutilClient struct {
-	mtx          sync.RWMutex
-	clients      SortedClients
-	latestMaxIdx int
-}
-
-type SortedClients []*RpcClient
-
-func (clients SortedClients) Len() int {
-	return len(clients)
-}
-func (clients SortedClients) Swap(i, j int) {
-	clients[i], clients[j] = clients[j], clients[i]
-}
-func (clients SortedClients) Less(i, j int) bool {
-	return clients[i].syncingResult.CurrentBlock.BigInt().Cmp(clients[j].syncingResult.CurrentBlock.BigInt()) > 0
+	clients       map[string]*RpcClient
+	downedClients map[string]*RpcClient
 }
 
 type RpcClient struct {
-	url           string
-	syncingResult *SyncingResult
-	client        *rpc.Client
+	url         string
+	client      *rpc.Client
+	blockNumber *big.Int
 }
 
 type SyncingResult struct {
@@ -62,74 +57,31 @@ type SyncingResult struct {
 	HighestBlock  types.Big
 }
 
-func (sr *SyncingResult) isSynced() bool {
-	return sr.CurrentBlock.BigInt().Cmp(sr.HighestBlock.BigInt()) >= 0
-}
-
-func (mc *MutilClient) startSyncStatus() {
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Duration(300 * time.Second)):
-				mc.syncStatus()
-			}
-		}
-	}()
-}
-
-func (mc *MutilClient) syncStatus() {
-	mc.mtx.Lock()
-	defer mc.mtx.Unlock()
-
-	highest := big.NewInt(int64(0))
-	for _, client := range mc.clients {
-		var status bool
-
-		sr := &SyncingResult{}
-
-		if err := client.client.Call(&status, "eth_syncing"); nil != err {
-			if err := client.client.Call(&sr, "eth_syncing"); nil != err {
-				log.Errorf("err:%s", err.Error())
-			} else {
-				if highest.Cmp(sr.HighestBlock.BigInt()) < 0 {
-					highest.Set(sr.HighestBlock.BigInt())
-				}
-			}
+//将最近的块放入redis中，获取时，从redis中按照块号获取可用的client与本地保存做交集，然后随机选取client，请求节点
+func NewMutilClient(urls []string) *MutilClient {
+	mc := &MutilClient{}
+	mc.clients = make(map[string]*RpcClient)
+	mc.downedClients = make(map[string]*RpcClient)
+	for _, url := range urls {
+		if client, err := rpc.DialHTTP(url); nil != err {
+			log.Errorf("rpc.Dail err : %s, url:%s", err.Error(), url)
 		} else {
-			var blockNumber types.Big
-			if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
-				log.Errorf("err:%s", err.Error())
-			}
-			if highest.Cmp(blockNumber.BigInt()) < 0 {
-				highest.Set(blockNumber.BigInt())
-			}
-			sr.CurrentBlock = blockNumber
-		}
-		client.syncingResult = sr
-	}
-
-	for _, c := range mc.clients {
-		c.syncingResult.HighestBlock = new(types.Big).SetInt(highest)
-	}
-	sort.Sort(mc.clients)
-
-	if len(mc.clients) > 0 {
-		latestBlockNumber := mc.clients[0].syncingResult.CurrentBlock.Int()
-		for idx, c := range mc.clients {
-			if latestBlockNumber <= c.syncingResult.CurrentBlock.Int() {
-				mc.latestMaxIdx = idx
-			}
+			rpcClient := &RpcClient{}
+			rpcClient.client = client
+			rpcClient.url = url
+			mc.clients[url] = rpcClient
 		}
 	}
+	return mc
 }
 
 func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
-	var idx int
 	//latest,pending
-	lastIdx := 0
 
+	var blockNumber types.Big
 	if "latest" == routeParam || "" == routeParam {
-		lastIdx = mc.latestMaxIdx
+		//lastIdx = mc.latestMaxIdx
+		mc.BlockNumber(&blockNumber)
 	} else if strings.Contains(routeParam, ":") {
 		//specific node
 		for _, c := range mc.clients {
@@ -145,56 +97,115 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			blockNumberForRouteBig = new(big.Int)
 			blockNumberForRouteBig.SetString(routeParam, 0)
 		}
-		for curIdx, c := range mc.clients {
-			//todo:request from synced client
-			if blockNumberForRouteBig.Cmp(c.syncingResult.CurrentBlock.BigInt()) <= 0 {
-				lastIdx = curIdx
-			} else {
-				break
+		blockNumber = *types.NewBigPtr(blockNumberForRouteBig)
+	}
+
+	urls, _ := mc.useageClient(blockNumber.BigInt().String())
+	if len(urls) <= 0 {
+		for url, client := range mc.clients {
+			if _, exists := mc.downedClients[url]; !exists && (nil == client.blockNumber || client.blockNumber.Cmp(blockNumber.BigInt()) >= 0) {
+				urls = append(urls, url)
 			}
 		}
-
 	}
-	if lastIdx > 0 {
-		idx = rand.Intn(lastIdx)
+	if len(urls) > 0 {
+		idx := 0
+		idx = rand.Intn(len(urls))
+		client := mc.clients[urls[idx]]
+		return client
+	} else {
+		return nil
 	}
-	return mc.clients[idx]
 }
 
-func (mc *MutilClient) Dail(urls []string) {
-	for _, url := range urls {
-		if client, err := rpc.Dial(url); nil != err {
-			log.Errorf("rpc.Dail err : %s, url:%s", err.Error(), url)
+func (mc *MutilClient) startSyncBlockNumber() {
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Duration(3 * time.Second)):
+				for _, client := range mc.clients {
+					var blockNumber types.Big
+					if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
+						mc.downedClients[client.url] = client
+					} else {
+						delete(mc.downedClients, client.url)
+						client.blockNumber = blockNumber.BigInt()
+						blockNumberStr := blockNumber.BigInt().String()
+						cache.SAdd(USAGE_CLIENT_BLOCK+blockNumberStr, cacheDuration, []byte(client.url))
+						cache.ZAdd(BLOCKS, int64(0), []byte(blockNumberStr), []byte(blockNumberStr))
+						cache.ZRemRangeByScore(BLOCKS, int64(0), blockNumber.Int64()-blocks_count)
+					}
+				}
+			}
+		}
+	}()
+}
+
+func (mc *MutilClient) BlockNumber(result interface{}) error {
+	if data, err := cache.ZRange(BLOCKS, -1, -1, false); nil != err {
+		return err
+	} else {
+		if len(data) > 0 && len(data[0]) > 0 {
+			if r, ok := result.(*types.Big); ok {
+				blockNumber := new(big.Int)
+				blockNumber.SetString(string(data[0]), 0)
+				r.SetInt(blockNumber)
+			} else {
+				errors.New("Wrong `result` type, please use types.Big ")
+			}
+			return nil
 		} else {
-			rpcClient := &RpcClient{}
-			rpcClient.client = client
-			rpcClient.url = url
-			mc.clients = append(mc.clients, rpcClient)
+			return errors.New("BlockNumber can't get from cache")
 		}
 	}
-	mc.syncStatus()
+}
+
+func (mc *MutilClient) useageClient(blockNumberStr string) ([]string, error) {
+	urls := []string{}
+	if data, err := cache.SMembers(USAGE_CLIENT_BLOCK + blockNumberStr); nil != err {
+		return urls, err
+	} else {
+		if len(data) > 0 {
+			for _, d := range data {
+				if len(d) > 0 {
+					//log.Debugf("useageClient:%s, %s", string(d), blockNumberStr)
+					urls = append(urls, string(d))
+				} else {
+					log.Debug("useageClient len(d) == 0")
+				}
+			}
+		} else {
+			return urls, errors.New("cant get client by blocknumer:" + blockNumberStr)
+		}
+	}
+	return urls, nil
 }
 
 func (mc *MutilClient) Call(routeParam string, result interface{}, method string, args ...interface{}) (node string, err error) {
-	rpcClient := mc.bestClient(routeParam)
-	err = rpcClient.client.Call(result, method, args...)
-	return rpcClient.url, err
+	//blocknumber 特殊处理下
+	if "eth_blockNumber" == method {
+		err = mc.BlockNumber(result)
+	}
+	if "eth_blockNumber" == method && nil == err {
+		return "", nil
+	} else {
+		rpcClient := mc.bestClient(routeParam)
+		if nil == rpcClient {
+			return "", errors.New("there isn't an usable ethnode")
+		}
+		log.Debugf("rpcClient:%s, %s", rpcClient.url, routeParam)
+		err = rpcClient.client.Call(result, method, args...)
+		return rpcClient.url, err
+	}
 }
 
 func (mc *MutilClient) BatchCall(routeParam string, b []rpc.BatchElem) (node string, err error) {
 	rpcClient := mc.bestClient(routeParam)
+	if nil == rpcClient {
+		return "", errors.New("there isn't an usable ethnode")
+	}
 	err = rpcClient.client.BatchCall(b)
 	return rpcClient.url, err
-}
-
-func (mc *MutilClient) Close() {
-	for _, c := range mc.clients {
-		c.client.Close()
-	}
-}
-
-func (mc *MutilClient) Synced() bool {
-	return mc.clients[0].syncingResult.isSynced()
 }
 
 type ethNodeAccessor struct {
