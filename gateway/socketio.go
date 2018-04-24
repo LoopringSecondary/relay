@@ -87,7 +87,7 @@ const (
 
 var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec3Second},
-	eventKeyLoopringTickers: {"GetAllMarketTickers", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyLoopringTickers: {"GetTicker", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	// portfolio has been remove from loopr2
 	// eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec3Second},
