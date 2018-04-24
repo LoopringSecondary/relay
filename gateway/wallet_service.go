@@ -37,9 +37,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/Loopring/relay/cache"
+	"encoding/json"
 )
 
 const DefaultCapCurrency = "CNY"
+const PendingTxPreKey = "PENDING_TX_"
 
 type Portfolio struct {
 	Token      string `json:"token"`
@@ -421,6 +424,10 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 
 	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 	eventemitter.Emit(eventemitter.PendingTransaction, tx)
+	txByte, err := json.Marshal(tx)
+	if err != nil {
+		cache.Set(PendingTxPreKey + strings.ToUpper(tx.Hash), txByte, 3600 * 24 * 7)
+	}
 	log.Info("emit transaction info " + tx.Hash)
 	return tx.Hash, nil
 }
@@ -755,6 +762,27 @@ func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []
 	}
 
 	return result, nil
+}
+
+func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (result txmanager.TransactionJsonResult, err error) {
+	if len(query.ThxHash) == 0 {
+		return result, errors.New("tx hash can't be nil")
+	}
+
+	txBytes, err := cache.Get(PendingTxPreKey + strings.ToUpper(query.ThxHash))
+	if err != nil {
+		return result, err
+	}
+
+	var tx *types.Transaction
+
+	err = json.Unmarshal(txBytes, tx)
+	if err != nil {
+		return result, err
+	}
+
+	return toTxJsonResult(*tx), nil
+
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
