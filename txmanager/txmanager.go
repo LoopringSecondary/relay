@@ -274,9 +274,12 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 		log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s, to:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), tx.To.Hex())
 
 		// emit transaction before saving
-		eventemitter.Emit(eventemitter.TransactionEvent, tx)
 
-		return tm.db.SaveTransaction(&model)
+		err := tm.db.SaveTransaction(&model)
+		if err == nil {
+			eventemitter.Emit(eventemitter.TransactionEvent, tx)
+		}
+		return err
 
 		//// save new tx
 		//if err := tm.db.SaveTransaction(&model); err != nil {
