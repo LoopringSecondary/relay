@@ -257,7 +257,7 @@ func (n *Node) registerSocketIOService() {
 }
 
 func (n *Node) registerMiner() {
-	ethaccessor.IncludeGasPriceEvaluator()
+	//ethaccessor.IncludeGasPriceEvaluator()
 	submitter, err := miner.NewSubmitter(n.globalConfig.Miner, n.rdsService, n.marketCapProvider)
 	if nil != err {
 		log.Fatalf("failed to init submitter, error:%s", err.Error())
