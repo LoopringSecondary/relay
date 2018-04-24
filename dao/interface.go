@@ -117,8 +117,8 @@ type RdsService interface {
 	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
 	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
 	GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
-	GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error)
-	GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error)
+	GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error)
+	GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error)
 	GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error)
 	GetTransactionsBySenderNonce(rawFrom common.Address, nonce *big.Int) ([]Transaction, error)
 	DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error

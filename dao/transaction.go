@@ -138,21 +138,40 @@ func (s *RdsServiceImpl) GetPendingTransactionsByOwner(owner string) ([]Transact
 	return txs, err
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error) {
+func (s *RdsServiceImpl) GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error) {
 	var (
 		number int
 		err    error
 	)
 
+	query := make(map[string]interface{})
+	query["symbol"] = symbol
+	query = combineTypeAndStatus(query, status, typs)
+
 	err = s.db.Model(&Transaction{}).
 		Where("tx_from=? or tx_to=?", owner, owner).
-		Where("symbol=?", symbol).
-		Where("status in (?)", status).
+		Where(query).
 		Where("fork=?", false).
 		Select("count(distinct(tx_hash))").
 		Count(&number).Error
 
 	return number, err
+}
+
+func combineTypeAndStatus(query map[string]interface{}, status []types.TxStatus, typs []types.TxType) map[string]interface{} {
+	if len(status) == 1 {
+		query["status"] = status[0]
+	} else if len(status) > 1 {
+		query["status in (?)"] = status
+	}
+
+	if len(typs) == 1 {
+		query["tx_type"] = typs[0]
+	} else if len(typs) > 1 {
+		query["tx_type in (?)"] = status
+	}
+
+	return query
 }
 
 func (s *RdsServiceImpl) GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error) {
@@ -196,17 +215,21 @@ func (s *RdsServiceImpl) DeletePendingTransactions(rawFrom common.Address, nonce
 		Delete(&Transaction{}).Error
 }
 
-func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error) {
+func (s *RdsServiceImpl) GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error) {
 	var (
 		hashs []string
 		err   error
 	)
 
+	query := make(map[string]interface{})
+	query["symbol"] = symbol
+	query = combineTypeAndStatus(query, status, typs)
+
 	err = s.db.Model(&Transaction{}).
 		Where("tx_from=? or tx_to=?", owner, owner).
-		Where("symbol=?", symbol).
-		Where("status in (?)", status).
+		Where(query).
 		Where("fork=?", false).
+		Order("create_time desc").
 		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
 
 	return hashs, err

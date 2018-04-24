@@ -32,17 +32,17 @@ func GetPendingTransactions(owner string) ([]TransactionJsonResult, error) {
 func GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error) {
 	return impl.GetTransactionsByHash(owner, hashList)
 }
-func GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
-	return impl.GetMinedTransactionCount(ownerStr, symbol)
+func GetAllTransactionCount(ownerStr, symbol, status, typ string) (int, error) {
+	return impl.GetAllTransactionCount(ownerStr, symbol, status, typ)
 }
-func GetMinedTransactions(owner, symbol string, limit, offset int) ([]TransactionJsonResult, error) {
-	return impl.GetMinedTransactions(owner, symbol, limit, offset)
+func GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]TransactionJsonResult, error) {
+	return impl.GetAllTransactions(owner, symbol, status, typ, limit, offset)
 }
 
 type TransactionView interface {
 	GetPendingTransactions(owner string) ([]TransactionJsonResult, error)
-	GetMinedTransactionCount(ownerStr, symbol string) (int, error)
-	GetMinedTransactions(owner, symbol string, limit, offset int) ([]TransactionJsonResult, error)
+	GetAllTransactionCount(owner, symbol, status, typ string) (int, error)
+	GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]TransactionJsonResult, error)
 	GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error)
 }
 
@@ -58,9 +58,9 @@ type TransactionViewImpl struct {
 // 2. user tx number key存储某个用户所有tx数量的key,设置过期时间
 // 3. block key 存储某个block涉及到的用户key(用于分叉),设置过期时间
 func NewTxView(db dao.RdsService) {
-	var tm TransactionViewImpl
+	tm := &TransactionViewImpl{}
 	tm.db = db
-	impl = &tm
+	impl = tm
 }
 
 var (
@@ -86,25 +86,29 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]Tran
 	return list, nil
 }
 
-func (impl *TransactionViewImpl) GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
+func (impl *TransactionViewImpl) GetAllTransactionCount(ownerStr, symbolStr, statusStr, typStr string) (int, error) {
 	owner := common.HexToAddress(ownerStr)
-	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
-	symbol = standardSymbol(symbol)
-	number, err := impl.db.GetMinedTransactionCount(owner.Hex(), symbol, status)
+	symbol := standardSymbol(symbolStr)
+	statusList := statusStringToList(statusStr)
+	typList := typeStringToList(typStr)
+
+	number, err := impl.db.GetTransactionCount(owner.Hex(), symbol, statusList, typList)
 	if number == 0 || err != nil {
 		return 0, ErrNonTransaction
 	}
+
 	return number, nil
 }
 
-func (impl *TransactionViewImpl) GetMinedTransactions(ownerStr, symbol string, limit, offset int) ([]TransactionJsonResult, error) {
+func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]TransactionJsonResult, error) {
 	var list []TransactionJsonResult
 
 	owner := common.HexToAddress(ownerStr)
-	symbol = standardSymbol(symbol)
-	status := []types.TxStatus{types.TX_STATUS_SUCCESS, types.TX_STATUS_FAILED}
+	symbol := standardSymbol(symbolStr)
+	statusList := statusStringToList(statusStr)
+	typList := typeStringToList(typStr)
 
-	hashs, err := impl.db.GetMinedTransactionHashs(owner.Hex(), symbol, status, limit, offset)
+	hashs, err := impl.db.GetTransactionHashs(owner.Hex(), symbol, statusList, typList, limit, offset)
 	if len(hashs) == 0 || err != nil {
 		return list, ErrNonTransaction
 	}
@@ -161,5 +165,28 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 		list = append(list, res)
 	}
 
+	return list
+}
+
+func statusStringToList(statusStr string) []types.TxStatus {
+	var list []types.TxStatus
+
+	status := types.StrToTxStatus(statusStr)
+	if status == types.TX_STATUS_UNKNOWN {
+		return list
+	}
+	list = append(list, status)
+	return list
+}
+
+func typeStringToList(typStr string) []types.TxType {
+	var list []types.TxType
+
+	typ := types.StrToTxType(typStr)
+	if typ == types.TX_TYPE_UNKNOWN {
+		return list
+	}
+
+	list = append(list, typ)
 	return list
 }

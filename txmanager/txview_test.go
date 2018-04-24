@@ -27,7 +27,7 @@ import (
 func TestTransactionViewImpl_GetPendingTransactions(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0x43e85e2c882bbce41c69740eed4bfffb45e3f9dd"
+	owner := "0x43e85E2c882bbcE41C69740Eed4BfFFb45E3f9dd"
 	list, err := txmanager.GetPendingTransactions(owner)
 	if err != nil {
 		t.Fatalf(err.Error())
@@ -38,25 +38,29 @@ func TestTransactionViewImpl_GetPendingTransactions(t *testing.T) {
 	}
 }
 
-func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
+func TestTransactionViewImpl_GetAllTransactionCount(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0x43e85e2c882bbce41c69740eed4bfffb45e3f9dd"
+	owner := "0x43e85E2c882bbcE41C69740Eed4BfFFb45E3f9dd"
 	symbol := "foo"
-	if number, err := txmanager.GetMinedTransactionCount(owner, symbol); err != nil {
+	status := "failed"
+	typ := "all"
+	if number, err := txmanager.GetAllTransactionCount(owner, symbol, status, typ); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		t.Logf("owner:%s have %d transactions in %s", owner, number, symbol)
 	}
 }
 
-func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
+func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0xc73d79d2baadf3145a2b358e7012efe44116da2c"
+	owner := "0x43e85E2c882bbcE41C69740Eed4BfFFb45E3f9dd"
 	symbol := "foo"
+	status := "all"
+	typ := "all"
 
-	txs, err := txmanager.GetMinedTransactions(owner, symbol, 100, 0)
+	txs, err := txmanager.GetAllTransactions(owner, symbol, status, typ, 100, 0)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

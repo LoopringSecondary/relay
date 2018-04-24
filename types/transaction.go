@@ -167,9 +167,9 @@ func TypeStr(typ TxType) string {
 	return ret
 }
 
-func StrToTxType(status string) TxType {
+func StrToTxType(typ string) TxType {
 	var ret TxType
-	switch status {
+	switch typ {
 	case "approve":
 		ret = TX_TYPE_APPROVE
 	case "send":
