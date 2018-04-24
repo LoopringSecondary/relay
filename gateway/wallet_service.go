@@ -389,6 +389,9 @@ func (w *WalletServiceImpl) UnlockWallet(owner SingleOwner) (result string, err 
 }
 
 func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (result string, err error) {
+
+	log.Info("input transaciton found > >>>>>>>>" + txNotify.Hash)
+
 	if len(txNotify.Hash) == 0 {
 		return "", errors.New("raw tx can't be null string")
 	}
