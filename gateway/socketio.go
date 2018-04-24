@@ -108,7 +108,7 @@ type SocketIOService interface {
 type SocketIOServiceImpl struct {
 	port               string
 	walletService      WalletServiceImpl
-	connIdMap          sync.Map
+	connIdMap          *sync.Map
 	connBusinessKeyMap map[string]socketio.Conn
 	cron               *cron.Cron
 }
@@ -118,7 +118,7 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	so.port = port
 	so.walletService = walletService
 	so.connBusinessKeyMap = make(map[string]socketio.Conn)
-	so.connIdMap = sync.Map{}
+	so.connIdMap = &sync.Map{}
 	so.cron = cron.New()
 
 	// init event watcher
