@@ -1,4 +1,4 @@
-package aws
+package log
 
 import (
     "github.com/aws/aws-sdk-go/aws"
@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/sns"
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/log"
 )
 import (
 	"fmt"
@@ -23,7 +22,7 @@ const region = "ap-northeast-1"
 
 func NewSnsClient(options config.AwsServiceOption) *SnsClient {
 	if len(options.SNSTopicArn) == 0 {
-		log.Errorf("Sns TopicArn not set, will not init sns client")
+		Errorf("Sns TopicArn not set, will not init sns client")
 		return &SnsClient{nil, nil, false}
 	}
 	//NOTE: use default config ~/.asw/credentials
@@ -32,7 +31,7 @@ func NewSnsClient(options config.AwsServiceOption) *SnsClient {
 		Credentials: credentials.NewSharedCredentials("", ""),
 	})
 	if err != nil {
-		log.Errorf("new aws session failed \n", err.Error())
+		Errorf("new aws session failed \n", err.Error())
 		return &SnsClient{nil, options.SNSTopicArn, false}
 	} else {
 		return &SnsClient{sns.New(sess), options.SNSTopicArn,true}
@@ -41,7 +40,7 @@ func NewSnsClient(options config.AwsServiceOption) *SnsClient {
 
 func (client *SnsClient) PublishSns(subject string, message string) {
 	if !client.valid {
-		log.Error("SnsClient invalid, will not send message")
+		Error("SnsClient invalid, will not send message")
 		return
 	} else {
 		input := &sns.PublishInput{}
@@ -50,7 +49,7 @@ func (client *SnsClient) PublishSns(subject string, message string) {
 		input.SetMessage(fmt.Sprintf("%s|%s",time.Now().Format("15:04:05"), message))
 		_, err := client.innerClient.Publish(input)
 		if err != nil {
-			log.Errorf("Failed send sns message with error : %s\nSubject: %s\n, Message %s\n", err.Error(), subject, message)
+			Errorf("Failed send sns message with error : %s\nSubject: %s\n, Message %s\n", err.Error(), subject, message)
 		}
 	}
 }
