@@ -504,6 +504,8 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 	log.Infof("received owner is %s ", owner)
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
+		fmt.Println(key)
+		fmt.Println(value)
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			ctx, ok := businesses[eventKeyPendingTx]
