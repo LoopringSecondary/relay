@@ -24,7 +24,7 @@ import (
 	"math/big"
 )
 
-type NormalMinerAddress struct {
+type NormalSenderAddress struct {
 	Address         common.Address
 	GasPriceLimit   *big.Int
 	MaxPendingTtl   int

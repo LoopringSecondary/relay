@@ -28,7 +28,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -44,7 +43,7 @@ type RingSubmitter struct {
 	maxGasLimit *big.Int
 	minGasLimit *big.Int
 
-	normalMinerAddresses  []*NormalMinerAddress
+	normalMinerAddresses  []*NormalSenderAddress
 	percentMinerAddresses []*SplitMinerAddress
 
 	dbService         dao.RdsService
@@ -75,14 +74,13 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 		if err := ethaccessor.GetTransactionCount(&nonce, normalAddr, "pending"); nil != err {
 			log.Errorf("err:%s", err.Error())
 		}
-		miner := &NormalMinerAddress{}
+		miner := &NormalSenderAddress{}
 		miner.Address = normalAddr
 		miner.GasPriceLimit = big.NewInt(addr.GasPriceLimit)
 		miner.MaxPendingCount = addr.MaxPendingCount
 		miner.MaxPendingTtl = addr.MaxPendingTtl
 		miner.Nonce = nonce.BigInt()
 		submitter.normalMinerAddresses = append(submitter.normalMinerAddresses, miner)
-
 	}
 
 	for _, addr := range options.PercentMiners {
@@ -204,6 +202,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
 			e := eventData.(*types.SubmitRingMethodEvent)
+			log.Debugf("eventemitter.Watchereventemitter.Watcher:%s", e.TxHash.Hex())
 			submitRingMethodChan <- e
 			return nil
 		},
@@ -244,7 +243,7 @@ func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, statu
 //	}
 //}
 
-func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, gas, gasPrice *big.Int, received *big.Rat) (*types.RingSubmitInfo, error) {
+func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*types.RingSubmitInfo, error) {
 	//todo:change to advice protocolAddress
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	var (
@@ -252,7 +251,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 		err error
 	)
 
-	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, Received: received, ProtocolGasPrice: gasPrice, ProtocolGas: gas}
+	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, ProtocolGasPrice: ringState.GasPrice, ProtocolGas: ringState.Gas}
 	if types.IsZeroHash(ringState.Hash) {
 		ringState.Hash = ringState.GenerateHash(submitter.miner)
 	}
@@ -262,7 +261,12 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring, ga
 	ringSubmitInfo.Ringhash = ringState.Hash
 
 	protocolAbi := ethaccessor.ProtocolImplAbi()
-	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
+	if senderAddress, err := submitter.selectSenderAddress(); nil != err {
+		return ringSubmitInfo, err
+	} else {
+		ringSubmitInfo.Miner = senderAddress
+	}
+	//submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
 
 	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.miner); nil != err1 {
 		return nil, err1
@@ -308,120 +312,126 @@ func (submitter *RingSubmitter) start() {
 	submitter.listenSubmitRingMethodEvent()
 }
 
-func (submitter *RingSubmitter) availabeMinerAddress() []*NormalMinerAddress {
-	minerAddresses := []*NormalMinerAddress{}
+func (submitter *RingSubmitter) availableSenderAddresses() []*NormalSenderAddress {
+	senderAddresses := []*NormalSenderAddress{}
 	for _, minerAddress := range submitter.normalMinerAddresses {
 		var blockedTxCount, txCount types.Big
+		//todo:change it by event
 		ethaccessor.GetTransactionCount(&blockedTxCount, minerAddress.Address, "latest")
 		ethaccessor.GetTransactionCount(&txCount, minerAddress.Address, "pending")
 		//submitter.Accessor.Call("latest", &blockedTxCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "latest")
 		//submitter.Accessor.Call("latest", &txCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "pending")
-
+		//todo:check ethbalance
 		pendingCount := big.NewInt(int64(0))
 		pendingCount.Sub(txCount.BigInt(), blockedTxCount.BigInt())
 		if pendingCount.Int64() <= minerAddress.MaxPendingCount {
-			minerAddresses = append(minerAddresses, minerAddress)
+			senderAddresses = append(senderAddresses, minerAddress)
 		}
 	}
 
-	if len(minerAddresses) <= 0 {
-		minerAddresses = append(minerAddresses, submitter.normalMinerAddresses[0])
+	if len(senderAddresses) <= 0 {
+		senderAddresses = append(senderAddresses, submitter.normalMinerAddresses[0])
 	}
-	return minerAddresses
+	return senderAddresses
 }
 
-func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *types.RingSubmitInfo) error {
-	ringState := ringSubmitInfo.RawRing
-	ringState.LegalFee = new(big.Rat).SetInt(big.NewInt(int64(0)))
-	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
-	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
-	lrcAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].LrcTokenAddress
-	spenderAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].DelegateAddress
-	useSplit := false
-	//for _,splitMiner := range submitter.splitMinerAddresses {
-	//	//todo:optimize it
-	//	if lrcFee > splitMiner.StartFee || splitFee > splitMiner.StartFee || len(submitter.normalMinerAddresses) <= 0  {
-	//		useSplit = true
-	//		ringState.Miner = splitMiner.Address
-	//		minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(splitMiner.Address, lrcAddress)
-	//		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
-	//		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
-	//
-	//
-	//		if ringState.LrcLegalFee.Cmp(ringState.SplitLegalFee) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
-	//			filledOrder.FeeSelection = 1
-	//			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
-	//			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
-	//			filledOrder.LrcReward = legalAmountOfLrc
-	//			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
-	//			filledOrder.LegalFee = legalAmountOfSaving
-	//
-	//			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
-	//			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-	//		} else {
-	//			filledOrder.FeeSelection = 0
-	//			filledOrder.LegalFee = legalAmountOfLrc
-	//		}
-	//
-	//		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
-	//	}
-	//}
-	minerAddresses := submitter.availabeMinerAddress()
-	if !useSplit {
-		for _, normalMinerAddress := range minerAddresses {
-			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
-			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
-			feeSelections := []uint8{}
-			legalFees := []*big.Rat{}
-			lrcRewards := []*big.Rat{}
-			for _, filledOrder := range ringState.Orders {
-				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
-				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
-				log.Debugf("lrcFee:%s, filledOrder.LegalFeeS:%s, minerLrcBalance:%s, filledOrder.LrcFee:%s", lrcFee.FloatString(3), filledOrder.LegalFeeS.FloatString(3), minerLrcBalance.FloatString(3), filledOrder.LrcFee.FloatString(3))
-				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
-					feeSelections = append(feeSelections, 1)
-					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
-					fee.Sub(fee, filledOrder.LegalLrcFee)
-					legalFees = append(legalFees, fee)
-					lrcRewards = append(lrcRewards, filledOrder.LegalLrcFee)
-					legalFee.Add(legalFee, fee)
-
-					minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
-					//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-				} else {
-					feeSelections = append(feeSelections, 0)
-					legalFees = append(legalFees, filledOrder.LegalLrcFee)
-					lrcRewards = append(lrcRewards, new(big.Rat).SetInt(big.NewInt(int64(0))))
-					legalFee.Add(legalFee, filledOrder.LegalLrcFee)
-				}
-			}
-
-			if ringState.LegalFee.Sign() == 0 || ringState.LegalFee.Cmp(legalFee) < 0 {
-				ringState.LegalFee = legalFee
-				ringSubmitInfo.Miner = normalMinerAddress.Address
-				for idx, filledOrder := range ringState.Orders {
-					filledOrder.FeeSelection = feeSelections[idx]
-					filledOrder.LegalFee = legalFees[idx]
-					filledOrder.LrcReward = lrcRewards[idx]
-				}
-
-				if nil == ringSubmitInfo.ProtocolGasPrice || ringSubmitInfo.ProtocolGasPrice.Cmp(normalMinerAddress.GasPriceLimit) > 0 {
-					ringSubmitInfo.ProtocolGasPrice = normalMinerAddress.GasPriceLimit
-				}
-			}
-		}
+func (submitter *RingSubmitter) selectSenderAddress() (common.Address, error) {
+	senderAddresses := submitter.availableSenderAddresses()
+	if len(senderAddresses) <= 0 {
+		return types.NilAddress, errors.New("there isn't an available sender address")
+	} else {
+		return senderAddresses[0].Address, nil
 	}
-	//protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
-	//
-	//costEth := new(big.Rat).SetInt(protocolCost)
-	//costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
-	//ringSubmitInfo.LegalCost = costLegal
-	//received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
-	//ringSubmitInfo.Received = received
-
-	return nil
 }
 
-func (submitter *RingSubmitter) SetMatcher(matcher Matcher) {
-	submitter.matcher = matcher
-}
+//func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *types.RingSubmitInfo) error {
+//	ringState := ringSubmitInfo.RawRing
+//	ringState.LegalFee = new(big.Rat).SetInt(big.NewInt(int64(0)))
+//	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
+//	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
+//	lrcAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].LrcTokenAddress
+//	spenderAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].DelegateAddress
+//	useSplit := false
+//	//for _,splitMiner := range submitter.splitMinerAddresses {
+//	//	//todo:optimize it
+//	//	if lrcFee > splitMiner.StartFee || splitFee > splitMiner.StartFee || len(submitter.normalMinerAddresses) <= 0  {
+//	//		useSplit = true
+//	//		ringState.Miner = splitMiner.Address
+//	//		minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(splitMiner.Address, lrcAddress)
+//	//		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
+//	//		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
+//	//
+//	//
+//	//		if ringState.LrcLegalFee.Cmp(ringState.SplitLegalFee) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
+//	//			filledOrder.FeeSelection = 1
+//	//			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
+//	//			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
+//	//			filledOrder.LrcReward = legalAmountOfLrc
+//	//			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
+//	//			filledOrder.LegalFee = legalAmountOfSaving
+//	//
+//	//			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
+//	//			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+//	//		} else {
+//	//			filledOrder.FeeSelection = 0
+//	//			filledOrder.LegalFee = legalAmountOfLrc
+//	//		}
+//	//
+//	//		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
+//	//	}
+//	//}
+//	minerAddresses := submitter.availableSenderAddresses()
+//	if !useSplit {
+//		for _, normalMinerAddress := range minerAddresses {
+//			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
+//			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
+//			feeSelections := []uint8{}
+//			legalFees := []*big.Rat{}
+//			lrcRewards := []*big.Rat{}
+//			for _, filledOrder := range ringState.Orders {
+//				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
+//				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
+//				log.Debugf("lrcFee:%s, filledOrder.LegalFeeS:%s, minerLrcBalance:%s, filledOrder.LrcFee:%s", lrcFee.FloatString(3), filledOrder.LegalFeeS.FloatString(3), minerLrcBalance.FloatString(3), filledOrder.LrcFee.FloatString(3))
+//				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
+//					feeSelections = append(feeSelections, 1)
+//					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
+//					fee.Sub(fee, filledOrder.LegalLrcFee)
+//					legalFees = append(legalFees, fee)
+//					lrcRewards = append(lrcRewards, filledOrder.LegalLrcFee)
+//					legalFee.Add(legalFee, fee)
+//
+//					minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
+//					//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+//				} else {
+//					feeSelections = append(feeSelections, 0)
+//					legalFees = append(legalFees, filledOrder.LegalLrcFee)
+//					lrcRewards = append(lrcRewards, new(big.Rat).SetInt(big.NewInt(int64(0))))
+//					legalFee.Add(legalFee, filledOrder.LegalLrcFee)
+//				}
+//			}
+//
+//			if ringState.LegalFee.Sign() == 0 || ringState.LegalFee.Cmp(legalFee) < 0 {
+//				ringState.LegalFee = legalFee
+//				ringSubmitInfo.Miner = normalMinerAddress.Address
+//				for idx, filledOrder := range ringState.Orders {
+//					filledOrder.FeeSelection = feeSelections[idx]
+//					filledOrder.LegalFee = legalFees[idx]
+//					filledOrder.LrcReward = lrcRewards[idx]
+//				}
+//
+//				if nil == ringSubmitInfo.ProtocolGasPrice || ringSubmitInfo.ProtocolGasPrice.Cmp(normalMinerAddress.GasPriceLimit) > 0 {
+//					ringSubmitInfo.ProtocolGasPrice = normalMinerAddress.GasPriceLimit
+//				}
+//			}
+//		}
+//	}
+//	//protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
+//	//
+//	//costEth := new(big.Rat).SetInt(protocolCost)
+//	//costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
+//	//ringSubmitInfo.LegalCost = costLegal
+//	//received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
+//	//ringSubmitInfo.Received = received
+//
+//	return nil
+//}
