@@ -465,9 +465,11 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			ctx, ok := businesses[eventKeyTransaction]
+			log.Infof("cxt contains event key %b", ok)
 
 			if ok {
 				txQuery := &TransactionQuery{}
+				log.Info("txQuery owner is " + txQuery.Owner)
 				err = json.Unmarshal([]byte(ctx), txQuery)
 				if err != nil {
 					log.Error("tx query unmarshal error, " + err.Error())
@@ -505,10 +507,12 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			ctx, ok := businesses[eventKeyPendingTx]
+			log.Infof("cxt contains event key %b", ok)
 
 			if ok {
 				txQuery := &SingleOwner{}
 				err = json.Unmarshal([]byte(ctx), txQuery)
+				log.Info("single owner is: " + txQuery.Owner)
 				if err != nil {
 					log.Error("tx query unmarshal error, " + err.Error())
 				} else if strings.ToUpper(owner) == strings.ToUpper(txQuery.Owner) {
