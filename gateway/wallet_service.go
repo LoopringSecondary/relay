@@ -673,7 +673,7 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 	return markets, err
 }
 
-func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
+func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
 	var (
 		rst           PageResult
 		txs           []txmanager.TransactionJsonResult
@@ -682,7 +682,7 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 	)
 
 	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
-	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol)
+	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol, query.Status, query.TxType)
 	if err != nil {
 		return rst, err
 	}
@@ -699,7 +699,16 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 }
 
 func pagination(pageIndex, pageSize int) (int, int, int, int) {
-	if pageSize
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	limit := pageSize
+	offset := (pageIndex - 1) * pageSize
+
+	return pageIndex, pageSize, limit, offset
 }
 
 func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
