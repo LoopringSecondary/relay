@@ -184,9 +184,11 @@ func (so *SocketIOServiceImpl) Start() {
 		spec := events.spec
 
 		if events.emitType != emitTypeByCron {
+			log.Infof("no cron emit type %d ", events.emitType)
 			continue
 		}
 
+		log.Infof("add cron emit %d ", events.emitType)
 		so.cron.AddFunc(spec, func() {
 			so.connIdMap.Range(func(key, value interface{}) bool {
 				v := value.(socketio.Conn)
