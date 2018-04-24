@@ -133,6 +133,8 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	eventemitter.On(eventemitter.DepthUpdated, depthWatcher)
 	transactionWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleTransactionUpdate}
 	eventemitter.On(eventemitter.TransactionEvent, transactionWatcher)
+	pendingTxWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePendingTransaction}
+	eventemitter.On(eventemitter.TransactionEvent, pendingTxWatcher)
 	return so
 }
 
@@ -452,9 +454,8 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input. %s", input)
 
-	req := input.(types.TransactionEvent)
-	tx := req.Tx
-	owner := tx.Owner.Hex()
+	req := input.(*types.Transaction)
+	owner := req.Owner.Hex()
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
@@ -492,9 +493,8 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input (for pending). %s", input)
 
-	req := input.(types.TransactionEvent)
-	tx := req.Tx
-	owner := tx.Owner.Hex()
+	req := input.(*types.Transaction)
+	owner := req.Owner.Hex()
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
