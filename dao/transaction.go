@@ -145,11 +145,11 @@ func (s *RdsServiceImpl) GetTransactionCount(owner string, symbol string, status
 	)
 
 	query := make(map[string]interface{})
-	query["tx_from = ? or tx_to = ?"] = owner
 	query["symbol"] = symbol
 	query = combineTypeAndStatus(query, status, typs)
 
 	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
 		Where(query).
 		Where("fork=?", false).
 		Select("count(distinct(tx_hash))").
@@ -159,12 +159,18 @@ func (s *RdsServiceImpl) GetTransactionCount(owner string, symbol string, status
 }
 
 func combineTypeAndStatus(query map[string]interface{}, status []types.TxStatus, typs []types.TxType) map[string]interface{} {
-	if len(status) < 1 {
+	if len(status) == 1 {
+		query["status"] = status[0]
+	} else if len(status) > 1 {
 		query["status in (?)"] = status
 	}
-	if len(typs) > 0 {
-		query["tx_type"] = typs
+
+	if len(typs) == 1 {
+		query["tx_type"] = typs[0]
+	} else if len(typs) > 1 {
+		query["tx_type in (?)"] = status
 	}
+
 	return query
 }
 
@@ -216,16 +222,11 @@ func (s *RdsServiceImpl) GetTransactionHashs(owner string, symbol string, status
 	)
 
 	query := make(map[string]interface{})
-	if len(status) > 0 {
-		query["status"] = status
-	}
-	if len(typs) > 0 {
-		query["tx_type"] = typs
-	}
+	query["symbol"] = symbol
+	query = combineTypeAndStatus(query, status, typs)
 
 	err = s.db.Model(&Transaction{}).
 		Where("tx_from=? or tx_to=?", owner, owner).
-		Where("symbol=?", symbol).
 		Where(query).
 		Where("fork=?", false).
 		Order("create_time desc").
@@ -347,8 +348,6 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 
 	return pageResult, err
 }
-
-
 
 func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
