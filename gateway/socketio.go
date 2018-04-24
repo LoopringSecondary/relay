@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/types"
+	"strings"
 )
 
 type BusinessType int
@@ -349,7 +350,8 @@ func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (er
 				err = json.Unmarshal([]byte(ctx), trendQuery)
 				if err != nil {
 					log.Error("trend query unmarshal error, " + err.Error())
-				} else if req.Market == trendQuery.Market && req.Interval == trendQuery.Interval {
+				} else if strings.ToUpper(req.Market) == strings.ToUpper(trendQuery.Market) &&
+					strings.ToUpper(req.Interval) == strings.ToUpper(trendQuery.Interval) {
 					log.Info("emit trend " + ctx)
 					v.Emit(eventKeyTrends + EventPostfixRes, respJson)
 				}
@@ -439,7 +441,8 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 				err = json.Unmarshal([]byte(ctx), depthQuery)
 				if err != nil {
 					log.Error("depth query unmarshal error, " + err.Error())
-				} else if req.DelegateAddress == depthQuery.DelegateAddress && req.Market == depthQuery.Market {
+				} else if strings.ToUpper(req.DelegateAddress) == strings.ToUpper(depthQuery.DelegateAddress) &&
+					strings.ToUpper(req.Market) == strings.ToUpper(depthQuery.Market) {
 					log.Info("emit trend " + ctx)
 					v.Emit(eventKeyDepth + EventPostfixRes, respJson)
 				}
@@ -456,6 +459,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 
 	req := input.(*types.Transaction)
 	owner := req.Owner.Hex()
+	log.Infof("received owner is %s ", owner)
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
@@ -467,7 +471,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 				err = json.Unmarshal([]byte(ctx), txQuery)
 				if err != nil {
 					log.Error("tx query unmarshal error, " + err.Error())
-				} else if owner == txQuery.Owner {
+				} else if strings.ToUpper(owner) == strings.ToUpper(txQuery.Owner) {
 					log.Info("emit trend " + ctx)
 
 					txs, err := so.walletService.GetTransactions(*txQuery)
@@ -495,6 +499,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 
 	req := input.(*types.Transaction)
 	owner := req.Owner.Hex()
+	log.Infof("received owner is %s ", owner)
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
@@ -506,9 +511,8 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 				err = json.Unmarshal([]byte(ctx), txQuery)
 				if err != nil {
 					log.Error("tx query unmarshal error, " + err.Error())
-				} else if owner == txQuery.Owner {
+				} else if strings.ToUpper(owner) == strings.ToUpper(txQuery.Owner) {
 					log.Info("emit tx pending " + ctx)
-
 					txs, err := so.walletService.GetPendingTransactions(SingleOwner{owner})
 					resp := SocketIOJsonResp{}
 
