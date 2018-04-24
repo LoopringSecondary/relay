@@ -95,15 +95,16 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 
 func (matcher *TimingMatcher) Start() {
 	matcher.listenSubmitEvent()
-	syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
-		log.Debugf("TimingMatcher Start......")
-		matcher.listenTimingRound()
-		return nil
-	}}
-	eventemitter.On(eventemitter.SyncChainComplete, syncWatcher)
-	matcher.stopFuncs = append(matcher.stopFuncs, func() {
-		eventemitter.Un(eventemitter.SyncChainComplete, syncWatcher)
-	})
+	matcher.listenTimingRound()
+	//syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
+	//	log.Debugf("TimingMatcher Start......")
+	//	matcher.listenTimingRound()
+	//	return nil
+	//}}
+	//eventemitter.On(eventemitter.SyncChainComplete, syncWatcher)
+	//matcher.stopFuncs = append(matcher.stopFuncs, func() {
+	//	eventemitter.Un(eventemitter.SyncChainComplete, syncWatcher)
+	//})
 }
 
 func (matcher *TimingMatcher) Stop() {
