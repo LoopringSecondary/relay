@@ -3,12 +3,14 @@ package aws
 import (
     "github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/sns"
-    "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 )
 import (
-    "github.com/Loopring/relay/config"
-    "github.com/Loopring/relay/log"
+	"fmt"
+	"time"
 )
 
 type SnsClient struct {
@@ -45,7 +47,7 @@ func (client *SnsClient) PublishSns(subject string, message string) {
 		input := &sns.PublishInput{}
 		input.SetTopicArn(client.topicArn)
 		input.SetSubject(subject)
-		input.SetMessage(message)
+		input.SetMessage(fmt.Sprintf("%s|%s",time.Now().Format("15:04:05"), message))
 		_, err := client.innerClient.Publish(input)
 		if err != nil {
 			log.Errorf("Failed send sns message with error : %s\nSubject: %s\n, Message %s\n", err.Error(), subject, message)
