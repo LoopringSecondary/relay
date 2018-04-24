@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"math/big"
-	"fmt"
 )
 
 type TransactionManager struct {
@@ -277,8 +276,6 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 		// emit transaction before saving
 
 		err := tm.db.SaveTransaction(&model)
-		fmt.Println(">>>>>>>> save transaction result is ")
-		fmt.Println(err)
 		if err == nil {
 			eventemitter.Emit(eventemitter.TransactionEvent, tx)
 		}
