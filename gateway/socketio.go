@@ -460,6 +460,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 	req := input.(*types.Transaction)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
+	fmt.Println(so.connIdMap)
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
@@ -502,6 +503,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 	req := input.(*types.Transaction)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
+	fmt.Println(so.connIdMap)
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
 		fmt.Println(key)
