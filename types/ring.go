@@ -50,6 +50,12 @@ type Ring struct {
 	ReducedRate *big.Rat       `json:"reducedRate"` //成环之后，折价比例
 	LegalFee    *big.Rat       `json:"legalFee"`    //法币计算的fee
 	UniqueId    common.Hash    `json:"uniquedId"`
+
+	//
+	Received  *big.Rat
+	LegalCost *big.Rat
+	Gas       *big.Int
+	GasPrice  *big.Int
 }
 
 func (ring *Ring) FeeSelections() *big.Int {
@@ -160,8 +166,6 @@ type RingSubmitInfo struct {
 	ProtocolGasPrice *big.Int
 
 	SubmitTxHash common.Hash
-	Received     *big.Rat
-	LegalCost    *big.Rat
 }
 
 type RingSubmitInputs struct {

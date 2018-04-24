@@ -114,7 +114,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()
-	n.registerIPFSSubService()
+	//n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
 	n.registerAccountManager()
@@ -156,7 +156,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.marketCapProvider.Start()
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 
 	// todo delete after test
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
@@ -164,6 +164,7 @@ func (n *Node) Start() {
 
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
+		n.accountManager.Start()
 	}
 	if n.globalConfig.Mode != MODEL_RELAY {
 		n.mineNode.Start()
@@ -265,7 +266,7 @@ func (n *Node) registerMiner() {
 	}
 	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner)
 	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
-	submitter.SetMatcher(matcher)
+	evaluator.SetMatcher(matcher)
 	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.marketCapProvider)
 }
 

@@ -93,7 +93,7 @@ func (market *Market) match() {
 			continue
 		} else {
 			//todo:for test, release this limit
-			if ringForSubmit.Received.Sign() > 0 {
+			if ringForSubmit.RawRing.Received.Sign() > 0 {
 				for _, filledOrder := range ringForSubmit.RawRing.Orders {
 					orderState := market.reduceAmountAfterFilled(filledOrder)
 					isFullFilled := market.om.IsOrderFullFinished(orderState)
@@ -105,7 +105,7 @@ func (market *Market) match() {
 				AddMinedRing(ringForSubmit)
 				ringSubmitInfos = append(ringSubmitInfos, ringForSubmit)
 			} else {
-				log.Debugf("ring:%s will not be submitted,because of received:%s", ringForSubmit.RawRing.Hash.Hex(), ringForSubmit.Received.String())
+				log.Debugf("ring:%s will not be submitted,because of received:%s", ringForSubmit.RawRing.Hash.Hex(), ringForSubmit.RawRing.Received.String())
 			}
 		}
 	}
@@ -252,7 +252,6 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 	filledOrders := []*types.FilledOrder{}
 	//miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
 	for _, order := range orders {
-
 		if filledOrder, err := market.generateFilledOrder(order); nil != err {
 			log.Errorf("err:%s", err.Error())
 			return nil, err
@@ -265,8 +264,7 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 	if err := market.matcher.evaluator.ComputeRing(ringTmp); nil != err {
 		return nil, err
 	} else {
-		_, _, costLegal, received := market.matcher.evaluator.EvaluateReceived(ringTmp)
-		candidateRing := &CandidateRing{cost: costLegal, received: received, filledOrders: make(map[common.Hash]*big.Rat)}
+		candidateRing := &CandidateRing{cost: ringTmp.LegalCost, received: ringTmp.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 		for _, filledOrder := range ringTmp.Orders {
 			log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
 			candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
@@ -311,8 +309,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 	if err := market.matcher.evaluator.ComputeRing(ringTmp); nil != err {
 		return nil, err
 	} else {
-		gas, gasPrice, _, received := market.matcher.evaluator.EvaluateReceived(ringTmp)
-		res, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp, gas, gasPrice, received)
+		res, err := market.matcher.submitter.GenerateRingSubmitInfo(ringTmp)
 		return res, err
 	}
 }
