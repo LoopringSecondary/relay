@@ -277,7 +277,8 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 		// emit transaction before saving
 
 		err := tm.db.SaveTransaction(&model)
-		fmt.Println(">>>>>>>> save transaction result is " + err.Error())
+		fmt.Println(">>>>>>>> save transaction result is ")
+		fmt.Println(err)
 		if err == nil {
 			eventemitter.Emit(eventemitter.TransactionEvent, tx)
 		}
