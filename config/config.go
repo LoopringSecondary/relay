@@ -232,6 +232,7 @@ type MysqlOptions struct {
 	Password    string
 	DbName      string
 	TablePrefix string
+	MaxConnections int
 	Debug       bool
 }
 
