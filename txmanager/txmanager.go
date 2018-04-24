@@ -276,17 +276,19 @@ func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
 		// emit transaction before saving
 		eventemitter.Emit(eventemitter.TransactionEvent, tx)
 
-		// save new tx
-		if err := tm.db.SaveTransaction(&model); err != nil {
-			log.Errorf(err.Error())
-			return nil
-		}
+		return tm.db.SaveTransaction(&model)
 
-		// update prev tx which has the same nonce
-		if err := tm.updatePrevPendingTx(tx); err != nil {
-			log.Errorf(err.Error())
-			return nil
-		}
+		//// save new tx
+		//if err := tm.db.SaveTransaction(&model); err != nil {
+		//	log.Errorf(err.Error())
+		//	return nil
+		//}
+		//
+		//// update prev tx which has the same nonce
+		//if err := tm.updatePrevPendingTx(tx); err != nil {
+		//	log.Errorf(err.Error())
+		//	return nil
+		//}
 	}
 
 	return nil
