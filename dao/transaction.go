@@ -229,7 +229,7 @@ func (s *RdsServiceImpl) GetTransactionHashs(owner string, symbol string, status
 		Where("tx_from=? or tx_to=?", owner, owner).
 		Where(query).
 		Where("fork=?", false).
-		Order("create_time desc").
+		Order("create_time DESC").
 		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
 
 	return hashs, err
@@ -351,7 +351,7 @@ func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, page
 
 func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
-	err := s.db.Where("tx_hash in (?)", hashes).Where("fork=?", false).Find(&trxs).Error
+	err := s.db.Where("tx_hash in (?)", hashes).Order("create_time DESC").Where("fork=?", false).Find(&trxs).Error
 	return trxs, err
 }
 

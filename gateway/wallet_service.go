@@ -703,7 +703,7 @@ func pagination(pageIndex, pageSize int) (int, int, int, int) {
 		pageIndex = 1
 	}
 	if pageSize <= 0 {
-		pageSize = 20
+		pageSize = 10
 	}
 	limit := pageSize
 	offset := (pageIndex - 1) * pageSize
