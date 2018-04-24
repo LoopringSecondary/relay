@@ -296,9 +296,19 @@ func (tm *TransactionManager) saveMinedTransactions(tx *types.Transaction) error
 }
 
 func (tm *TransactionManager) addTransaction(tx *types.Transaction) error {
-	var latest dao.Transaction
+	var (
+		latest dao.Transaction
+		err    error
+	)
+
 	latest.ConvertDown(tx)
-	return tm.db.Add(&latest)
+	err = tm.db.Add(&latest)
+
+	if err == nil {
+		eventemitter.Emit(eventemitter.TransactionEvent, tx)
+	}
+
+	return err
 }
 
 func (tm *TransactionManager) validateTransaction(tx *types.Transaction) bool {

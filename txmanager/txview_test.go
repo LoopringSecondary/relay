@@ -53,7 +53,7 @@ func TestTransactionViewImpl_GetMinedTransactionCount(t *testing.T) {
 func TestTransactionViewImpl_GetMinedTransactions(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0x43e85e2c882bbce41c69740eed4bfffb45e3f9dd"
+	owner := "0xc73d79d2baadf3145a2b358e7012efe44116da2c"
 	symbol := "foo"
 
 	txs, err := txmanager.GetMinedTransactions(owner, symbol, 100, 0)
