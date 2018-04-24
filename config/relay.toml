@@ -134,3 +134,8 @@ name = "Loopring corporation"
     white_list_open = false
     white_list_cache_expire_time = 8640000
     white_list_cache_clean_time = 0
+
+[zookeeper]
+    with_zookeeper = false
+    zk_servers = "127.0.0.1:2181"
+    connect_time_out = 5
