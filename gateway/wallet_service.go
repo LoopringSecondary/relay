@@ -424,10 +424,9 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 
 	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 	eventemitter.Emit(eventemitter.PendingTransaction, tx)
-	txByte, err := json.Marshal(tx)
+	txByte, err := json.Marshal(txNotify)
 	if err == nil {
-		log.Infof("saved pending raw tx key %s", tx.Hash)
-		err = cache.Set(PendingTxPreKey+strings.ToUpper(tx.Hash), txByte, 3600*24*7)
+		err = cache.Set(PendingTxPreKey+strings.ToUpper(txNotify.Hash), txByte, 3600*24*7)
 		if err != nil {
 			return "", err
 		}
@@ -726,7 +725,7 @@ func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []
 	return txmanager.GetPendingTransactions(query.Owner)
 }
 
-func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (result txmanager.TransactionJsonResult, err error) {
+func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (result TxNotify, err error) {
 	if len(query.ThxHash) == 0 {
 		return result, errors.New("tx hash can't be nil")
 	}
@@ -736,15 +735,19 @@ func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (resul
 		return result, err
 	}
 
-	var tx *types.Transaction
+	var tx TxNotify
 
-	err = json.Unmarshal(txBytes, tx)
+	err = json.Unmarshal(txBytes, &tx)
 	if err != nil {
 		return result, err
 	}
 
-	return toTxJsonResult(*tx), nil
+	return tx, nil
 
+}
+
+func (w *WalletServiceImpl) GetEstimateGasPrice() (result string, err error) {
+	return ethaccessor.EstimateGasPrice(nil, nil).String(), nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
