@@ -51,6 +51,10 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 		log.Fatalf("mysql connection error:%s", err.Error())
 	}
 
+	if options.MaxConnections > 0 {
+		db.DB().SetMaxOpenConns(options.MaxConnections)
+	}
+
 	db.LogMode(options.Debug)
 
 	impl.db = db
