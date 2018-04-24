@@ -110,9 +110,14 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	evt := input.(*types.ApprovalEvent)
 
-	var tx types.Transaction
+	var (
+		tx  types.Transaction
+		err error
+	)
 	tx.FromApproveEvent(evt)
-	tx.Symbol, _ = util.GetSymbolWithAddress(tx.Protocol)
+	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
+		return err
+	}
 	return tm.saveTransaction(&tx)
 }
 
@@ -144,71 +149,49 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 }
 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
-	evt := input.(*types.WethDepositEvent)
-	var tx1, tx2 types.Transaction
+	evt := input.(*types.WethWithdrawalEvent)
+
+	var (
+		tx  types.Transaction
+		err error
+	)
 
 	// save weth
-	tx1.FromWethDepositEvent(evt, true)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := tm.saveTransaction(&tx1); err != nil {
+	tx.FromWethWithdrawalEvent(evt)
+	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return err
 	}
-
-	// save eth
-	tx2.FromWethDepositEvent(evt, false)
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
+	return tm.saveTransaction(&tx)
 
 	return nil
 }
 
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
-	evt := input.(*types.WethWithdrawalEvent)
-	var tx1, tx2 types.Transaction
+	evt := input.(*types.TransferEvent)
 
-	// save weth
-	tx1.FromWethWithdrawalEvent(evt, false)
-	tx1.Symbol, _ = util.GetSymbolWithAddress(tx1.Protocol)
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
+	var (
+		tx  types.Transaction
+		err error
+	)
+	tx.FromTransferEvent(evt)
+	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
+		return nil
 	}
-
-	// save eth
-	tx2.FromWethWithdrawalEvent(evt, true)
-	tx2.Protocol = types.NilAddress
-	tx2.Symbol = "ETH"
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	return nil
+	return tm.saveTransaction(&tx)
 }
 
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
 	evt := input.(*types.TransferEvent)
 
 	var (
-		tx1, tx2 types.Transaction
-		err      error
+		tx  types.Transaction
+		err error
 	)
-	tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
-	if tx1.Symbol, err = util.GetSymbolWithAddress(tx1.Protocol); err != nil {
+	tx.FromTransferEvent(evt)
+	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return nil
 	}
-
-	tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
-	tx2.Symbol = tx1.Symbol
-	if err := tm.saveTransaction(&tx1); err != nil {
-		return err
-	}
-	if err := tm.saveTransaction(&tx2); err != nil {
-		return err
-	}
-
-	return nil
+	return tm.saveTransaction(&tx)
 }
 
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
@@ -233,24 +216,17 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 	evt := input.(*types.TransferEvent)
 
 	if evt.Value.Cmp(big.NewInt(0)) > 0 {
-		var tx1, tx2 types.Transaction
+		var tx types.Transaction
 
-		tx1.FromTransferEvent(evt, types.TX_TYPE_SEND)
-		tx1.Protocol = types.NilAddress
-		tx1.Symbol = ETH_SYMBOL
-		if err := tm.saveTransaction(&tx1); err != nil {
-			return err
-		}
-
-		tx2.FromTransferEvent(evt, types.TX_TYPE_RECEIVE)
-		tx2.Protocol = types.NilAddress
-		tx2.Symbol = ETH_SYMBOL
-		if err := tm.saveTransaction(&tx2); err != nil {
+		tx.FromTransferEvent(evt)
+		tx.Protocol = types.NilAddress
+		tx.Symbol = ETH_SYMBOL
+		if err := tm.saveTransaction(&tx); err != nil {
 			return err
 		}
 	} else {
 		var tx types.Transaction
-		tx.FromTransferEvent(evt, types.TX_TYPE_SEND)
+		tx.FromTransferEvent(evt)
 		tx.Type = types.TX_TYPE_UNSUPPORTED_CONTRACT
 		tx.Protocol = tx.To
 		tx.Symbol = ETH_SYMBOL
@@ -263,40 +239,118 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
-	var model dao.Transaction
-
-	tx.CreateTime = tx.BlockTime
-	tx.UpdateTime = tx.UpdateTime
-
-	model.ConvertDown(tx)
-
-	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
-		log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s, to:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), tx.To.Hex())
-
-		// emit transaction before saving
-		eventemitter.Emit(eventemitter.TransactionEvent, tx)
-
-		return tm.db.SaveTransaction(&model)
-
-		//// save new tx
-		//if err := tm.db.SaveTransaction(&model); err != nil {
-		//	log.Errorf(err.Error())
-		//	return nil
-		//}
-		//
-		//// update prev tx which has the same nonce
-		//if err := tm.updatePrevPendingTx(tx); err != nil {
-		//	log.Errorf(err.Error())
-		//	return nil
-		//}
+	// validate tx addresses
+	if !tm.validateTransaction(tx) {
+		return nil
 	}
 
+	// save pending
+	if tx.Status == types.TX_STATUS_PENDING {
+		return tm.savePendingTransactions(tx)
+	} else {
+		return tm.saveMinedTransactions(tx)
+	}
+}
+
+func (tm *TransactionManager) savePendingTransactions(tx *types.Transaction) error {
+	// find transaction which have the same hash, raw_from and nonce
+	if _, err := tm.db.GetPendingTransaction(tx.TxHash, tx.RawFrom, tx.Nonce); err == nil {
+		return nil
+	}
+
+	return tm.addTransaction(tx)
+}
+
+func (tm *TransactionManager) saveMinedTransactions(tx *types.Transaction) error {
+	// get transactions by sender and tx.nonce
+	list, _ := tm.db.GetTransactionsBySenderNonce(tx.RawFrom, tx.Nonce)
+
+	// insert new data if list is empty
+	if len(list) == 0 {
+		return tm.addTransaction(tx)
+	}
+
+	// judge have any pending tx and the same tx
+	hasPendingTx := false
+	hasSameTx := false
+	for _, v := range list {
+		var latest types.Transaction
+		v.ConvertUp(&latest)
+
+		if latest.Status == types.TX_STATUS_PENDING {
+			hasPendingTx = true
+		} else if latest.Compare(tx) {
+			hasSameTx = true
+		}
+	}
+
+	// delete pending tx
+	if hasPendingTx {
+		tm.db.DeletePendingTransactions(tx.RawFrom, tx.Nonce)
+	}
+	// check tx if exist
+	if !hasSameTx {
+		tm.addTransaction(tx)
+	}
 	return nil
 }
 
-func (tm *TransactionManager) updatePrevPendingTx(tx *types.Transaction) error {
-	if tx.Status == types.TX_STATUS_PENDING {
-		return nil
+func (tm *TransactionManager) addTransaction(tx *types.Transaction) error {
+	var (
+		latest dao.Transaction
+		err    error
+	)
+
+	latest.ConvertDown(tx)
+	err = tm.db.Add(&latest)
+
+	if err == nil {
+		eventemitter.Emit(eventemitter.TransactionEvent, tx)
 	}
-	return tm.db.UpdatePendingTransactionsByOwner(tx.Owner, tx.Nonce, tx.StatusValue())
+
+	return err
 }
+
+func (tm *TransactionManager) validateTransaction(tx *types.Transaction) bool {
+	var fromUnlocked, toUnlocked bool
+
+	unlocked := true
+
+	// validate wallet address
+	fromUnlocked, _ = tm.accountmanager.HasUnlocked(tx.From.Hex())
+	if tx.Type == types.TX_TYPE_TRANSFER {
+		toUnlocked, _ = tm.accountmanager.HasUnlocked(tx.To.Hex())
+		if !fromUnlocked && !toUnlocked {
+			unlocked = false
+		}
+	} else {
+		if !fromUnlocked {
+			unlocked = false
+		}
+	}
+
+	log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s->unlocked:%t, to:%s->unlocked:%t",
+		tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), fromUnlocked, tx.To.Hex(), toUnlocked)
+
+	return unlocked
+}
+
+//func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
+//	var model dao.Transaction
+//
+//	tx.CreateTime = tx.BlockTime
+//	tx.UpdateTime = tx.UpdateTime
+//
+//	model.ConvertDown(tx)
+//
+//	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
+//		log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s, to:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), tx.To.Hex())
+//
+//		// emit transaction before saving
+//		eventemitter.Emit(eventemitter.TransactionEvent, tx)
+//
+//		return tm.db.SaveTransaction(&model)
+//	}
+//
+//	return nil
+//}

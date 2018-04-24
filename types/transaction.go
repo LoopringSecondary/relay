@@ -205,9 +205,28 @@ func StrToTxType(status string) TxType {
 	return ret
 }
 
+// Compare return true: is the same
+func (tx *Transaction) Compare(src *Transaction) bool {
+	if tx.TxHash != src.TxHash {
+		return false
+	}
+	if tx.Type != src.Type {
+		return false
+	}
+	if tx.Nonce != src.Nonce {
+		return false
+	}
+	if tx.LogIndex != src.LogIndex {
+		return false
+	}
+	if tx.Status != src.Status {
+		return false
+	}
+	return true
+}
+
 func (tx *Transaction) FromFillEvent(src *OrderFilledEvent, txtype TxType) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.Type = txtype
 	if txtype == TX_TYPE_SELL {
 		tx.From = src.BuyFrom
@@ -233,7 +252,6 @@ func (tx *Transaction) GetFillContent() (common.Hash, error) {
 
 func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
@@ -245,7 +263,6 @@ func (tx *Transaction) FromCancelMethod(src *OrderCancelledEvent) error {
 
 func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.From
 	tx.From = src.From
 	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
@@ -257,7 +274,6 @@ func (tx *Transaction) FromCancelEvent(src *OrderCancelledEvent) error {
 
 func (tx *Transaction) FromCutoffEvent(src *CutoffEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF
@@ -273,7 +289,6 @@ type CutoffPairSalt struct {
 
 func (tx *Transaction) FromCutoffPairEvent(src *CutoffPairEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
@@ -313,37 +328,26 @@ func (tx *Transaction) GetCancelOrderHash() (string, error) {
 // 充值和提现from和to都是用户钱包自己的地址，因为合约限制了发送方msg.sender
 func (tx *Transaction) FromWethDepositEvent(src *WethDepositEvent, isIncome bool) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Dst
 	tx.From = src.Dst
 	tx.To = src.Dst
 	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
+	tx.Type = TX_TYPE_DEPOSIT
 
 	return nil
 }
 
-func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent, isIncome bool) error {
+func (tx *Transaction) FromWethWithdrawalEvent(src *WethWithdrawalEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Src
 	tx.From = src.Src
 	tx.To = src.Src
 	tx.Value = src.Value
-	if isIncome {
-		tx.Type = TX_TYPE_CONVERT_INCOME
-	} else {
-		tx.Type = TX_TYPE_CONVERT_OUTCOME
-	}
+	tx.Type = TX_TYPE_WITHDRAWAL
 
 	return nil
 }
 
 func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
 	tx.From = src.Owner
 	tx.To = src.Spender
 	tx.Value = src.Value
@@ -352,17 +356,12 @@ func (tx *Transaction) FromApproveEvent(src *ApprovalEvent) error {
 	return nil
 }
 
-func (tx *Transaction) FromTransferEvent(src *TransferEvent, sendOrReceive TxType) error {
+func (tx *Transaction) FromTransferEvent(src *TransferEvent) error {
 	tx.fullFilled(src.TxInfo)
-	if sendOrReceive == TX_TYPE_SEND {
-		tx.Owner = src.Sender
-	} else {
-		tx.Owner = src.Receiver
-	}
 	tx.From = src.Sender
 	tx.To = src.Receiver
 	tx.Value = src.Value
-	tx.Type = sendOrReceive
+	tx.Type = TX_TYPE_TRANSFER
 
 	return nil
 }
