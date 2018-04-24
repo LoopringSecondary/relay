@@ -425,8 +425,12 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 	eventemitter.Emit(eventemitter.PendingTransaction, tx)
 	txByte, err := json.Marshal(tx)
-	if err != nil {
-		cache.Set(PendingTxPreKey + strings.ToUpper(tx.Hash), txByte, 3600 * 24 * 7)
+	if err == nil {
+		log.Infof("saved pending raw tx key %s", tx.Hash)
+		err = cache.Set(PendingTxPreKey + strings.ToUpper(tx.Hash), txByte, 3600 * 24 * 7)
+		if err != nil {
+			return "", err
+		}
 	}
 	log.Info("emit transaction info " + tx.Hash)
 	return tx.Hash, nil
