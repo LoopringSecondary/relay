@@ -155,6 +155,47 @@ func (s *RdsServiceImpl) GetMinedTransactionCount(owner string, symbol string, s
 	return number, err
 }
 
+func (s *RdsServiceImpl) GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error) {
+	var tx Transaction
+
+	err := s.db.Where("tx_hash=?", hash.Hex()).
+		Where("raw_from=?", rawFrom.Hex()).
+		Where("nonce=?", nonce.String()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("fork=?", false).
+		First(&tx).Error
+
+	return tx, err
+}
+
+func (s *RdsServiceImpl) GetTransactionsBySenderNonce(rawFrom common.Address, nonce *big.Int) ([]Transaction, error) {
+	var txs []Transaction
+
+	err := s.db.Where("raw_from=?", rawFrom.Hex()).
+		Where("nonce=?", nonce.String()).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
+func (s *RdsServiceImpl) DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error {
+	return s.db.Where("tx_hash=?", hash.Hex()).
+		Where("raw_from=?", rawFrom.Hex()).
+		Where("nonce=?", nonce.String()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("fork=?", false).
+		Delete(&Transaction{}).Error
+}
+
+func (s *RdsServiceImpl) DeletePendingTransactions(rawFrom common.Address, nonce *big.Int) error {
+	return s.db.Where("raw_from=?", rawFrom.Hex()).
+		Where("nonce=?", nonce.String()).
+		Where("status=?", uint8(types.TX_STATUS_PENDING)).
+		Where("fork=?", false).
+		Delete(&Transaction{}).Error
+}
+
 func (s *RdsServiceImpl) GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error) {
 	var (
 		hashs []string
