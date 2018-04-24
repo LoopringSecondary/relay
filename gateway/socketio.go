@@ -315,7 +315,7 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 			_, ok := businesses[eventKeyLoopringTickers]
 			if ok {
 				log.Info("emit loopring ticker info")
-				v.Emit(eventKeyLoopringTickers + EventPostfixRes, respJson)
+				v.Emit(eventKeyLoopringTickers + EventPostfixRes, string(respJson[:]))
 			}
 		}
 		return true
@@ -353,7 +353,7 @@ func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (er
 				} else if strings.ToUpper(req.Market) == strings.ToUpper(trendQuery.Market) &&
 					strings.ToUpper(req.Interval) == strings.ToUpper(trendQuery.Interval) {
 					log.Info("emit trend " + ctx)
-					v.Emit(eventKeyTrends + EventPostfixRes, respJson)
+					v.Emit(eventKeyTrends + EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -406,7 +406,7 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 			_, ok := businesses[eventKeyBalance]
 			if ok {
 				log.Info("emit balance info")
-				v.Emit(eventKeyBalance + EventPostfixRes, respJson)
+				v.Emit(eventKeyBalance + EventPostfixRes, string(respJson[:]))
 			}
 		}
 		return true
@@ -444,7 +444,7 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 				} else if strings.ToUpper(req.DelegateAddress) == strings.ToUpper(depthQuery.DelegateAddress) &&
 					strings.ToUpper(req.Market) == strings.ToUpper(depthQuery.Market) {
 					log.Info("emit trend " + ctx)
-					v.Emit(eventKeyDepth + EventPostfixRes, respJson)
+					v.Emit(eventKeyDepth + EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -486,7 +486,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 						resp.Data = txs
 					}
 					respJson, _ := json.Marshal(resp)
-					v.Emit(eventKeyDepth + EventPostfixRes, respJson)
+					v.Emit(eventKeyTransaction + EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -530,7 +530,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 						resp.Data = txs
 					}
 					respJson, _ := json.Marshal(resp)
-					v.Emit(eventKeyPendingTx + EventPostfixRes, respJson)
+					v.Emit(eventKeyPendingTx + EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
