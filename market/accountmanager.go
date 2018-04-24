@@ -537,6 +537,10 @@ func NewAccountManager() AccountManager {
 	b.cachedDuration = big.NewInt(int64(500))
 	accountManager.block = b
 
+	return accountManager
+}
+
+func (accountManager *AccountManager) Start() {
 	transferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleTokenTransfer}
 	approveWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleApprove}
 	wethDepositWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleWethDeposit}
@@ -554,7 +558,6 @@ func NewAccountManager() AccountManager {
 	eventemitter.On(eventemitter.WethWithdrawal, wethWithdrawalWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, blockForkWatcher)
 
-	return accountManager
 }
 
 func (a *AccountManager) GetBalanceWithSymbolResult(owner common.Address) (map[string]*big.Int, error) {
