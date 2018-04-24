@@ -674,47 +674,32 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 }
 
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
+	var (
+		rst           PageResult
+		txs           []txmanager.TransactionJsonResult
+		limit, offset int
+		err           error
+	)
 
-	trxQuery := make(map[string]interface{})
-
-	if query.Symbol != "" {
-		trxQuery["symbol"] = query.Symbol
+	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
+	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol)
+	if err != nil {
+		return rst, err
 	}
-
-	if query.Owner != "" {
-		trxQuery["owner"] = query.Owner
+	txs, err = txmanager.GetAllTransactions(query.Owner, query.Symbol, query.Status, query.TxType, limit, offset)
+	for _, v := range txs {
+		rst.Data = append(rst.Data, v)
 	}
-
-	if query.ThxHash != "" {
-		trxQuery["tx_hash"] = query.ThxHash
-	}
-
-	if txStatusToUint8(query.Status) > 0 {
-		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
-	}
-
-	if txTypeToUint8(query.TxType) > 0 {
-		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
-	}
-
-	pageIndex := query.PageIndex
-	pageSize := query.PageSize
-
-	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
 
 	if err != nil {
-		return pr, err
+		return rst, err
 	}
 
-	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
-
-	for _, d := range daoPr.Data {
-		o := d.(dao.Transaction)
-		tr := types.Transaction{}
-		err = o.ConvertUp(&tr)
-		rst.Data = append(rst.Data, toTxJsonResult(tr))
-	}
 	return rst, nil
+}
+
+func pagination(pageIndex, pageSize int) (int, int, int, int) {
+	if pageSize
 }
 
 func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
