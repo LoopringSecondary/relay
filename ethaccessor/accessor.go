@@ -332,7 +332,6 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	}
 
 	accessor.MutilClient.startSyncBlockNumber()
-	IncludeGasPriceEvaluator()
 	return nil
 }
 

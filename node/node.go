@@ -164,9 +164,11 @@ func (n *Node) Start() {
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
 		n.accountManager.Start()
+		go ethaccessor.IncludeGasPriceEvaluator()
 	}
 	if n.globalConfig.Mode != MODEL_RELAY {
 		n.mineNode.Start()
+		ethaccessor.IncludeGasPriceEvaluator()
 	}
 }
 
