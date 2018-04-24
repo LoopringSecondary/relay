@@ -778,14 +778,14 @@ func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (resul
 		return result, err
 	}
 
-	var tx *types.Transaction
+	var tx types.Transaction
 
-	err = json.Unmarshal(txBytes, tx)
+	err = json.Unmarshal(txBytes, &tx)
 	if err != nil {
 		return result, err
 	}
 
-	return toTxJsonResult(*tx), nil
+	return toTxJsonResult(tx), nil
 
 }
 
