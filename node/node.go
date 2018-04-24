@@ -142,6 +142,7 @@ func (n *Node) registerRelayNode() {
 	n.registerJsonRpcService()
 	n.registerWebsocketService()
 	n.registerSocketIOService()
+	txmanager.NewTxView(n.rdsService)
 }
 
 func (n *Node) registerMineNode() {

@@ -19,7 +19,9 @@
 package gateway
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -37,8 +39,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/Loopring/relay/cache"
-	"encoding/json"
 )
 
 const DefaultCapCurrency = "CNY"
@@ -426,7 +426,7 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 	eventemitter.Emit(eventemitter.PendingTransaction, tx)
 	txByte, err := json.Marshal(txNotify)
 	if err == nil {
-		err = cache.Set(PendingTxPreKey + strings.ToUpper(txNotify.Hash), txByte, 3600 * 24 * 7)
+		err = cache.Set(PendingTxPreKey+strings.ToUpper(txNotify.Hash), txByte, 3600*24*7)
 		if err != nil {
 			return "", err
 		}
@@ -718,53 +718,11 @@ func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResu
 }
 
 func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
-
-	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result = make([]txmanager.TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
-	}
-
-	return result, nil
+	return txmanager.GetTransactionsByHash(query.Owner, query.TrxHashes)
 }
 
 func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txmanager.TransactionJsonResult, err error) {
-
-	if len(query.Owner) == 0 {
-		return nil, errors.New("owner can't be null")
-	}
-
-	txQuery := make(map[string]interface{})
-	txQuery["owner"] = query.Owner
-	txQuery["status"] = types.TX_STATUS_PENDING
-
-	rst, err := w.rds.PendingTransactions(txQuery)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result = make([]txmanager.TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
-	}
-
-	return result, nil
+	return txmanager.GetPendingTransactions(query.Owner)
 }
 
 func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (result TxNotify, err error) {

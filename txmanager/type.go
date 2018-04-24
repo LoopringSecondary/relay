@@ -68,7 +68,12 @@ func (tx *TransactionJsonResult) IsTransfer() bool {
 	return false
 }
 
-// 过滤老版本重复数据
+// filter 数据库里在之前每个transaction/event可能存储了多条记录,现在只存一条记录
+// 区别:
+// 转账,老版本存send & receive 现在存transfer,那么send.from/receive.to == owner
+// 充值,老版本存convert_income & convert_outcome, symbol == weth为income,symbol == eth为outcome
+// 提现,老版本存convert_income & convert_outcome, symbol == weth为outcome,symbol == eth为income
+// 充值&提现,查询symbol必须与tx的symbol相等
 func filter(tx *types.Transaction, owner common.Address, symbol string) error {
 	askSymbol := strings.ToUpper(symbol)
 	answerSymbol := strings.ToUpper(tx.Symbol)
