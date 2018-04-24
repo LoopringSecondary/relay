@@ -116,7 +116,7 @@ type RdsService interface {
 	/////add while optimize tx manager
 	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
 	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
-	GetPendingTransactions(owner string, status types.TxStatus) ([]Transaction, error)
+	GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
 	GetMinedTransactionCount(owner string, symbol string, status []types.TxStatus) (int, error)
 	GetMinedTransactionHashs(owner string, symbol string, status []types.TxStatus, limit, offset int) ([]string, error)
 	GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error)

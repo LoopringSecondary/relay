@@ -26,12 +26,27 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+func GetPendingTransactions(owner string) ([]TransactionJsonResult, error) {
+	return impl.GetPendingTransactions(owner)
+}
+func GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error) {
+	return impl.GetTransactionsByHash(owner, hashList)
+}
+func GetMinedTransactionCount(ownerStr, symbol string) (int, error) {
+	return impl.GetMinedTransactionCount(ownerStr, symbol)
+}
+func GetMinedTransactions(owner, symbol string, limit, offset int) ([]TransactionJsonResult, error) {
+	return impl.GetMinedTransactions(owner, symbol, limit, offset)
+}
+
 type TransactionView interface {
 	GetPendingTransactions(owner string) ([]TransactionJsonResult, error)
 	GetMinedTransactionCount(ownerStr, symbol string) (int, error)
 	GetMinedTransactions(owner, symbol string, limit, offset int) ([]TransactionJsonResult, error)
 	GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error)
 }
+
+var impl TransactionView
 
 type TransactionViewImpl struct {
 	db dao.RdsService
@@ -42,11 +57,10 @@ type TransactionViewImpl struct {
 // 1. user key 存储用户pengding&mined first page transactions,设置过期时间
 // 2. user tx number key存储某个用户所有tx数量的key,设置过期时间
 // 3. block key 存储某个block涉及到的用户key(用于分叉),设置过期时间
-func NewTxView(db dao.RdsService) *TransactionViewImpl {
+func NewTxView(db dao.RdsService) {
 	var tm TransactionViewImpl
 	tm.db = db
-
-	return &tm
+	impl = &tm
 }
 
 var (
@@ -63,7 +77,7 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]Tran
 	}
 
 	owner := common.HexToAddress(ownerStr)
-	txs, err := impl.db.GetPendingTransactions(owner.Hex(), types.TX_STATUS_PENDING)
+	txs, err := impl.db.GetPendingTransactionsByOwner(owner.Hex())
 	if err != nil {
 		return list, ErrNonTransaction
 	}
@@ -114,17 +128,14 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 		return list, ErrHashListEmpty
 	}
 
-	for _, v := range hashList {
-		hashstr = append(hashstr, common.HexToHash(v).Hex())
-	}
-	txs, err := impl.db.GetTrxByHashes(hashstr)
-	if len(txs) == 0 || err != nil {
+	txs, _ := impl.db.GetTrxByHashes(hashstr)
+	if len(txs) == 0 {
 		return list, ErrNonTransaction
 	}
 
 	owner := common.HexToAddress(ownerStr)
 	list = assemble(txs, owner)
-	//list = collector(list)
+
 	return list, nil
 }
 

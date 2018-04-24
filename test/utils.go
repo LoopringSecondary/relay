@@ -30,6 +30,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
+	"github.com/Loopring/relay/txmanager"
 	"github.com/Loopring/relay/types"
 	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -59,7 +60,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.5"
-	DebugFile = "debug.toml"
+	DebugFile = "mainchain.toml"
 )
 
 var (
@@ -75,6 +76,7 @@ var (
 func init() {
 	cfg = loadConfig()
 	rds = GenerateDaoService()
+	txmanager.NewTxView(rds)
 	cache.NewCache(cfg.Redis)
 	util.Initialize(cfg.Market)
 	entity = loadTestData()
