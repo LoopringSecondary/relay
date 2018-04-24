@@ -26,7 +26,9 @@ name = "Loopring corporation"
     password = "111111"
     db_name = "miner_v3"
     table_prefix = "lpr_"
-    max_connections = 5
+    max_open_connections = 0
+    max_idle_connections = 0
+    conn_max_lifetime = 0
     debug = false
 
 [websocket]
