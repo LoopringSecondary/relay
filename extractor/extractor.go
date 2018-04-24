@@ -70,7 +70,7 @@ func NewExtractorService(options config.ExtractorOptions,
 
 	l.options = options
 	l.dao = db
-	l.processor = newAbiProcessor(db, ac)
+	l.processor = newAbiProcessor(db, ac, &options)
 	l.detector = newForkDetector(db, l.options.StartBlockNumber)
 	l.stop = make(chan bool, 1)
 
