@@ -87,6 +87,7 @@ type GlobalConfig struct {
 	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
+	AWSService     AwsServiceOption
 }
 
 type JsonrpcOptions struct {
@@ -252,6 +253,10 @@ type UserManagerOptions struct {
 	WhiteListOpen            bool
 	WhiteListCacheExpireTime int64
 	WhiteListCacheCleanTime  int64
+}
+
+type AwsServiceOption struct {
+	SNSTopicArn    string
 }
 
 func Validator(cv reflect.Value) (bool, error) {

@@ -47,6 +47,8 @@ func startNode(ctx *cli.Context) error {
 		}
 	}()
 
+	log.InitSnsClient(globalConfig.AWSService)
+
 	var n *node.Node
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)

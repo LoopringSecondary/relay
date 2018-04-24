@@ -20,12 +20,14 @@ package log
 
 import (
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/aws"
 	"go.uber.org/zap"
 )
 
 //todo: I'm not sure whether zap support Rotating
 var logger *zap.Logger
 var sugaredLogger *zap.SugaredLogger
+var snsClient *aws.SnsClient
 
 func Initialize(logOpts config.LogOptions) *zap.Logger {
 	var err error
@@ -45,4 +47,8 @@ func Initialize(logOpts config.LogOptions) *zap.Logger {
 	sugaredLogger = logger.Sugar()
 
 	return logger
+}
+
+func InitSnsClient(awsOption config.AwsServiceOption) {
+	snsClient = aws.NewSnsClient(awsOption)
 }
