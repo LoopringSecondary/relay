@@ -227,14 +227,16 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
-	Hostname    string
-	Port        string
-	User        string
-	Password    string
-	DbName      string
-	TablePrefix string
-	MaxConnections int
-	Debug       bool
+	Hostname           string
+	Port               string
+	User               string
+	Password           string
+	DbName             string
+	TablePrefix        string
+	MaxOpenConnections int
+	MaxIdleConnections int
+	ConnMaxLifetime    int
+	Debug              bool
 }
 
 type RedisOptions struct {

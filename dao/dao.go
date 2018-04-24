@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"time"
 )
 
 type PageResult struct {
@@ -51,9 +52,9 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 		log.Fatalf("mysql connection error:%s", err.Error())
 	}
 
-	if options.MaxConnections > 0 {
-		db.DB().SetMaxOpenConns(options.MaxConnections)
-	}
+	db.DB().SetConnMaxLifetime(time.Duration(options.ConnMaxLifetime) * time.Second)
+	db.DB().SetMaxIdleConns(options.MaxIdleConnections)
+	db.DB().SetMaxOpenConns(options.MaxOpenConnections)
 
 	db.LogMode(options.Debug)
 
