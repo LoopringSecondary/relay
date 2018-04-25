@@ -21,6 +21,7 @@ package txmanager_test
 import (
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
+	"github.com/Loopring/relay/types"
 	"testing"
 )
 
@@ -66,5 +67,37 @@ func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 	}
 	for k, v := range txs {
 		t.Logf("%d >>>>>> txhash:%s, symbol:%s, from:%s, to:%s, type:%s, status:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type, v.Status)
+	}
+}
+
+func TestTransactionViewImpl_DeleteDuplicatePendingTx(t *testing.T) {
+	db := test.Rds()
+	query := make(map[string]interface{})
+	query["status"] = types.TX_STATUS_PENDING
+
+	list, err := db.PendingTransactions(query)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	for _, v := range list {
+		t.Log("=======================================================")
+		t.Logf("symbol:%s, hash:%s, nonce:%s, owner:%s, status:%d", v.Symbol, v.TxHash, v.Nonce, v.Owner, v.Status)
+
+		minedQuery := make(map[string]interface{})
+		minedQuery["tx_hash"] = v.TxHash
+		minedList, err := db.PendingTransactions(minedQuery)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+		if len(minedList) > 1 {
+			for _, mv := range minedList {
+				if mv.Status != uint8(types.TX_STATUS_PENDING) {
+					t.Logf("symbol:%s, hash:%s, nonce:%s, owner:%s, status:%d", mv.Symbol, mv.TxHash, mv.Nonce, mv.Owner, mv.Status)
+				} else {
+					//db.Del(mv)
+				}
+			}
+		}
 	}
 }

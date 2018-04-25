@@ -50,7 +50,6 @@ type RdsService interface {
 	SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error)
-	TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error)
 	PendingTransactions(query map[string]interface{}) ([]Transaction, error)
 	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
@@ -108,14 +107,9 @@ type RdsService interface {
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
-	UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error
 
 	// transactions
-	SaveTransaction(latest *Transaction) error
 	RollBackTransaction(from, to int64) error
-	/////add while optimize tx manager
-	FindTransactionWithoutLogIndex(txhash string) (Transaction, error)
-	FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error)
 	GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
 	GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error)
 	GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error)

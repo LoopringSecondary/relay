@@ -161,9 +161,14 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return err
 	}
-	return tm.saveTransaction(&tx)
+	if err := tm.saveTransaction(&tx); err != nil {
+		return err
+	}
 
-	return nil
+	// save eth
+	tx1 := tx
+	tx1.Symbol = ETH_SYMBOL
+	return tm.saveTransaction(&tx1)
 }
 
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
@@ -177,7 +182,14 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return nil
 	}
-	return tm.saveTransaction(&tx)
+	if err := tm.saveTransaction(&tx); err != nil {
+		return err
+	}
+
+	// save eth
+	tx1 := tx
+	tx1.Symbol = ETH_SYMBOL
+	return tm.saveTransaction(&tx1)
 }
 
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
