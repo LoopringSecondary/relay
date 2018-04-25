@@ -101,3 +101,7 @@ func Panicw(msg string, keysAndValues ...interface{}) {
 func Fatalw(msg string, keysAndValues ...interface{}) {
 	sugaredLogger.Fatalw(msg, keysAndValues...)
 }
+
+func PublishSns(subject string, message string) {
+	snsClient.PublishSns(subject, message)
+}
