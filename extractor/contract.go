@@ -994,6 +994,8 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
+	dst.RawFrom = common.HexToAddress(tx.From)
+	dst.RawTo = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
 	dst.LogIndex = 0

@@ -106,27 +106,6 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	return nil
 }
 
-// value,status可能会变更
-func (s *RdsServiceImpl) FindTransactionWithoutLogIndex(txhash string) (Transaction, error) {
-	var (
-		tx  Transaction
-		err error
-	)
-
-	err = s.db.Where("tx_hash=?", txhash).First(&tx).Error
-	return tx, err
-}
-
-func (s *RdsServiceImpl) FindTransactionWithLogIndex(txhash string, logIndex int64) (Transaction, error) {
-	var (
-		tx  Transaction
-		err error
-	)
-
-	err = s.db.Where("tx_hash=? and tx_log_index=?", txhash, logIndex).First(&tx).Error
-	return tx, err
-}
-
 func (s *RdsServiceImpl) GetPendingTransactionsByOwner(owner string) ([]Transaction, error) {
 	var txs []Transaction
 
@@ -156,6 +135,26 @@ func (s *RdsServiceImpl) GetTransactionCount(owner string, symbol string, status
 		Count(&number).Error
 
 	return number, err
+}
+
+func (s *RdsServiceImpl) GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error) {
+	var (
+		hashs []string
+		err   error
+	)
+
+	query := make(map[string]interface{})
+	query["symbol"] = symbol
+	query = combineTypeAndStatus(query, status, typs)
+
+	err = s.db.Model(&Transaction{}).
+		Where("tx_from=? or tx_to=?", owner, owner).
+		Where(query).
+		Where("fork=?", false).
+		Order("create_time DESC").
+		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
+
+	return hashs, err
 }
 
 func combineTypeAndStatus(query map[string]interface{}, status []types.TxStatus, typs []types.TxType) map[string]interface{} {
@@ -215,140 +214,6 @@ func (s *RdsServiceImpl) DeletePendingTransactions(rawFrom common.Address, nonce
 		Delete(&Transaction{}).Error
 }
 
-func (s *RdsServiceImpl) GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error) {
-	var (
-		hashs []string
-		err   error
-	)
-
-	query := make(map[string]interface{})
-	query["symbol"] = symbol
-	query = combineTypeAndStatus(query, status, typs)
-
-	err = s.db.Model(&Transaction{}).
-		Where("tx_from=? or tx_to=?", owner, owner).
-		Where(query).
-		Where("fork=?", false).
-		Order("create_time DESC").
-		Limit(limit).Offset(offset).Pluck("distinct(tx_hash)", &hashs).Error
-
-	return hashs, err
-}
-
-////////////////////////////////////////////////////////
-// add while optimize
-////////////////////////////////////////////////////////
-
-// value,status可能会变更
-func (s *RdsServiceImpl) SaveTransaction(latest *Transaction) error {
-	var (
-		current Transaction
-		query   string
-		args    []interface{}
-	)
-
-	switch types.TxType(latest.Type) {
-	case types.TX_TYPE_SELL, types.TX_TYPE_BUY:
-		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
-
-	case types.TX_TYPE_CANCEL_ORDER:
-		query = "tx_hash=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.Type)
-
-	case types.TX_TYPE_CONVERT_INCOME, types.TX_TYPE_CONVERT_OUTCOME:
-		query = "tx_hash=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.Type)
-
-	case types.TX_TYPE_APPROVE:
-		query = "tx_hash=? and tx_from=? and tx_to=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.From, latest.To, latest.Type)
-
-	case types.TX_TYPE_SEND, types.TX_TYPE_RECEIVE:
-		return s.processTransfer(latest)
-
-	case types.TX_TYPE_CUTOFF:
-		query = "tx_hash=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.Type)
-
-	case types.TX_TYPE_CUTOFF_PAIR:
-		query = "tx_hash=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.Type)
-
-	case types.TX_TYPE_UNSUPPORTED_CONTRACT:
-		query = "tx_hash=? and tx_type=?"
-		args = append(args, latest.TxHash, latest.Type)
-	}
-
-	if len(query) == 0 || len(args) == 0 {
-		return nil
-	}
-
-	err := s.db.Where(query, args...).Where("nonce=?", latest.Nonce).Where("fork=?", false).Find(&current).Error
-	if err != nil {
-		return s.db.Create(latest).Error
-	}
-
-	if latest.Value != current.Value || latest.Status != current.Status {
-		latest.ID = current.ID
-		latest.CreateTime = current.CreateTime
-		if err := s.db.Save(latest).Error; err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *RdsServiceImpl) processTransfer(latest *Transaction) error {
-	var current Transaction
-
-	// add pending then create new item
-	// todo hash相同时 nonce可能不同?
-	if err := s.db.Where("tx_hash=? and owner=? and `status`=? and nonce=?", latest.TxHash, latest.Owner, uint8(types.TX_STATUS_PENDING), latest.Nonce).Find(&current).Error; err != nil {
-		return s.db.Create(latest).Error
-	}
-
-	// select mined transaction then create or update
-	// todo 最好能区分多个transfer和单个transfer 做到只删一次
-	s.db.Where("raw_from=? and owner=? and nonce=? and `status`=?", latest.RawFrom, latest.Owner, latest.Nonce, uint8(types.TX_STATUS_PENDING)).Delete(&Transaction{})
-	return s.db.Create(latest).Error
-}
-
-func (s *RdsServiceImpl) TransactionPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
-	var (
-		trxs       []Transaction
-		err        error
-		data       = make([]interface{}, 0)
-		pageResult PageResult
-	)
-
-	if pageIndex <= 0 {
-		pageIndex = 1
-	}
-
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-
-	if err = s.db.Where(query).Where("fork=?", false).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&trxs).Error; err != nil {
-		return pageResult, err
-	}
-
-	for _, v := range trxs {
-		data = append(data, v)
-	}
-
-	pageResult = PageResult{data, pageIndex, pageSize, 0}
-
-	err = s.db.Model(&Transaction{}).Where("fork=?", false).Where(query).Count(&pageResult.Total).Error
-	if err != nil {
-		return pageResult, err
-	}
-
-	return pageResult, err
-}
-
 func (s *RdsServiceImpl) GetTrxByHashes(hashes []string) ([]Transaction, error) {
 	var trxs []Transaction
 	err := s.db.Where("tx_hash in (?)", hashes).Order("create_time DESC").Where("fork=?", false).Find(&trxs).Error
@@ -359,15 +224,6 @@ func (s *RdsServiceImpl) PendingTransactions(query map[string]interface{}) ([]Tr
 	var txs []Transaction
 	err := s.db.Where(query).Where("fork=?", false).Find(&txs).Error
 	return txs, err
-}
-
-func (s *RdsServiceImpl) UpdatePendingTransactionsByOwner(owner common.Address, nonce *big.Int, status uint8) error {
-	return s.db.Model(&Transaction{}).
-		Where("raw_from=?", owner.Hex()).
-		Where("status=?", uint8(types.TX_STATUS_PENDING)).
-		Where("nonce=?", nonce.String()).
-		Where("fork=?", false).
-		Update("status", status).Error
 }
 
 func (s *RdsServiceImpl) RollBackTransaction(from, to int64) error {
