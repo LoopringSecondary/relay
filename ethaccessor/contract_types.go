@@ -43,7 +43,7 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
 	evt.Sender = e.Sender
 	evt.Receiver = e.Receiver
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -241,7 +241,7 @@ type WethDepositEvent struct {
 
 func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
 	evt := &types.WethDepositEvent{}
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -254,7 +254,7 @@ type WethWithdrawalEvent struct {
 
 func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
 	evt := &types.WethWithdrawalEvent{}
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -386,7 +386,7 @@ type WethWithdrawalMethod struct {
 
 func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalEvent {
 	evt := &types.WethWithdrawalEvent{}
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -413,7 +413,7 @@ type TransferMethod struct {
 func (e *TransferMethod) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
 	evt.Receiver = e.Receiver
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }

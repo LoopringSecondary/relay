@@ -79,7 +79,7 @@ type TransferEvent struct {
 	TxInfo
 	Sender   common.Address
 	Receiver common.Address
-	Value    *big.Int
+	Amount   *big.Int
 }
 
 type ApprovalEvent struct {
@@ -145,14 +145,14 @@ type RingMinedEvent struct {
 
 type WethDepositEvent struct {
 	TxInfo
-	Dst   common.Address
-	Value *big.Int
+	Dst    common.Address
+	Amount *big.Int
 }
 
 type WethWithdrawalEvent struct {
 	TxInfo
-	Src   common.Address
-	Value *big.Int
+	Src    common.Address
+	Amount *big.Int
 }
 
 type SubmitRingMethodEvent struct {

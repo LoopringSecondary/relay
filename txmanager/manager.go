@@ -227,7 +227,7 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData) error {
 	evt := input.(*types.TransferEvent)
 
-	if evt.Value.Cmp(big.NewInt(0)) > 0 {
+	if evt.Amount.Cmp(big.NewInt(0)) > 0 {
 		var tx types.Transaction
 
 		tx.FromTransferEvent(evt)
