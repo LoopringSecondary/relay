@@ -69,6 +69,7 @@ type CollectorImpl struct {
 	exs          []ExchangeImpl
 	syncInterval int
 	cron         *cron.Cron
+	cronJobLock  bool
 }
 
 func NewExchange(name, tickerUrl string) ExchangeImpl {
@@ -133,8 +134,8 @@ func setCache(exchange, market string, ticker Ticker) {
 	}
 }
 
-func NewCollector() *CollectorImpl {
-	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New()}
+func NewCollector(cronJobLock bool) *CollectorImpl {
+	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New(), cronJobLock:cronJobLock}
 
 	for k, v := range exchanges {
 		exchange := NewExchange(k, v)
@@ -145,14 +146,16 @@ func NewCollector() *CollectorImpl {
 
 func (c *CollectorImpl) Start() {
 	// create cron job and exec sync
-	updateBinanceCache()
-	updateOkexCache()
-	updateHuobiCache()
-	c.cron.AddFunc("@every 20s", updateBinanceCache)
-	c.cron.AddFunc("@every 5s", updateOkexCache)
-	c.cron.AddFunc("@every 5s", updateHuobiCache)
-	log.Info("start collect cron jobs......... ")
-	c.cron.Start()
+	if c.cronJobLock {
+		updateBinanceCache()
+		updateOkexCache()
+		updateHuobiCache()
+		c.cron.AddFunc("@every 20s", updateBinanceCache)
+		c.cron.AddFunc("@every 5s", updateOkexCache)
+		c.cron.AddFunc("@every 5s", updateHuobiCache)
+		log.Info("start collect cron jobs......... ")
+		c.cron.Start()
+	}
 
 }
 
