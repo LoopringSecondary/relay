@@ -149,7 +149,7 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 }
 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
-	evt := input.(*types.WethWithdrawalEvent)
+	evt := input.(*types.WethDepositEvent)
 
 	var (
 		tx  types.Transaction
@@ -157,7 +157,7 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 	)
 
 	// save weth
-	tx.FromWethWithdrawalEvent(evt)
+	tx.FromWethDepositEvent(evt)
 	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return err
 	}
@@ -167,13 +167,13 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
-	evt := input.(*types.TransferEvent)
+	evt := input.(*types.WethWithdrawalEvent)
 
 	var (
 		tx  types.Transaction
 		err error
 	)
-	tx.FromTransferEvent(evt)
+	tx.FromWethWithdrawalEvent(evt)
 	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
 		return nil
 	}
