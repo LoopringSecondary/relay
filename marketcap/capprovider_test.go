@@ -23,8 +23,6 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
-	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 	"testing"
 )
 
@@ -32,17 +30,12 @@ func TestStart(t *testing.T) {
 	cfg := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/relay.toml")
 
 	log.Initialize(cfg.Log)
-	m := make(map[string]string)
-	util.Initialize(cfg.Market, m)
+	util.Initialize(cfg.Market)
 	provider := marketcap.NewMarketCapProvider(cfg.MarketCap)
 	provider.Start()
-	a := new(big.Rat).SetInt64(int64(1000000000000000000))
-	s, _ := provider.LegalCurrencyValue(common.HexToAddress("0x5ca9a71b1d01849c0a95490cc00559717fcf0d1d"), a)
-	t.Log(s.String())
 	for _, token := range util.AllTokens {
 		p1, _ := provider.GetMarketCap(token.Protocol)
 		p2, _ := provider.GetMarketCapByCurrency(token.Protocol, "USD")
-
 		t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.String(), p2.String())
 	}
 	//

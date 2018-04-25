@@ -203,6 +203,7 @@ type MarketCapOptions struct {
 	BaseUrl  string
 	Currency string
 	Duration int
+	IsSync   bool
 }
 
 type GatewayFiltersOptions struct {
