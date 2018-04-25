@@ -27,12 +27,12 @@ type TransactionView struct {
 	Symbol     string `gorm:"column:symbol;type:varchar(20)"`
 	Owner      string `gorm:"column:owner;type:varchar(42)"`
 	TxHash     string `gorm:"column:tx_hash;type:varchar(82)"`
+	LogIndex   int64  `gorm:"column:tx_log_index"`
 	Type       uint8  `gorm:"column:tx_type"`
-	Amount     string `gorm:"column:amount;type:varchar(64)"`
-	Content    string `gorm:"column:content;type:text"`
 	Status     uint8  `gorm:"column:status"`
 	CreateTime int64  `gorm:"column:create_time"`
 	UpdateTime int64  `gorm:"column:update_time"`
+	Fork       bool   `gorm:"column:fork"`
 }
 
 // convert types/transaction to dao/transaction

@@ -146,7 +146,7 @@ func TestExtractorServiceImpl_UnpackApproveMethod(t *testing.T) {
 	}
 
 	approve := method.ConvertDown()
-	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Value.String())
+	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Amount.String())
 }
 
 func TestExtractorServiceImpl_UnpackTransferMethod(t *testing.T) {

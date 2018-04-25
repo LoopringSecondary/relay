@@ -16,7 +16,7 @@
 
 */
 
-package txmanager
+package types
 
 import (
 	"fmt"
@@ -25,11 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strings"
-)
-
-const (
-	ETH_SYMBOL  = "ETH"
-	WETH_SYMBOL = "WETH"
 )
 
 type TransactionJsonResult struct {
@@ -184,7 +179,7 @@ func (dst *TransactionJsonResult) fromTransaction(tx *types.Transaction, owner c
 	dst.To = tx.To
 	dst.TxHash = tx.TxHash
 	dst.BlockNumber = tx.BlockNumber.Int64()
-	dst.LogIndex = tx.LogIndex
+	dst.LogIndex = tx.TxLogIndex
 	dst.Type = tx.TypeStr()
 	dst.Status = tx.StatusStr()
 	dst.CreateTime = tx.CreateTime

@@ -1070,7 +1070,7 @@ func toTxJsonResult(tx types.Transaction) txmanager.TransactionJsonResult {
 	}
 
 	dst.BlockNumber = tx.BlockNumber.Int64()
-	dst.LogIndex = tx.LogIndex
+	dst.LogIndex = tx.TxLogIndex
 	if tx.Value == nil {
 		dst.Value = "0"
 	} else {

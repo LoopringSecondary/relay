@@ -58,7 +58,7 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	evt := &types.ApprovalEvent{}
 	evt.Owner = e.Owner
 	evt.Spender = e.Spender
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -399,7 +399,7 @@ type ApproveMethod struct {
 func (e *ApproveMethod) ConvertDown() *types.ApprovalEvent {
 	evt := &types.ApprovalEvent{}
 	evt.Spender = e.Spender
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }

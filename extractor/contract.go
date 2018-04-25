@@ -57,7 +57,7 @@ func (event *EventData) FullFilled(tx *ethaccessor.Transaction, evtLog *ethacces
 	event.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
-	event.LogIndex = evtLog.LogIndex.Int64()
+	event.TxLogIndex = evtLog.LogIndex.Int64()
 	event.Status = types.TX_STATUS_SUCCESS
 }
 
@@ -85,7 +85,7 @@ func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, block
 	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
-	method.LogIndex = 0
+	method.TxLogIndex = 0
 	method.Status = status
 }
 
@@ -100,8 +100,6 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
-	txinfo.RawFrom = common.HexToAddress(tx.From)
-	txinfo.RawTo = common.HexToAddress(tx.To)
 	txinfo.GasLimit = tx.Gas.BigInt()
 	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
@@ -615,7 +613,7 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 	approve.Owner = contractData.From
 	approve.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Amount.String())
 
 	eventemitter.Emit(eventemitter.Approve, approve)
 
@@ -875,7 +873,7 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 	approve := contractEvent.ConvertDown()
 	approve.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Amount.String())
 
 	eventemitter.Emit(eventemitter.Approve, approve)
 
@@ -994,11 +992,9 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
-	dst.RawFrom = common.HexToAddress(tx.From)
-	dst.RawTo = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
-	dst.LogIndex = 0
+	dst.TxLogIndex = 0
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
 
