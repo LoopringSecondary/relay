@@ -66,7 +66,7 @@ func (tx *Transaction) ConvertDown(src *types.Transaction) error {
 	tx.Type = src.TypeValue()
 	tx.Status = src.StatusValue()
 	tx.TxIndex = src.TxIndex
-	tx.LogIndex = src.LogIndex
+	tx.LogIndex = src.TxLogIndex
 	tx.CreateTime = src.CreateTime
 	tx.UpdateTime = src.UpdateTime
 	tx.Symbol = src.Symbol
@@ -91,7 +91,7 @@ func (tx *Transaction) ConvertUp(dst *types.Transaction) error {
 	dst.Content = []byte(tx.Content)
 	dst.BlockNumber = big.NewInt(tx.BlockNumber)
 	dst.TxIndex = tx.TxIndex
-	dst.LogIndex = tx.LogIndex
+	dst.TxLogIndex = tx.LogIndex
 	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
 	dst.Type = types.TxType(tx.Type)
 	dst.Status = types.TxStatus(tx.Status)

@@ -46,7 +46,7 @@ func (e *CancelEvent) ConvertDown(src *types.OrderCancelledEvent) error {
 	e.DelegateAddress = src.DelegateAddress.Hex()
 	e.CreateTime = src.BlockTime
 	e.BlockNumber = src.BlockNumber.Int64()
-	e.LogIndex = src.LogIndex
+	e.LogIndex = src.TxLogIndex
 
 	return nil
 }
@@ -60,7 +60,7 @@ func (e *CancelEvent) ConvertUp(dst *types.OrderCancelledEvent) error {
 	dst.DelegateAddress = common.HexToAddress(e.DelegateAddress)
 	dst.BlockTime = e.CreateTime
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
-	dst.LogIndex = e.LogIndex
+	dst.TxLogIndex = e.LogIndex
 
 	return nil
 }

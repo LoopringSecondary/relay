@@ -50,7 +50,7 @@ func (e *CutOffPairEvent) ConvertDown(src *types.CutoffPairEvent) error {
 	e.Token1 = src.Token1.Hex()
 	e.Token2 = src.Token2.Hex()
 	e.Cutoff = src.Cutoff.Int64()
-	e.LogIndex = src.LogIndex
+	e.LogIndex = src.TxLogIndex
 	e.BlockNumber = src.BlockNumber.Int64()
 	e.CreateTime = src.BlockTime
 
@@ -74,7 +74,7 @@ func (e *CutOffPairEvent) ConvertUp(dst *types.CutoffPairEvent) error {
 	dst.Token2 = common.HexToAddress(e.Token2)
 	dst.BlockNumber = big.NewInt(e.BlockNumber)
 	dst.Cutoff = big.NewInt(e.Cutoff)
-	dst.LogIndex = e.LogIndex
+	dst.TxLogIndex = e.LogIndex
 	dst.BlockTime = e.CreateTime
 	dst.OrderHashList = []common.Hash{}
 
