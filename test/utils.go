@@ -60,7 +60,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.5"
-	DebugFile = "debug.toml"
+	DebugFile = "relay.toml"
 )
 
 var (

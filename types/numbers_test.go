@@ -19,7 +19,9 @@
 package types_test
 
 import (
-	"github.com/Loopring/relay/ethaccessor"
+	"encoding/json"
+	"github.com/Loopring/relay/types"
+	"math/big"
 	"testing"
 )
 
@@ -32,9 +34,9 @@ func TestBig_UnmarshalText(t *testing.T) {
 	//}
 	//
 	//t.Log(n.BigInt().String())
-	var b ethaccessor.TransactionReceipt
+	//var b ethaccessor.TransactionReceipt
 
-	println(b.Status.IsNil())
+	//println(b.Status.IsNil())
 	//if b.Status {
 	//	t.Log("#####")
 	//} else if b.BigInt() == nil {
@@ -42,5 +44,11 @@ func TestBig_UnmarshalText(t *testing.T) {
 	//} else {
 	//	t.Log("iiiiiii")
 	//}
+	r := types.NewBigRat(big.NewRat(int64(1111), int64(2)))
+	data, _ := json.Marshal(r)
+	println(string(data))
 
+	var r1 types.Rat
+	json.Unmarshal(data, &r1)
+	println(r1.BigRat().String())
 }

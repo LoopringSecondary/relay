@@ -110,6 +110,7 @@ name = "Loopring corporation"
         base_url = "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=%s"
         currency = "USD"
         duration = 5
+        is_sync = false
 
 [gateway_filters]
     [gateway_filters.base_filter]

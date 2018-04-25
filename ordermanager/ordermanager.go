@@ -408,13 +408,13 @@ func (om *OrderManagerImpl) IsValueDusted(tokenAddress common.Address, value *bi
 	}
 }
 
-func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
+func (om *OrderManagerImpl) MinerOrders(delegateAddress, tokenS, tokenB common.Address, length int, startBlockNumber, endBlockNumber int64, filterOrderHashLists ...*types.OrderDelayList) []*types.OrderState {
 	var list []*types.OrderState
 
 	// 订单在extractor同步结束后才可以提供给miner进行撮合
-	if !om.ordersValidForMiner {
-		return list
-	}
+	//if !om.ordersValidForMiner {
+	//	return list
+	//}
 
 	var (
 		modelList    []*dao.Order
@@ -435,7 +435,7 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	}
 
 	// 从数据库获取订单
-	if modelList, err = om.rds.GetOrdersForMiner(protocol.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, startBlockNumber, endBlockNumber); err != nil {
+	if modelList, err = om.rds.GetOrdersForMiner(delegateAddress.Hex(), tokenS.Hex(), tokenB.Hex(), length, filterStatus, startBlockNumber, endBlockNumber); err != nil {
 		return list
 	}
 
