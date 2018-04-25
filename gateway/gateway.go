@@ -57,7 +57,7 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	eventemitter.On(eventemitter.GatewayNewOrder, gatewayWatcher)
 
 	gateway = Gateway{filters: make([]Filter, 0), om: om, isBroadcast: options.IsBroadcast, maxBroadcastTime: options.MaxBroadcastTime, am: am}
-	gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
+	//gateway.ipfsPubService = NewIPFSPubService(ipfsOptions)
 
 	gateway.marketCap = marketCap
 
@@ -108,7 +108,7 @@ func HandleOrder(input eventemitter.EventData) error {
 	order := input.(*types.Order)
 	order.Hash = order.GenerateHash()
 
-	var broadcastTime int
+	//var broadcastTime int
 
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil && err.Error() == "record not found" {
@@ -125,25 +125,25 @@ func HandleOrder(input eventemitter.EventData) error {
 		}
 		state = &types.OrderState{}
 		state.RawOrder = *order
-		broadcastTime = 0
+		//broadcastTime = 0
 		eventemitter.Emit(eventemitter.NewOrder, state)
 	} else {
-		broadcastTime = state.BroadcastTime
+		//broadcastTime = state.BroadcastTime
 		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
 	}
 
-	if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
-		//broadcast
-		log.Infof(">>>>>>> broad to ipfs order : " + state.RawOrder.Hash.Hex())
-		pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
-		if pubErr != nil {
-			log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.String())
-		} else {
-			if err = gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1); nil != err {
-				return err
-			}
-		}
-	}
+	//if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {
+	//	//broadcast
+	//	log.Infof(">>>>>>> broad to ipfs order : " + state.RawOrder.Hash.Hex())
+	//	pubErr := gateway.ipfsPubService.PublishOrder(state.RawOrder)
+	//	if pubErr != nil {
+	//		log.Errorf("gateway,publish order %s failed", state.RawOrder.Hash.String())
+	//	} else {
+	//		if err = gateway.om.UpdateBroadcastTimeByHash(state.RawOrder.Hash, state.BroadcastTime+1); nil != err {
+	//			return err
+	//		}
+	//	}
+	//}
 	return nil
 }
 
