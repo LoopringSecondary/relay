@@ -114,7 +114,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerMarketCap()
 	n.registerAccessor()
 	n.registerUserManager()
-	n.registerIPFSSubService()
+	//n.registerIPFSSubService()
 	n.registerOrderManager()
 	n.registerExtractor()
 	n.registerAccountManager()
@@ -156,7 +156,7 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.extractorService.Start()
 	n.marketCapProvider.Start()
-	n.ipfsSubService.Start()
+	//n.ipfsSubService.Start()
 
 	// todo delete after test
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
