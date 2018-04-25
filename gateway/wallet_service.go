@@ -19,7 +19,9 @@
 package gateway
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -40,6 +42,7 @@ import (
 )
 
 const DefaultCapCurrency = "CNY"
+const PendingTxPreKey = "PENDING_TX_"
 
 type Portfolio struct {
 	Token      string `json:"token"`
@@ -423,6 +426,13 @@ func (w *WalletServiceImpl) NotifyTransactionSubmitted(txNotify TxNotify) (resul
 
 	log.Debug("emit Pending tx >>>>>>>>>>>>>>>> " + tx.Hash)
 	eventemitter.Emit(eventemitter.PendingTransaction, tx)
+	txByte, err := json.Marshal(txNotify)
+	if err == nil {
+		err = cache.Set(PendingTxPreKey+strings.ToUpper(txNotify.Hash), txByte, 3600*24*7)
+		if err != nil {
+			return "", err
+		}
+	}
 	log.Info("emit transaction info " + tx.Hash)
 	return tx.Hash, nil
 }
@@ -662,98 +672,75 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 	return markets, err
 }
 
-func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (pr PageResult, err error) {
+func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
+	var (
+		rst           PageResult
+		txs           []txmanager.TransactionJsonResult
+		limit, offset int
+		err           error
+	)
 
-	trxQuery := make(map[string]interface{})
-
-	if query.Symbol != "" {
-		trxQuery["symbol"] = query.Symbol
+	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
+	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol, query.Status, query.TxType)
+	if err != nil {
+		return rst, err
 	}
-
-	if query.Owner != "" {
-		trxQuery["owner"] = query.Owner
+	txs, err = txmanager.GetAllTransactions(query.Owner, query.Symbol, query.Status, query.TxType, limit, offset)
+	for _, v := range txs {
+		rst.Data = append(rst.Data, v)
 	}
-
-	if query.ThxHash != "" {
-		trxQuery["tx_hash"] = query.ThxHash
-	}
-
-	if txStatusToUint8(query.Status) > 0 {
-		trxQuery["status"] = uint8(txStatusToUint8(query.Status))
-	}
-
-	if txTypeToUint8(query.TxType) > 0 {
-		trxQuery["tx_type"] = uint8(txTypeToUint8(query.TxType))
-	}
-
-	pageIndex := query.PageIndex
-	pageSize := query.PageSize
-
-	daoPr, err := w.rds.TransactionPageQuery(trxQuery, pageIndex, pageSize)
 
 	if err != nil {
-		return pr, err
+		return rst, err
 	}
 
-	rst := PageResult{Total: daoPr.Total, PageIndex: daoPr.PageIndex, PageSize: daoPr.PageSize, Data: make([]interface{}, 0)}
-
-	for _, d := range daoPr.Data {
-		o := d.(dao.Transaction)
-		tr := types.Transaction{}
-		err = o.ConvertUp(&tr)
-		rst.Data = append(rst.Data, toTxJsonResult(tr))
-	}
 	return rst, nil
 }
 
+func pagination(pageIndex, pageSize int) (int, int, int, int) {
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	limit := pageSize
+	offset := (pageIndex - 1) * pageSize
+
+	return pageIndex, pageSize, limit, offset
+}
+
 func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
-
-	rst, err := w.rds.GetTrxByHashes(query.TrxHashes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result = make([]txmanager.TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
-	}
-
-	return result, nil
+	return txmanager.GetTransactionsByHash(query.Owner, query.TrxHashes)
 }
 
 func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txmanager.TransactionJsonResult, err error) {
+	return txmanager.GetPendingTransactions(query.Owner)
+}
 
-	if len(query.Owner) == 0 {
-		return nil, errors.New("owner can't be null")
+func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (result TxNotify, err error) {
+	if len(query.ThxHash) == 0 {
+		return result, errors.New("tx hash can't be nil")
 	}
 
-	txQuery := make(map[string]interface{})
-	txQuery["owner"] = query.Owner
-	txQuery["status"] = types.TX_STATUS_PENDING
-
-	rst, err := w.rds.PendingTransactions(txQuery)
-
+	txBytes, err := cache.Get(PendingTxPreKey + strings.ToUpper(query.ThxHash))
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
-	result = make([]txmanager.TransactionJsonResult, 0)
-	for _, r := range rst {
-		tr := types.Transaction{}
-		err = r.ConvertUp(&tr)
-		if err != nil {
-			log.Error("convert error occurs..." + err.Error())
-		}
-		result = append(result, toTxJsonResult(tr))
+	var tx TxNotify
+
+	err = json.Unmarshal(txBytes, &tx)
+	if err != nil {
+		return result, err
 	}
 
-	return result, nil
+	return tx, nil
+
+}
+
+func (w *WalletServiceImpl) GetEstimateGasPrice() (result string, err error) {
+	return ethaccessor.EstimateGasPrice(nil, nil).String(), nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {

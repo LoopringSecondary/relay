@@ -80,6 +80,7 @@ type token struct {
 	Deny     bool   `json:"Deny"`
 	Decimals int    `json:"Decimals"`
 	IsMarket bool   `json:"IsMarket"`
+	IcoPrice string `json:"IcoPrice"`
 }
 
 func (t *token) convert() types.Token {
@@ -92,6 +93,10 @@ func (t *token) convert() types.Token {
 	dst.Decimals = new(big.Int)
 	dst.Decimals.SetString("1"+strings.Repeat("0", t.Decimals), 0)
 	dst.IsMarket = t.IsMarket
+	if "" != t.IcoPrice {
+		dst.IcoPrice = new(big.Rat)
+		dst.IcoPrice.SetString(t.IcoPrice)
+	}
 
 	return dst
 }

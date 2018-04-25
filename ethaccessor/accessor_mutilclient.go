@@ -118,24 +118,28 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 	}
 }
 
+func (mc *MutilClient) syncBlockNumber() {
+	for _, client := range mc.clients {
+		var blockNumber types.Big
+		if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
+			mc.downedClients[client.url] = client
+		} else {
+			delete(mc.downedClients, client.url)
+			client.blockNumber = blockNumber.BigInt()
+			blockNumberStr := blockNumber.BigInt().String()
+			cache.SAdd(USAGE_CLIENT_BLOCK+blockNumberStr, cacheDuration, []byte(client.url))
+			cache.ZAdd(BLOCKS, int64(0), []byte(blockNumberStr), []byte(blockNumberStr))
+			cache.ZRemRangeByScore(BLOCKS, int64(0), blockNumber.Int64()-blocks_count)
+		}
+	}
+}
+
 func (mc *MutilClient) startSyncBlockNumber() {
 	go func() {
 		for {
 			select {
 			case <-time.After(time.Duration(3 * time.Second)):
-				for _, client := range mc.clients {
-					var blockNumber types.Big
-					if err := client.client.Call(&blockNumber, "eth_blockNumber"); nil != err {
-						mc.downedClients[client.url] = client
-					} else {
-						delete(mc.downedClients, client.url)
-						client.blockNumber = blockNumber.BigInt()
-						blockNumberStr := blockNumber.BigInt().String()
-						cache.SAdd(USAGE_CLIENT_BLOCK+blockNumberStr, cacheDuration, []byte(client.url))
-						cache.ZAdd(BLOCKS, int64(0), []byte(blockNumberStr), []byte(blockNumberStr))
-						cache.ZRemRangeByScore(BLOCKS, int64(0), blockNumber.Int64()-blocks_count)
-					}
-				}
+				mc.syncBlockNumber()
 			}
 		}
 	}()

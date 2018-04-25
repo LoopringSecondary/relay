@@ -26,8 +26,6 @@ import (
 
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/log"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
 )
@@ -95,15 +93,16 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 
 func (matcher *TimingMatcher) Start() {
 	matcher.listenSubmitEvent()
-	syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
-		log.Debugf("TimingMatcher Start......")
-		matcher.listenTimingRound()
-		return nil
-	}}
-	eventemitter.On(eventemitter.SyncChainComplete, syncWatcher)
-	matcher.stopFuncs = append(matcher.stopFuncs, func() {
-		eventemitter.Un(eventemitter.SyncChainComplete, syncWatcher)
-	})
+	matcher.listenTimingRound()
+	//syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
+	//	log.Debugf("TimingMatcher Start......")
+	//	matcher.listenTimingRound()
+	//	return nil
+	//}}
+	//eventemitter.On(eventemitter.SyncChainComplete, syncWatcher)
+	//matcher.stopFuncs = append(matcher.stopFuncs, func() {
+	//	eventemitter.Un(eventemitter.SyncChainComplete, syncWatcher)
+	//})
 }
 
 func (matcher *TimingMatcher) Stop() {

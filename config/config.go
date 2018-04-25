@@ -132,6 +132,7 @@ type ExtractorOptions struct {
 	ConfirmBlockNumber uint64
 	Debug              bool
 	Open               bool
+	MinerOnly          bool
 }
 
 type KeyStoreOptions struct {
@@ -202,6 +203,7 @@ type MarketCapOptions struct {
 	BaseUrl  string
 	Currency string
 	Duration int
+	IsSync   bool
 }
 
 type GatewayFiltersOptions struct {
@@ -226,13 +228,16 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
-	Hostname    string
-	Port        string
-	User        string
-	Password    string
-	DbName      string
-	TablePrefix string
-	Debug       bool
+	Hostname           string
+	Port               string
+	User               string
+	Password           string
+	DbName             string
+	TablePrefix        string
+	MaxOpenConnections int
+	MaxIdleConnections int
+	ConnMaxLifetime    int
+	Debug              bool
 }
 
 type RedisOptions struct {

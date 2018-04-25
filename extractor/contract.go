@@ -20,6 +20,7 @@ package extractor
 
 import (
 	"fmt"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
@@ -147,10 +148,11 @@ type AbiProcessor struct {
 	delegates      map[common.Address]string
 	accountmanager *market.AccountManager
 	db             dao.RdsService
+	options        *config.ExtractorOptions
 }
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
-func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *AbiProcessor {
+func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager, option *config.ExtractorOptions) *AbiProcessor {
 	processor := &AbiProcessor{}
 
 	processor.accountmanager = accountmanager
@@ -160,6 +162,12 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager) *
 	processor.protocols = make(map[common.Address]string)
 	processor.delegates = make(map[common.Address]string)
 	processor.db = db
+
+	processor.options = option
+	if processor.options.MinerOnly {
+		processor.loadMinerOnlyContract()
+		return processor
+	}
 
 	processor.loadProtocolAddress()
 	processor.loadErc20Contract()
@@ -271,6 +279,35 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 		log.Infof("extractor,contract protocol %s->%s", tokenRegisterSymbol, v.TokenRegistryAddress.Hex())
 		log.Infof("extractor,contract protocol %s->%s", delegateSymbol, v.DelegateAddress.Hex())
 	}
+}
+
+func (processor *AbiProcessor) loadMinerOnlyContract() {
+	// load abi
+	for _, v := range ethaccessor.ProtocolAddresses() {
+		protocolSymbol := "loopring"
+		processor.protocols[v.ContractAddress] = protocolSymbol
+		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
+	}
+
+	// load event
+	event := ethaccessor.ProtocolImplAbi().Events[RINGMINED_EVT_NAME]
+	contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
+	contract.Event = &ethaccessor.RingMinedEvent{}
+	watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
+
+	eventemitter.On(contract.Id.Hex(), watcher)
+	processor.events[contract.Id] = contract
+	log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
+
+	// load method
+	method := ethaccessor.ProtocolImplAbi().Methods[SUBMITRING_METHOD_NAME]
+	contract1 := newMethodData(&method, ethaccessor.ProtocolImplAbi())
+	contract1.Method = &ethaccessor.SubmitRingMethod{}
+	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
+
+	eventemitter.On(contract1.Id, watcher1)
+	processor.methods[contract1.Id] = contract1
+	log.Infof("extractor,contract method name:%s -> key:%s", contract1.Name, contract1.Id)
 }
 
 func (processor *AbiProcessor) loadProtocolContract() {
@@ -675,6 +712,10 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 
 	eventemitter.Emit(eventemitter.RingMined, ringmined)
 
+	if processor.options.MinerOnly {
+		return nil
+	}
+
 	var (
 		fillList      []*types.OrderFilledEvent
 		orderhashList []string
@@ -953,6 +994,8 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
+	dst.RawFrom = common.HexToAddress(tx.From)
+	dst.RawTo = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
 	dst.Value = tx.Value.BigInt()
 	dst.LogIndex = 0

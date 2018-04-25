@@ -33,6 +33,7 @@ type Token struct {
 	Deny     bool           `json:"deny"`
 	Decimals *big.Int       `json:"decimals"`
 	IsMarket bool           `json:"isMarket"`
+	IcoPrice *big.Rat       `json:"icoPrice"`
 }
 
 type CurrencyMarketCap struct {

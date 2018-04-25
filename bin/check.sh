@@ -7,7 +7,7 @@ fi
 
 k=1
 RPC_PORT=8083
-WAIT_SECONDS=20
+WAIT_SECONDS=120
 
 echo "check rpc port......."
 TEST_URL="127.0.0.1:$RPC_PORT"
