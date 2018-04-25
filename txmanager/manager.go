@@ -346,23 +346,3 @@ func (tm *TransactionManager) validateTransaction(tx *types.Transaction) bool {
 
 	return unlocked
 }
-
-//func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
-//	var model dao.Transaction
-//
-//	tx.CreateTime = tx.BlockTime
-//	tx.UpdateTime = tx.UpdateTime
-//
-//	model.ConvertDown(tx)
-//
-//	if unlocked, _ := tm.accountmanager.HasUnlocked(tx.Owner.Hex()); unlocked {
-//		log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s, to:%s", tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), tx.To.Hex())
-//
-//		// emit transaction before saving
-//		eventemitter.Emit(eventemitter.TransactionEvent, tx)
-//
-//		return tm.db.SaveTransaction(&model)
-//	}
-//
-//	return nil
-//}

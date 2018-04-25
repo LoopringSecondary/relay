@@ -18,6 +18,10 @@
 
 package types
 
+import (
+	"github.com/Loopring/relay/types"
+)
+
 type TxType uint8
 
 const (
@@ -47,19 +51,19 @@ const (
 	TX_TYPE_WITHDRAWAL TxType = 23
 )
 
-func (tx *Transaction) TypeStr() string    { return TypeStr(tx.Type) }
-func (tx *Transaction) StatusStr() string  { return StatusStr(tx.Status) }
-func (tx *Transaction) TypeValue() uint8   { return uint8(tx.Type) }
-func (tx *Transaction) StatusValue() uint8 { return uint8(tx.Status) }
+//func (tx *Transaction) TypeStr() string    { return TypeStr(tx.Type) }
+//func (tx *Transaction) StatusStr() string  { return StatusStr(tx.Status) }
+//func (tx *Transaction) TypeValue() uint8   { return uint8(tx.Type) }
+//func (tx *Transaction) StatusValue() uint8 { return uint8(tx.Status) }
 
-func StatusStr(status TxStatus) string {
+func StatusStr(status types.TxStatus) string {
 	var ret string
 	switch status {
-	case TX_STATUS_PENDING:
+	case types.TX_STATUS_PENDING:
 		ret = "pending"
-	case TX_STATUS_SUCCESS:
+	case types.TX_STATUS_SUCCESS:
 		ret = "success"
-	case TX_STATUS_FAILED:
+	case types.TX_STATUS_FAILED:
 		ret = "failed"
 	default:
 		ret = "unknown"
@@ -68,17 +72,17 @@ func StatusStr(status TxStatus) string {
 	return ret
 }
 
-func StrToTxStatus(txType string) TxStatus {
-	var ret TxStatus
+func StrToTxStatus(txType string) types.TxStatus {
+	var ret types.TxStatus
 	switch txType {
 	case "pending":
-		ret = TX_STATUS_PENDING
+		ret = types.TX_STATUS_PENDING
 	case "success":
-		ret = TX_STATUS_SUCCESS
+		ret = types.TX_STATUS_SUCCESS
 	case "failed":
-		ret = TX_STATUS_FAILED
+		ret = types.TX_STATUS_FAILED
 	default:
-		ret = TX_STATUS_UNKNOWN
+		ret = types.TX_STATUS_UNKNOWN
 	}
 
 	return ret
@@ -161,29 +165,63 @@ func StrToTxType(typ string) TxType {
 	return ret
 }
 
-// Compare return true: is the same
-func (tx *Transaction) Compare(src *Transaction) bool {
-	if tx.TxHash != src.TxHash {
-		return false
-	}
-	if tx.Type != src.Type {
-		return false
-	}
-	if tx.Nonce != src.Nonce {
-		return false
-	}
-	if tx.TxLogIndex != src.TxLogIndex {
-		return false
-	}
-	if tx.Status != src.Status {
-		return false
-	}
-	return true
+type TransferContent struct {
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Amount   string `json:"amount"`
 }
 
-func (tx *Transaction) fullFilled(txinfo TxInfo) {
-	tx.TxInfo = txinfo
-	tx.Protocol = txinfo.Protocol
-	tx.CreateTime = txinfo.BlockTime
-	tx.UpdateTime = txinfo.BlockTime
+type WethWithdrawalContent struct {
+	Src    string `json:"src"`
+	Amount string `json:"amount"`
+}
+
+type WethDepositContent struct {
+	Dst    string `json:"dst"`
+	Amount string `json:"amount"`
+}
+
+type CutoffPairContent struct {
+	Owner           string `json:"owner"`
+	Token1          string `json:"token1"`
+	Token2          string `json:"token2"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+type CutoffContent struct {
+	Owner           string `json:"owner"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+type CancelContent struct {
+	OrderHash string `json:"order_hash"`
+	Amount    string `json:"amount"`
+}
+
+type ApproveContent struct {
+	Owner   string `json:"owner"`
+	Spender string `json:"spender"`
+	Amount  string `json:"amount"`
+}
+
+// todo fill
+type OrderFilledEvent struct {
+	RingHash      string `json:"ring_hash"`
+	PreOrderHash  string `json:"pre_order_hash"`
+	OrderHash     string `json:"order_hash"`
+	NextOrderHash string `json:"next_order_hash"`
+	Owner         string `json:"owner"`
+	TokenS        string `json:"token_s"`
+	TokenB        string `json:"token_b"`
+	SellTo        string `json:"sell_to"`
+	BuyFrom       string `json:"buy_from"`
+	RingIndex     string `json:"ring_index"`
+	AmountS       string `json:"amount_s"`
+	AmountB       string `json:"amount_b"`
+	LrcReward     string `json:"lrc_reward"`
+	LrcFee        string `json:"lrc_fee"`
+	SplitS        string `json:"split_s"`
+	SplitB        string `json:"split_b"`
+	Market        string `json:"market"`
+	FillIndex     string `json:"fill_index"`
 }
