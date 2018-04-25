@@ -33,21 +33,51 @@ const (
 )
 
 type TransactionJsonResult struct {
-	Protocol    common.Address     `json:"protocol"`
-	Owner       common.Address     `json:"owner"`
-	From        common.Address     `json:"from"`
-	To          common.Address     `json:"to"`
-	TxHash      common.Hash        `json:"txHash"`
-	Symbol      string             `json:"symbol"`
-	Content     TransactionContent `json:"content"`
-	BlockNumber int64              `json:"blockNumber"`
-	Value       string             `json:"value"`
-	LogIndex    int64              `json:"logIndex"`
-	Type        string             `json:"type"`
-	Status      string             `json:"status"`
-	CreateTime  int64              `json:"createTime"`
-	UpdateTime  int64              `json:"updateTime"`
-	Nonce       string             `json:"nonce"`
+	Protocol    common.Address `json:"protocol"`
+	Owner       common.Address `json:"owner"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	TxHash      common.Hash    `json:"txHash"`
+	Symbol      string         `json:"symbol"`
+	Content     string         `json:"content"`
+	BlockNumber int64          `json:"blockNumber"`
+	Value       string         `json:"value"`
+	LogIndex    int64          `json:"logIndex"`
+	Type        string         `json:"type"`
+	Status      string         `json:"status"`
+	CreateTime  int64          `json:"createTime"`
+	UpdateTime  int64          `json:"updateTime"`
+	Nonce       string         `json:"nonce"`
+}
+
+// cancel
+type TxCancelContent struct {
+	Amount    string `json:"amount"`
+	OrderHash string `json:"orderHash"`
+}
+
+// cutoff
+type TxCutoffContent struct {
+	CutoffTimeStamp string `json:"cutoffTimestamp"`
+}
+
+// cutoff pair
+type TxCutoffPairContent struct {
+	Market          string `json:"market"`
+	CutoffTimeStamp string `json:"cutoffTimestamp"`
+}
+
+// ringmined
+type TxRingMinedContent struct {
+	List []TransferInRing
+}
+
+// transferInRing
+type TransferInRing struct {
+	Symbol string `json:"symbol"`
+	From   string `json:from`
+	To     string `json:to`
+	Amount string `json:amount`
 }
 
 type TransactionContent struct {
