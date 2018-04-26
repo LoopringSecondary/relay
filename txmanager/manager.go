@@ -290,6 +290,7 @@ func (tm *TransactionManager) addView(tx *txtyp.TransactionView) error {
 		return err
 	}
 
+	// todo(fuk): emit to frontend and use new tx type
 	eventemitter.Emit(eventemitter.TransactionEvent, &tx)
 	return nil
 }

@@ -22,28 +22,29 @@ import (
 	"errors"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func GetPendingTransactions(owner string) ([]TransactionJsonResult, error) {
+func GetPendingTransactions(owner string) ([]txtyp.TransactionJsonResult, error) {
 	return impl.GetPendingTransactions(owner)
 }
-func GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error) {
+func GetTransactionsByHash(owner string, hashList []string) ([]txtyp.TransactionJsonResult, error) {
 	return impl.GetTransactionsByHash(owner, hashList)
 }
 func GetAllTransactionCount(ownerStr, symbol, status, typ string) (int, error) {
 	return impl.GetAllTransactionCount(ownerStr, symbol, status, typ)
 }
-func GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]TransactionJsonResult, error) {
+func GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
 	return impl.GetAllTransactions(owner, symbol, status, typ, limit, offset)
 }
 
 type TransactionView interface {
-	GetPendingTransactions(owner string) ([]TransactionJsonResult, error)
+	GetPendingTransactions(owner string) ([]txtyp.TransactionJsonResult, error)
 	GetAllTransactionCount(owner, symbol, status, typ string) (int, error)
-	GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]TransactionJsonResult, error)
-	GetTransactionsByHash(owner string, hashList []string) ([]TransactionJsonResult, error)
+	GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]txtyp.TransactionJsonResult, error)
+	GetTransactionsByHash(owner string, hashList []string) ([]txtyp.TransactionJsonResult, error)
 }
 
 var impl TransactionView
@@ -69,8 +70,8 @@ var (
 	ErrNonTransaction      error = errors.New("no transaction found")
 )
 
-func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]TransactionJsonResult, error) {
-	var list []TransactionJsonResult
+func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]txtyp.TransactionJsonResult, error) {
+	var list []txtyp.TransactionJsonResult
 
 	if ownerStr == "" {
 		return list, ErrOwnerAddressInvalid
@@ -100,8 +101,8 @@ func (impl *TransactionViewImpl) GetAllTransactionCount(ownerStr, symbolStr, sta
 	return number, nil
 }
 
-func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]TransactionJsonResult, error) {
-	var list []TransactionJsonResult
+func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
+	var list []txtyp.TransactionJsonResult
 
 	owner := common.HexToAddress(ownerStr)
 	symbol := standardSymbol(symbolStr)
@@ -123,9 +124,9 @@ func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusS
 	return list, nil
 }
 
-func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList []string) ([]TransactionJsonResult, error) {
+func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList []string) ([]txtyp.TransactionJsonResult, error) {
 	var (
-		list    []TransactionJsonResult
+		list    []txtyp.TransactionJsonResult
 		hashstr []string
 	)
 	if len(hashList) == 0 {
@@ -144,8 +145,8 @@ func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList
 }
 
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
-func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonResult {
-	var list []TransactionJsonResult
+func assemble(items []dao.Transaction, owner common.Address) []txtyp.TransactionJsonResult {
+	var list []txtyp.TransactionJsonResult
 
 	for _, v := range items {
 		var (
@@ -171,7 +172,7 @@ func assemble(items []dao.Transaction, owner common.Address) []TransactionJsonRe
 func statusStringToList(statusStr string) []types.TxStatus {
 	var list []types.TxStatus
 
-	status := types.StrToTxStatus(statusStr)
+	status := txtyp.StrToTxStatus(statusStr)
 	if status == types.TX_STATUS_UNKNOWN {
 		return list
 	}
@@ -179,11 +180,11 @@ func statusStringToList(statusStr string) []types.TxStatus {
 	return list
 }
 
-func typeStringToList(typStr string) []types.TxType {
-	var list []types.TxType
+func typeStringToList(typStr string) []txtyp.TxType {
+	var list []txtyp.TxType
 
-	typ := types.StrToTxType(typStr)
-	if typ == types.TX_TYPE_UNKNOWN {
+	typ := txtyp.StrToTxType(typStr)
+	if typ == txtyp.TX_TYPE_UNKNOWN {
 		return list
 	}
 
