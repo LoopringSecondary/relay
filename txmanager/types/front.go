@@ -194,23 +194,3 @@ func (dst *TransactionJsonResult) fromTransaction(tx *types.Transaction, owner c
 		dst.Value = tx.Value.String()
 	}
 }
-
-func standardSymbol(symbol string) string {
-	return strings.ToUpper(symbol)
-}
-
-func protocolToSymbol(address common.Address) string {
-	if address == types.NilAddress {
-		return ETH_SYMBOL
-	}
-	symbol := util.AddressToAlias(address.Hex())
-	return symbol
-}
-
-func symbolToProtocol(symbol string) common.Address {
-	symbol = standardSymbol(symbol)
-	if symbol == ETH_SYMBOL {
-		return types.NilAddress
-	}
-	return util.AliasToAddress(symbol)
-}

@@ -74,6 +74,8 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 	return nil
 }
 
+//////////// write related
+
 // 根据owner&hash查询pending tx
 func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(owner, hash string) ([]TransactionView, error) {
 	var txs []TransactionView
@@ -111,6 +113,60 @@ func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(owner, hash string, logI
 	return txs, err
 }
 
+//////////// read related
+func (s *RdsServiceImpl) GetTxViewByOwnerAndHashs(owner string, hashs []string) ([]TransactionView, error) {
+	var txs []TransactionView
+
+	err := s.db.Where("owner=?", owner).
+		Where("tx_hash in (?)", hashs).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
+func (s *RdsServiceImpl) GetPendingTxViewByOwner(owner string) ([]TransactionView, error) {
+	var txs []TransactionView
+
+	err := s.db.Where("owner=?", owner).
+		Where("status=?", types.TX_STATUS_PENDING).
+		Where("fork=?", false).
+		Order("create_time DESC").
+		Find(&txs).Error
+
+	return txs, err
+}
+
+func (s *RdsServiceImpl) GetTxViewCount(owner string, symbol string, status types.TxStatus, typ txtyp.TxType) (int, error) {
+	var (
+		number int
+		err    error
+	)
+
+	query := assembleTxViewQuery(owner, symbol, status, typ)
+	err = s.db.Model(&TransactionView{}).
+		Where(query).
+		Where("fork=?", false).
+		Select("count(id)").
+		Count(&number).Error
+
+	return number, err
+}
+
 func (s *RdsServiceImpl) RollBackTxView(from, to int64) error {
 	return s.db.Model(&TransactionView{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
+}
+
+func assembleTxViewQuery(owner, symbol string, status types.TxStatus, typ txtyp.TxType) map[string]interface{} {
+	query := make(map[string]interface{})
+	query["owner"] = owner
+	query["symbol"] = symbol
+	if status != types.TX_STATUS_UNKNOWN {
+		query["status"] = status
+	}
+	if typ != txtyp.TX_TYPE_UNKNOWN {
+		query["tx_type"] = typ
+	}
+
+	return query
 }

@@ -21,6 +21,7 @@ package dao
 import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"math/big"
 )
 
@@ -126,6 +127,9 @@ type RdsService interface {
 	FindPendingTxViewByOwnerAndHash(owner, hash string) ([]TransactionView, error)
 	DelPendingTxViewByOwnerAndNonce(owner, nonce string) error
 	FindMinedTxViewByOwnerAndEvent(owner, hash string, logIndex int64) ([]TransactionView, error)
+	GetTxViewByOwnerAndHashs(owner string, hashs []string) ([]TransactionView, error)
+	GetPendingTxViewByOwner(owner string) ([]TransactionView, error)
+	GetTxViewCount(owner string, symbol string, status types.TxStatus, typ txtyp.TxType) (int, error)
 	RollBackTxView(from, to int64) error
 
 	// checkpoint

@@ -22,9 +22,11 @@ import (
 	"errors"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"strings"
 )
 
 func GetPendingTransactions(owner string) ([]txtyp.TransactionJsonResult, error) {
@@ -40,16 +42,16 @@ func GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([
 	return impl.GetAllTransactions(owner, symbol, status, typ, limit, offset)
 }
 
-type TransactionView interface {
+type TransactionViewer interface {
 	GetPendingTransactions(owner string) ([]txtyp.TransactionJsonResult, error)
 	GetAllTransactionCount(owner, symbol, status, typ string) (int, error)
 	GetAllTransactions(owner, symbol, status, typ string, limit, offset int) ([]txtyp.TransactionJsonResult, error)
 	GetTransactionsByHash(owner string, hashList []string) ([]txtyp.TransactionJsonResult, error)
 }
 
-var impl TransactionView
+var impl TransactionViewer
 
-type TransactionViewImpl struct {
+type TransactionViewerImpl struct {
 	db dao.RdsService
 }
 
@@ -59,7 +61,7 @@ type TransactionViewImpl struct {
 // 2. user tx number key存储某个用户所有tx数量的key,设置过期时间
 // 3. block key 存储某个block涉及到的用户key(用于分叉),设置过期时间
 func NewTxView(db dao.RdsService) {
-	tm := &TransactionViewImpl{}
+	tm := &TransactionViewerImpl{}
 	tm.db = db
 	impl = tm
 }
@@ -70,7 +72,25 @@ var (
 	ErrNonTransaction      error = errors.New("no transaction found")
 )
 
-func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]txtyp.TransactionJsonResult, error) {
+func (impl *TransactionViewerImpl) GetTransactionsByHash(ownerStr string, hashList []string) ([]txtyp.TransactionJsonResult, error) {
+	var list []txtyp.TransactionJsonResult
+
+	if len(hashList) == 0 {
+		return list, ErrHashListEmpty
+	}
+
+	txs, _ := impl.db.GetTxViewByOwnerAndHashs(ownerStr, hashList)
+	if len(txs) == 0 {
+		return list, ErrNonTransaction
+	}
+
+	owner := common.HexToAddress(ownerStr)
+	list = assemble(txs, owner)
+
+	return list, nil
+}
+
+func (impl *TransactionViewerImpl) GetPendingTransactions(ownerStr string) ([]txtyp.TransactionJsonResult, error) {
 	var list []txtyp.TransactionJsonResult
 
 	if ownerStr == "" {
@@ -78,7 +98,7 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]txty
 	}
 
 	owner := common.HexToAddress(ownerStr)
-	txs, err := impl.db.GetPendingTransactionsByOwner(owner.Hex())
+	txs, err := impl.db.GetPendingTxViewByOwner(owner.Hex())
 	if err != nil {
 		return list, ErrNonTransaction
 	}
@@ -87,13 +107,13 @@ func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]txty
 	return list, nil
 }
 
-func (impl *TransactionViewImpl) GetAllTransactionCount(ownerStr, symbolStr, statusStr, typStr string) (int, error) {
+func (impl *TransactionViewerImpl) GetAllTransactionCount(ownerStr, symbolStr, statusStr, typStr string) (int, error) {
 	owner := common.HexToAddress(ownerStr)
-	symbol := standardSymbol(symbolStr)
-	statusList := statusStringToList(statusStr)
-	typList := typeStringToList(typStr)
+	symbol := safeSymbol(symbolStr)
+	status := safeStatus(statusStr)
+	typ := safeType(typStr)
 
-	number, err := impl.db.GetTransactionCount(owner.Hex(), symbol, statusList, typList)
+	number, err := impl.db.GetTxViewCount(owner.Hex(), symbol, status, typ)
 	if number == 0 || err != nil {
 		return 0, ErrNonTransaction
 	}
@@ -101,7 +121,7 @@ func (impl *TransactionViewImpl) GetAllTransactionCount(ownerStr, symbolStr, sta
 	return number, nil
 }
 
-func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
+func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
 	var list []txtyp.TransactionJsonResult
 
 	owner := common.HexToAddress(ownerStr)
@@ -121,26 +141,6 @@ func (impl *TransactionViewImpl) GetAllTransactions(ownerStr, symbolStr, statusS
 
 	list = assemble(txs, owner)
 	//list = collector(list)
-	return list, nil
-}
-
-func (impl *TransactionViewImpl) GetTransactionsByHash(ownerStr string, hashList []string) ([]txtyp.TransactionJsonResult, error) {
-	var (
-		list    []txtyp.TransactionJsonResult
-		hashstr []string
-	)
-	if len(hashList) == 0 {
-		return list, ErrHashListEmpty
-	}
-
-	txs, _ := impl.db.GetTrxByHashes(hashstr)
-	if len(txs) == 0 {
-		return list, ErrNonTransaction
-	}
-
-	owner := common.HexToAddress(ownerStr)
-	list = assemble(txs, owner)
-
 	return list, nil
 }
 
@@ -169,25 +169,30 @@ func assemble(items []dao.Transaction, owner common.Address) []txtyp.Transaction
 	return list
 }
 
-func statusStringToList(statusStr string) []types.TxStatus {
-	var list []types.TxStatus
-
-	status := txtyp.StrToTxStatus(statusStr)
-	if status == types.TX_STATUS_UNKNOWN {
-		return list
-	}
-	list = append(list, status)
-	return list
+func safeStatus(statusStr string) types.TxStatus {
+	return txtyp.StrToTxStatus(statusStr)
 }
 
-func typeStringToList(typStr string) []txtyp.TxType {
-	var list []txtyp.TxType
+func safeType(typStr string) txtyp.TxType {
+	return txtyp.StrToTxType(typStr)
+}
 
-	typ := txtyp.StrToTxType(typStr)
-	if typ == txtyp.TX_TYPE_UNKNOWN {
-		return list
+func safeSymbol(symbol string) string {
+	return strings.ToUpper(symbol)
+}
+
+func protocolToSymbol(address common.Address) string {
+	if address == types.NilAddress {
+		return txtyp.ETH_SYMBOL
 	}
+	symbol := util.AddressToAlias(address.Hex())
+	return safeSymbol(symbol)
+}
 
-	list = append(list, typ)
-	return list
+func symbolToProtocol(symbol string) common.Address {
+	symbol = safeSymbol(symbol)
+	if symbol == txtyp.ETH_SYMBOL {
+		return types.NilAddress
+	}
+	return util.AliasToAddress(symbol)
 }
