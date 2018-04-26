@@ -36,14 +36,14 @@ type TransactionView struct {
 	BlockTime int64          `json:"block_time"`
 }
 
-func ApproveView(src *types.ApprovalEvent) (*TransactionView, error) {
+func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
 	var (
 		tx  TransactionView
 		err error
 	)
 
 	if tx.Symbol, err = util.GetSymbolWithAddress(src.To); err != nil {
-		return nil, err
+		return tx, err
 	}
 	tx.fullFilled(src.TxInfo)
 
@@ -51,7 +51,7 @@ func ApproveView(src *types.ApprovalEvent) (*TransactionView, error) {
 	tx.Amount = src.Amount
 	tx.Type = TX_TYPE_APPROVE
 
-	return &tx, nil
+	return tx, nil
 }
 
 // 从entity中获取amount&orderHash
@@ -181,6 +181,14 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 		tx2.Owner = src.To
 	}
 
+	return list
+}
+
+func RelatedOwners(viewList []TransactionView) []common.Address {
+	var list []common.Address
+	for _, v := range viewList {
+		list = append(list, v.Owner)
+	}
 	return list
 }
 

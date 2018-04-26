@@ -25,7 +25,7 @@ import (
 	"github.com/Loopring/relay/market"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
-	"math/big"
+	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionManager struct {
@@ -110,49 +110,63 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	event := input.(*types.ApprovalEvent)
 
-	var entity txtyp.TransactionEntity
-	entity.FromApproveEvent(event)
+	var (
+		entity txtyp.TransactionEntity
+		list   []txtyp.TransactionView
+	)
 
+	entity.FromApproveEvent(event)
 	view, err := txtyp.ApproveView(event)
 	if err != nil {
 		return err
 	}
+	list = append(list, view)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
 
-	var entity txtyp.TransactionEntity
+	var (
+		entity txtyp.TransactionEntity
+		list   []txtyp.TransactionView
+	)
+
 	entity.FromCancelEvent(event)
 	view := txtyp.CancelView(event)
+	list = append(list, view)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
-	var entity txtyp.TransactionEntity
+	var (
+		entity txtyp.TransactionEntity
+		list   []txtyp.TransactionView
+	)
 	entity.FromCutoffEvent(event)
 	view := txtyp.CutoffView(event)
+	list = append(list, view)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) error {
 	event := input.(*types.CutoffPairEvent)
 
-	var entity txtyp.TransactionEntity
+	var (
+		entity txtyp.TransactionEntity
+		list   []txtyp.TransactionView
+	)
+
 	entity.FromCutoffPairEvent(event)
 	view := txtyp.CutoffPairView(event)
+	list = append(list, view)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
@@ -160,10 +174,9 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 
 	var entity txtyp.TransactionEntity
 	entity.FromWethDepositEvent(event)
-	viewList := txtyp.WethDepositView(event)
+	list := txtyp.WethDepositView(event)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
@@ -171,10 +184,9 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 
 	var entity txtyp.TransactionEntity
 	entity.FromWethWithdrawalEvent(event)
-	viewList := txtyp.WethWithdrawalView(event)
+	list := txtyp.WethWithdrawalView(event)
 
-	// todo save
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
@@ -182,19 +194,12 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 
 	var entity txtyp.TransactionEntity
 	entity.FromTransferEvent(event)
-	viewList, err := txtyp.TransferView(event)
+	list, err := txtyp.TransferView(event)
 	if err != nil {
 		return err
 	}
 
-	// todo save
-	return nil
-}
-
-func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
-	// todo
-
-	return nil
+	return tm.saveTransaction(&entity, list)
 }
 
 // 普通的transaction
@@ -205,27 +210,66 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 
 	var entity txtyp.TransactionEntity
 	entity.FromEthTransferEvent(event)
-	viewList := txtyp.EthTransferView(event)
+	list := txtyp.EthTransferView(event)
 
-	// todo save
+	return tm.saveTransaction(&entity, list)
+}
+
+func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
+	// todo
+
 	return nil
 }
 
-func (tm *TransactionManager) saveTransaction(tx *types.Transaction) error {
-	// validate tx addresses
-	if !tm.validateTransaction(tx) {
+func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
+	if err := tm.saveEntity(tx, list); err != nil {
+		return err
+	}
+
+	if tx.Status == types.TX_STATUS_PENDING {
+		if err := tm.savePendingEntity(tx); err != nil {
+			return err
+		}
+	} else {
+		if err := tm.saveMinedEntity(tx); err != nil {
+			return err
+		}
+	}
+
+	for _, v := range list {
+		if tx.Status == types.TX_STATUS_PENDING {
+			if err := tm.savePendingView(&v); err != nil {
+				return err
+			}
+		} else {
+			if err := tm.saveMinedView(&v); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+//
+func (tm *TransactionManager) saveEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
+	if !tm.validateEntity(viewList) {
 		return nil
 	}
 
-	// save pending
-	if tx.Status == types.TX_STATUS_PENDING {
-		return tm.savePendingTransactions(tx)
-	} else {
-		return tm.saveMinedTransactions(tx)
-	}
+	// 如果
+	// todo save
 }
 
-func (tm *TransactionManager) savePendingTransactions(tx *types.Transaction) error {
+func (tm *TransactionManager) savePendingEntity(tx *txtyp.TransactionEntity) error {
+
+}
+
+func (tm *TransactionManager) saveMinedEntity(tx *txtyp.TransactionEntity) error {
+
+}
+
+func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
 	// find transaction which have the same hash, raw_from and nonce
 	if _, err := tm.db.GetPendingTransaction(tx.TxHash, tx.RawFrom, tx.Nonce); err == nil {
 		return nil
@@ -234,7 +278,7 @@ func (tm *TransactionManager) savePendingTransactions(tx *types.Transaction) err
 	return tm.addTransaction(tx)
 }
 
-func (tm *TransactionManager) saveMinedTransactions(tx *types.Transaction) error {
+func (tm *TransactionManager) saveMinedView(tx *txtyp.TransactionView) error {
 	// get transactions by sender and tx.nonce
 	list, _ := tm.db.GetTransactionsBySenderNonce(tx.RawFrom, tx.Nonce)
 
@@ -284,26 +328,21 @@ func (tm *TransactionManager) addTransaction(tx *types.Transaction) error {
 	return err
 }
 
-func (tm *TransactionManager) validateTransaction(tx *types.Transaction) bool {
-	var fromUnlocked, toUnlocked bool
+func (tm *TransactionManager) validateEntity(viewList []txtyp.TransactionView) bool {
+	owners := txtyp.RelatedOwners(viewList)
 
-	unlocked := true
-
-	// validate wallet address
-	fromUnlocked, _ = tm.accountmanager.HasUnlocked(tx.From.Hex())
-	if tx.Type == types.TX_TYPE_TRANSFER {
-		toUnlocked, _ = tm.accountmanager.HasUnlocked(tx.To.Hex())
-		if !fromUnlocked && !toUnlocked {
-			unlocked = false
-		}
-	} else {
-		if !fromUnlocked {
-			unlocked = false
+	unlocked := false
+	for _, v := range owners {
+		if ok, _ := tm.accountmanager.HasUnlocked(v.Hex()); ok {
+			unlocked = true
+			break
 		}
 	}
 
-	log.Debugf("txmanager,save transaction,tx:%s, type:%s, status:%s, rawFrom:%s, rawTo:%s, from:%s->unlocked:%t, to:%s->unlocked:%t",
-		tx.TxHash.Hex(), tx.TypeStr(), tx.StatusStr(), tx.RawFrom.Hex(), tx.RawTo.Hex(), tx.From.Hex(), fromUnlocked, tx.To.Hex(), toUnlocked)
+	return unlocked
+}
 
+func (tm *TransactionManager) validateView(view *txtyp.TransactionView) bool {
+	unlocked, _ := tm.accountmanager.HasUnlocked(view.Owner.Hex())
 	return unlocked
 }
