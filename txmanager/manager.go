@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/market"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionManager struct {
@@ -226,16 +225,6 @@ func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list 
 		return err
 	}
 
-	if tx.Status == types.TX_STATUS_PENDING {
-		if err := tm.savePendingEntity(tx); err != nil {
-			return err
-		}
-	} else {
-		if err := tm.saveMinedEntity(tx); err != nil {
-			return err
-		}
-	}
-
 	for _, v := range list {
 		if tx.Status == types.TX_STATUS_PENDING {
 			if err := tm.savePendingView(&v); err != nil {
@@ -259,14 +248,6 @@ func (tm *TransactionManager) saveEntity(tx *txtyp.TransactionEntity, viewList [
 
 	// 如果
 	// todo save
-}
-
-func (tm *TransactionManager) savePendingEntity(tx *txtyp.TransactionEntity) error {
-
-}
-
-func (tm *TransactionManager) saveMinedEntity(tx *txtyp.TransactionEntity) error {
-
 }
 
 func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
@@ -326,6 +307,12 @@ func (tm *TransactionManager) addTransaction(tx *types.Transaction) error {
 	}
 
 	return err
+}
+
+func (tm *TransactionManager) addEntity(tx *txtyp.TransactionEntity) error {
+	var item dao.TransactionEntity
+	item.ConvertDown(tx)
+	return tm.db.Add(&item)
 }
 
 func (tm *TransactionManager) validateEntity(viewList []txtyp.TransactionView) bool {

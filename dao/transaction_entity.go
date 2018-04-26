@@ -19,6 +19,7 @@
 package dao
 
 import (
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -45,15 +46,54 @@ type TransactionEntity struct {
 	Fork        bool   `gorm:"column:fork"`
 }
 
-// convert types/transaction to dao/transaction
+// convert to txmanager/types/transactionEntity to dao/transactionEntity
 // todo(fuk): judge nil fields
-func (tx *TransactionEntity) ConvertDown(src *types.Transaction) error {
+func (tx *TransactionEntity) ConvertDown(src *txtyp.TransactionEntity) error {
+	tx.From = src.From.Hex()
+	tx.To = src.To.Hex()
+	tx.BlockNumber = src.BlockNumber
+	tx.TxHash = src.Hash.Hex()
+	tx.LogIndex = src.LogIndex
+	tx.Value = src.Value.String()
+	tx.Content = src.Content
+	tx.Status = uint8(src.Status)
+	tx.GasLimit = src.GasLimit.String()
+	tx.GasUsed = src.GasUsed.String()
+	tx.GasPrice = src.GasPrice.String()
+	tx.Nonce = src.Nonce.String()
+	tx.CreateTime = src.BlockTime
+	tx.Fork = false
 
 	return nil
 }
 
-// convert dao/transaction to types/transaction
-func (tx *TransactionEntity) ConvertUp(dst *types.Transaction) error {
+// convert dao/transactionEntity to txmanager/types/transactionEntity
+func (tx *TransactionEntity) ConvertUp(dst *txtyp.TransactionEntity) error {
+	dst.From = common.HexToAddress(tx.From)
+	dst.To = common.HexToAddress(tx.To)
+	dst.BlockNumber = tx.BlockNumber
+	dst.Hash = common.HexToHash(tx.TxHash)
+	dst.LogIndex = tx.LogIndex
+	dst.Value, _ = new(big.Int).SetString(tx.Value, 0)
+	dst.Content = tx.Content
+	dst.Status = types.TxStatus(tx.Status)
+	dst.GasLimit, _ = new(big.Int).SetString(tx.GasLimit, 0)
+	dst.GasUsed, _ = new(big.Int).SetString(tx.GasUsed, 0)
+	dst.GasPrice, _ = new(big.Int).SetString(tx.GasPrice, 0)
+	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)
+	dst.BlockTime = tx.CreateTime
 
 	return nil
+}
+
+// entity不处理pending数据
+func (s *RdsServiceImpl) FindEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error) {
+	var tx TransactionEntity
+
+	err := s.db.Where("tx_hash=?", txhash).
+		Where("tx_log_index=?", logIndex).
+		Where("fork=?", false).
+		Find(&tx).Error
+
+	return tx, err
 }

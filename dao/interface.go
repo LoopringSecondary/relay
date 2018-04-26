@@ -118,6 +118,9 @@ type RdsService interface {
 	DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error
 	DeletePendingTransactions(rawFrom common.Address, nonce *big.Int) error
 
+	// transactionEntity
+	FindEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
+
 	// checkpoint
 	QueryCheckPointByType(businessType string) (point CheckPoint, err error)
 }
