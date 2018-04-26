@@ -2,23 +2,21 @@ package gateway
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/eventemiter"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/googollee/go-socket.io"
 	"github.com/robfig/cron"
 	"gopkg.in/googollee/go-engine.io.v1"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/eventemiter"
-	"errors"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/types"
-	"strings"
-	"github.com/Loopring/relay/market/util"
-	"github.com/Loopring/relay/market"
 )
 
 type BusinessType int
@@ -34,8 +32,7 @@ const (
 
 const (
 	emitTypeByEvent = 1
-	emitTypeByCron = 2
-
+	emitTypeByCron  = 2
 )
 
 type Server struct {
@@ -77,16 +74,16 @@ type InvokeInfo struct {
 }
 
 const (
-	eventKeyTickers = "tickers"
+	eventKeyTickers         = "tickers"
 	eventKeyLoopringTickers = "loopringTickers"
-	eventKeyTrends = "trends"
-	eventKeyPortfolio = "portfolio"
-	eventKeyMarketCap = "marketcap"
-	eventKeyBalance = "balance"
-	eventKeyTransaction = "transaction"
-	eventKeyPendingTx = "pendingTx"
-	eventKeyDepth = "depth"
-	eventKeyTrades = "trades"
+	eventKeyTrends          = "trends"
+	eventKeyPortfolio       = "portfolio"
+	eventKeyMarketCap       = "marketcap"
+	eventKeyBalance         = "balance"
+	eventKeyTransaction     = "transaction"
+	eventKeyPendingTx       = "pendingTx"
+	eventKeyDepth           = "depth"
+	eventKeyTrades          = "trades"
 )
 
 var EventTypeRoute = map[string]InvokeInfo{
@@ -107,13 +104,13 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	// portfolio has been remove from loopr2
 	// eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
-	eventKeyMarketCap:       {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
-	eventKeyBalance:         {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTransaction:     {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyPendingTx:       {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
-	eventKeyDepth:           {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTrades:          {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyPortfolio:   {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
+	eventKeyMarketCap:   {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
+	eventKeyBalance:     {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyPendingTx:   {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
+	eventKeyDepth:       {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTrades:      {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
@@ -208,11 +205,11 @@ func (so *SocketIOServiceImpl) Start() {
 		//}
 
 		switch k {
-		case eventKeyTickers :
+		case eventKeyTickers:
 			so.cron.AddFunc(spec, func() {
 				so.broadcastTpTickers(nil)
 			})
-		case eventKeyLoopringTickers :
+		case eventKeyLoopringTickers:
 			so.cron.AddFunc(spec, func() {
 				so.broadcastLoopringTicker(nil)
 			})
@@ -352,8 +349,9 @@ func (so *SocketIOServiceImpl) broadcastTpTickers(input eventemitter.EventData) 
 				if err != nil {
 					return true
 				}
-				tks, ok := tickerMap[strings.ToUpper(singleMarket.Market)]; if ok {
-					v.Emit(eventKeyTickers + EventPostfixRes, tks)
+				tks, ok := tickerMap[strings.ToUpper(singleMarket.Market)]
+				if ok {
+					v.Emit(eventKeyTickers+EventPostfixRes, tks)
 				}
 			}
 		}
@@ -384,7 +382,7 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 			_, ok := businesses[eventKeyLoopringTickers]
 			if ok {
 				log.Info("emit loopring ticker info")
-				v.Emit(eventKeyLoopringTickers + EventPostfixRes, string(respJson[:]))
+				v.Emit(eventKeyLoopringTickers+EventPostfixRes, string(respJson[:]))
 			}
 		}
 		return true
@@ -422,7 +420,7 @@ func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (er
 				} else if strings.ToUpper(req.Market) == strings.ToUpper(trendQuery.Market) &&
 					strings.ToUpper(req.Interval) == strings.ToUpper(trendQuery.Interval) {
 					log.Info("emit trend " + ctx)
-					v.Emit(eventKeyTrends + EventPostfixRes, string(respJson[:]))
+					v.Emit(eventKeyTrends+EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -475,7 +473,7 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 			_, ok := businesses[eventKeyBalance]
 			if ok {
 				log.Info("emit balance info")
-				v.Emit(eventKeyBalance + EventPostfixRes, string(respJson[:]))
+				v.Emit(eventKeyBalance+EventPostfixRes, string(respJson[:]))
 			}
 		}
 		return true
@@ -513,7 +511,7 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 				} else if strings.ToUpper(req.DelegateAddress) == strings.ToUpper(depthQuery.DelegateAddress) &&
 					strings.ToUpper(req.Market) == strings.ToUpper(depthQuery.Market) {
 					log.Info("emit trend " + ctx)
-					v.Emit(eventKeyDepth + EventPostfixRes, string(respJson[:]))
+					v.Emit(eventKeyDepth+EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -555,7 +553,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 						resp.Data = txs
 					}
 					respJson, _ := json.Marshal(resp)
-					v.Emit(eventKeyTransaction + EventPostfixRes, string(respJson[:]))
+					v.Emit(eventKeyTransaction+EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
@@ -599,7 +597,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 						resp.Data = txs
 					}
 					respJson, _ := json.Marshal(resp)
-					v.Emit(eventKeyPendingTx + EventPostfixRes, string(respJson[:]))
+					v.Emit(eventKeyPendingTx+EventPostfixRes, string(respJson[:]))
 				}
 			}
 		}
