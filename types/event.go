@@ -187,3 +187,13 @@ type ExtractorWarningEvent struct{}
 type TransactionEvent struct {
 	Tx TxInfo
 }
+
+type DepthUpdateEvent struct {
+	DelegateAddress string
+	Market          string
+}
+
+type BalanceUpdateEvent struct {
+	DelegateAddress string
+	Owner           string
+}

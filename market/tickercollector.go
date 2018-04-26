@@ -156,7 +156,6 @@ func (c *CollectorImpl) Start() {
 		log.Info("start collect cron jobs......... ")
 		c.cron.Start()
 	}
-
 }
 
 func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
