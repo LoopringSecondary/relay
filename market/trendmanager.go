@@ -34,6 +34,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -53,6 +54,7 @@ const (
 	tsFourHour = 4 * tsOneHour
 	tsOneDay   = 24 * tsOneHour
 	tsOneWeek  = 7 * tsOneDay
+	localCachePre = "LocalCacheMarketBy"
 )
 
 var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
@@ -98,6 +100,7 @@ type TrendManager struct {
 	rds         dao.RdsService
 	cron        *cron.Cron
 	cronJobLock bool
+	localCache  *gocache.Cache
 }
 
 var once sync.Once
@@ -110,6 +113,7 @@ func NewTrendManager(dao dao.RdsService, cronJobLock bool) TrendManager {
 
 	once.Do(func() {
 		trendManager = TrendManager{rds: dao, cron: cron.New(), cronJobLock: cronJobLock}
+		trendManager.localCache = gocache.New(5 * time.Second, 5 * time.Minute)
 		trendManager.LoadCache()
 		if cronJobLock {
 			trendManager.startScheduleUpdate()
@@ -976,13 +980,20 @@ func (t *TrendManager) GetTickerByMarket(mkt string) (ticker Ticker, err error) 
 
 	if t.cacheReady {
 		log.Info("[TICKER]ticker key used in GetTickerByMarket")
-		if tickerCache, err := redisCache.Get(tickerKey); err == nil {
+
+		localCacheValue, ok := t.localCache.Get(localCachePre + strings.ToUpper(mkt))
+		if ok {
+			log.Info("[TICKER] get cache from local " + mkt)
+			return localCacheValue.(Ticker), nil
+		} else if tickerCache, err := redisCache.Get(tickerKey); err == nil {
+			log.Info("[TICKER] get cache from redis " + mkt)
 			var tickerMap map[string]Ticker
 			json.Unmarshal(tickerCache, &tickerMap)
 			for k, v := range tickerMap {
 				if k == mkt {
 					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 					v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+					t.localCache.Set(localCachePre + strings.ToUpper(mkt), v, 3 * time.Second)
 					return v, err
 				}
 			}

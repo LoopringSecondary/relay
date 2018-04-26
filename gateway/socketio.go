@@ -26,6 +26,7 @@ const (
 	EventPostfixRes         = "_res"
 	EventPostfixEnd         = "_end"
 	DefaultCronSpec3Second  = "0/3 * * * * *"
+	DefaultCronSpec5Second  = "0/5 * * * * *"
 	DefaultCronSpec10Second = "0/10 * * * * *"
 	DefaultCronSpec5Minute  = "0 */5 * * * *"
 )
@@ -99,8 +100,8 @@ var EventTypeRoute = map[string]InvokeInfo{
 	//eventKeyPendingTx:       {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	//eventKeyDepth:           {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	//eventKeyTrades:          {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec3Second},
-	eventKeyLoopringTickers: {"GetTicker", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec5Second},
+	eventKeyLoopringTickers: {"GetTicker", nil, true, emitTypeByEvent, DefaultCronSpec5Second},
 	eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	// portfolio has been remove from loopr2
 	// eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec3Second},
