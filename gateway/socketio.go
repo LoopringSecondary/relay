@@ -17,6 +17,8 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/types"
 	"strings"
+	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/market"
 )
 
 type BusinessType int
@@ -84,9 +86,22 @@ const (
 	eventKeyTransaction = "transaction"
 	eventKeyPendingTx = "pendingTx"
 	eventKeyDepth = "depth"
+	eventKeyTrades = "trades"
 )
 
 var EventTypeRoute = map[string]InvokeInfo{
+	//eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec3Second},
+	//eventKeyLoopringTickers: {"GetTicker", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
+	//eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	//// portfolio has been remove from loopr2
+	//// eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	//eventKeyPortfolio:       {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
+	//eventKeyMarketCap:       {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
+	//eventKeyBalance:         {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	//eventKeyTransaction:     {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	//eventKeyPendingTx:       {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
+	//eventKeyDepth:           {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	//eventKeyTrades:          {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyTickers:         {"GetTickers", SingleMarket{}, true, emitTypeByCron, DefaultCronSpec3Second},
 	eventKeyLoopringTickers: {"GetTicker", nil, true, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyTrends:          {"GetTrend", TrendQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
@@ -98,6 +113,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyTransaction:     {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyPendingTx:       {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyDepth:           {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTrades:          {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
@@ -122,20 +138,20 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 	so.cron = cron.New()
 
 	// init event watcher
-	loopringTickerWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastLoopringTicker}
-	eventemitter.On(eventemitter.LoopringTickerUpdated, loopringTickerWatcher)
-	trendsWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastTrends}
-	eventemitter.On(eventemitter.TrendUpdated, trendsWatcher)
-	portfolioWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePortfolioUpdate}
-	eventemitter.On(eventemitter.PortfolioUpdated, portfolioWatcher)
-	balanceWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleBalanceUpdate}
-	eventemitter.On(eventemitter.BalanceUpdated, balanceWatcher)
-	depthWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastDepth}
-	eventemitter.On(eventemitter.DepthUpdated, depthWatcher)
-	transactionWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleTransactionUpdate}
-	eventemitter.On(eventemitter.TransactionEvent, transactionWatcher)
-	pendingTxWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePendingTransaction}
-	eventemitter.On(eventemitter.TransactionEvent, pendingTxWatcher)
+	//loopringTickerWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastLoopringTicker}
+	//eventemitter.On(eventemitter.LoopringTickerUpdated, loopringTickerWatcher)
+	//trendsWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastTrends}
+	//eventemitter.On(eventemitter.TrendUpdated, trendsWatcher)
+	//portfolioWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePortfolioUpdate}
+	//eventemitter.On(eventemitter.PortfolioUpdated, portfolioWatcher)
+	//balanceWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleBalanceUpdate}
+	//eventemitter.On(eventemitter.BalanceUpdated, balanceWatcher)
+	//depthWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.broadcastDepth}
+	//eventemitter.On(eventemitter.DepthUpdated, depthWatcher)
+	//transactionWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handleTransactionUpdate}
+	//eventemitter.On(eventemitter.TransactionEvent, transactionWatcher)
+	//pendingTxWatcher := &eventemitter.Watcher{Concurrent: false, Handle: so.handlePendingTransaction}
+	//eventemitter.On(eventemitter.TransactionEvent, pendingTxWatcher)
 	return so
 }
 
@@ -186,26 +202,38 @@ func (so *SocketIOServiceImpl) Start() {
 		copyOfK := k
 		spec := events.spec
 
-		if events.emitType != emitTypeByCron {
-			log.Infof("no cron emit type %d ", events.emitType)
-			continue
-		}
+		//if events.emitType != emitTypeByCron {
+		//	log.Infof("no cron emit type %d ", events.emitType)
+		//	continue
+		//}
 
-		log.Infof("add cron emit %d ", events.emitType)
-		so.cron.AddFunc(spec, func() {
-			so.connIdMap.Range(func(key, value interface{}) bool {
-				v := value.(socketio.Conn)
-				if v.Context() != nil {
-					businesses := v.Context().(map[string]string)
-					eventContext, ok := businesses[copyOfK]
-					if ok {
-						log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
-						so.EmitNowByEventType(copyOfK, v, eventContext)
-					}
-				}
-				return true
+		switch k {
+		case eventKeyTickers :
+			so.cron.AddFunc(spec, func() {
+				so.broadcastTpTickers(nil)
 			})
-		})
+		case eventKeyLoopringTickers :
+			so.cron.AddFunc(spec, func() {
+				so.broadcastLoopringTicker(nil)
+			})
+		default:
+			log.Infof("add cron emit %d ", events.emitType)
+			so.cron.AddFunc(spec, func() {
+				so.connIdMap.Range(func(key, value interface{}) bool {
+					v := value.(socketio.Conn)
+					if v.Context() != nil {
+						businesses := v.Context().(map[string]string)
+						eventContext, ok := businesses[copyOfK]
+						if ok {
+							log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
+							so.EmitNowByEventType(copyOfK, v, eventContext)
+						}
+					}
+					return true
+				})
+			})
+
+		}
 	}
 
 	//so.cron.AddFunc("0/10 * * * * *", func() {
@@ -291,6 +319,47 @@ func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, m
 func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface{}, methodName string, conn socketio.Conn, ctx string) {
 	result := so.handleWith(eventType, query, methodName, ctx)
 	conn.Emit(eventType+EventPostfixRes, result)
+}
+
+func (so *SocketIOServiceImpl) broadcastTpTickers(input eventemitter.EventData) (err error) {
+
+	log.Infof("[SOCKETIO-RECEIVE-EVENT] ticker input. %s", input)
+
+	mkts, _ := so.walletService.GetSupportedMarket()
+
+	tickerMap := make(map[string]SocketIOJsonResp)
+
+	for _, mkt := range mkts {
+		ticker, err := so.walletService.GetTickers(SingleMarket{mkt})
+		resp := SocketIOJsonResp{}
+
+		if err != nil {
+			resp = SocketIOJsonResp{Error: err.Error()}
+		} else {
+			resp.Data = ticker
+		}
+		tickerMap[mkt] = resp
+	}
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyLoopringTickers]
+			if ok {
+				var singleMarket SingleMarket
+				err = json.Unmarshal([]byte(ctx), &singleMarket)
+				if err != nil {
+					return true
+				}
+				tks, ok := tickerMap[strings.ToUpper(singleMarket.Market)]; if ok {
+					v.Emit(eventKeyTickers + EventPostfixRes, tks)
+				}
+			}
+		}
+		return true
+	})
+	return nil
 }
 
 func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventData) (err error) {
