@@ -80,6 +80,7 @@ func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(owner, hash string) ([]
 
 	err := s.db.Where("owner=?", owner).
 		Where("tx_hash=?", hash).
+		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Find(&txs).Error
 
@@ -90,6 +91,7 @@ func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(owner, hash string) ([]
 func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner, nonce string) error {
 	err := s.db.Where("owner=?", owner).
 				Where("nonce=?", nonce).
+				Where("status=?", types.TX_STATUS_PENDING).
 				Where("fork=?", false).
 				Delete(&TransactionView{}).Error
 	return err
@@ -102,7 +104,13 @@ func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(owner, hash string, logI
 	err := s.db.Where("owner=?", owner).
 				Where("tx_hash=?", hash).
 				Where("tx_log_index", logIndex).
+				Where("status<>?", types.TX_STATUS_PENDING).
+				Where("fork=?", false).
 				Find(&txs).Error
 
 	return txs, err
+}
+
+func (s *RdsServiceImpl) RollBackTxView(from, to int64) error {
+	return s.db.Model(&TransactionView{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }

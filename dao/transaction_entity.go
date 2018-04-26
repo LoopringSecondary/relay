@@ -96,3 +96,7 @@ func (s *RdsServiceImpl) FindTxEntityByHashAndLogIndex(txhash string, logIndex i
 
 	return tx, err
 }
+
+func (s *RdsServiceImpl) RollBackTxEntity(from, to int64) error {
+	return s.db.Model(&TransactionEntity{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
+}

@@ -98,8 +98,11 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	forkEvent := input.(*types.ForkedEvent)
 	from := forkEvent.ForkBlock.Int64()
 	to := forkEvent.DetectedBlock.Int64()
-	if err := tm.db.RollBackTransaction(from, to); err != nil {
-		log.Fatalf("txmanager,process fork error:%s", err.Error())
+	if err := tm.db.RollBackTxEntity(from, to); err != nil {
+		log.Warnf("txmanager,process fork error:%s", err.Error())
+	}
+	if err := tm.db.RollBackTxView(from, to); err != nil {
+		log.Warnf("txmanager,process fork error:%s", err.Error())
 	}
 	tm.Start()
 
@@ -244,80 +247,51 @@ func (tm *TransactionManager) saveEntity(tx *txtyp.TransactionEntity, viewList [
 	if !tm.validateEntity(viewList) {
 		return nil
 	}
-
-	// err != nil 没有数据
 	if _, err := tm.db.FindTxEntityByHashAndLogIndex(tx.Hash.Hex(), tx.LogIndex); err == nil {
 		return nil
 	}
-
-	var entity dao.TransactionEntity
-	entity.ConvertUp(tx)
-	return tm.db.Add(entity)
+	return tm.addEntity(tx)
 }
 
 func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
-	// find transaction which have the same hash, raw_from and nonce
-	if _, err := tm.db.GetPendingTransaction(tx.TxHash, tx.RawFrom, tx.Nonce); err == nil {
+	if !tm.validateView(tx) {
 		return nil
 	}
-
-	return tm.addTransaction(tx)
+	if _, err := tm.db.FindPendingTxViewByOwnerAndHash(tx.Owner.Hex(), tx.TxHash.Hex()); err == nil {
+		return nil
+	}
+	return tm.addView(tx)
 }
 
 func (tm *TransactionManager) saveMinedView(tx *txtyp.TransactionView) error {
-	// get transactions by sender and tx.nonce
-	list, _ := tm.db.GetTransactionsBySenderNonce(tx.RawFrom, tx.Nonce)
-
-	// insert new data if list is empty
-	if len(list) == 0 {
-		return tm.addTransaction(tx)
+	if !tm.validateView(tx) {
+		return nil
 	}
-
-	// judge have any pending tx and the same tx
-	hasPendingTx := false
-	hasSameTx := false
-	for _, v := range list {
-		var latest types.Transaction
-		v.ConvertUp(&latest)
-
-		if latest.Status == types.TX_STATUS_PENDING {
-			hasPendingTx = true
-		} else if latest.Compare(tx) {
-			hasSameTx = true
-		}
+	if err := tm.db.DelPendingTxViewByOwnerAndNonce(tx.Owner.Hex(), tx.Nonce.String()); err != nil {
+		return err
 	}
-
-	// delete pending tx
-	if hasPendingTx {
-		tm.db.DeletePendingTransactions(tx.RawFrom, tx.Nonce)
+	if list, _ := tm.db.FindMinedTxViewByOwnerAndEvent(tx.Owner.Hex(), tx.TxHash.Hex(), tx.LogIndex); len(list) > 0 {
+		return nil
 	}
-	// check tx if exist
-	if !hasSameTx {
-		tm.addTransaction(tx)
-	}
-	return nil
-}
-
-func (tm *TransactionManager) addTransaction(tx *types.Transaction) error {
-	var (
-		latest dao.Transaction
-		err    error
-	)
-
-	latest.ConvertDown(tx)
-	err = tm.db.Add(&latest)
-
-	if err == nil {
-		eventemitter.Emit(eventemitter.TransactionEvent, tx)
-	}
-
-	return err
+	return tm.addView(tx)
 }
 
 func (tm *TransactionManager) addEntity(tx *txtyp.TransactionEntity) error {
 	var item dao.TransactionEntity
 	item.ConvertDown(tx)
 	return tm.db.Add(&item)
+}
+
+func (tm *TransactionManager) addView(tx *txtyp.TransactionView) error {
+	var item dao.TransactionView
+
+	item.ConvertDown(tx)
+	if err := tm.db.Add(&item); err != nil {
+		return err
+	}
+
+	eventemitter.Emit(eventemitter.TransactionEvent, &tx)
+	return nil
 }
 
 func (tm *TransactionManager) validateEntity(viewList []txtyp.TransactionView) bool {
