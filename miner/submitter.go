@@ -160,12 +160,17 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
 	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
 
-	txHashStr, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
-	if nil != err {
-		log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
-		status = types.TX_STATUS_FAILED
+	txHash := types.NilHash
+	var err error
+	if _,_,err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest"); nil == err {
+		txHashStr, err := ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
+		if nil != err {
+			log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+			status = types.TX_STATUS_FAILED
+		}
+		txHash = common.HexToHash(txHashStr)
 	}
-	txHash := common.HexToHash(txHashStr)
+
 	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
 	return txHash, err
 }
