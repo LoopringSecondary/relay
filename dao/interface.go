@@ -121,6 +121,11 @@ type RdsService interface {
 	// transactionEntity
 	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
 
+	// transactionView
+	FindPendingTxViewByOwnerAndHash(owner, hash string) ([]TransactionView, error)
+	DelPendingTxViewByOwnerAndNonce(owner, nonce string) error
+	FindMinedTxViewByOwnerAndEvent(owner, hash string, logIndex int64) ([]TransactionView, error)
+
 	// checkpoint
 	QueryCheckPointByType(businessType string) (point CheckPoint, err error)
 }

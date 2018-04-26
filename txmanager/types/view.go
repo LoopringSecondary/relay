@@ -31,6 +31,7 @@ type TransactionView struct {
 	TxHash     common.Hash    `json:"tx_hash"`
 	LogIndex   int64          `json:"log_index"`
 	Amount     *big.Int       `json:"amount"`
+	Nonce      *big.Int       `json:"nonce"`
 	Type       TxType         `json:"type"`
 	Status     types.TxStatus `json:"status"`
 	CreateTime int64          `json:"create_time"`
@@ -86,6 +87,7 @@ func CutoffPairView(src *types.CutoffPairEvent) TransactionView {
 
 	tx.fullFilled(src.TxInfo)
 	tx.Symbol = ETH_SYMBOL
+	tx.Amount = src.Cutoff
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF_PAIR
 
@@ -197,6 +199,7 @@ func (tx *TransactionView) fullFilled(src types.TxInfo) {
 	tx.TxHash = src.TxHash
 	tx.LogIndex = src.TxLogIndex
 	tx.Status = src.Status
+	tx.Nonce = src.Nonce
 	tx.CreateTime = src.BlockTime
 	tx.UpdateTime = src.BlockTime
 }

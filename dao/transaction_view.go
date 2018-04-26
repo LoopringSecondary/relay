@@ -32,6 +32,7 @@ type TransactionView struct {
 	TxHash     string `gorm:"column:tx_hash;type:varchar(82)"`
 	LogIndex   int64  `gorm:"column:tx_log_index"`
 	Amount 		string `gorm:"column:amount;type:varchar(40)"`
+	Nonce 		string `gorm:"column:nonce;type:varchar(40)"`
 	Type       uint8  `gorm:"column:tx_type"`
 	Status     uint8  `gorm:"column:status"`
 	CreateTime int64  `gorm:"column:create_time"`
@@ -47,6 +48,7 @@ func (tx *TransactionView) ConvertDown(src *txtyp.TransactionView) error {
 	tx.TxHash = src.TxHash.Hex()
 	tx.LogIndex = src.LogIndex
 	tx.Amount = src.Amount.String()
+	tx.Nonce = src.Nonce.String()
 	tx.Type = uint8(src.Type)
 	tx.Status = uint8(src.Status)
 	tx.CreateTime = src.CreateTime
@@ -63,6 +65,7 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 	dst.TxHash = common.HexToHash(tx.TxHash)
 	dst.LogIndex = tx.LogIndex
 	dst.Amount, _ = new(big.Int).SetString(tx.Amount, 0)
+	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)
 	dst.Type = txtyp.TxType(tx.Type)
 	dst.Status = types.TxStatus(tx.Status)
 	dst.CreateTime = tx.CreateTime
@@ -71,14 +74,35 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 	return nil
 }
 
-// entity不处理pending数据
-func (s *RdsServiceImpl) FindPendingTxViewByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error) {
-	var tx TransactionEntity
+// 根据owner&hash查询pending tx
+func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(owner, hash string) ([]TransactionView, error) {
+	var txs []TransactionView
 
-	err := s.db.Where("tx_hash=?", txhash).
-		Where("tx_log_index=?", logIndex).
+	err := s.db.Where("owner=?", owner).
+		Where("tx_hash=?", hash).
 		Where("fork=?", false).
-		Find(&tx).Error
+		Find(&txs).Error
 
-	return tx, err
+	return txs, err
+}
+
+// 根据owner&nonce删除pending tx
+func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner, nonce string) error {
+	err := s.db.Where("owner=?", owner).
+				Where("nonce=?", nonce).
+				Where("fork=?", false).
+				Delete(&TransactionView{}).Error
+	return err
+}
+
+// 根据owner&hash&logIndex查询mined tx
+func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(owner, hash string, logIndex int64) ([]TransactionView, error) {
+	var txs []TransactionView
+
+	err := s.db.Where("owner=?", owner).
+				Where("tx_hash=?", hash).
+				Where("tx_log_index", logIndex).
+				Find(&txs).Error
+
+	return txs, err
 }
