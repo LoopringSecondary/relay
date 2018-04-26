@@ -155,6 +155,10 @@ type WethWithdrawalEvent struct {
 	Amount *big.Int
 }
 
+type EthTransferEvent struct {
+	TxInfo
+}
+
 type SubmitRingMethodEvent struct {
 	TxInfo
 	Err error

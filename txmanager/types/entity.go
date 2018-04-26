@@ -26,19 +26,19 @@ import (
 )
 
 type TransactionEntity struct {
-	From        common.Address  `json:"from"`
-	To          common.Address  `json:"to"`
-	BlockNumber int64			`json:"block_number"`
-	Hash        common.Hash		`json:"hash"`
-	LogIndex    int64			`json:"log_index"`
-	Value       *big.Int		`json:"value"`
-	Content     string			`json:"content"`
-	Status      types.TxStatus	`json:"status"`
-	GasLimit    *big.Int		`json:"gas_limit"`
-	GasUsed     *big.Int		`json:"gas_used"`
-	GasPrice    *big.Int		`json:"gas_price"`
-	Nonce       *big.Int		`json:"nonce"`
-	BlockTime   int64			`json:"block_time"`
+	From        common.Address `json:"from"`
+	To          common.Address `json:"to"`
+	BlockNumber int64          `json:"block_number"`
+	Hash        common.Hash    `json:"hash"`
+	LogIndex    int64          `json:"log_index"`
+	Value       *big.Int       `json:"value"`
+	Content     string         `json:"content"`
+	Status      types.TxStatus `json:"status"`
+	GasLimit    *big.Int       `json:"gas_limit"`
+	GasUsed     *big.Int       `json:"gas_used"`
+	GasPrice    *big.Int       `json:"gas_price"`
+	Nonce       *big.Int       `json:"nonce"`
+	BlockTime   int64          `json:"block_time"`
 }
 
 func (tx *TransactionEntity) FromApproveEvent(src *types.ApprovalEvent) error {
@@ -155,6 +155,12 @@ func (tx *TransactionEntity) FromTransferEvent(src *types.TransferEvent) error {
 	}
 
 	tx.Content = string(bs)
+	return nil
+}
+
+func (tx *TransactionEntity) FromEthTransferEvent(src *types.EthTransferEvent) error {
+	tx.fullFilled(src.TxInfo)
+	tx.Content = ""
 	return nil
 }
 

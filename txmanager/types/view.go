@@ -23,23 +23,22 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-	"github.com/tendermint/go-crypto/keys/tx"
 )
 
 type TransactionView struct {
-	Symbol     string         `json:"symbol"`
-	Owner      common.Address `json:"owner"`
-	TxHash     common.Hash    `json:"tx_hash"`
-	LogIndex   int64          `json:"log_index"`
-	Amount 	   *big.Int `json:"amount"`
-	Type       TxType         `json:"type"`
-	Status     types.TxStatus `json:"status"`
-	BlockTime int64 `json:"block_time"`
+	Symbol    string         `json:"symbol"`
+	Owner     common.Address `json:"owner"`
+	TxHash    common.Hash    `json:"tx_hash"`
+	LogIndex  int64          `json:"log_index"`
+	Amount    *big.Int       `json:"amount"`
+	Type      TxType         `json:"type"`
+	Status    types.TxStatus `json:"status"`
+	BlockTime int64          `json:"block_time"`
 }
 
 func ApproveView(src *types.ApprovalEvent) (*TransactionView, error) {
 	var (
-		tx TransactionView
+		tx  TransactionView
 		err error
 	)
 
@@ -94,8 +93,8 @@ func CutoffPairView(src *types.CutoffPairEvent) TransactionView {
 
 func WethDepositView(src *types.WethDepositEvent) []TransactionView {
 	var (
-		list []TransactionView
-		tx1,tx2 TransactionView
+		list     []TransactionView
+		tx1, tx2 TransactionView
 	)
 
 	tx1.fullFilled(src.TxInfo)
@@ -114,8 +113,8 @@ func WethDepositView(src *types.WethDepositEvent) []TransactionView {
 
 func WethWithdrawalView(src *types.WethWithdrawalEvent) []TransactionView {
 	var (
-		list []TransactionView
-		tx1,tx2 TransactionView
+		list     []TransactionView
+		tx1, tx2 TransactionView
 	)
 
 	tx1.fullFilled(src.TxInfo)
@@ -135,9 +134,9 @@ func WethWithdrawalView(src *types.WethWithdrawalEvent) []TransactionView {
 
 func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 	var (
-		list []TransactionView
-		tx1,tx2 TransactionView
-		err error
+		list     []TransactionView
+		tx1, tx2 TransactionView
+		err      error
 	)
 
 	if tx1.Symbol, err = util.GetSymbolWithAddress(src.To); err != nil {
@@ -155,6 +154,34 @@ func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 
 	list = append(list, tx1, tx2)
 	return list, nil
+}
+
+func EthTransferView(src *types.EthTransferEvent) []TransactionView {
+	var (
+		list     []TransactionView
+		tx1, tx2 TransactionView
+	)
+
+	tx1.fullFilled(src.TxInfo)
+	tx1.Amount = src.Value
+	tx1.Symbol = ETH_SYMBOL
+
+	if src.Value.Cmp(big.NewInt(0)) > 0 {
+		tx1.Owner = src.From
+		tx1.Type = TX_TYPE_SEND
+
+		tx2 = tx1
+		tx2.Owner = src.To
+		tx2.Type = TX_TYPE_RECEIVE
+	} else {
+		tx1.Type = TX_TYPE_UNSUPPORTED_CONTRACT
+		tx1.Owner = src.From
+
+		tx2 = tx1
+		tx2.Owner = src.To
+	}
+
+	return list
 }
 
 func (tx *TransactionView) fullFilled(src types.TxInfo) {

@@ -163,7 +163,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.DepthUpdated, types.DepthUpdateEvent{DelegateAddress:model.DelegateAddress, Market:model.Market})
+	eventemitter.Emit(eventemitter.DepthUpdated, types.DepthUpdateEvent{DelegateAddress: model.DelegateAddress, Market: model.Market})
 	return om.rds.Add(model)
 }
 

@@ -23,7 +23,7 @@ import (
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/market/util"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"math/big"
 )
@@ -108,115 +108,91 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 }
 
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
-	evt := input.(*types.ApprovalEvent)
+	event := input.(*types.ApprovalEvent)
 
-	var (
-		tx  types.Transaction
-		err error
-	)
-	tx.FromApproveEvent(evt)
-	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
+	var entity txtyp.TransactionEntity
+	entity.FromApproveEvent(event)
+
+	view, err := txtyp.ApproveView(event)
+	if err != nil {
 		return err
 	}
-	return tm.saveTransaction(&tx)
+
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
-	evt := input.(*types.OrderCancelledEvent)
+	event := input.(*types.OrderCancelledEvent)
 
-	var tx types.Transaction
-	tx.FromCancelEvent(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
+	var entity txtyp.TransactionEntity
+	entity.FromCancelEvent(event)
+	view := txtyp.CancelView(event)
+
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) error {
-	evt := input.(*types.CutoffEvent)
+	event := input.(*types.CutoffEvent)
 
-	var tx types.Transaction
-	tx.FromCutoffEvent(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
+	var entity txtyp.TransactionEntity
+	entity.FromCutoffEvent(event)
+	view := txtyp.CutoffView(event)
+
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) error {
-	evt := input.(*types.CutoffPairEvent)
+	event := input.(*types.CutoffPairEvent)
 
-	var tx types.Transaction
-	tx.FromCutoffPairEvent(evt)
-	tx.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx)
+	var entity txtyp.TransactionEntity
+	entity.FromCutoffPairEvent(event)
+	view := txtyp.CutoffPairView(event)
+
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
-	evt := input.(*types.WethDepositEvent)
+	event := input.(*types.WethDepositEvent)
 
-	var (
-		tx  types.Transaction
-		err error
-	)
+	var entity txtyp.TransactionEntity
+	entity.FromWethDepositEvent(event)
+	viewList := txtyp.WethDepositView(event)
 
-	// save weth
-	tx.FromWethDepositEvent(evt)
-	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
-		return err
-	}
-	if err := tm.saveTransaction(&tx); err != nil {
-		return err
-	}
-
-	// save eth
-	tx1 := tx
-	tx1.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx1)
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
-	evt := input.(*types.WethWithdrawalEvent)
+	event := input.(*types.WethWithdrawalEvent)
 
-	var (
-		tx  types.Transaction
-		err error
-	)
-	tx.FromWethWithdrawalEvent(evt)
-	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
-		return nil
-	}
-	if err := tm.saveTransaction(&tx); err != nil {
-		return err
-	}
+	var entity txtyp.TransactionEntity
+	entity.FromWethWithdrawalEvent(event)
+	viewList := txtyp.WethWithdrawalView(event)
 
-	// save eth
-	tx1 := tx
-	tx1.Symbol = ETH_SYMBOL
-	return tm.saveTransaction(&tx1)
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
-	evt := input.(*types.TransferEvent)
+	event := input.(*types.TransferEvent)
 
-	var (
-		tx  types.Transaction
-		err error
-	)
-	tx.FromTransferEvent(evt)
-	if tx.Symbol, err = util.GetSymbolWithAddress(tx.Protocol); err != nil {
-		return nil
+	var entity txtyp.TransactionEntity
+	entity.FromTransferEvent(event)
+	viewList, err := txtyp.TransferView(event)
+	if err != nil {
+		return err
 	}
-	return tm.saveTransaction(&tx)
+
+	// todo save
+	return nil
 }
 
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
-	evt := input.(*types.OrderFilledEvent)
-
-	var tx1, tx2 types.Transaction
-	tx1.FromFillEvent(evt, types.TX_TYPE_BUY)
-	tx1.Symbol = ""
-	tm.saveTransaction(&tx1)
-
-	tx2.FromFillEvent(evt, types.TX_TYPE_SELL)
-	tx1.Symbol = ""
-	tm.saveTransaction(&tx2)
+	// todo
 
 	return nil
 }
@@ -225,28 +201,13 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 // 当value大于0时认为是eth转账
 // 当value等于0时认为是调用系统不支持的合约,默认使用fromTransferEvent/send type为unsupported_contract
 func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData) error {
-	evt := input.(*types.TransferEvent)
+	event := input.(*types.EthTransferEvent)
 
-	if evt.Amount.Cmp(big.NewInt(0)) > 0 {
-		var tx types.Transaction
+	var entity txtyp.TransactionEntity
+	entity.FromEthTransferEvent(event)
+	viewList := txtyp.EthTransferView(event)
 
-		tx.FromTransferEvent(evt)
-		tx.Protocol = types.NilAddress
-		tx.Symbol = ETH_SYMBOL
-		if err := tm.saveTransaction(&tx); err != nil {
-			return err
-		}
-	} else {
-		var tx types.Transaction
-		tx.FromTransferEvent(evt)
-		tx.Type = types.TX_TYPE_UNSUPPORTED_CONTRACT
-		tx.Protocol = tx.To
-		tx.Symbol = ETH_SYMBOL
-		if err := tm.saveTransaction(&tx); err != nil {
-			return err
-		}
-	}
-
+	// todo save
 	return nil
 }
 

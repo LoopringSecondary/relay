@@ -371,7 +371,7 @@ type ChangedOfBlock struct {
 func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
 	err := rcache.SAdd(b.cacheBalanceKey(), int64(0), b.cacheBalanceField(owner, token))
 	if err == nil {
-		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex()})
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner: owner.Hex()})
 	}
 	return err
 }
@@ -402,7 +402,7 @@ func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner, token, sp
 func (b *ChangedOfBlock) saveAllowanceKey(owner, token, spender common.Address) error {
 	err := rcache.SAdd(b.cacheAllowanceKey(), int64(0), b.cacheAllowanceField(owner, token, spender))
 	if err == nil {
-		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex(), DelegateAddress: spender.Hex()})
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner: owner.Hex(), DelegateAddress: spender.Hex()})
 	}
 	return err
 }
