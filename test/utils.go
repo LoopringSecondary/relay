@@ -87,7 +87,7 @@ func init() {
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
+	path := "/Users/jaice/relay.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 
@@ -95,7 +95,7 @@ func loadConfig() *config.GlobalConfig {
 }
 
 func LoadConfig() *config.GlobalConfig {
-	path := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
+	path := "/Users/jaice/relay.toml"
 	c := config.LoadConfig(path)
 	log.Initialize(c.Log)
 
