@@ -30,6 +30,8 @@ import (
 	"qiniupkg.com/x/errors.v7"
 	"strconv"
 	"strings"
+	gocache "github.com/patrickmn/go-cache"
+	"time"
 )
 
 type ExchangeType string
@@ -40,6 +42,8 @@ const (
 	huobi   = "huobi"
 )
 
+// only support eth market now
+var supportedMarkets = make([]string, 0)
 const cachePreKey = "TICKER_EX_"
 
 //TODO (xiaolu)  add more exchanges to this list
@@ -53,6 +57,11 @@ const defaultSyncInterval = 5 // minutes
 
 type Exchange interface {
 	updateCache()
+}
+
+type TickerField struct {
+	key []byte
+	value []byte
 }
 
 type ExchangeImpl struct {
@@ -70,6 +79,7 @@ type CollectorImpl struct {
 	syncInterval int
 	cron         *cron.Cron
 	cronJobLock  bool
+	localCache  *gocache.Cache
 }
 
 func NewExchange(name, tickerUrl string) ExchangeImpl {
@@ -89,21 +99,57 @@ func (e *ExchangeImpl) updateCache() {
 	}
 }
 
+func mockUpdateCache() {
+	tickers := make([]Ticker, 0)
+	t1 := Ticker{Market:"LRC-WETH", Amount:0.001}
+	t2 := Ticker{Market:"LRC-WETH", Amount:0.003}
+	t3 := Ticker{Market:"FOO-BAR", Amount:0.002}
+	tickers = append(tickers, t1)
+	tickers = append(tickers, t2)
+	tickers = append(tickers, t3)
+	var err error
+	if err == nil && len(tickers) > 0 {
+		tkFields := make([]TickerField, 0)
+		for _, t := range tickers {
+			tkField, err := buildTickerField(t.Market, t)
+			if err == nil {
+				tkFields = append(tkFields, tkField)
+			}
+			//setCache(binance, t.Market, t)
+		}
+		setHMCache(binance, tkFields)
+		t11, _ := buildTickerField(t1.Market, t1)
+		setHMCache(okex, []TickerField{t11})
+	}
+}
+
 func updateBinanceCache() {
 	//updateCacheByExchange("binance", GetTickerFromBinance)
 	tickers, err := GetAllTickerFromBinance()
 	if err == nil && len(tickers) > 0 {
+		tkFields := make([]TickerField, 0)
 		for _, t := range tickers {
-			setCache(binance, t.Market, t)
+			tkField, err := buildTickerField(t.Market, t)
+			if err == nil {
+				tkFields = append(tkFields, tkField)
+			}
+			//setCache(binance, t.Market, t)
 		}
+		setHMCache(binance, tkFields)
 	}
 }
 func updateOkexCache() {
 	tickers, err := GetAllTickerFromOkex()
 	if err == nil && len(tickers) > 0 {
+		tkFields := make([]TickerField, 0)
 		for _, t := range tickers {
-			setCache(okex, t.Market, t)
+			tkField, err := buildTickerField(t.Market, t)
+			if err == nil {
+				tkFields = append(tkFields, tkField)
+			}
+			//setCache(okex, t.Market, t)
 		}
+		setHMCache(okex, tkFields)
 	}
 }
 func updateHuobiCache() {
@@ -112,20 +158,31 @@ func updateHuobiCache() {
 
 func updateCacheByExchange(exchange string, getter func(mkt string) (ticker Ticker, err error)) {
 
+	tkFields := make([]TickerField, 0)
 	for _, v := range util.AllMarkets {
+
+		if !stringInSlice(v, supportedMarkets) {
+			continue
+		}
+
 		vv := strings.ToUpper(v)
 		vv = strings.Replace(vv, "WETH", "ETH", 1)
 		ticker, err := getter(vv)
 		if err != nil {
 			//log.Debug("get ticker error " + err.Error())
 		} else {
-			setCache(exchange, v, ticker)
+			//setCache(exchange, v, ticker)
+			tkField, err := buildTickerField(v, ticker)
+			if err == nil {
+				tkFields = append(tkFields, tkField)
+			}
 		}
 	}
+	setHMCache(exchange, tkFields)
 }
 
 func setCache(exchange, market string, ticker Ticker) {
-	cacheKey := cachePreKey + exchange + "_" + market
+	cacheKey := cachePreKey + exchange
 	tickerByte, err := json.Marshal(ticker)
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
@@ -134,8 +191,42 @@ func setCache(exchange, market string, ticker Ticker) {
 	}
 }
 
+func buildTickerField(market string, ticker Ticker) (tf TickerField, err error) {
+
+	if len(market) == 0 {
+		return tf, errors.New("market is nil")
+	}
+
+	tickerByte, err := json.Marshal(ticker)
+	if err != nil {
+		log.Info("marshal ticker json error " + err.Error())
+		return tf, err
+	} else {
+		return TickerField{key: []byte(market), value: tickerByte}, nil
+	}
+}
+
+func setHMCache(exchange string, tickers []TickerField) {
+
+	data := [][]byte{}
+
+	for _, tk := range tickers {
+		data = append(data, tk.key)
+		data = append(data, tk.value)
+	}
+
+	cacheKey := cachePreKey + exchange
+	cache.HMSet(cacheKey, 3600 * 24 * 30, data...)
+}
+
 func NewCollector(cronJobLock bool) *CollectorImpl {
 	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New(), cronJobLock: cronJobLock}
+	rst.localCache = gocache.New(5 * time.Second, 5 * time.Minute)
+	for _, v := range util.AllMarkets {
+		if strings.HasSuffix(v, "ETH") {
+			supportedMarkets = append(supportedMarkets, v)
+		}
+	}
 
 	for k, v := range exchanges {
 		exchange := NewExchange(k, v)
@@ -147,6 +238,7 @@ func NewCollector(cronJobLock bool) *CollectorImpl {
 func (c *CollectorImpl) Start() {
 	// create cron job and exec sync
 	if c.cronJobLock {
+		//mockUpdateCache()
 		updateBinanceCache()
 		updateOkexCache()
 		updateHuobiCache()
@@ -167,17 +259,74 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 	}
 
 	for _, e := range c.exs {
-		cacheKey := cachePreKey + e.name + "_" + market
-		byteRst, err := cache.Get(cacheKey)
-		if err == nil {
-			var unmarshalRst Ticker
-			json.Unmarshal(byteRst, &unmarshalRst)
-			result = append(result, unmarshalRst)
+
+		tkByteInLocal, ok := c.localCache.Get(e.name); if ok {
+			log.Infof("get ticker from local cache, ex : %s, market : %s", e.name, market)
+			localTickers := tkByteInLocal.(map[string]Ticker)
+			if _, ok := localTickers[market]; ok {
+				result = append(result, localTickers[market])
+			}
 		} else {
-			//log.Info("get ticker from redis error" + err.Error())
+
+			log.Infof("get ticker from redis cache, ex : %s, market : %s", e.name, market)
+			tickerMap, err := getAllMarketFromRedis(e.name)
+			fmt.Println(tickerMap)
+			if err != nil {
+				continue
+			}
+
+			v, ok := tickerMap[market]; if ok {
+				result = append(result, v)
+			}
+
+			c.localCache.Set(e.name, tickerMap, 5 * time.Second)
+
+			//cacheKey := cachePreKey + e.name + "_" + market
+			//byteRst, err := cache.Get(cacheKey)
+			//cacheKey := cachePreKey + e.name
+			//byteRst, err := cache.HMGet(cacheKey, []byte(market))
+			//if err == nil && len(byteRst) == 1 && len(byteRst[0]) > 0 {
+			//	var unmarshalRst Ticker
+			//	json.Unmarshal(byteRst[0], &unmarshalRst)
+			//	result = append(result, unmarshalRst)
+			//} else {
+			//	//log.Info("get ticker from redis error" + err.Error())
+			//}
 		}
+
 	}
 	return result, nil
+}
+
+func getAllMarketFromRedis(exchange string) (tickers map[string]Ticker, err error) {
+	keys := make([][]byte, 0)
+	for _, m := range supportedMarkets {
+		keys = append(keys, []byte(m))
+	}
+
+	if len(keys) == 0  {
+		return nil, errors.New("no supported market found")
+	}
+
+	byteRst, err := cache.HMGet(cachePreKey + exchange, keys...)
+
+	if err != nil {
+		return nil, err
+	}
+	tickers = make(map[string]Ticker)
+	if err == nil && len(byteRst) > 1 {
+		for _, tb := range byteRst {
+			if len(tb) == 0 {
+				continue
+			}
+			var unmarshalRst Ticker
+			json.Unmarshal(tb, &unmarshalRst)
+			if len(unmarshalRst.Market) > 0  {
+				tickers[unmarshalRst.Market] = unmarshalRst
+			}
+		}
+	}
+	return
 }
 
 type HuobiTicker struct {
@@ -469,8 +618,8 @@ func GetAllTickerFromOkex() (tickers []Ticker, err error) {
 				okexMarket := strings.Replace(v.Symbol, "_", "-", 1)
 				okexMarket = strings.ToUpper(okexMarket)
 				okexMarket = strings.Replace(okexMarket, "ETH", "WETH", 1)
-				ticker.Market = okexMarket
-				if stringInSlice(okexMarket, util.AllMarkets) {
+				if stringInSlice(okexMarket, supportedMarkets) {
+					ticker.Market = okexMarket
 					ticker.Last, _ = strconv.ParseFloat(v.Last, 64)
 					ticker.Change = v.Change
 					ticker.Exchange = okex
