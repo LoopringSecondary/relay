@@ -369,7 +369,11 @@ type ChangedOfBlock struct {
 }
 
 func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
-	return rcache.SAdd(b.cacheBalanceKey(), int64(0), b.cacheBalanceField(owner, token))
+	err := rcache.SAdd(b.cacheBalanceKey(), int64(0), b.cacheBalanceField(owner, token))
+	if err == nil {
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex()})
+	}
+	return err
 }
 
 func (b *ChangedOfBlock) cacheBalanceKey() string {
@@ -396,7 +400,11 @@ func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner, token, sp
 }
 
 func (b *ChangedOfBlock) saveAllowanceKey(owner, token, spender common.Address) error {
-	return rcache.SAdd(b.cacheAllowanceKey(), int64(0), b.cacheAllowanceField(owner, token, spender))
+	err := rcache.SAdd(b.cacheAllowanceKey(), int64(0), b.cacheAllowanceField(owner, token, spender))
+	if err == nil {
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex(), DelegateAddress: spender.Hex()})
+	}
+	return err
 }
 
 func removeExpiredBlock(blockNumber, duration *big.Int) error {

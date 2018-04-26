@@ -578,7 +578,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getFills","params":{see 
 
 #### loopring_getTrend
 
-Get trend info per market.
+Get trend info per market.If you select interval 1Hr, this function will return a list(the length is 100 mostly). each item represent a data point of price change in 1Hr. The same for other intervals.
 
 ##### Parameters
 

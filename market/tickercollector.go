@@ -135,7 +135,7 @@ func setCache(exchange, market string, ticker Ticker) {
 }
 
 func NewCollector(cronJobLock bool) *CollectorImpl {
-	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New(), cronJobLock:cronJobLock}
+	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New(), cronJobLock: cronJobLock}
 
 	for k, v := range exchanges {
 		exchange := NewExchange(k, v)
@@ -156,7 +156,6 @@ func (c *CollectorImpl) Start() {
 		log.Info("start collect cron jobs......... ")
 		c.cron.Start()
 	}
-
 }
 
 func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {

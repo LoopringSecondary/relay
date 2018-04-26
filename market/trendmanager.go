@@ -34,6 +34,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	gocache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -53,6 +54,7 @@ const (
 	tsFourHour = 4 * tsOneHour
 	tsOneDay   = 24 * tsOneHour
 	tsOneWeek  = 7 * tsOneDay
+	localCacheTicker = "LocalCacheTicker"
 )
 
 var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
@@ -98,6 +100,7 @@ type TrendManager struct {
 	rds         dao.RdsService
 	cron        *cron.Cron
 	cronJobLock bool
+	localCache  *gocache.Cache
 }
 
 var once sync.Once
@@ -110,6 +113,7 @@ func NewTrendManager(dao dao.RdsService, cronJobLock bool) TrendManager {
 
 	once.Do(func() {
 		trendManager = TrendManager{rds: dao, cron: cron.New(), cronJobLock: cronJobLock}
+		trendManager.localCache = gocache.New(5 * time.Second, 5 * time.Minute)
 		trendManager.LoadCache()
 		if cronJobLock {
 			trendManager.startScheduleUpdate()
@@ -781,7 +785,7 @@ func (t *TrendManager) ScheduleUpdate() {
 		wgInterval.Done()
 	}
 	wgInterval.Wait()
-	//t.wupdateCache()
+	t.LoadCache()
 }
 
 func (t *TrendManager) aggregate(fills []dao.FillEvent, trends []Trend) (trend Trend, err error) {
@@ -911,8 +915,11 @@ func (t *TrendManager) GetTrends(market, interval string) (trends []Trend, err e
 
 func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 
+	log.Info("GetTicker Method Invoked")
+
 	if t.cacheReady {
 
+		log.Info("[TICKER]ticker key used in GetTicker")
 		if tickerCache, err := redisCache.Get(tickerKey); err == nil {
 			var tickerMap map[string]Ticker
 			json.Unmarshal(tickerCache, &tickerMap)
@@ -972,9 +979,24 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 func (t *TrendManager) GetTickerByMarket(mkt string) (ticker Ticker, err error) {
 
 	if t.cacheReady {
-		if tickerCache, err := redisCache.Get(tickerKey); err == nil {
+		log.Info("[TICKER]ticker key used in GetTickerByMarket")
+
+		localCacheValue, ok := t.localCache.Get(localCacheTicker)
+		if ok {
+			log.Info("[TICKER] get cache from local " + mkt)
+			tickerMap := localCacheValue.(map[string]Ticker)
+			for k, v := range tickerMap {
+				if k == mkt {
+					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+					v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+					return v, err
+				}
+			}
+		} else if tickerCache, err := redisCache.Get(tickerKey); err == nil {
+			log.Info("[TICKER] get cache from redis " + mkt)
 			var tickerMap map[string]Ticker
 			json.Unmarshal(tickerCache, &tickerMap)
+			t.localCache.Set(localCacheTicker, tickerMap, 5 * time.Second)
 			for k, v := range tickerMap {
 				if k == mkt {
 					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
@@ -1009,6 +1031,8 @@ func ConvertUp(src dao.Trend) Trend {
 }
 
 func (t *TrendManager) HandleOrderFilled(input eventemitter.EventData) (err error) {
+
+	log.Info("HandleOrderFilled invoked")
 
 	if t.cacheReady {
 
@@ -1064,6 +1088,7 @@ func (t *TrendManager) reCalTicker(market string) {
 	firstSecondThisHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 1, 0, now.Location())
 	ticker := calculateTicker(market, mktCache.Fills, mktCache.Trends, firstSecondThisHour)
 	//tickerInCache, _ := t.c.Get(tickerKey)
+	log.Info("[TICKER]ticker key used in reCalTicker")
 	tickerInCache, _ := redisCache.Get(tickerKey)
 	var tickerMap map[string]Ticker
 	json.Unmarshal(tickerInCache, &tickerMap)
@@ -1078,6 +1103,7 @@ func setTrendCache(interval, market string, mktCache Cache, ttl int64) {
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
 	} else {
+		eventemitter.Emit(eventemitter.TrendUpdated, market)
 		redisCache.Set(cacheKey, tickerByte, ttl)
 	}
 }
@@ -1087,6 +1113,8 @@ func setLprTickerCache(tickers map[string]Ticker, ttl int64) {
 	if err != nil {
 		log.Info("marshal ticker json error " + err.Error())
 	} else {
+		eventemitter.Emit(eventemitter.LoopringTickerUpdated, nil)
+		log.Info("[TICKER]ticker key set in setLprTickerCache")
 		redisCache.Set(tickerKey, tickerByte, ttl)
 	}
 }
