@@ -321,8 +321,7 @@ func (so *SocketIOServiceImpl) handleAfterEmit(eventType string, query interface
 
 func (so *SocketIOServiceImpl) broadcastTpTickers(input eventemitter.EventData) (err error) {
 
-	log.Infof("[SOCKETIO-RECEIVE-EVENT] tickers input. %s", input)
-
+	//log.Infof("[SOCKETIO-RECEIVE-EVENT] tickers input. %s", input)
 	mkts, _ := so.walletService.GetSupportedMarket()
 
 	tickerMap := make(map[string]SocketIOJsonResp)
@@ -363,7 +362,7 @@ func (so *SocketIOServiceImpl) broadcastTpTickers(input eventemitter.EventData) 
 
 func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventData) (err error) {
 
-	log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring ticker input. %s", input)
+	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring ticker input. %s", input)
 
 	resp := SocketIOJsonResp{}
 	tickers, err := so.walletService.GetTicker()

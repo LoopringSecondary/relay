@@ -261,14 +261,14 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 	for _, e := range c.exs {
 
 		tkByteInLocal, ok := c.localCache.Get(e.name); if ok {
-			log.Infof("get ticker from local cache, ex : %s, market : %s", e.name, market)
+			//log.Infof("get ticker from local cache, ex : %s, market : %s", e.name, market)
 			localTickers := tkByteInLocal.(map[string]Ticker)
 			if _, ok := localTickers[market]; ok {
 				result = append(result, localTickers[market])
 			}
 		} else {
 
-			log.Infof("get ticker from redis cache, ex : %s, market : %s", e.name, market)
+			//log.Infof("get ticker from redis cache, ex : %s, market : %s", e.name, market)
 			tickerMap, err := getAllMarketFromRedis(e.name)
 			fmt.Println(tickerMap)
 			if err != nil {
