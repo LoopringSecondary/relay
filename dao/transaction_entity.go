@@ -41,7 +41,7 @@ type TransactionEntity struct {
 	GasUsed     string `gorm:"column:gas_used;type:varchar(40)"`
 	GasPrice    string `gorm:"column:gas_price;type:varchar(40)"`
 	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
-	BlockTime  int64  `gorm:"column:block_time"`
+	BlockTime   int64  `gorm:"column:block_time"`
 	Fork        bool   `gorm:"column:fork"`
 }
 
@@ -92,7 +92,7 @@ func (s *RdsServiceImpl) FindTxEntityByHashAndLogIndex(txhash string, logIndex i
 	err := s.db.Where("tx_hash=?", txhash).
 		Where("tx_log_index=?", logIndex).
 		Where("fork=?", false).
-		Find(&tx).Error
+		First(&tx).Error
 
 	return tx, err
 }

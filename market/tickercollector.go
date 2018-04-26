@@ -24,13 +24,13 @@ import (
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	gocache "github.com/patrickmn/go-cache"
 	"github.com/robfig/cron"
 	"io/ioutil"
 	"net/http"
 	"qiniupkg.com/x/errors.v7"
 	"strconv"
 	"strings"
-	gocache "github.com/patrickmn/go-cache"
 	"time"
 )
 
@@ -44,6 +44,7 @@ const (
 
 // only support eth market now
 var supportedMarkets = make([]string, 0)
+
 const cachePreKey = "TICKER_EX_"
 
 //TODO (xiaolu)  add more exchanges to this list
@@ -60,7 +61,7 @@ type Exchange interface {
 }
 
 type TickerField struct {
-	key []byte
+	key   []byte
 	value []byte
 }
 
@@ -79,7 +80,7 @@ type CollectorImpl struct {
 	syncInterval int
 	cron         *cron.Cron
 	cronJobLock  bool
-	localCache  *gocache.Cache
+	localCache   *gocache.Cache
 }
 
 func NewExchange(name, tickerUrl string) ExchangeImpl {
@@ -101,9 +102,9 @@ func (e *ExchangeImpl) updateCache() {
 
 func mockUpdateCache() {
 	tickers := make([]Ticker, 0)
-	t1 := Ticker{Market:"LRC-WETH", Amount:0.001}
-	t2 := Ticker{Market:"LRC-WETH", Amount:0.003}
-	t3 := Ticker{Market:"FOO-BAR", Amount:0.002}
+	t1 := Ticker{Market: "LRC-WETH", Amount: 0.001}
+	t2 := Ticker{Market: "LRC-WETH", Amount: 0.003}
+	t3 := Ticker{Market: "FOO-BAR", Amount: 0.002}
 	tickers = append(tickers, t1)
 	tickers = append(tickers, t2)
 	tickers = append(tickers, t3)
@@ -216,12 +217,12 @@ func setHMCache(exchange string, tickers []TickerField) {
 	}
 
 	cacheKey := cachePreKey + exchange
-	cache.HMSet(cacheKey, 3600 * 24 * 30, data...)
+	cache.HMSet(cacheKey, 3600*24*30, data...)
 }
 
 func NewCollector(cronJobLock bool) *CollectorImpl {
 	rst := &CollectorImpl{exs: make([]ExchangeImpl, 0), syncInterval: defaultSyncInterval, cron: cron.New(), cronJobLock: cronJobLock}
-	rst.localCache = gocache.New(5 * time.Second, 5 * time.Minute)
+	rst.localCache = gocache.New(5*time.Second, 5*time.Minute)
 	for _, v := range util.AllMarkets {
 		if strings.HasSuffix(v, "ETH") {
 			supportedMarkets = append(supportedMarkets, v)
@@ -260,7 +261,8 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 
 	for _, e := range c.exs {
 
-		tkByteInLocal, ok := c.localCache.Get(e.name); if ok {
+		tkByteInLocal, ok := c.localCache.Get(e.name)
+		if ok {
 			log.Infof("get ticker from local cache, ex : %s, market : %s", e.name, market)
 			localTickers := tkByteInLocal.(map[string]Ticker)
 			if _, ok := localTickers[market]; ok {
@@ -275,11 +277,12 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 				continue
 			}
 
-			v, ok := tickerMap[market]; if ok {
+			v, ok := tickerMap[market]
+			if ok {
 				result = append(result, v)
 			}
 
-			c.localCache.Set(e.name, tickerMap, 5 * time.Second)
+			c.localCache.Set(e.name, tickerMap, 5*time.Second)
 
 			//cacheKey := cachePreKey + e.name + "_" + market
 			//byteRst, err := cache.Get(cacheKey)
@@ -304,11 +307,11 @@ func getAllMarketFromRedis(exchange string) (tickers map[string]Ticker, err erro
 		keys = append(keys, []byte(m))
 	}
 
-	if len(keys) == 0  {
+	if len(keys) == 0 {
 		return nil, errors.New("no supported market found")
 	}
 
-	byteRst, err := cache.HMGet(cachePreKey + exchange, keys...)
+	byteRst, err := cache.HMGet(cachePreKey+exchange, keys...)
 
 	if err != nil {
 		return nil, err
@@ -321,7 +324,7 @@ func getAllMarketFromRedis(exchange string) (tickers map[string]Ticker, err erro
 			}
 			var unmarshalRst Ticker
 			json.Unmarshal(tb, &unmarshalRst)
-			if len(unmarshalRst.Market) > 0  {
+			if len(unmarshalRst.Market) > 0 {
 				tickers[unmarshalRst.Market] = unmarshalRst
 			}
 		}

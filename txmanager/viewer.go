@@ -21,7 +21,6 @@ package txmanager
 import (
 	"errors"
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
@@ -88,7 +87,7 @@ func (impl *TransactionViewerImpl) GetTransactionsByHash(ownerStr string, hashLi
 		return list, ErrNonTransaction
 	}
 
-	list = assemble(txs, owner)
+	list = impl.assemble(txs)
 
 	return list, nil
 }
@@ -106,7 +105,7 @@ func (impl *TransactionViewerImpl) GetPendingTransactions(ownerStr string) ([]tx
 		return list, ErrNonTransaction
 	}
 
-	list = assemble(txs, owner)
+	list = impl.assemble(txs)
 	return list, nil
 }
 
@@ -145,30 +144,40 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 		return list, ErrNonTransaction
 	}
 
-	list = assemble(views, owner)
+	list = impl.assemble(views)
 	//list = collector(list)
 	return list, nil
 }
 
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
-func assemble(items []dao.TransactionView, owner string) []txtyp.TransactionJsonResult {
+func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp.TransactionJsonResult {
 	var list []txtyp.TransactionJsonResult
 
 	for _, v := range items {
-		var (
-			tx  types.Transaction
-			res TransactionJsonResult
-		)
-		v.ConvertUp(&tx)
-		symbol := protocolToSymbol(tx.Protocol)
+		var view txtyp.TransactionView
 
-		// todo(fuk): 数据稳定后可以删除该代码或者加开关过滤该代码
-		if err := filter(&tx, owner, symbol); err != nil {
-			log.Debugf(err.Error())
-			continue
+		v.ConvertUp(&view)
+		res := txtyp.NewResult(&view)
+
+		res.Content = txtyp.SetDefaultContent()
+
+		if view.Type == txtyp.TX_TYPE_CANCEL_ORDER {
+			if entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex); err == nil {
+				if cancel, err := txtyp.ParseCancelContent(entity.Content); err == nil {
+					res.Content = txtyp.SetCancelContent(cancel.OrderHash)
+				}
+			}
+		}
+		if view.Type == txtyp.TX_TYPE_CUTOFF_PAIR {
+			if entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex); err == nil {
+				if cutoff, err := txtyp.ParseCutoffPairContent(entity.Content); err == nil {
+					if market, err := util.WrapMarket(cutoff.Token1, cutoff.Token2); err == nil {
+						res.Content = txtyp.SetCutoffContent(market)
+					}
+				}
+			}
 		}
 
-		res.fromTransaction(&tx, owner, symbol)
 		list = append(list, res)
 	}
 

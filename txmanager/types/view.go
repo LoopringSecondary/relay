@@ -26,17 +26,18 @@ import (
 )
 
 type TransactionView struct {
-	Symbol     string         `json:"symbol"`
-	Owner      common.Address `json:"owner"`     // 用户地址
-	To 			common.Address `json:"to"`       // 如果是转账相关则为receiver,如果是打个合约则为to
-	TxHash     common.Hash    `json:"tx_hash"`
-	LogIndex   int64          `json:"log_index"`
-	Amount     *big.Int       `json:"amount"`
-	Nonce      *big.Int       `json:"nonce"`
-	Type       TxType         `json:"type"`
-	Status     types.TxStatus `json:"status"`
-	CreateTime int64          `json:"create_time"`
-	UpdateTime int64          `json:"update_time"`
+	Symbol      string         `json:"symbol"`
+	Owner       common.Address `json:"owner"` // 用户地址
+	To          common.Address `json:"to"`    // 如果是转账相关则为receiver,如果是打个合约则为to
+	TxHash      common.Hash    `json:"tx_hash"`
+	BlockNumber int64          `json:"block_number"`
+	LogIndex    int64          `json:"log_index"`
+	Amount      *big.Int       `json:"amount"`
+	Nonce       *big.Int       `json:"nonce"`
+	Type        TxType         `json:"type"`
+	Status      types.TxStatus `json:"status"`
+	CreateTime  int64          `json:"create_time"`
+	UpdateTime  int64          `json:"update_time"`
 }
 
 func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
@@ -204,6 +205,7 @@ func RelatedOwners(viewList []TransactionView) []common.Address {
 
 func (tx *TransactionView) fullFilled(src types.TxInfo) {
 	tx.TxHash = src.TxHash
+	tx.BlockNumber = src.BlockNumber.Int64()
 	tx.LogIndex = src.TxLogIndex
 	tx.Status = src.Status
 	tx.Nonce = src.Nonce

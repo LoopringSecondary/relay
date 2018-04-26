@@ -78,7 +78,8 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &FilledOrder{})
-	tables = append(tables, &Transaction{})
+	tables = append(tables, &TransactionEntity{})
+	tables = append(tables, &TransactionView{})
 	tables = append(tables, &CheckPoint{})
 
 	for _, t := range tables {

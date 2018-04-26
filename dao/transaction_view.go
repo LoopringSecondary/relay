@@ -26,18 +26,19 @@ import (
 )
 
 type TransactionView struct {
-	ID         int    `gorm:"column:id;primary_key;"`
-	Symbol     string `gorm:"column:symbol;type:varchar(20)"`
-	Owner      string `gorm:"column:owner;type:varchar(42)"`
-	TxHash     string `gorm:"column:tx_hash;type:varchar(82)"`
-	LogIndex   int64  `gorm:"column:tx_log_index"`
-	Amount     string `gorm:"column:amount;type:varchar(40)"`
-	Nonce      string `gorm:"column:nonce;type:varchar(40)"`
-	Type       uint8  `gorm:"column:tx_type"`
-	Status     uint8  `gorm:"column:status"`
-	CreateTime int64  `gorm:"column:create_time"`
-	UpdateTime int64  `gorm:"column:update_time"`
-	Fork       bool   `gorm:"column:fork"`
+	ID          int    `gorm:"column:id;primary_key;"`
+	Symbol      string `gorm:"column:symbol;type:varchar(20)"`
+	Owner       string `gorm:"column:owner;type:varchar(42)"`
+	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
+	BlockNumber int64  `gorm:"column:block_number"`
+	LogIndex    int64  `gorm:"column:tx_log_index"`
+	Amount      string `gorm:"column:amount;type:varchar(40)"`
+	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
+	Type        uint8  `gorm:"column:tx_type"`
+	Status      uint8  `gorm:"column:status"`
+	CreateTime  int64  `gorm:"column:create_time"`
+	UpdateTime  int64  `gorm:"column:update_time"`
+	Fork        bool   `gorm:"column:fork"`
 }
 
 // convert types/transaction to dao/transaction
@@ -46,6 +47,7 @@ func (tx *TransactionView) ConvertDown(src *txtyp.TransactionView) error {
 	tx.Symbol = src.Symbol
 	tx.Owner = src.Owner.Hex()
 	tx.TxHash = src.TxHash.Hex()
+	tx.BlockNumber = src.BlockNumber
 	tx.LogIndex = src.LogIndex
 	tx.Amount = src.Amount.String()
 	tx.Nonce = src.Nonce.String()
@@ -63,6 +65,7 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 	dst.Symbol = tx.Symbol
 	dst.Owner = common.HexToAddress(tx.Owner)
 	dst.TxHash = common.HexToHash(tx.TxHash)
+	dst.BlockNumber = tx.BlockNumber
 	dst.LogIndex = tx.LogIndex
 	dst.Amount, _ = new(big.Int).SetString(tx.Amount, 0)
 	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)

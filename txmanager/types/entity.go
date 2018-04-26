@@ -41,10 +41,39 @@ type TransactionEntity struct {
 	BlockTime   int64          `json:"block_time"`
 }
 
-type TransferContent struct {
-	Sender   string `json:"sender"`
-	Receiver string `json:"receiver"`
-	Amount   string `json:"amount"`
+type ApproveContent struct {
+	Owner   string `json:"owner"`
+	Spender string `json:"spender"`
+	Amount  string `json:"amount"`
+}
+
+type CancelContent struct {
+	OrderHash string `json:"order_hash"`
+	Amount    string `json:"amount"`
+}
+
+func ParseCancelContent(str string) (CancelContent, error) {
+	var content CancelContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
+}
+
+type CutoffContent struct {
+	Owner           string `json:"owner"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+type CutoffPairContent struct {
+	Owner           string `json:"owner"`
+	Token1          string `json:"token1"`
+	Token2          string `json:"token2"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+func ParseCutoffPairContent(str string) (CutoffPairContent, error) {
+	var content CutoffPairContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
 }
 
 type WethWithdrawalContent struct {
@@ -57,27 +86,10 @@ type WethDepositContent struct {
 	Amount string `json:"amount"`
 }
 
-type CutoffPairContent struct {
-	Owner           string `json:"owner"`
-	Token1          string `json:"token1"`
-	Token2          string `json:"token2"`
-	CutoffTimeStamp int64  `json:"cutoff"`
-}
-
-type CutoffContent struct {
-	Owner           string `json:"owner"`
-	CutoffTimeStamp int64  `json:"cutoff"`
-}
-
-type CancelContent struct {
-	OrderHash string `json:"order_hash"`
-	Amount    string `json:"amount"`
-}
-
-type ApproveContent struct {
-	Owner   string `json:"owner"`
-	Spender string `json:"spender"`
-	Amount  string `json:"amount"`
+type TransferContent struct {
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Amount   string `json:"amount"`
 }
 
 // todo fill
