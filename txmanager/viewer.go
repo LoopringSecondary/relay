@@ -75,16 +75,19 @@ var (
 func (impl *TransactionViewerImpl) GetTransactionsByHash(ownerStr string, hashList []string) ([]txtyp.TransactionJsonResult, error) {
 	var list []txtyp.TransactionJsonResult
 
-	if len(hashList) == 0 {
+	if !validateTxHashList(hashList) {
 		return list, ErrHashListEmpty
 	}
+	if !validateOwner(ownerStr) {
+		return list, ErrOwnerAddressInvalid
+	}
 
-	txs, _ := impl.db.GetTxViewByOwnerAndHashs(ownerStr, hashList)
+	owner := safeOwner(ownerStr)
+	txs, _ := impl.db.GetTxViewByOwnerAndHashs(owner, hashList)
 	if len(txs) == 0 {
 		return list, ErrNonTransaction
 	}
 
-	owner := common.HexToAddress(ownerStr)
 	list = assemble(txs, owner)
 
 	return list, nil
@@ -93,12 +96,12 @@ func (impl *TransactionViewerImpl) GetTransactionsByHash(ownerStr string, hashLi
 func (impl *TransactionViewerImpl) GetPendingTransactions(ownerStr string) ([]txtyp.TransactionJsonResult, error) {
 	var list []txtyp.TransactionJsonResult
 
-	if ownerStr == "" {
+	if !validateOwner(ownerStr) {
 		return list, ErrOwnerAddressInvalid
 	}
 
-	owner := common.HexToAddress(ownerStr)
-	txs, err := impl.db.GetPendingTxViewByOwner(owner.Hex())
+	owner := safeOwner(ownerStr)
+	txs, err := impl.db.GetPendingTxViewByOwner(owner)
 	if err != nil {
 		return list, ErrNonTransaction
 	}
@@ -108,12 +111,16 @@ func (impl *TransactionViewerImpl) GetPendingTransactions(ownerStr string) ([]tx
 }
 
 func (impl *TransactionViewerImpl) GetAllTransactionCount(ownerStr, symbolStr, statusStr, typStr string) (int, error) {
+	if !validateOwner(ownerStr) {
+		return 0, ErrOwnerAddressInvalid
+	}
+
 	owner := common.HexToAddress(ownerStr)
 	symbol := safeSymbol(symbolStr)
 	status := safeStatus(statusStr)
 	typ := safeType(typStr)
 
-	number, err := impl.db.GetTxViewCount(owner.Hex(), symbol, status, typ)
+	number, err := impl.db.GetTxViewCountByOwner(owner.Hex(), symbol, status, typ)
 	if number == 0 || err != nil {
 		return 0, ErrNonTransaction
 	}
@@ -124,28 +131,27 @@ func (impl *TransactionViewerImpl) GetAllTransactionCount(ownerStr, symbolStr, s
 func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
 	var list []txtyp.TransactionJsonResult
 
-	owner := common.HexToAddress(ownerStr)
-	symbol := standardSymbol(symbolStr)
-	statusList := statusStringToList(statusStr)
-	typList := typeStringToList(typStr)
+	if !validateOwner(ownerStr) {
+		return list, ErrOwnerAddressInvalid
+	}
 
-	hashs, err := impl.db.GetTransactionHashs(owner.Hex(), symbol, statusList, typList, limit, offset)
-	if len(hashs) == 0 || err != nil {
+	owner := safeOwner(ownerStr)
+	symbol := safeSymbol(symbolStr)
+	status := safeStatus(statusStr)
+	typ := safeType(typStr)
+
+	views, err := impl.db.GetTxViewByOwner(owner, symbol, status, typ, limit, offset)
+	if err != nil {
 		return list, ErrNonTransaction
 	}
 
-	txs, err := impl.db.GetTrxByHashes(hashs)
-	if len(txs) == 0 || err != nil {
-		return list, ErrNonTransaction
-	}
-
-	list = assemble(txs, owner)
+	list = assemble(views, owner)
 	//list = collector(list)
 	return list, nil
 }
 
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
-func assemble(items []dao.Transaction, owner common.Address) []txtyp.TransactionJsonResult {
+func assemble(items []dao.TransactionView, owner string) []txtyp.TransactionJsonResult {
 	var list []txtyp.TransactionJsonResult
 
 	for _, v := range items {
@@ -169,17 +175,24 @@ func assemble(items []dao.Transaction, owner common.Address) []txtyp.Transaction
 	return list
 }
 
-func safeStatus(statusStr string) types.TxStatus {
-	return txtyp.StrToTxStatus(statusStr)
+func validateOwner(ownerStr string) bool {
+	if ownerStr == "" {
+		return false
+	}
+	return true
 }
 
-func safeType(typStr string) txtyp.TxType {
-	return txtyp.StrToTxType(typStr)
+func validateTxHashList(list []string) bool {
+	if len(list) == 0 {
+		return false
+	}
+	return true
 }
 
-func safeSymbol(symbol string) string {
-	return strings.ToUpper(symbol)
-}
+func safeOwner(ownerStr string) string           { return common.HexToAddress(ownerStr).Hex() }
+func safeStatus(statusStr string) types.TxStatus { return txtyp.StrToTxStatus(statusStr) }
+func safeType(typStr string) txtyp.TxType        { return txtyp.StrToTxType(typStr) }
+func safeSymbol(symbol string) string            { return strings.ToUpper(symbol) }
 
 func protocolToSymbol(address common.Address) string {
 	if address == types.NilAddress {
