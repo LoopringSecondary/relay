@@ -27,7 +27,8 @@ import (
 
 type TransactionView struct {
 	Symbol     string         `json:"symbol"`
-	Owner      common.Address `json:"owner"`
+	Owner      common.Address `json:"owner"`     // 用户地址
+	To 			common.Address `json:"to"`       // 如果是转账相关则为receiver,如果是打个合约则为to
 	TxHash     common.Hash    `json:"tx_hash"`
 	LogIndex   int64          `json:"log_index"`
 	Amount     *big.Int       `json:"amount"`
@@ -50,6 +51,7 @@ func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
 	tx.fullFilled(src.TxInfo)
 
 	tx.Owner = src.Owner
+	tx.To = src.Spender
 	tx.Amount = src.Amount
 	tx.Type = TX_TYPE_APPROVE
 
@@ -64,6 +66,7 @@ func CancelView(src *types.OrderCancelledEvent) TransactionView {
 	tx.fullFilled(src.TxInfo)
 
 	tx.Owner = src.From
+	tx.To = src.To
 	tx.Type = TX_TYPE_CANCEL_ORDER
 
 	return tx
@@ -75,6 +78,7 @@ func CutoffView(src *types.CutoffEvent) TransactionView {
 	tx.fullFilled(src.TxInfo)
 	tx.Symbol = ETH_SYMBOL
 	tx.Owner = src.Owner
+	tx.To = src.To
 	tx.Amount = src.Cutoff
 	tx.Type = TX_TYPE_CUTOFF
 
@@ -89,6 +93,7 @@ func CutoffPairView(src *types.CutoffPairEvent) TransactionView {
 	tx.Symbol = ETH_SYMBOL
 	tx.Amount = src.Cutoff
 	tx.Owner = src.Owner
+	tx.To = src.To
 	tx.Type = TX_TYPE_CUTOFF_PAIR
 
 	return tx
@@ -102,6 +107,7 @@ func WethDepositView(src *types.WethDepositEvent) []TransactionView {
 
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Dst
+	tx1.To = src.To
 	tx1.Amount = src.Amount
 	tx1.Symbol = ETH_SYMBOL
 	tx1.Type = TX_TYPE_CONVERT_OUTCOME
@@ -122,6 +128,7 @@ func WethWithdrawalView(src *types.WethWithdrawalEvent) []TransactionView {
 
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Src
+	tx1.To = src.To
 	tx1.Amount = src.Amount
 	tx1.Symbol = ETH_SYMBOL
 	tx1.Type = TX_TYPE_CONVERT_INCOME

@@ -41,6 +41,67 @@ type TransactionEntity struct {
 	BlockTime   int64          `json:"block_time"`
 }
 
+type TransferContent struct {
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Amount   string `json:"amount"`
+}
+
+type WethWithdrawalContent struct {
+	Src    string `json:"src"`
+	Amount string `json:"amount"`
+}
+
+type WethDepositContent struct {
+	Dst    string `json:"dst"`
+	Amount string `json:"amount"`
+}
+
+type CutoffPairContent struct {
+	Owner           string `json:"owner"`
+	Token1          string `json:"token1"`
+	Token2          string `json:"token2"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+type CutoffContent struct {
+	Owner           string `json:"owner"`
+	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+type CancelContent struct {
+	OrderHash string `json:"order_hash"`
+	Amount    string `json:"amount"`
+}
+
+type ApproveContent struct {
+	Owner   string `json:"owner"`
+	Spender string `json:"spender"`
+	Amount  string `json:"amount"`
+}
+
+// todo fill
+type OrderFilledContent struct {
+	RingHash      string `json:"ring_hash"`
+	PreOrderHash  string `json:"pre_order_hash"`
+	OrderHash     string `json:"order_hash"`
+	NextOrderHash string `json:"next_order_hash"`
+	Owner         string `json:"owner"`
+	TokenS        string `json:"token_s"`
+	TokenB        string `json:"token_b"`
+	SellTo        string `json:"sell_to"`
+	BuyFrom       string `json:"buy_from"`
+	RingIndex     string `json:"ring_index"`
+	AmountS       string `json:"amount_s"`
+	AmountB       string `json:"amount_b"`
+	LrcReward     string `json:"lrc_reward"`
+	LrcFee        string `json:"lrc_fee"`
+	SplitS        string `json:"split_s"`
+	SplitB        string `json:"split_b"`
+	Market        string `json:"market"`
+	FillIndex     string `json:"fill_index"`
+}
+
 func (tx *TransactionEntity) FromApproveEvent(src *types.ApprovalEvent) error {
 	tx.fullFilled(src.TxInfo)
 
