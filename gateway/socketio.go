@@ -109,7 +109,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyPortfolio:   {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
 	eventKeyMarketCap:   {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
 	eventKeyBalance:     {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyPendingTx:   {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyDepth:       {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyTrades:      {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
