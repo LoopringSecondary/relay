@@ -67,7 +67,6 @@ type MethodData struct {
 	CAbi   *abi.ABI
 	Id     string
 	Name   string
-	Value  *big.Int
 	Input  string
 }
 
@@ -83,7 +82,6 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 
 func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus) {
 	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
-	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
 	method.TxLogIndex = 0
 	method.Status = status
@@ -104,6 +102,7 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
+	txinfo.Value = tx.Value.BigInt()
 
 	if impl, ok := ethaccessor.ProtocolAddresses()[txinfo.To]; ok {
 		txinfo.DelegateAddress = impl.DelegateAddress

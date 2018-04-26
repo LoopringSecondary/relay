@@ -121,6 +121,8 @@ type RdsService interface {
 
 	// transactionEntity
 	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
+	FindPendingTxEntityByHash(hash string) ([]TransactionEntity, error)
+	DelPendingTxEntityByHash(hash string) error
 	RollBackTxEntity(from, to int64) error
 
 	// transactionView

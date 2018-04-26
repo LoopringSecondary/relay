@@ -68,6 +68,7 @@ func CancelView(src *types.OrderCancelledEvent) TransactionView {
 
 	tx.Owner = src.From
 	tx.To = src.To
+	tx.Amount = src.AmountCancelled
 	tx.Type = TX_TYPE_CANCEL_ORDER
 
 	return tx

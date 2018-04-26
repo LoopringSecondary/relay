@@ -112,6 +112,8 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) error {
 	event := input.(*types.ApprovalEvent)
 
+	log.Debugf("transaction manager, Approve tx:%s, owner:%s, spender:%s", event.TxHash.Hex(), event.Owner.Hex(), event.Spender.Hex())
+
 	var (
 		entity txtyp.TransactionEntity
 		list   []txtyp.TransactionView
@@ -130,6 +132,8 @@ func (tm *TransactionManager) SaveApproveEvent(input eventemitter.EventData) err
 func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventData) error {
 	event := input.(*types.OrderCancelledEvent)
 
+	log.Debugf("transaction manager, CancelOrder tx:%s, from:%s, orderhash:%s", event.TxHash.Hex(), event.From.Hex(), event.OrderHash.Hex())
+
 	var (
 		entity txtyp.TransactionEntity
 		list   []txtyp.TransactionView
@@ -145,6 +149,8 @@ func (tm *TransactionManager) SaveOrderCancelledEvent(input eventemitter.EventDa
 func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) error {
 	event := input.(*types.CutoffEvent)
 
+	log.Debugf("transaction manager, Cutoff tx:%s, owner:%s, cutoff:%s", event.TxHash.Hex(), event.Owner.Hex(), event.Cutoff.String())
+
 	var (
 		entity txtyp.TransactionEntity
 		list   []txtyp.TransactionView
@@ -158,6 +164,8 @@ func (tm *TransactionManager) SaveCutoffAllEvent(input eventemitter.EventData) e
 
 func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) error {
 	event := input.(*types.CutoffPairEvent)
+
+	log.Debugf("transaction manager, CutoffPair tx:%s, owner:%s, cutoff:%s, token1:%s, token2:%s", event.TxHash.Hex(), event.Owner.Hex(), event.Cutoff.String(), event.Token1.Hex(), event.Token2.Hex())
 
 	var (
 		entity txtyp.TransactionEntity
@@ -174,6 +182,8 @@ func (tm *TransactionManager) SaveCutoffPairEvent(input eventemitter.EventData) 
 func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData) error {
 	event := input.(*types.WethDepositEvent)
 
+	log.Debugf("transaction manager, WethDeposit tx:%s, owner:%s, value:%s", event.TxHash.Hex(), event.Dst.Hex(), event.Amount.String())
+
 	var entity txtyp.TransactionEntity
 	entity.FromWethDepositEvent(event)
 	list := txtyp.WethDepositView(event)
@@ -184,6 +194,8 @@ func (tm *TransactionManager) SaveWethDepositEvent(input eventemitter.EventData)
 func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventData) error {
 	event := input.(*types.WethWithdrawalEvent)
 
+	log.Debugf("transaction manager, WethWithdrawal tx:%s, owner:%s, value:%s", event.TxHash.Hex(), event.Src.Hex(), event.Amount.String())
+
 	var entity txtyp.TransactionEntity
 	entity.FromWethWithdrawalEvent(event)
 	list := txtyp.WethWithdrawalView(event)
@@ -193,6 +205,8 @@ func (tm *TransactionManager) SaveWethWithdrawalEvent(input eventemitter.EventDa
 
 func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) error {
 	event := input.(*types.TransferEvent)
+
+	log.Debugf("transaction manager, Transfer tx:%s, sender:%s, receiver:%s", event.TxHash.Hex(), event.Sender.Hex(), event.Receiver.Hex())
 
 	var entity txtyp.TransactionEntity
 	entity.FromTransferEvent(event)
@@ -224,28 +238,41 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
-	if err := tm.saveEntity(tx, list); err != nil {
-		return err
+	// save entity
+	if tx.Status == types.TX_STATUS_PENDING {
+		tm.savePendingEntity(tx, list)
+	} else {
+		tm.saveMinedEntity(tx, list)
 	}
 
+	// save views
 	for _, v := range list {
 		if tx.Status == types.TX_STATUS_PENDING {
-			if err := tm.savePendingView(&v); err != nil {
-				return err
-			}
+			tm.savePendingView(&v)
 		} else {
-			if err := tm.saveMinedView(&v); err != nil {
-				return err
-			}
+			tm.saveMinedView(&v)
 		}
 	}
 
 	return nil
 }
 
-func (tm *TransactionManager) saveEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
+func (tm *TransactionManager) savePendingEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
 	if !tm.validateEntity(viewList) {
 		return nil
+	}
+	if list, _ := tm.db.FindPendingTxEntityByHash(tx.Hash.Hex()); len(list) > 0 {
+		return nil
+	}
+	return tm.addEntity(tx)
+}
+
+func (tm *TransactionManager) saveMinedEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
+	if !tm.validateEntity(viewList) {
+		return nil
+	}
+	if err := tm.db.DelPendingTxEntityByHash(tx.Hash.Hex()); err != nil {
+		log.Errorf(err.Error())
 	}
 	if _, err := tm.db.FindTxEntityByHashAndLogIndex(tx.Hash.Hex(), tx.LogIndex); err == nil {
 		return nil
@@ -268,7 +295,7 @@ func (tm *TransactionManager) saveMinedView(tx *txtyp.TransactionView) error {
 		return nil
 	}
 	if err := tm.db.DelPendingTxViewByOwnerAndNonce(tx.Owner.Hex(), tx.Nonce.String()); err != nil {
-		return err
+		log.Errorf(err.Error())
 	}
 	if list, _ := tm.db.FindMinedTxViewByOwnerAndEvent(tx.Owner.Hex(), tx.TxHash.Hex(), tx.LogIndex); len(list) > 0 {
 		return nil
