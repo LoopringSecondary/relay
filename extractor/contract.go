@@ -988,23 +988,13 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 }
 
 func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, time *big.Int) error {
-	var dst types.TransferEvent
+	var dst types.EthTransferEvent
 
-	dst.From = common.HexToAddress(tx.From)
-	dst.To = common.HexToAddress(tx.To)
-	dst.TxHash = common.HexToHash(tx.Hash)
-	dst.Amount = tx.Value.BigInt()
-	dst.TxLogIndex = 0
-	dst.BlockNumber = tx.BlockNumber.BigInt()
-	dst.BlockTime = time.Int64()
+	gasUsed, status := processor.getGasAndStatus(tx, receipt)
+	txinfo := setTxInfo(tx, gasUsed, time)
+	txinfo.Status = status
 
-	dst.GasLimit = tx.Gas.BigInt()
-	dst.GasPrice = tx.GasPrice.BigInt()
-	dst.Nonce = tx.Nonce.BigInt()
-
-	dst.Sender = common.HexToAddress(tx.From)
-	dst.Receiver = common.HexToAddress(tx.To)
-	dst.GasUsed, dst.Status = processor.getGasAndStatus(tx, receipt)
+	dst.TxInfo = txinfo
 
 	log.Debugf("extractor,tx:%s handleEthTransfer from:%s, to:%s, value:%s, gasUsed:%s, status:%d", tx.Hash, tx.From, tx.To, tx.Value.BigInt().String(), dst.GasUsed.String(), dst.Status)
 
