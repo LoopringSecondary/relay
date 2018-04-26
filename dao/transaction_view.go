@@ -108,7 +108,7 @@ func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(owner, hash string, logI
 
 	err := s.db.Where("owner=?", owner).
 		Where("tx_hash=?", hash).
-		Where("tx_log_index", logIndex).
+		Where("tx_log_index=?", logIndex).
 		Where("status<>?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Find(&txs).Error
