@@ -64,8 +64,7 @@ func (impl *RedisCacheImpl) Initialize(cfg interface{}) {
 }
 
 func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
-
-	log.Info("[REDIS-GET] key : " + key)
+	//log.Info("[REDIS-GET] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -87,7 +86,7 @@ func (impl *RedisCacheImpl) Get(key string) ([]byte, error) {
 
 func (impl *RedisCacheImpl) Exists(key string) (bool, error) {
 
-	log.Info("[REDIS-Exists] key : " + key)
+	//log.Info("[REDIS-Exists] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -109,7 +108,7 @@ func (impl *RedisCacheImpl) Exists(key string) (bool, error) {
 
 func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 
-	log.Info("[REDIS-SET] key : " + key)
+	//log.Info("[REDIS-SET] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -130,7 +129,7 @@ func (impl *RedisCacheImpl) Set(key string, value []byte, ttl int64) error {
 
 func (impl *RedisCacheImpl) Del(key string) error {
 
-	log.Info("[REDIS-Del] key : " + key)
+	//log.Info("[REDIS-Del] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -144,7 +143,7 @@ func (impl *RedisCacheImpl) Del(key string) error {
 
 func (impl *RedisCacheImpl) HMSet(key string, ttl int64, args ...[]byte) error {
 
-	log.Info("[REDIS-HMSET] key : " + key)
+	//log.Info("[REDIS-HMSET] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -172,7 +171,7 @@ func (impl *RedisCacheImpl) HMSet(key string, ttl int64, args ...[]byte) error {
 
 func (impl *RedisCacheImpl) ZAdd(key string, ttl int64, args ...[]byte) error {
 
-	log.Info("[REDIS-ZAdd] key : " + key)
+	//log.Info("[REDIS-ZAdd] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -200,7 +199,7 @@ func (impl *RedisCacheImpl) ZAdd(key string, ttl int64, args ...[]byte) error {
 
 func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error) {
 
-	log.Info("[REDIS-HMGET] key : " + key)
+	//log.Info("[REDIS-HMGET] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -230,7 +229,7 @@ func (impl *RedisCacheImpl) HMGet(key string, fields ...[]byte) ([][]byte, error
 
 func (impl *RedisCacheImpl) ZRange(key string, start, stop int64, withScores bool) ([][]byte, error) {
 
-	log.Info("[REDIS-ZRANGE] key : " + key)
+	//log.Info("[REDIS-ZRANGE] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -260,7 +259,7 @@ func (impl *RedisCacheImpl) ZRange(key string, start, stop int64, withScores boo
 
 func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 
-	log.Info("[REDIS-HDEL] key : " + key)
+	//log.Info("[REDIS-HDEL] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -283,7 +282,7 @@ func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 
 func (impl *RedisCacheImpl) ZRemRangeByScore(key string, start, stop int64) (int64, error) {
 
-	log.Info("[REDIS-ZRemRangeByScore] key : " + key)
+	//log.Info("[REDIS-ZRemRangeByScore] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -304,7 +303,7 @@ func (impl *RedisCacheImpl) ZRemRangeByScore(key string, start, stop int64) (int
 
 func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64, error) {
 
-	log.Info("[REDIS-SRem] key : " + key)
+	//log.Info("[REDIS-SRem] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -327,7 +326,7 @@ func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64, error) {
 
 func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
 
-	log.Info("[REDIS-HGetAll] key : " + key)
+	//log.Info("[REDIS-HGetAll] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -347,7 +346,7 @@ func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
 }
 func (impl *RedisCacheImpl) HVals(key string) ([][]byte, error) {
 
-	log.Info("[REDIS-HVals] key : " + key)
+	//log.Info("[REDIS-HVals] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -369,7 +368,7 @@ func (impl *RedisCacheImpl) HVals(key string) ([][]byte, error) {
 
 func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
 
-	log.Info("[REDIS-HExists] key : " + key)
+	//log.Info("[REDIS-HExists] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -387,7 +386,7 @@ func (impl *RedisCacheImpl) HExists(key string, field []byte) (bool, error) {
 
 func (impl *RedisCacheImpl) SAdd(key string, ttl int64, members ...[]byte) error {
 
-	log.Info("[REDIS-SAdd] key : " + key)
+	//log.Info("[REDIS-SAdd] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
@@ -412,7 +411,7 @@ func (impl *RedisCacheImpl) SAdd(key string, ttl int64, members ...[]byte) error
 
 func (impl *RedisCacheImpl) SMembers(key string) ([][]byte, error) {
 
-	log.Info("[REDIS-SMembers] key : " + key)
+	//log.Info("[REDIS-SMembers] key : " + key)
 
 	conn := impl.pool.Get()
 	defer conn.Close()
