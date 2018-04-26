@@ -54,7 +54,7 @@ const (
 	tsFourHour = 4 * tsOneHour
 	tsOneDay   = 24 * tsOneHour
 	tsOneWeek  = 7 * tsOneDay
-	localCachePre = "LocalCacheMarketBy"
+	localCacheTicker = "LocalCacheTicker"
 )
 
 var allInterval = []string{OneHour, TwoHour, FourHour, OneDay, OneWeek}
@@ -981,19 +981,26 @@ func (t *TrendManager) GetTickerByMarket(mkt string) (ticker Ticker, err error) 
 	if t.cacheReady {
 		log.Info("[TICKER]ticker key used in GetTickerByMarket")
 
-		localCacheValue, ok := t.localCache.Get(localCachePre + strings.ToUpper(mkt))
+		localCacheValue, ok := t.localCache.Get(localCacheTicker)
 		if ok {
 			log.Info("[TICKER] get cache from local " + mkt)
-			return localCacheValue.(Ticker), nil
-		} else if tickerCache, err := redisCache.Get(tickerKey); err == nil {
-			log.Info("[TICKER] get cache from redis " + mkt)
-			var tickerMap map[string]Ticker
-			json.Unmarshal(tickerCache, &tickerMap)
+			tickerMap := localCacheValue.(map[string]Ticker)
 			for k, v := range tickerMap {
 				if k == mkt {
 					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 					v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
-					t.localCache.Set(localCachePre + strings.ToUpper(mkt), v, 3 * time.Second)
+					return v, err
+				}
+			}
+		} else if tickerCache, err := redisCache.Get(tickerKey); err == nil {
+			log.Info("[TICKER] get cache from redis " + mkt)
+			var tickerMap map[string]Ticker
+			json.Unmarshal(tickerCache, &tickerMap)
+			t.localCache.Set(localCacheTicker, tickerMap, 5 * time.Second)
+			for k, v := range tickerMap {
+				if k == mkt {
+					v.Buy, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
+					v.Sell, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 					return v, err
 				}
 			}
