@@ -26,14 +26,15 @@ import (
 )
 
 type TransactionView struct {
-	Symbol    string         `json:"symbol"`
-	Owner     common.Address `json:"owner"`
-	TxHash    common.Hash    `json:"tx_hash"`
-	LogIndex  int64          `json:"log_index"`
-	Amount    *big.Int       `json:"amount"`
-	Type      TxType         `json:"type"`
-	Status    types.TxStatus `json:"status"`
-	BlockTime int64          `json:"block_time"`
+	Symbol     string         `json:"symbol"`
+	Owner      common.Address `json:"owner"`
+	TxHash     common.Hash    `json:"tx_hash"`
+	LogIndex   int64          `json:"log_index"`
+	Amount     *big.Int       `json:"amount"`
+	Type       TxType         `json:"type"`
+	Status     types.TxStatus `json:"status"`
+	CreateTime int64          `json:"create_time"`
+	UpdateTime int64          `json:"update_time"`
 }
 
 func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
@@ -196,7 +197,8 @@ func (tx *TransactionView) fullFilled(src types.TxInfo) {
 	tx.TxHash = src.TxHash
 	tx.LogIndex = src.TxLogIndex
 	tx.Status = src.Status
-	tx.BlockTime = src.BlockTime
+	tx.CreateTime = src.BlockTime
+	tx.UpdateTime = src.BlockTime
 }
 
 // todo fill

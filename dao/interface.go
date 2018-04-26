@@ -50,8 +50,6 @@ type RdsService interface {
 	SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error
 	GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error)
 	OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error)
-	PendingTransactions(query map[string]interface{}) ([]Transaction, error)
-	GetTrxByHashes(hashes []string) ([]Transaction, error)
 	UpdateBroadcastTimeByHash(hash string, bt int) error
 	UpdateOrderWhileRollbackCutoff(orderhash common.Hash, status types.OrderStatus, blockNumber *big.Int) error
 	UpdateOrderWhileFill(hash common.Hash, status types.OrderStatus, dealtAmountS, dealtAmountB, splitAmountS, splitAmountB, blockNumber *big.Int) error
@@ -109,17 +107,19 @@ type RdsService interface {
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// transactions
-	RollBackTransaction(from, to int64) error
-	GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
-	GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error)
-	GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error)
-	GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error)
-	GetTransactionsBySenderNonce(rawFrom common.Address, nonce *big.Int) ([]Transaction, error)
-	DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error
-	DeletePendingTransactions(rawFrom common.Address, nonce *big.Int) error
+	//RollBackTransaction(from, to int64) error
+	//GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
+	//GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error)
+	//GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error)
+	//GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error)
+	//GetTransactionsBySenderNonce(rawFrom common.Address, nonce *big.Int) ([]Transaction, error)
+	//DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error
+	//DeletePendingTransactions(rawFrom common.Address, nonce *big.Int) error
+	//PendingTransactions(query map[string]interface{}) ([]Transaction, error)
+	//GetTrxByHashes(hashes []string) ([]Transaction, error)
 
 	// transactionEntity
-	FindEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
+	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
 
 	// checkpoint
 	QueryCheckPointByType(businessType string) (point CheckPoint, err error)

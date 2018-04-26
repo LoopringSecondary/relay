@@ -240,14 +240,19 @@ func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list 
 	return nil
 }
 
-//
 func (tm *TransactionManager) saveEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
 	if !tm.validateEntity(viewList) {
 		return nil
 	}
 
-	// 如果
-	// todo save
+	// err != nil 没有数据
+	if _, err := tm.db.FindTxEntityByHashAndLogIndex(tx.Hash.Hex(), tx.LogIndex); err == nil {
+		return nil
+	}
+
+	var entity dao.TransactionEntity
+	entity.ConvertUp(tx)
+	return tm.db.Add(entity)
 }
 
 func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
