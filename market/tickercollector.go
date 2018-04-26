@@ -261,7 +261,8 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 
 	for _, e := range c.exs {
 
-		tkByteInLocal, ok := c.localCache.Get(e.name); if ok {
+		tkByteInLocal, ok := c.localCache.Get(e.name)
+		if ok {
 			//log.Infof("get ticker from local cache, ex : %s, market : %s", e.name, market)
 			localTickers := tkByteInLocal.(map[string]Ticker)
 			if _, ok := localTickers[market]; ok {
