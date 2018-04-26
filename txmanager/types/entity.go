@@ -158,7 +158,7 @@ func (tx *TransactionEntity) FromTransferEvent(src *types.TransferEvent) error {
 	return nil
 }
 
-func (tx *TransactionEntity) FromEthTransferEvent(src *types.EthTransferEvent) error {
+func (tx *TransactionEntity) FromEthTransferEvent(src *types.TransferEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Content = ""
 	return nil

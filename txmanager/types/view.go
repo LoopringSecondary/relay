@@ -156,7 +156,7 @@ func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 	return list, nil
 }
 
-func EthTransferView(src *types.EthTransferEvent) []TransactionView {
+func EthTransferView(src *types.TransferEvent) []TransactionView {
 	var (
 		list     []TransactionView
 		tx1, tx2 TransactionView
