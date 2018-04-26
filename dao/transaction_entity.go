@@ -29,6 +29,7 @@ import (
 // fork should be marked and never used it again
 type TransactionEntity struct {
 	ID          int    `gorm:"column:id;primary_key;"`
+	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
 	From        string `gorm:"column:tx_from;type:varchar(42)"`
 	To          string `gorm:"column:tx_to;type:varchar(42)"`
 	BlockNumber int64  `gorm:"column:block_number"`
@@ -48,6 +49,7 @@ type TransactionEntity struct {
 // convert to txmanager/types/transactionEntity to dao/transactionEntity
 // todo(fuk): judge nil fields
 func (tx *TransactionEntity) ConvertDown(src *txtyp.TransactionEntity) error {
+	tx.Protocol = src.Protocol.Hex()
 	tx.From = src.From.Hex()
 	tx.To = src.To.Hex()
 	tx.BlockNumber = src.BlockNumber
@@ -68,6 +70,7 @@ func (tx *TransactionEntity) ConvertDown(src *txtyp.TransactionEntity) error {
 
 // convert dao/transactionEntity to txmanager/types/transactionEntity
 func (tx *TransactionEntity) ConvertUp(dst *txtyp.TransactionEntity) error {
+	dst.Protocol = common.HexToAddress(tx.Protocol)
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
 	dst.BlockNumber = tx.BlockNumber

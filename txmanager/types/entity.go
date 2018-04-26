@@ -28,6 +28,7 @@ import (
 type TransactionEntity struct {
 	From        common.Address `json:"from"`
 	To          common.Address `json:"to"`
+	Protocol    common.Address `json:"protocol"`
 	BlockNumber int64          `json:"block_number"`
 	Hash        common.Hash    `json:"hash"`
 	LogIndex    int64          `json:"log_index"`
@@ -239,6 +240,7 @@ func (tx *TransactionEntity) FromEthTransferEvent(src *types.TransferEvent) erro
 
 func (entity *TransactionEntity) fullFilled(src types.TxInfo) {
 	entity.Hash = src.TxHash
+	entity.Protocol = src.Protocol
 	entity.From = src.From
 	entity.To = src.To
 	entity.BlockNumber = src.BlockNumber.Int64()

@@ -60,7 +60,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.5"
-	DebugFile = "mainchain.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -71,9 +71,11 @@ var (
 	creator       accounts.Account
 	protocol      common.Address
 	delegate      common.Address
+	Path          string
 )
 
 func init() {
+	Path = strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
 	cfg = loadConfig()
 	rds = GenerateDaoService()
 	txmanager.NewTxView(rds)
@@ -87,16 +89,14 @@ func init() {
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := "/Users/jaice/relay.toml"
-	c := config.LoadConfig(path)
+	c := config.LoadConfig(Path)
 	log.Initialize(c.Log)
 
 	return c
 }
 
 func LoadConfig() *config.GlobalConfig {
-	path := "/Users/jaice/relay.toml"
-	c := config.LoadConfig(path)
+	c := config.LoadConfig(Path)
 	log.Initialize(c.Log)
 
 	return c
@@ -127,7 +127,6 @@ func loadTestData() *TestEntity {
 	}
 
 	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/test/testdata.toml"
-
 	io, err := os.Open(file)
 	if err != nil {
 		panic(err)

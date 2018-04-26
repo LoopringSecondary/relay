@@ -46,7 +46,7 @@ func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
 		err error
 	)
 
-	if tx.Symbol, err = util.GetSymbolWithAddress(src.To); err != nil {
+	if tx.Symbol, err = util.GetSymbolWithAddress(src.Protocol); err != nil {
 		return tx, err
 	}
 	tx.fullFilled(src.TxInfo)
@@ -150,7 +150,7 @@ func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 		err      error
 	)
 
-	if tx1.Symbol, err = util.GetSymbolWithAddress(src.To); err != nil {
+	if tx1.Symbol, err = util.GetSymbolWithAddress(src.Protocol); err != nil {
 		return list, err
 	}
 	tx1.fullFilled(src.TxInfo)
