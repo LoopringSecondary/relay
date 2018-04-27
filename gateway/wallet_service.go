@@ -675,13 +675,14 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
 	var (
-		rst           PageResult
+		rst PageResult
 		// should be make
 		txs           = make([]txtyp.TransactionJsonResult, 0)
 		limit, offset int
 		err           error
 	)
 
+	rst.Data = make([]interface{}, 0)
 	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
 	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol, query.Status, query.TxType)
 	if err != nil {
