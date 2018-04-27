@@ -214,6 +214,14 @@ func (so *SocketIOServiceImpl) Start() {
 			so.cron.AddFunc(spec, func() {
 				so.broadcastLoopringTicker(nil)
 			})
+		case eventKeyDepth:
+			so.cron.AddFunc(spec, func() {
+				so.broadcastDepth(nil)
+			})
+		case eventKeyTrades:
+			so.cron.AddFunc(spec, func() {
+				so.broadcastTrades(nil)
+			})
 		default:
 			log.Infof("add cron emit %d ", events.emitType)
 			so.cron.AddFunc(spec, func() {
