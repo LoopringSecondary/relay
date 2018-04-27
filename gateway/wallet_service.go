@@ -676,7 +676,7 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
 	var (
 		rst           PageResult
-		txs           []txtyp.TransactionJsonResult
+		txs           = make([]txtyp.TransactionJsonResult, 0)
 		limit, offset int
 		err           error
 	)
