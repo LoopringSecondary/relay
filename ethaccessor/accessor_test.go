@@ -48,7 +48,7 @@ var (
 )
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := account2
+	account := account1
 	wethAddr := wethTokenAddress
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)

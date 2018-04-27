@@ -27,19 +27,25 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
+	"time"
 )
 
 func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
-	account := common.HexToAddress("0x71C079107B5af8619D54537A93dbF16e5aab4900") //test.Entity().Accounts[1].Address
-	manager := test.GenerateAccountManager()
-	manager.UnlockedWallet(account.Hex())
+	accounts := []string{common.HexToAddress("0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135").Hex(),
+		common.HexToAddress("0xb1018949b241d76a1ab2094f473e9befeabb5ead").Hex(),
+	}
+	for _, account := range accounts {
+		manager := test.GenerateAccountManager()
+		manager.UnlockedWallet(account)
+	}
+	time.Sleep(1 * time.Second)
 }
 
 // test save transaction
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xbb4d9c2098ea3605132526d49b388a991d515d555d1592894e4d698abe238bda", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0xf3d3dc877954ecd39bc24789f32770a22ba3fbe1b5ddf356e2d555bee6c866d4", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
