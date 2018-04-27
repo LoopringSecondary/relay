@@ -163,6 +163,7 @@ type TimingMatcher struct {
 	Duration             int64
 	DelayedNumber        int64
 	MaxCacheRoundsLength int
+	LagBlocks            int64
 }
 
 type PercentMinerAddress struct {
