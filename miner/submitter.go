@@ -168,7 +168,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 
 	txHash := types.NilHash
 	var err error
-	lastTime := 0
+	lastTime := int64(0)
 	if nil != ringSubmitInfo.RawRing && len(ringSubmitInfo.RawRing.Orders) > 0 {
 		for _,order := range ringSubmitInfo.RawRing.Orders {
 			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
@@ -178,7 +178,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		}
 	}
 
-	if time.Now().Unix() >= (lastTime + 15) {
+	if time.Now().Unix() >= (lastTime + int64(15)) {
 		_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
 	}
 
