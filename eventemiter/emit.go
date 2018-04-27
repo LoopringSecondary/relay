@@ -80,11 +80,11 @@ const (
 
 	// socketio notify event types
 	LoopringTickerUpdated = "LoopringTickerUpdated"
-	TrendUpdated = "TrendUpdated"
-	PortfolioUpdated = "PortfolioUpdated"
-	BalanceUpdated = "BalanceUpdated"
-	DepthUpdated = "DepthUpdated"
-	TransactionUpdated = "TransactionUpdated"
+	TrendUpdated          = "TrendUpdated"
+	PortfolioUpdated      = "PortfolioUpdated"
+	BalanceUpdated        = "BalanceUpdated"
+	DepthUpdated          = "DepthUpdated"
+	TransactionUpdated    = "TransactionUpdated"
 )
 
 //change map to sync.Map

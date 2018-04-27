@@ -239,7 +239,7 @@ func (p *ForkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error
 				innerEvt InnerForkEvent
 			)
 			v.ConvertUp(&fill)
-			innerEvt.LogIndex = fill.LogIndex
+			innerEvt.LogIndex = fill.TxLogIndex
 			innerEvt.BlockNumber = fill.BlockNumber.Int64()
 			innerEvt.Type = FORK_EVT_TYPE_FILL
 			innerEvt.Event = &fill
@@ -254,7 +254,7 @@ func (p *ForkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error
 				innerEvt InnerForkEvent
 			)
 			v.ConvertUp(&cancel)
-			innerEvt.LogIndex = cancel.LogIndex
+			innerEvt.LogIndex = cancel.TxLogIndex
 			innerEvt.BlockNumber = cancel.BlockNumber.Int64()
 			innerEvt.Type = FORK_EVT_TYPE_CANCEL
 			innerEvt.Event = &cancel
@@ -269,7 +269,7 @@ func (p *ForkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error
 				innerEvt InnerForkEvent
 			)
 			v.ConvertUp(&cutoff)
-			innerEvt.LogIndex = cutoff.LogIndex
+			innerEvt.LogIndex = cutoff.TxLogIndex
 			innerEvt.BlockNumber = cutoff.BlockNumber.Int64()
 			innerEvt.Type = FORK_EVT_TYPE_CUTOFF
 			innerEvt.Event = &cutoff
@@ -284,7 +284,7 @@ func (p *ForkProcessor) GetForkEvents(from, to int64) (InnerForkEventList, error
 				innerEvt   InnerForkEvent
 			)
 			v.ConvertUp(&cutoffPair)
-			innerEvt.LogIndex = cutoffPair.LogIndex
+			innerEvt.LogIndex = cutoffPair.TxLogIndex
 			innerEvt.BlockNumber = cutoffPair.BlockNumber.Int64()
 			innerEvt.Type = FORK_EVT_TYPE_CUTOFF_PAIR
 			innerEvt.Event = &cutoffPair
