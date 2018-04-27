@@ -41,9 +41,9 @@ func TestTransactionViewImpl_GetPendingTransactions(t *testing.T) {
 func TestTransactionViewImpl_GetAllTransactionCount(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0x43e85E2c882bbcE41C69740Eed4BfFFb45E3f9dd"
-	symbol := "foo"
-	status := "failed"
+	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+	symbol := "eth"
+	status := "pending"
 	typ := "all"
 	if number, err := txmanager.GetAllTransactionCount(owner, symbol, status, typ); err != nil {
 		t.Fatalf(err.Error())

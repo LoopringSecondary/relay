@@ -284,7 +284,7 @@ func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
 	if !tm.validateView(tx) {
 		return nil
 	}
-	if _, err := tm.db.FindPendingTxViewByOwnerAndHash(tx.Owner.Hex(), tx.TxHash.Hex()); err == nil {
+	if list, _ := tm.db.FindPendingTxViewByOwnerAndHash(tx.Owner.Hex(), tx.TxHash.Hex()); len(list) > 0 {
 		return nil
 	}
 	return tm.addView(tx)
