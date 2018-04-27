@@ -108,16 +108,7 @@ type RdsService interface {
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
 
 	// transactions
-	//RollBackTransaction(from, to int64) error
-	//GetPendingTransactionsByOwner(owner string) ([]Transaction, error)
-	//GetTransactionCount(owner string, symbol string, status []types.TxStatus, typs []types.TxType) (int, error)
-	//GetTransactionHashs(owner string, symbol string, status []types.TxStatus, typs []types.TxType, limit, offset int) ([]string, error)
-	//GetPendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) (Transaction, error)
-	//GetTransactionsBySenderNonce(rawFrom common.Address, nonce *big.Int) ([]Transaction, error)
-	//DeletePendingTransaction(hash common.Hash, rawFrom common.Address, nonce *big.Int) error
-	//DeletePendingTransactions(rawFrom common.Address, nonce *big.Int) error
-	//PendingTransactions(query map[string]interface{}) ([]Transaction, error)
-	//GetTrxByHashes(hashes []string) ([]Transaction, error)
+	GetTransactionById(id int) (Transaction, error)
 
 	// transactionEntity
 	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
