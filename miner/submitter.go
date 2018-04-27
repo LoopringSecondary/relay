@@ -177,7 +177,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		}
 		txHash = common.HexToHash(txHashStr)
 	} else {
-		log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(),ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
 		status = types.TX_STATUS_FAILED
 	}
 
