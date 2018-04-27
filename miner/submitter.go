@@ -168,7 +168,21 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 
 	txHash := types.NilHash
 	var err error
-	if _, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest"); nil == err {
+	lastTime := 0
+	if nil != ringSubmitInfo.RawRing && len(ringSubmitInfo.RawRing.Orders) > 0 {
+		for _,order := range ringSubmitInfo.RawRing.Orders {
+			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
+			if lastTime <= thisTime {
+				lastTime = thisTime
+			}
+		}
+	}
+
+	if time.Now().Unix() >= (lastTime + 15) {
+		_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
+	}
+
+	if nil == err {
 		txHashStr := "0x"
 		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
 		if nil != err {
@@ -180,7 +194,6 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(),ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
 		status = types.TX_STATUS_FAILED
 	}
-
 
 	return txHash, status, err
 }
