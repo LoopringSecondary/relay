@@ -109,6 +109,18 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			}
 		}
 	}
+
+	if len(urls) == 0 {
+		log.Debugf("len(urls) == 0")
+		mc.syncBlockNumber()
+		for url, client := range mc.clients {
+			if _, exists := mc.downedClients[url]; !exists && (nil == client.blockNumber || client.blockNumber.Cmp(blockNumber.BigInt()) >= 0) {
+				urls = append(urls, url)
+			}
+		}
+		log.Debugf("after syncBlockNumber len(urls) == %d", len(urls))
+	}
+
 	if len(urls) > 0 {
 		idx := 0
 		idx = rand.Intn(len(urls))
