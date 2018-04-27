@@ -216,10 +216,12 @@ func (so *SocketIOServiceImpl) Start() {
 			})
 		case eventKeyDepth:
 			so.cron.AddFunc(spec, func() {
+				log.Info("start depth broadcast")
 				so.broadcastDepth(nil)
 			})
 		case eventKeyTrades:
 			so.cron.AddFunc(spec, func() {
+				log.Info("start trades broadcast")
 				so.broadcastTrades(nil)
 			})
 		default:
@@ -403,6 +405,8 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
 
 	markets := so.getConnectedMarketForDepth()
+	fmt.Println(">>>>>>> markets described")
+	fmt.Println(markets)
 
 	respMap := make(map[string]string, 0)
 	for mk := range markets {
@@ -442,6 +446,8 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
 
 	markets := so.getConnectedMarketForFill()
+	fmt.Println(">>>>>>> trade markets described")
+	fmt.Println(markets)
 
 	respMap := make(map[string]string, 0)
 	for mk := range markets {
@@ -450,6 +456,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
 		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress : delegate, Market: mkt}); if err == nil {
+			log.Infof("fetch fill from wallet %d ", len(fills))
 			resp.Data = fills
 		} else {
 			resp = SocketIOJsonResp{Error: err.Error()}
@@ -462,12 +469,12 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		v := value.(socketio.Conn)
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
-			ctx, ok := businesses[eventKeyDepth]
+			ctx, ok := businesses[eventKeyTrades]
 			if ok {
 				fQuery := &FillQuery{}
 				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
 					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
-					v.Emit(eventKeyDepth + EventPostfixRes, respMap[fillKey])
+					v.Emit(eventKeyTrades + EventPostfixRes, respMap[fillKey])
 				}
 			}
 		}
