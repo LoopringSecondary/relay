@@ -117,11 +117,11 @@ func (submitter *RingSubmitter) listenNewRings() {
 			case ringInfos := <-ringSubmitInfoChan:
 				if nil != ringInfos {
 					for _, ringState := range ringInfos {
-						txHash, err := submitter.submitRing(ringState)
+						txHash,status, err1 := submitter.submitRing(ringState)
 						ringState.SubmitTxHash = txHash
 
 						daoInfo := &dao.RingSubmitInfo{}
-						daoInfo.ConvertDown(ringState, err)
+						daoInfo.ConvertDown(ringState, err1)
 						if err := submitter.dbService.Add(daoInfo); nil != err {
 							log.Errorf("Miner submitter,insert new ring err:%s", err.Error())
 						} else {
@@ -133,6 +133,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 								}
 							}
 						}
+						submitter.submitResult(ringState.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err1)
 					}
 				}
 			}
@@ -160,7 +161,7 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 	return errors.New("had been processed")
 }
 
-func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, error) {
+func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, types.TxStatus, error) {
 	status := types.TX_STATUS_PENDING
 	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
 	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
@@ -180,8 +181,8 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		status = types.TX_STATUS_FAILED
 	}
 
-	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
-	return txHash, err
+
+	return txHash, status, err
 }
 
 func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
