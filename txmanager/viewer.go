@@ -93,7 +93,7 @@ func (impl *TransactionViewerImpl) GetTransactionsByHash(ownerStr string, hashLi
 }
 
 func (impl *TransactionViewerImpl) GetPendingTransactions(ownerStr string) ([]txtyp.TransactionJsonResult, error) {
-	var list []txtyp.TransactionJsonResult
+	list := make([]txtyp.TransactionJsonResult, 0)
 
 	if !validateOwner(ownerStr) {
 		return list, ErrOwnerAddressInvalid
@@ -128,7 +128,7 @@ func (impl *TransactionViewerImpl) GetAllTransactionCount(ownerStr, symbolStr, s
 }
 
 func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statusStr, typStr string, limit, offset int) ([]txtyp.TransactionJsonResult, error) {
-	var list []txtyp.TransactionJsonResult
+	list := make([]txtyp.TransactionJsonResult, 0)
 
 	if !validateOwner(ownerStr) {
 		return list, ErrOwnerAddressInvalid
@@ -151,7 +151,7 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
 func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp.TransactionJsonResult {
-	var list []txtyp.TransactionJsonResult
+	list := make([]txtyp.TransactionJsonResult, 0)
 
 	for _, v := range items {
 		var view txtyp.TransactionView
