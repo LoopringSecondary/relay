@@ -915,7 +915,7 @@ func (t *TrendManager) GetTrends(market, interval string) (trends []Trend, err e
 
 func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 
-	log.Info("GetTicker Method Invoked")
+	//log.Info("GetTicker Method Invoked")
 
 	if t.cacheReady {
 

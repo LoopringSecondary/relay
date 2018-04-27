@@ -183,7 +183,7 @@ func (so *SocketIOServiceImpl) Start() {
 			context[aliasOfV] = msg
 			s.SetContext(context)
 			so.connIdMap.Store(s.ID(), s)
-			log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
+			//log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
@@ -223,7 +223,7 @@ func (so *SocketIOServiceImpl) Start() {
 						businesses := v.Context().(map[string]string)
 						eventContext, ok := businesses[copyOfK]
 						if ok {
-							log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
+							//log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
 							so.EmitNowByEventType(copyOfK, v, eventContext)
 						}
 					}
@@ -381,7 +381,7 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 			businesses := v.Context().(map[string]string)
 			_, ok := businesses[eventKeyLoopringTickers]
 			if ok {
-				log.Info("emit loopring ticker info")
+				//log.Info("emit loopring ticker info")
 				v.Emit(eventKeyLoopringTickers+EventPostfixRes, string(respJson[:]))
 			}
 		}
