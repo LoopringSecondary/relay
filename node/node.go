@@ -160,6 +160,7 @@ func (n *Node) Start() {
 	//n.ipfsSubService.Start()
 	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
 	//txManager.Start()
+	//n.extractorService.Start()
 
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.extractorService.Start()

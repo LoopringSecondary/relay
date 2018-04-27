@@ -45,7 +45,7 @@ func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xf3d3dc877954ecd39bc24789f32770a22ba3fbe1b5ddf356e2d555bee6c866d4", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0x305204a4c86148f4320256195ca42ab5822a49dd9bd2df699dea2092e29a7f42", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
