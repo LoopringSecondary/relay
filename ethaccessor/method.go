@@ -387,6 +387,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 
 	var blockNumber types.Big
 	if err := iterator.ethClient.RetryCall("latest", 2, &blockNumber, "eth_blockNumber"); nil != err {
+		log.Errorf("err:%s", err.Error())
 		return nil, err
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
@@ -429,6 +430,11 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 	blockWithTxHash := &BlockWithTxHash{}
 
 	if err := accessor.RetryCall(blockNumber.String(), 2, &blockWithTxHash, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), false); nil != err {
+		blockNumberStr := "0"
+		if nil != blockNumber {
+			blockNumberStr = blockNumber.String()
+		}
+		log.Errorf("err:%s, blockNumber:%s", err.Error(), blockNumberStr)
 		return nil, err
 	} else {
 		if !withTxObject {
@@ -473,9 +479,11 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				}
 
 				if err := BatchTransactions(txReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					log.Errorf("err:%s, blockNumber:%s", err.Error(), blockWithTxAndReceipt.Number.BigInt().String())
 					return nil, err
 				}
 				if err := BatchTransactionRecipients(rcReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					log.Errorf("err:%s, blockNumber:%s", err.Error(), blockWithTxAndReceipt.Number.BigInt().String())
 					return nil, err
 				}
 
