@@ -19,6 +19,7 @@
 package dao
 
 import (
+	"errors"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -108,4 +109,62 @@ func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIn
 		res.Data = append(res.Data, rm)
 	}
 	return
+}
+
+type RingMinedMethod struct {
+	ID              int    `gorm:"column:id;primary_key" json:"id"`
+	Protocol        string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
+	DelegateAddress string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
+	TxHash          string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
+	BlockNumber     int64  `gorm:"column:block_number;type:bigint" json:"blockNumber"`
+	Status          uint8  `gorm:"column:status;type:tinyint(4)"`
+	GasLimit        string `gorm:"column:gas_limit;type:varchar(50)"`
+	GasUsed         string `gorm:"column:gas_used;type:varchar(50)"`
+	GasPrice        string `gorm:"column:gas_price;type:varchar(50)"`
+	Err             string `gorm:"column:err;type:text" json:"err"`
+}
+
+func (r *RingMinedMethod) ConvertDown(event *types.SubmitRingMethodEvent) error {
+	r.Protocol = event.Protocol.Hex()
+	r.DelegateAddress = event.DelegateAddress.Hex()
+	r.TxHash = event.TxHash.Hex()
+	r.BlockNumber = event.BlockNumber.Int64()
+	r.Status = uint8(event.Status)
+	r.GasLimit = event.GasLimit.String()
+	r.GasUsed = event.GasUsed.String()
+	r.GasPrice = event.GasPrice.String()
+	if nil != event.Err {
+		r.Err = event.Err.Error()
+	}
+	return nil
+}
+
+func (r *RingMinedMethod) ConvertUp(event *types.SubmitRingMethodEvent) error {
+	event.Protocol = common.HexToAddress(r.Protocol)
+	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)
+	event.TxHash = common.HexToHash(r.TxHash)
+	event.BlockNumber = big.NewInt(r.BlockNumber)
+	event.Status = event.Status
+	event.GasLimit = new(big.Int)
+	event.GasLimit.SetString(r.GasLimit, 0)
+	event.GasUsed = new(big.Int)
+	event.GasUsed.SetString(r.GasUsed, 0)
+	event.GasPrice = new(big.Int)
+	event.GasPrice.SetString(r.GasPrice, 0)
+	event.Err = errors.New(r.Err)
+	return nil
+}
+
+func (s *RdsServiceImpl) GetRingminedMethods(lastId int, limit int) ([]*RingMinedMethod, error) {
+	var (
+		list []*RingMinedMethod
+		err  error
+	)
+
+	err = s.db.Where("id > ?", lastId).
+		Find(&list).
+		Limit(limit).
+		Error
+
+	return list, err
 }

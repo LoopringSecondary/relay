@@ -19,6 +19,8 @@
 package timing_matcher
 
 import (
+	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
@@ -74,10 +76,56 @@ import (
 //
 //}
 
+func (matcher *TimingMatcher) listenOrderReady() {
+	stopChan := make(chan bool)
+
+	readyFunc := func() {
+		var err error
+		var ethBlockNumber types.Big
+		if err = ethaccessor.BlockNumber(&ethBlockNumber); nil == err {
+			var block *dao.Block
+			if block, err = matcher.db.FindLatestBlock(); nil == err {
+				log.Debugf("listenOrderReadylistenOrderReadylistenOrderReady, %t, %d, %d", matcher.isOrdersReady, block.BlockNumber, ethBlockNumber.Int64())
+				if ethBlockNumber.Int64() > (block.BlockNumber + matcher.lagBlocks) {
+					matcher.isOrdersReady = false
+				} else {
+					matcher.isOrdersReady = true
+				}
+			}
+		}
+		if nil != err {
+			matcher.isOrdersReady = false
+		}
+		log.Debugf("listenOrderReadylistenOrderReadylistenOrderReady, %t", matcher.isOrdersReady)
+
+
+	}
+
+	go func() {
+		readyFunc()
+		for {
+			select {
+			case <-time.After(10 * time.Second):
+				readyFunc()
+			case <-stopChan:
+				return
+			}
+		}
+	}()
+
+	matcher.stopFuncs = append(matcher.stopFuncs, func() {
+		stopChan <- true
+		close(stopChan)
+	})
+}
+
 func (matcher *TimingMatcher) listenTimingRound() {
 	stopChan := make(chan bool)
 
 	matchFunc := func() {
+		if !matcher.isOrdersReady {
+			return
+		}
 		//if ethaccessor.Synced() {
 		matcher.lastRoundNumber = big.NewInt(time.Now().UnixNano() / 1e6)
 		//matcher.rounds.appendNewRoundState(matcher.lastRoundNumber)

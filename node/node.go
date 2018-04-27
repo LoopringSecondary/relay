@@ -154,7 +154,6 @@ func (n *Node) registerMineNode() {
 
 func (n *Node) Start() {
 	n.orderManager.Start()
-	n.extractorService.Start()
 	n.marketCapProvider.Start()
 	n.ipfsSubService.Start()
 
@@ -163,6 +162,7 @@ func (n *Node) Start() {
 	//txManager.Start()
 
 	if n.globalConfig.Mode != MODEL_MINER {
+		n.extractorService.Start()
 		n.relayNode.Start()
 		n.accountManager.Start()
 		go ethaccessor.IncludeGasPriceEvaluator()
@@ -267,7 +267,7 @@ func (n *Node) registerMiner() {
 		log.Fatalf("failed to init submitter, error:%s", err.Error())
 	}
 	evaluator := miner.NewEvaluator(n.marketCapProvider, n.globalConfig.Miner)
-	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager)
+	matcher := timing_matcher.NewTimingMatcher(n.globalConfig.Miner.TimingMatcher, submitter, evaluator, n.orderManager, &n.accountManager, n.rdsService)
 	evaluator.SetMatcher(matcher)
 	n.mineNode.miner = miner.NewMiner(submitter, matcher, evaluator, n.marketCapProvider)
 }
