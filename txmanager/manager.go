@@ -228,6 +228,7 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 	entity.FromEthTransferEvent(event)
 	list := txtyp.EthTransferView(event)
 
+	log.Debugf("transaction manager, EthTransfer tx:%s, sender:%s, receiver:%s", event.TxHash.Hex(), event.From.Hex(), event.To.Hex())
 	return tm.saveTransaction(&entity, list)
 }
 
