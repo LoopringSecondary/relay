@@ -929,11 +929,12 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDec
 	sort.Slice(depth, func(i, j int) bool {
 		cmpA, _ := strconv.ParseFloat(depth[i][0], 64)
 		cmpB, _ := strconv.ParseFloat(depth[j][0], 64)
-		if isAsk {
-			return cmpA < cmpB
-		} else {
-			return cmpA > cmpB
-		}
+		//if isAsk {
+		//	return cmpA < cmpB
+		//} else {
+		//	return cmpA > cmpB
+		//}
+		return cmpA > cmpB
 
 	})
 
