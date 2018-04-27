@@ -132,7 +132,6 @@ type ExtractorOptions struct {
 	ConfirmBlockNumber uint64
 	Debug              bool
 	Open               bool
-	MinerOnly          bool
 }
 
 type KeyStoreOptions struct {
