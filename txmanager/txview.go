@@ -70,7 +70,8 @@ var (
 )
 
 func (impl *TransactionViewImpl) GetPendingTransactions(ownerStr string) ([]TransactionJsonResult, error) {
-	var list []TransactionJsonResult
+	//var list []TransactionJsonResult
+	list := make([]TransactionJsonResult, 0)
 
 	if ownerStr == "" {
 		return list, ErrOwnerAddressInvalid

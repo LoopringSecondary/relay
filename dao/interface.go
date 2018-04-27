@@ -71,6 +71,7 @@ type RdsService interface {
 	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
+	GetLatestFills(query map[string]interface{}, limit int) (res []FillEvent, err error)
 	FindFillsByRingHash(ringHash common.Hash) ([]FillEvent, error)
 
 	// cancel event table

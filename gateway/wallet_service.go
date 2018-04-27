@@ -545,6 +545,22 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 	return result, nil
 }
 
+func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]dao.FillEvent, error) {
+	rst := make([]dao.FillEvent, 0)
+	fillQuery, _, _ := fillQueryToMap(query)
+	res, err := w.orderManager.GetLatestFills(fillQuery, 40)
+
+	if err != nil {
+		return rst, err
+	}
+
+	for _, f := range res {
+		f.TokenS = util.AddressToAlias(f.TokenS)
+		f.TokenB = util.AddressToAlias(f.TokenB)
+	}
+	return res, nil
+}
+
 func (w *WalletServiceImpl) GetTicker() (res []market.Ticker, err error) {
 	return w.trendManager.GetTicker()
 }
@@ -658,6 +674,32 @@ func (w *WalletServiceImpl) GetFrozenLRCFee(query SingleOwner) (frozenAmount str
 	}
 
 	return types.BigintToHex(allLrcFee), err
+}
+
+func (w *WalletServiceImpl) GetLooprSupportedMarket() (markets []string, err error) {
+	return w.GetSupportedMarket()
+}
+
+func (w *WalletServiceImpl) GetLooprSupportedTokens() (markets []types.Token, err error) {
+	return w.GetSupportedTokens()
+}
+
+func (w *WalletServiceImpl) GetContracts() (contracts map[string][]string, err error) {
+	rst := make(map[string][]string)
+	for k, protocol := range ethaccessor.ProtocolAddresses() {
+		lprP := k.Hex()
+		lprDP := protocol.DelegateAddress.Hex()
+
+		v, ok := rst[lprDP]; if ok {
+			v = append(v, lprP)
+			rst[lprDP] = v
+		} else {
+			lprPS := make([]string, 0)
+			lprPS = append(lprPS, lprP)
+			rst[lprDP] = lprPS
+		}
+	}
+	return rst, nil
 }
 
 func (w *WalletServiceImpl) GetSupportedMarket() (markets []string, err error) {

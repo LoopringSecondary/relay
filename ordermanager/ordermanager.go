@@ -41,6 +41,7 @@ type OrderManager interface {
 	GetOrderByHash(hash common.Hash) (*types.OrderState, error)
 	UpdateBroadcastTimeByHash(hash common.Hash, bt int) error
 	FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
+	GetLatestFills(query map[string]interface{}, limit int) ([]dao.FillEvent, error)
 	FindFillsByRingHash(ringHash common.Hash) (result []dao.FillEvent, err error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (dao.PageResult, error)
 	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
@@ -520,6 +521,10 @@ func (om *OrderManagerImpl) UpdateBroadcastTimeByHash(hash common.Hash, bt int) 
 
 func (om *OrderManagerImpl) FillsPageQuery(query map[string]interface{}, pageIndex, pageSize int) (result dao.PageResult, err error) {
 	return om.rds.FillsPageQuery(query, pageIndex, pageSize)
+}
+
+func (om *OrderManagerImpl) GetLatestFills(query map[string]interface{}, limit int) (result []dao.FillEvent, err error) {
+	return om.rds.GetLatestFills(query, limit)
 }
 
 func (om *OrderManagerImpl) FindFillsByRingHash(ringHash common.Hash) (result []dao.FillEvent, err error) {

@@ -390,6 +390,123 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 	return nil
 }
 
+func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
+
+	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
+
+	markets := so.getConnectedMarketForDepth()
+
+	respMap := make(map[string]string, 0)
+	for mk := range markets {
+		mktAndDelegate := strings.Split(mk, "_")
+		delegate := mktAndDelegate[0]
+		mkt := mktAndDelegate[1]
+		resp := SocketIOJsonResp{}
+		depth, err := so.walletService.GetDepth(DepthQuery{delegate, mkt}); if err == nil {
+			resp.Data = depth
+		} else {
+			resp = SocketIOJsonResp{Error: err.Error()}
+		}
+		respJson, _ := json.Marshal(resp)
+		respMap[mk] = string(respJson[:])
+	}
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyDepth]
+			if ok {
+				dQuery := &DepthQuery{}
+				err := json.Unmarshal([]byte(ctx), dQuery); if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
+					depthKey := strings.ToLower(dQuery.DelegateAddress) + "_" + strings.ToLower(dQuery.Market)
+					v.Emit(eventKeyDepth + EventPostfixRes, respMap[depthKey])
+				}
+			}
+		}
+		return true
+	})
+	return nil
+}
+
+func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (err error) {
+
+	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
+
+	markets := so.getConnectedMarketForFill()
+
+	respMap := make(map[string]string, 0)
+	for mk := range markets {
+		mktAndDelegate := strings.Split(mk, "_")
+		delegate := mktAndDelegate[0]
+		mkt := mktAndDelegate[1]
+		resp := SocketIOJsonResp{}
+		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress : delegate, Market: mkt}); if err == nil {
+			resp.Data = fills
+		} else {
+			resp = SocketIOJsonResp{Error: err.Error()}
+		}
+		respJson, _ := json.Marshal(resp)
+		respMap[mk] = string(respJson[:])
+	}
+
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			ctx, ok := businesses[eventKeyDepth]
+			if ok {
+				fQuery := &FillQuery{}
+				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
+					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
+					v.Emit(eventKeyDepth + EventPostfixRes, respMap[fillKey])
+				}
+			}
+		}
+		return true
+	})
+	return nil
+}
+
+
+func (so *SocketIOServiceImpl) getConnectedMarketForDepth() map[string]bool {
+	markets := make(map[string]bool, 0)
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			DCtx, ok := businesses[eventKeyDepth]
+			if ok {
+				dQuery := &DepthQuery{}
+				err := json.Unmarshal([]byte(DCtx), dQuery); if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
+					markets[strings.ToLower(dQuery.DelegateAddress) + "_" + strings.ToLower(dQuery.Market)] = true
+				}
+			}
+		}
+		return true
+	})
+	return markets
+}
+
+func (so *SocketIOServiceImpl) getConnectedMarketForFill() map[string]bool {
+	markets := make(map[string]bool, 0)
+	so.connIdMap.Range(func(key, value interface{}) bool {
+		v := value.(socketio.Conn)
+		if v.Context() != nil {
+			businesses := v.Context().(map[string]string)
+			fCtx, ok := businesses[eventKeyTrades]
+			if ok {
+				fQuery := &FillQuery{}
+				err := json.Unmarshal([]byte(fCtx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
+					markets[strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)] = true
+				}
+			}
+		}
+		return true
+	})
+	return markets
+}
+
 func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (err error) {
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] trend input. %s", input)
@@ -481,44 +598,44 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 	return nil
 }
 
-func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
-
-	log.Infof("[SOCKETIO-RECEIVE-EVENT] depth input. %s", input)
-
-	req := input.(types.DepthUpdateEvent)
-	resp := SocketIOJsonResp{}
-	depths, err := so.walletService.GetDepth(DepthQuery{req.DelegateAddress, req.DelegateAddress})
-
-	if err != nil {
-		resp = SocketIOJsonResp{Error: err.Error()}
-	} else {
-		resp.Data = depths
-	}
-
-	respJson, _ := json.Marshal(resp)
-
-	so.connIdMap.Range(func(key, value interface{}) bool {
-		v := value.(socketio.Conn)
-		if v.Context() != nil {
-			businesses := v.Context().(map[string]string)
-			ctx, ok := businesses[eventKeyDepth]
-
-			if ok {
-				depthQuery := &DepthQuery{}
-				err = json.Unmarshal([]byte(ctx), depthQuery)
-				if err != nil {
-					log.Error("depth query unmarshal error, " + err.Error())
-				} else if strings.ToUpper(req.DelegateAddress) == strings.ToUpper(depthQuery.DelegateAddress) &&
-					strings.ToUpper(req.Market) == strings.ToUpper(depthQuery.Market) {
-					log.Info("emit trend " + ctx)
-					v.Emit(eventKeyDepth+EventPostfixRes, string(respJson[:]))
-				}
-			}
-		}
-		return true
-	})
-	return nil
-}
+//func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err error) {
+//
+//	log.Infof("[SOCKETIO-RECEIVE-EVENT] depth input. %s", input)
+//
+//	req := input.(types.DepthUpdateEvent)
+//	resp := SocketIOJsonResp{}
+//	depths, err := so.walletService.GetDepth(DepthQuery{req.DelegateAddress, req.DelegateAddress})
+//
+//	if err != nil {
+//		resp = SocketIOJsonResp{Error: err.Error()}
+//	} else {
+//		resp.Data = depths
+//	}
+//
+//	respJson, _ := json.Marshal(resp)
+//
+//	so.connIdMap.Range(func(key, value interface{}) bool {
+//		v := value.(socketio.Conn)
+//		if v.Context() != nil {
+//			businesses := v.Context().(map[string]string)
+//			ctx, ok := businesses[eventKeyDepth]
+//
+//			if ok {
+//				depthQuery := &DepthQuery{}
+//				err = json.Unmarshal([]byte(ctx), depthQuery)
+//				if err != nil {
+//					log.Error("depth query unmarshal error, " + err.Error())
+//				} else if strings.ToUpper(req.DelegateAddress) == strings.ToUpper(depthQuery.DelegateAddress) &&
+//					strings.ToUpper(req.Market) == strings.ToUpper(depthQuery.Market) {
+//					log.Info("emit trend " + ctx)
+//					v.Emit(eventKeyDepth+EventPostfixRes, string(respJson[:]))
+//				}
+//			}
+//		}
+//		return true
+//	})
+//	return nil
+//}
 
 func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventData) (err error) {
 
