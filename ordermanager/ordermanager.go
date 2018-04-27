@@ -51,22 +51,23 @@ type OrderManager interface {
 }
 
 type OrderManagerImpl struct {
-	options             *config.OrderManagerOptions
-	rds                 dao.RdsService
-	processor           *ForkProcessor
-	um                  usermanager.UserManager
-	mc                  marketcap.MarketCapProvider
-	cutoffCache         *CutoffCache
-	newOrderWatcher     *eventemitter.Watcher
-	ringMinedWatcher    *eventemitter.Watcher
-	fillOrderWatcher    *eventemitter.Watcher
-	cancelOrderWatcher  *eventemitter.Watcher
-	cutoffOrderWatcher  *eventemitter.Watcher
-	cutoffPairWatcher   *eventemitter.Watcher
-	forkWatcher         *eventemitter.Watcher
-	syncWatcher         *eventemitter.Watcher
-	warningWatcher      *eventemitter.Watcher
-	ordersValidForMiner bool
+	options            *config.OrderManagerOptions
+	rds                dao.RdsService
+	processor          *ForkProcessor
+	um                 usermanager.UserManager
+	mc                 marketcap.MarketCapProvider
+	cutoffCache        *CutoffCache
+	newOrderWatcher    *eventemitter.Watcher
+	ringMinedWatcher   *eventemitter.Watcher
+	fillOrderWatcher   *eventemitter.Watcher
+	cancelOrderWatcher *eventemitter.Watcher
+	cutoffOrderWatcher *eventemitter.Watcher
+	cutoffPairWatcher  *eventemitter.Watcher
+	forkWatcher        *eventemitter.Watcher
+	//syncWatcher             *eventemitter.Watcher
+	warningWatcher          *eventemitter.Watcher
+	submitRingMethodWatcher *eventemitter.Watcher
+	//ordersValidForMiner     bool
 }
 
 func NewOrderManager(
@@ -82,7 +83,7 @@ func NewOrderManager(
 	om.um = userManager
 	om.mc = market
 	om.cutoffCache = NewCutoffCache(options.CutoffCacheCleanTime)
-	om.ordersValidForMiner = false
+	//om.ordersValidForMiner = false
 
 	dustOrderValue = om.options.DustOrderValue
 
@@ -97,9 +98,10 @@ func (om *OrderManagerImpl) Start() {
 	om.cancelOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleOrderCancelled}
 	om.cutoffOrderWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoff}
 	om.cutoffPairWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleCutoffPair}
-	om.syncWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSync}
+	//om.syncWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSync}
 	om.forkWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleFork}
 	om.warningWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleWarning}
+	om.submitRingMethodWatcher = &eventemitter.Watcher{Concurrent: false, Handle: om.handleSubmitRingMethod}
 
 	eventemitter.On(eventemitter.NewOrder, om.newOrderWatcher)
 	eventemitter.On(eventemitter.RingMined, om.ringMinedWatcher)
@@ -107,9 +109,10 @@ func (om *OrderManagerImpl) Start() {
 	eventemitter.On(eventemitter.CancelOrder, om.cancelOrderWatcher)
 	eventemitter.On(eventemitter.CutoffAll, om.cutoffOrderWatcher)
 	eventemitter.On(eventemitter.CutoffPair, om.cutoffPairWatcher)
-	eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
+	//eventemitter.On(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.On(eventemitter.ChainForkDetected, om.forkWatcher)
 	eventemitter.On(eventemitter.ExtractorWarning, om.warningWatcher)
+	eventemitter.On(eventemitter.Miner_SubmitRing_Method, om.submitRingMethodWatcher)
 }
 
 func (om *OrderManagerImpl) Stop() {
@@ -118,21 +121,22 @@ func (om *OrderManagerImpl) Stop() {
 	eventemitter.Un(eventemitter.OrderFilled, om.fillOrderWatcher)
 	eventemitter.Un(eventemitter.CancelOrder, om.cancelOrderWatcher)
 	eventemitter.Un(eventemitter.CutoffAll, om.cutoffOrderWatcher)
-	eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
+	//eventemitter.Un(eventemitter.SyncChainComplete, om.syncWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, om.forkWatcher)
 	eventemitter.Un(eventemitter.ExtractorWarning, om.warningWatcher)
+	eventemitter.Un(eventemitter.Miner_SubmitRing_Method, om.submitRingMethodWatcher)
 
-	om.ordersValidForMiner = false
+	//om.ordersValidForMiner = false
 }
 
-func (om *OrderManagerImpl) handleSync(input eventemitter.EventData) error {
-	blockNumber := input.(types.Big)
-	if blockNumber.BigInt().Cmp(big.NewInt(0)) > 0 {
-		om.ordersValidForMiner = true
-	}
-
-	return nil
-}
+//func (om *OrderManagerImpl) handleSync(input eventemitter.EventData) error {
+//	blockNumber := input.(types.Big)
+//	if blockNumber.BigInt().Cmp(big.NewInt(0)) > 0 {
+//		om.ordersValidForMiner = true
+//	}
+//
+//	return nil
+//}
 
 func (om *OrderManagerImpl) handleFork(input eventemitter.EventData) error {
 	log.Debugf("order manager processing chain fork......")
@@ -152,6 +156,15 @@ func (om *OrderManagerImpl) handleWarning(input eventemitter.EventData) error {
 	return nil
 }
 
+func (om *OrderManagerImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
+	if evt, ok := input.(*types.SubmitRingMethodEvent); ok {
+		ringMinedMethod := &dao.RingMinedMethod{}
+		ringMinedMethod.ConvertDown(evt)
+		om.rds.Add(ringMinedMethod)
+	}
+	return nil
+}
+
 // 所有来自gateway的订单都是新订单
 func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) error {
 	state := input.(*types.OrderState)
@@ -163,7 +176,7 @@ func (om *OrderManagerImpl) handleGatewayOrder(input eventemitter.EventData) err
 		return err
 	}
 
-	eventemitter.Emit(eventemitter.DepthUpdated, types.DepthUpdateEvent{DelegateAddress:model.DelegateAddress, Market:model.Market})
+	eventemitter.Emit(eventemitter.DepthUpdated, types.DepthUpdateEvent{DelegateAddress: model.DelegateAddress, Market: model.Market})
 	return om.rds.Add(model)
 }
 
@@ -413,9 +426,9 @@ func (om *OrderManagerImpl) MinerOrders(protocol, tokenS, tokenB common.Address,
 	var list []*types.OrderState
 
 	// 订单在extractor同步结束后才可以提供给miner进行撮合
-	if !om.ordersValidForMiner {
-		return list
-	}
+	//if !om.ordersValidForMiner {
+	//	return list
+	//}
 
 	var (
 		modelList    []*dao.Order
