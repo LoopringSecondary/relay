@@ -4,13 +4,13 @@ import (
 	"testing"
 	//"github.com/Loopring/relay/test"
 	"fmt"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"time"
-	"github.com/Loopring/relay/market"
-	"github.com/Loopring/relay/cache"
 )
 
 func TestWalletServiceImpl_GetTrend(t *testing.T) {
@@ -21,9 +21,9 @@ func TestWalletServiceImpl_GetTrend(t *testing.T) {
 	zapOpt.DisableStacktrace = false
 	zapOpt.Encoding = "console"
 	zapOpt.EncoderConfig = zapcore.EncoderConfig{
-		MessageKey:"msg",
-		TimeKey:"ts",
-		LevelKey: "level",
+		MessageKey:    "msg",
+		TimeKey:       "ts",
+		LevelKey:      "level",
 		StacktraceKey: "trace",
 		EncodeLevel: func(level zapcore.Level, encoder zapcore.PrimitiveArrayEncoder) {
 

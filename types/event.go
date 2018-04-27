@@ -23,6 +23,34 @@ import (
 	"math/big"
 )
 
+type TxStatus uint8
+
+const (
+	TX_STATUS_UNKNOWN TxStatus = 0
+	TX_STATUS_PENDING TxStatus = 1
+	TX_STATUS_SUCCESS TxStatus = 2
+	TX_STATUS_FAILED  TxStatus = 3
+)
+
+type TxInfo struct {
+	Protocol        common.Address `json:"from"`
+	DelegateAddress common.Address `json:"to"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	BlockHash       common.Hash    `json:"block_hash"`
+	BlockNumber     *big.Int       `json:"block_number"`
+	BlockTime       int64          `json:"block_time"`
+	TxHash          common.Hash    `json:"tx_hash"`
+	TxIndex         int64          `json:"tx_index"`
+	TxLogIndex      int64          `json:"tx_log_index"`
+	Value           *big.Int       `json:"value"`
+	Status          TxStatus       `json:"status"`
+	GasLimit        *big.Int       `json:"gas_limit"`
+	GasUsed         *big.Int       `json:"gas_used"`
+	GasPrice        *big.Int       `json:"gas_price"`
+	Nonce           *big.Int       `json:"nonce"`
+}
+
 type TokenRegisterEvent struct {
 	TxInfo
 	Token  common.Address
@@ -51,14 +79,14 @@ type TransferEvent struct {
 	TxInfo
 	Sender   common.Address
 	Receiver common.Address
-	Value    *big.Int
+	Amount   *big.Int
 }
 
 type ApprovalEvent struct {
 	TxInfo
 	Owner   common.Address
 	Spender common.Address
-	Value   *big.Int
+	Amount  *big.Int
 }
 
 type OrderFilledEvent struct {
@@ -117,14 +145,14 @@ type RingMinedEvent struct {
 
 type WethDepositEvent struct {
 	TxInfo
-	Dst   common.Address
-	Value *big.Int
+	Dst    common.Address
+	Amount *big.Int
 }
 
 type WethWithdrawalEvent struct {
 	TxInfo
-	Src   common.Address
-	Value *big.Int
+	Src    common.Address
+	Amount *big.Int
 }
 
 type SubmitRingMethodEvent struct {
@@ -157,7 +185,7 @@ type BlockEvent struct {
 type ExtractorWarningEvent struct{}
 
 type TransactionEvent struct {
-	Tx Transaction
+	Tx TxInfo
 }
 
 type DepthUpdateEvent struct {

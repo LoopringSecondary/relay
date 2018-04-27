@@ -7,6 +7,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/googollee/go-socket.io"
@@ -108,7 +109,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyPortfolio:   {"GetPortfolio", SingleOwner{}, false, emitTypeByCron, DefaultCronSpec3Second},
 	eventKeyMarketCap:   {"GetPriceQuote", PriceQuoteQuery{}, true, emitTypeByCron, DefaultCronSpec5Minute},
 	eventKeyBalance:     {"GetBalance", CommonTokenRequest{}, false, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyPendingTx:   {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyDepth:       {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 	eventKeyTrades:      {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
@@ -183,7 +184,7 @@ func (so *SocketIOServiceImpl) Start() {
 			context[aliasOfV] = msg
 			s.SetContext(context)
 			so.connIdMap.Store(s.ID(), s)
-			log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
+			//log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
@@ -223,7 +224,7 @@ func (so *SocketIOServiceImpl) Start() {
 						businesses := v.Context().(map[string]string)
 						eventContext, ok := businesses[copyOfK]
 						if ok {
-							log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
+							//log.Infof("[SOCKETIO-EMIT]cron emit by key : %s, connId : %s", copyOfK, v.ID())
 							so.EmitNowByEventType(copyOfK, v, eventContext)
 						}
 					}
@@ -381,7 +382,7 @@ func (so *SocketIOServiceImpl) broadcastLoopringTicker(input eventemitter.EventD
 			businesses := v.Context().(map[string]string)
 			_, ok := businesses[eventKeyLoopringTickers]
 			if ok {
-				log.Info("emit loopring ticker info")
+				//log.Info("emit loopring ticker info")
 				v.Emit(eventKeyLoopringTickers+EventPostfixRes, string(respJson[:]))
 			}
 		}
@@ -524,7 +525,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input. %s", input)
 
-	req := input.(*types.Transaction)
+	req := input.(*txtyp.TransactionView)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
 	fmt.Println(so.connIdMap)
@@ -567,7 +568,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input (for pending). %s", input)
 
-	req := input.(*types.Transaction)
+	req := input.(*txtyp.TransactionView)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
 	fmt.Println(so.connIdMap)

@@ -79,6 +79,8 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &RingSubmitInfo{})
 	tables = append(tables, &FilledOrder{})
 	tables = append(tables, &Transaction{})
+	tables = append(tables, &TransactionEntity{})
+	tables = append(tables, &TransactionView{})
 	tables = append(tables, &CheckPoint{})
 	tables = append(tables, &RingMinedMethod{})
 

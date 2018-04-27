@@ -39,7 +39,7 @@ func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xc4747c33a8e00604c713e63a2f12d1af5d9a646a12e8f092731b1ceb638f1354", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0xbb4d9c2098ea3605132526d49b388a991d515d555d1592894e4d698abe238bda", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
@@ -70,4 +70,37 @@ func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
 	tm.Start()
 	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
 	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
+}
+
+func TestTransactionViewImpl_CoverTransactions(t *testing.T) {
+	//
+	// 1.get transaction from mainnet
+	// 2.get transaction receipt and transaction
+	// 3.process it as mined transaction
+	accmanager := test.GenerateAccountManager()
+	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
+	tm.Start()
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	//processor.ProcessPendingTransaction(&tx)
+
+	var (
+		tx      ethaccessor.Transaction
+		receipt ethaccessor.TransactionReceipt
+		block   ethaccessor.Block
+	)
+
+	txhash := ""
+	if err := ethaccessor.GetTransactionByHash(&tx, txhash, "latest"); err == nil {
+		t.Logf(err.Error())
+	}
+
+	if err := ethaccessor.GetTransactionReceipt(&receipt, txhash, "latest"); err != nil {
+		t.Logf(err.Error())
+	}
+
+	if err := ethaccessor.GetBlockByHash(&block, tx.BlockHash, false); err != nil {
+		t.Logf(err.Error())
+	}
+
+	processor.ProcessMinedTransaction(&tx, &receipt, block.Timestamp.BigInt())
 }
