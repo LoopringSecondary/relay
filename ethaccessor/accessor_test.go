@@ -534,6 +534,16 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_GetBlock(t *testing.T) {
+	hash := "0x25d526f4d913a563783fd09a1e5472c505d644fc2f3ac17eae8f2704943dd033"
+	var block ethaccessor.Block
+	if err := ethaccessor.GetBlockByHash(&block, hash, false); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("number:%s, hash:%s, time:%s", block.Number.BigInt().String(), block.Hash.Hex(), block.Timestamp.BigInt().String())
+	}
+}
+
 func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
 	var count types.Big
 	user := common.HexToAddress("0x71c079107b5af8619d54537a93dbf16e5aab4900")

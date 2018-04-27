@@ -71,3 +71,36 @@ func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
 	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
 	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
 }
+
+func TestTransactionViewImpl_CoverTransactions(t *testing.T) {
+	//
+	// 1.get transaction from mainnet
+	// 2.get transaction receipt and transaction
+	// 3.process it as mined transaction
+	accmanager := test.GenerateAccountManager()
+	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
+	tm.Start()
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	//processor.ProcessPendingTransaction(&tx)
+
+	var (
+		tx      ethaccessor.Transaction
+		receipt ethaccessor.TransactionReceipt
+		block   ethaccessor.Block
+	)
+
+	txhash := ""
+	if err := ethaccessor.GetTransactionByHash(&tx, txhash, "latest"); err == nil {
+		t.Logf(err.Error())
+	}
+
+	if err := ethaccessor.GetTransactionReceipt(&receipt, txhash, "latest"); err != nil {
+		t.Logf(err.Error())
+	}
+
+	if err := ethaccessor.GetBlockByHash(&block, tx.BlockHash, false); err != nil {
+		t.Logf(err.Error())
+	}
+
+	processor.ProcessMinedTransaction(&tx, &receipt, block.Timestamp.BigInt())
+}

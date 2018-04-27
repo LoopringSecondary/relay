@@ -68,7 +68,3 @@ func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 		t.Logf("%d >>>>>> txhash:%s, symbol:%s, from:%s, to:%s, type:%s, status:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type, v.Status)
 	}
 }
-
-func TestTransactionViewImpl_DeleteDuplicatePendingTx(t *testing.T) {
-
-}
