@@ -280,6 +280,7 @@ func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte,
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)
 	callArg.GasPrice = gasPriceBig
+	log.Debugf("EstimateGas gasPrice:%s", gasPriceBig.BigInt().String())
 	if err = accessor.RetryCall(routeParam, 2, &gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
