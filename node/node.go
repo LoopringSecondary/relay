@@ -156,10 +156,6 @@ func (n *Node) Start() {
 	n.orderManager.Start()
 	n.marketCapProvider.Start()
 
-	// todo delete after test
-	//n.registerIPFSSubService()
-	//n.ipfsSubService.Start()
-
 	if n.globalConfig.Mode != MODEL_MINER {
 		n.relayNode.Start()
 		n.accountManager.Start()
