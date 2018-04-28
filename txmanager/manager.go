@@ -289,7 +289,7 @@ func (tm *TransactionManager) saveMinedView(tx *txtyp.TransactionView) error {
 	if !tm.validateView(tx) {
 		return nil
 	}
-	if err := tm.db.DelPendingTxViewByOwnerAndNonce(tx.Owner.Hex(), tx.Nonce.Int64()); err != nil {
+	if err := tm.db.DelPendingTxViewByOwnerAndNonce(tx.TxHash.Hex(), tx.Owner.Hex(), tx.Nonce.Int64()); err != nil {
 		log.Errorf(err.Error())
 	}
 	if list, _ := tm.db.FindMinedTxViewByOwnerAndEvent(tx.Symbol, tx.Owner.Hex(), tx.TxHash.Hex(), tx.LogIndex); len(list) > 0 {
