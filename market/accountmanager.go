@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	UnlockedPrefix = "unlock_"
 	BalancePrefix     = "balance_"
 	AllowancePrefix   = "allowance_"
 	CustomTokenPrefix = "customtoken_"
@@ -60,6 +61,10 @@ type AccountBalances struct {
 
 func balanceCacheKey(owner common.Address) string {
 	return BalancePrefix + strings.ToLower(owner.Hex())
+}
+
+func unlockCacheKey(owner common.Address) string {
+	return UnlockedPrefix + strings.ToLower(owner.Hex())
 }
 
 func balanceCacheField(token common.Address) []byte {
@@ -738,10 +743,11 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 		return errors.New("owner isn't a valid hex-address")
 	}
 
-	accountBalances := AccountBalances{}
-	accountBalances.Owner = common.HexToAddress(owner)
-	accountBalances.Balances = make(map[common.Address]Balance)
-	err = accountBalances.getOrSave(a.cacheDuration)
+	//accountBalances := AccountBalances{}
+	//accountBalances.Owner = common.HexToAddress(owner)
+	//accountBalances.Balances = make(map[common.Address]Balance)
+	//err = accountBalances.getOrSave(a.cacheDuration)
+	rcache.Set(unlockCacheKey(common.HexToAddress(owner)), []byte("true"), a.cacheDuration)
 	return
 }
 
@@ -749,7 +755,7 @@ func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 	if !common.IsHexAddress(owner) {
 		return false, errors.New("owner isn't a valid hex-address")
 	}
-	return rcache.Exists(balanceCacheKey(common.HexToAddress(owner)))
+	return rcache.Exists(unlockCacheKey(common.HexToAddress(owner)))
 }
 
 func (a *AccountManager) handleBlockFork(input eventemitter.EventData) (err error) {
