@@ -471,6 +471,9 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 			log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
 			fillsToPush := make([]FillInSocketIO, 0)
 			for _, f := range fills {
+				fmt.Println("xxxxxxxxxx")
+				fmt.Println(f)
+				fmt.Println(fillsToPush)
 				fillInSocket, err := ToFillInSocket(f); if err == nil {
 					fillsToPush = append(fillsToPush, fillInSocket)
 				}
