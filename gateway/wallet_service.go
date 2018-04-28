@@ -251,9 +251,9 @@ type AccountJson struct {
 }
 
 type LatestFill struct {
-	CreateTime      int64 `json:"createTime"`
-	Price           float64 `json:"price"`
-	Amount          float64 `json:"amount"`
+	CreateTime int64   `json:"createTime"`
+	Price      float64 `json:"price"`
+	Amount     float64 `json:"amount"`
 }
 
 type WalletServiceImpl struct {
@@ -562,7 +562,8 @@ func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]LatestFill, error
 	}
 
 	for _, f := range res {
-		lf, err := toLatestFill(f); if err == nil && lf.Price > 0 && lf.Amount > 0 {
+		lf, err := toLatestFill(f)
+		if err == nil && lf.Price > 0 && lf.Amount > 0 {
 			rst = append(rst, lf)
 		}
 	}
@@ -698,7 +699,8 @@ func (w *WalletServiceImpl) GetContracts() (contracts map[string][]string, err e
 		lprP := k.Hex()
 		lprDP := protocol.DelegateAddress.Hex()
 
-		v, ok := rst[lprDP]; if ok {
+		v, ok := rst[lprDP]
+		if ok {
 			v = append(v, lprP)
 			rst[lprDP] = v
 		} else {
@@ -1187,7 +1189,7 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 }
 
 func toLatestFill(f dao.FillEvent) (latestFill LatestFill, err error) {
-	rst := LatestFill{CreateTime:f.CreateTime}
+	rst := LatestFill{CreateTime: f.CreateTime}
 	price := util.CalculatePrice(f.AmountS, f.AmountB, f.TokenS, f.TokenB)
 	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
 	var amount float64

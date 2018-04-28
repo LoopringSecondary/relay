@@ -33,7 +33,7 @@ type TransactionView struct {
 	BlockNumber int64  `gorm:"column:block_number"`
 	LogIndex    int64  `gorm:"column:tx_log_index"`
 	Amount      string `gorm:"column:amount;type:varchar(40)"`
-	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
+	Nonce       int64  `gorm:"column:nonce"`
 	Type        uint8  `gorm:"column:tx_type"`
 	Status      uint8  `gorm:"column:status"`
 	CreateTime  int64  `gorm:"column:create_time"`
@@ -50,7 +50,7 @@ func (tx *TransactionView) ConvertDown(src *txtyp.TransactionView) error {
 	tx.BlockNumber = src.BlockNumber
 	tx.LogIndex = src.LogIndex
 	tx.Amount = src.Amount.String()
-	tx.Nonce = src.Nonce.String()
+	tx.Nonce = src.Nonce.Int64()
 	tx.Type = uint8(src.Type)
 	tx.Status = uint8(src.Status)
 	tx.CreateTime = src.CreateTime
@@ -68,7 +68,7 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 	dst.BlockNumber = tx.BlockNumber
 	dst.LogIndex = tx.LogIndex
 	dst.Amount, _ = new(big.Int).SetString(tx.Amount, 0)
-	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)
+	dst.Nonce = big.NewInt(tx.Nonce)
 	dst.Type = txtyp.TxType(tx.Type)
 	dst.Status = types.TxStatus(tx.Status)
 	dst.CreateTime = tx.CreateTime
@@ -94,7 +94,7 @@ func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(symbol, owner, hash str
 }
 
 // 根据owner&nonce删除pending tx
-func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner, nonce string) error {
+func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner string, nonce int64) error {
 	err := s.db.Where("owner=?", owner).
 		Where("nonce=?", nonce).
 		Where("status=?", types.TX_STATUS_PENDING).
