@@ -51,7 +51,6 @@ type Node struct {
 	globalConfig      *config.GlobalConfig
 	rdsService        dao.RdsService
 	ipfsSubService    gateway.IPFSSubService
-	extractorService  extractor.ExtractorService
 	orderManager      ordermanager.OrderManager
 	userManager       usermanager.UserManager
 	marketCapProvider marketcap.MarketCapProvider
@@ -65,6 +64,7 @@ type Node struct {
 }
 
 type RelayNode struct {
+	extractorService extractor.ExtractorService
 	trendManager     market.TrendManager
 	tickerCollector  market.CollectorImpl
 	jsonRpcService   gateway.JsonrpcServiceImpl
@@ -75,6 +75,7 @@ type RelayNode struct {
 }
 
 func (n *RelayNode) Start() {
+	n.extractorService.Start()
 	n.txManager.Start()
 
 	//gateway.NewJsonrpcService("8080").Start()
@@ -115,7 +116,6 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 	n.registerAccessor()
 	n.registerUserManager()
 	n.registerOrderManager()
-	n.registerExtractor()
 	n.registerAccountManager()
 	n.registerGateway()
 	n.registerCrypto(nil)
@@ -134,6 +134,7 @@ func NewNode(logger *zap.Logger, globalConfig *config.GlobalConfig) *Node {
 
 func (n *Node) registerRelayNode() {
 	n.relayNode = &RelayNode{}
+	n.registerExtractor()
 	n.registerTransactionManager()
 	n.registerTrendManager()
 	n.registerTickerCollector()
@@ -158,12 +159,8 @@ func (n *Node) Start() {
 	// todo delete after test
 	//n.registerIPFSSubService()
 	//n.ipfsSubService.Start()
-	//txManager := txmanager.NewTxManager(n.rdsService, &n.accountManager)
-	//txManager.Start()
-	//n.extractorService.Start()
 
 	if n.globalConfig.Mode != MODEL_MINER {
-		n.extractorService.Start()
 		n.relayNode.Start()
 		n.accountManager.Start()
 		go ethaccessor.IncludeGasPriceEvaluator()
@@ -217,7 +214,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService, &n.accountManager)
+	n.relayNode.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService, &n.accountManager)
 }
 
 func (n *Node) registerIPFSSubService() {
