@@ -217,12 +217,12 @@ func (so *SocketIOServiceImpl) Start() {
 			})
 		case eventKeyDepth:
 			so.cron.AddFunc(spec, func() {
-				log.Info("start depth broadcast")
+				//log.Info("start depth broadcast")
 				so.broadcastDepth(nil)
 			})
 		case eventKeyTrades:
 			so.cron.AddFunc(spec, func() {
-				log.Info("start trades broadcast")
+				//log.Info("start trades broadcast")
 				so.broadcastTrades(nil)
 			})
 		default:
@@ -526,7 +526,7 @@ func (so *SocketIOServiceImpl) getConnectedMarketForFill() map[string]bool {
 
 func (so *SocketIOServiceImpl) broadcastTrends(input eventemitter.EventData) (err error) {
 
-	log.Infof("[SOCKETIO-RECEIVE-EVENT] trend input. %s", input)
+	//log.Infof("[SOCKETIO-RECEIVE-EVENT] trend input. %s", input)
 
 	req := input.(TrendQuery)
 	resp := SocketIOJsonResp{}
@@ -606,7 +606,7 @@ func (so *SocketIOServiceImpl) notifyBalanceUpdateByDelegateAddress(owner, deleg
 			businesses := v.Context().(map[string]string)
 			_, ok := businesses[eventKeyBalance]
 			if ok {
-				log.Info("emit balance info")
+				//log.Info("emit balance info")
 				v.Emit(eventKeyBalance+EventPostfixRes, string(respJson[:]))
 			}
 		}
