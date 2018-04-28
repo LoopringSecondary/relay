@@ -121,7 +121,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyPendingTx:   {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyDepth:       {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTrades:      {"GetFills", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTrades:      {"GetLatestFills", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
