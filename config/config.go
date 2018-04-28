@@ -87,6 +87,11 @@ type GlobalConfig struct {
 	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
+	AccountManager AccountManagerOptions
+}
+
+type AccountManagerOptions struct {
+	CacheDuration int64
 }
 
 type JsonrpcOptions struct {

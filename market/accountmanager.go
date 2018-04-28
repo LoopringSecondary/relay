@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	rcache "github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -33,7 +34,7 @@ import (
 )
 
 const (
-	UnlockedPrefix = "unlock_"
+	UnlockedPrefix    = "unlock_"
 	BalancePrefix     = "balance_"
 	AllowancePrefix   = "allowance_"
 	CustomTokenPrefix = "customtoken_"
@@ -542,9 +543,13 @@ type AccountManager struct {
 	block          *ChangedOfBlock
 }
 
-func NewAccountManager() AccountManager {
+func NewAccountManager(options config.AccountManagerOptions) AccountManager {
 	accountManager := AccountManager{}
-	accountManager.cacheDuration = 3600 * 24 * 30
+	if options.CacheDuration > 0 {
+		accountManager.cacheDuration = options.CacheDuration
+	} else {
+		accountManager.cacheDuration = 3600 * 24 * 100
+	}
 	accountManager.maxBlockLength = 3000
 	b := &ChangedOfBlock{}
 	b.cachedDuration = big.NewInt(int64(500))

@@ -226,7 +226,7 @@ func (n *Node) registerTrendManager() {
 }
 
 func (n *Node) registerAccountManager() {
-	n.accountManager = market.NewAccountManager()
+	n.accountManager = market.NewAccountManager(n.globalConfig.AccountManager)
 }
 
 func (n *Node) registerTransactionManager() {
