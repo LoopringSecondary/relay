@@ -554,6 +554,20 @@ func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_GetFullBlock(t *testing.T) {
+	blockNumber := big.NewInt(5514801)
+	withObject := true
+	ret, err := ethaccessor.GetFullBlock(blockNumber, withObject)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	block := ret.(*ethaccessor.BlockWithTxAndReceipt)
+	for _, v := range block.Transactions {
+		t.Logf("hash:%s", v.Hash)
+	}
+	t.Logf("length of block:%s is %d", blockNumber.String(), len(block.Transactions))
+}
+
 // 使用rpc.client调用eth call时应该使用 arg参数应该指针 保证unmarshal的正确性
 func TestEthNodeAccessor_Call(t *testing.T) {
 	var (

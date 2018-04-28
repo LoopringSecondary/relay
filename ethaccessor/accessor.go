@@ -202,6 +202,10 @@ func GetSpenderAddress(protocolAddress common.Address) (spender common.Address, 
 	return impl.DelegateAddress, nil
 }
 
+func GetFullBlock(blockNumber *big.Int, withObject bool) (interface{}, error) {
+	return accessor.GetFullBlock(blockNumber, withObject)
+}
+
 func IsSpenderAddress(spender common.Address) bool {
 	_, exists := accessor.DelegateAddresses[spender]
 	return exists
