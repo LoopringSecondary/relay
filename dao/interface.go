@@ -120,7 +120,7 @@ type RdsService interface {
 
 	// transactionView
 	FindPendingTxViewByOwnerAndHash(symbol, owner, hash string) ([]TransactionView, error)
-	DelPendingTxViewByOwnerAndNonce(owner, nonce string) error
+	DelPendingTxViewByOwnerAndNonce(owner string, nonce int64) error
 	FindMinedTxViewByOwnerAndEvent(symbol, owner, hash string, logIndex int64) ([]TransactionView, error)
 	GetTxViewByOwnerAndHashs(owner string, hashs []string) ([]TransactionView, error)
 	GetPendingTxViewByOwner(owner string) ([]TransactionView, error)

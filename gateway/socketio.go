@@ -413,7 +413,8 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 		delegate := mktAndDelegate[0]
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
-		depth, err := so.walletService.GetDepth(DepthQuery{delegate, mkt}); if err == nil {
+		depth, err := so.walletService.GetDepth(DepthQuery{delegate, mkt})
+		if err == nil {
 			resp.Data = depth
 		} else {
 			resp = SocketIOJsonResp{Error: err.Error()}
@@ -429,9 +430,10 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 			ctx, ok := businesses[eventKeyDepth]
 			if ok {
 				dQuery := &DepthQuery{}
-				err := json.Unmarshal([]byte(ctx), dQuery); if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
+				err := json.Unmarshal([]byte(ctx), dQuery)
+				if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
 					depthKey := strings.ToLower(dQuery.DelegateAddress) + "_" + strings.ToLower(dQuery.Market)
-					v.Emit(eventKeyDepth + EventPostfixRes, respMap[depthKey])
+					v.Emit(eventKeyDepth+EventPostfixRes, respMap[depthKey])
 				}
 			}
 		}
@@ -452,7 +454,8 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		delegate := mktAndDelegate[0]
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
-		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress : delegate, Market: mkt}); if err == nil {
+		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress: delegate, Market: mkt})
+		if err == nil {
 			//log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
 			resp.Data = fills
 		} else {
@@ -469,9 +472,10 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 			ctx, ok := businesses[eventKeyTrades]
 			if ok {
 				fQuery := &FillQuery{}
-				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
+				err := json.Unmarshal([]byte(ctx), fQuery)
+				if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
 					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
-					v.Emit(eventKeyTrades + EventPostfixRes, respMap[fillKey])
+					v.Emit(eventKeyTrades+EventPostfixRes, respMap[fillKey])
 				}
 			}
 		}
@@ -489,8 +493,9 @@ func (so *SocketIOServiceImpl) getConnectedMarketForDepth() map[string]bool {
 			DCtx, ok := businesses[eventKeyDepth]
 			if ok {
 				dQuery := &DepthQuery{}
-				err := json.Unmarshal([]byte(DCtx), dQuery); if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
-					markets[strings.ToLower(dQuery.DelegateAddress) + "_" + strings.ToLower(dQuery.Market)] = true
+				err := json.Unmarshal([]byte(DCtx), dQuery)
+				if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
+					markets[strings.ToLower(dQuery.DelegateAddress)+"_"+strings.ToLower(dQuery.Market)] = true
 				}
 			}
 		}
@@ -508,8 +513,9 @@ func (so *SocketIOServiceImpl) getConnectedMarketForFill() map[string]bool {
 			fCtx, ok := businesses[eventKeyTrades]
 			if ok {
 				fQuery := &FillQuery{}
-				err := json.Unmarshal([]byte(fCtx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
-					markets[strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)] = true
+				err := json.Unmarshal([]byte(fCtx), fQuery)
+				if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
+					markets[strings.ToLower(fQuery.DelegateAddress)+"_"+strings.ToLower(fQuery.Market)] = true
 				}
 			}
 		}

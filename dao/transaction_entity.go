@@ -41,7 +41,7 @@ type TransactionEntity struct {
 	GasLimit    string `gorm:"column:gas_limit;type:varchar(40)"`
 	GasUsed     string `gorm:"column:gas_used;type:varchar(40)"`
 	GasPrice    string `gorm:"column:gas_price;type:varchar(40)"`
-	Nonce       string `gorm:"column:nonce;type:varchar(40)"`
+	Nonce       int64  `gorm:"column:nonce"`
 	BlockTime   int64  `gorm:"column:block_time"`
 	Fork        bool   `gorm:"column:fork"`
 }
@@ -61,7 +61,7 @@ func (tx *TransactionEntity) ConvertDown(src *txtyp.TransactionEntity) error {
 	tx.GasLimit = src.GasLimit.String()
 	tx.GasUsed = src.GasUsed.String()
 	tx.GasPrice = src.GasPrice.String()
-	tx.Nonce = src.Nonce.String()
+	tx.Nonce = src.Nonce.Int64()
 	tx.BlockTime = src.BlockTime
 	tx.Fork = false
 
@@ -82,7 +82,7 @@ func (tx *TransactionEntity) ConvertUp(dst *txtyp.TransactionEntity) error {
 	dst.GasLimit, _ = new(big.Int).SetString(tx.GasLimit, 0)
 	dst.GasUsed, _ = new(big.Int).SetString(tx.GasUsed, 0)
 	dst.GasPrice, _ = new(big.Int).SetString(tx.GasPrice, 0)
-	dst.Nonce, _ = new(big.Int).SetString(tx.Nonce, 0)
+	dst.Nonce = big.NewInt(tx.Nonce)
 	dst.BlockTime = tx.BlockTime
 
 	return nil
