@@ -80,10 +80,11 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 //////////// write related
 
 // 根据owner&hash查询pending tx
-func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(owner, hash string) ([]TransactionView, error) {
+func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(symbol, owner, hash string) ([]TransactionView, error) {
 	var txs []TransactionView
 
 	err := s.db.Where("owner=?", owner).
+		Where("symbol=?", symbol).
 		Where("tx_hash=?", hash).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
@@ -103,10 +104,11 @@ func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner, nonce string) er
 }
 
 // 根据owner&hash&logIndex查询mined tx
-func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(owner, hash string, logIndex int64) ([]TransactionView, error) {
+func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(symbol, owner, hash string, logIndex int64) ([]TransactionView, error) {
 	var txs []TransactionView
 
 	err := s.db.Where("owner=?", owner).
+		Where("symbol=?", symbol).
 		Where("tx_hash=?", hash).
 		Where("tx_log_index=?", logIndex).
 		Where("status<>?", types.TX_STATUS_PENDING).

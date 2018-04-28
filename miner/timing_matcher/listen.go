@@ -98,7 +98,6 @@ func (matcher *TimingMatcher) listenOrderReady() {
 		}
 		log.Debugf("listenOrderReadylistenOrderReadylistenOrderReady, %t", matcher.isOrdersReady)
 
-
 	}
 
 	go func() {

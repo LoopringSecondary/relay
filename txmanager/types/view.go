@@ -193,6 +193,7 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 		tx2.Owner = src.To
 	}
 
+	list = append(list, tx1, tx2)
 	return list
 }
 

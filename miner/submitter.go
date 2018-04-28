@@ -117,7 +117,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 			case ringInfos := <-ringSubmitInfoChan:
 				if nil != ringInfos {
 					for _, ringState := range ringInfos {
-						txHash,status, err1 := submitter.submitRing(ringState)
+						txHash, status, err1 := submitter.submitRing(ringState)
 						ringState.SubmitTxHash = txHash
 
 						daoInfo := &dao.RingSubmitInfo{}
@@ -170,7 +170,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 	var err error
 	lastTime := int64(0)
 	if nil != ringSubmitInfo.RawRing && len(ringSubmitInfo.RawRing.Orders) > 0 {
-		for _,order := range ringSubmitInfo.RawRing.Orders {
+		for _, order := range ringSubmitInfo.RawRing.Orders {
 			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
 			if lastTime <= thisTime {
 				lastTime = thisTime
@@ -191,7 +191,7 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 		}
 		txHash = common.HexToHash(txHashStr)
 	} else {
-		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(),ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
+		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
 		status = types.TX_STATUS_FAILED
 	}
 

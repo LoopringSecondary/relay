@@ -21,6 +21,7 @@ package marketcap
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
@@ -29,10 +30,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
-	"fmt"
-	"net/http"
 )
 
 type LegalCurrency int

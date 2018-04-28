@@ -48,7 +48,7 @@ var (
 )
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := account2
+	account := account1
 	wethAddr := wethTokenAddress
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
@@ -86,7 +86,7 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 }
 
 func TestEthNodeAccessor_EthTransfer(t *testing.T) {
-	sender := miner.Address
+	sender := account1
 	receiver := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
@@ -552,6 +552,20 @@ func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
 	} else {
 		t.Logf("transaction count:%d", count.Int64())
 	}
+}
+
+func TestEthNodeAccessor_GetFullBlock(t *testing.T) {
+	blockNumber := big.NewInt(5514801)
+	withObject := true
+	ret, err := ethaccessor.GetFullBlock(blockNumber, withObject)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	block := ret.(*ethaccessor.BlockWithTxAndReceipt)
+	for _, v := range block.Transactions {
+		t.Logf("hash:%s", v.Hash)
+	}
+	t.Logf("length of block:%s is %d", blockNumber.String(), len(block.Transactions))
 }
 
 // 使用rpc.client调用eth call时应该使用 arg参数应该指针 保证unmarshal的正确性

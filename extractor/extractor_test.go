@@ -27,19 +27,25 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
+	"time"
 )
 
 func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
-	account := common.HexToAddress("0x71C079107B5af8619D54537A93dbF16e5aab4900") //test.Entity().Accounts[1].Address
-	manager := test.GenerateAccountManager()
-	manager.UnlockedWallet(account.Hex())
+	accounts := []string{common.HexToAddress("0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135").Hex(),
+		common.HexToAddress("0xb1018949b241d76a1ab2094f473e9befeabb5ead").Hex(),
+	}
+	for _, account := range accounts {
+		manager := test.GenerateAccountManager()
+		manager.UnlockedWallet(account)
+	}
+	time.Sleep(1 * time.Second)
 }
 
 // test save transaction
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0xbb4d9c2098ea3605132526d49b388a991d515d555d1592894e4d698abe238bda", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0x305204a4c86148f4320256195ca42ab5822a49dd9bd2df699dea2092e29a7f42", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
@@ -72,35 +78,54 @@ func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
 	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
 }
 
+// 1.get tx from dao.transactions
+// 2.get transaction from chain
+// 3.get transaction receipt and transaction
+// 4.process it as mined transaction
 func TestTransactionViewImpl_CoverTransactions(t *testing.T) {
-	//
-	// 1.get transaction from mainnet
-	// 2.get transaction receipt and transaction
-	// 3.process it as mined transaction
+	db := test.Rds()
 	accmanager := test.GenerateAccountManager()
-	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
+	tm := txmanager.NewTxManager(db, &accmanager)
 	tm.Start()
-	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
-	//processor.ProcessPendingTransaction(&tx)
 
-	var (
-		tx      ethaccessor.Transaction
-		receipt ethaccessor.TransactionReceipt
-		block   ethaccessor.Block
-	)
+	//processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
 
-	txhash := ""
-	if err := ethaccessor.GetTransactionByHash(&tx, txhash, "latest"); err == nil {
-		t.Logf(err.Error())
+	start := 1
+	end := 1
+
+	for id := start; id < end; id++ {
+		var (
+			tx      ethaccessor.Transaction
+			receipt ethaccessor.TransactionReceipt
+			block   ethaccessor.Block
+		)
+
+		entity, err := db.GetTransactionById(id)
+		if err != nil {
+			t.Logf(err.Error())
+			continue
+		}
+		if entity.Status < 2 {
+			t.Logf("tx:%s is pending or unknown(%d)", entity.TxHash, entity.Status)
+		}
+
+		txhash := entity.TxHash
+		if err := ethaccessor.GetTransactionByHash(&tx, txhash, "latest"); err == nil {
+			t.Logf(err.Error())
+			continue
+		}
+
+		if err := ethaccessor.GetTransactionReceipt(&receipt, txhash, "latest"); err != nil {
+			t.Logf(err.Error())
+			continue
+		}
+
+		if err := ethaccessor.GetBlockByHash(&block, tx.BlockHash, false); err != nil {
+			t.Logf(err.Error())
+			continue
+		}
+
+		t.Log("")
+		// processor.ProcessMinedTransaction(&tx, &receipt, block.Timestamp.BigInt())
 	}
-
-	if err := ethaccessor.GetTransactionReceipt(&receipt, txhash, "latest"); err != nil {
-		t.Logf(err.Error())
-	}
-
-	if err := ethaccessor.GetBlockByHash(&block, tx.BlockHash, false); err != nil {
-		t.Logf(err.Error())
-	}
-
-	processor.ProcessMinedTransaction(&tx, &receipt, block.Timestamp.BigInt())
 }
