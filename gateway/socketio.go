@@ -121,7 +121,7 @@ var EventTypeRoute = map[string]InvokeInfo{
 	eventKeyTransaction: {"GetTransactions", TransactionQuery{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyPendingTx:   {"GetPendingTransactions", SingleOwner{}, false, emitTypeByEvent, DefaultCronSpec10Second},
 	eventKeyDepth:       {"GetDepth", DepthQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
-	eventKeyTrades:      {"GetTrades", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
+	eventKeyTrades:      {"GetFills", FillQuery{}, true, emitTypeByEvent, DefaultCronSpec3Second},
 }
 
 type SocketIOService interface {
@@ -297,6 +297,10 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 }
 
 func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, ctx string) string {
+
+	fmt.Println(methodName)
+	fmt.Println(ctx)
+	fmt.Println(query)
 
 	results := make([]reflect.Value, 0)
 	var err error
