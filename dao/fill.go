@@ -146,6 +146,15 @@ func (s *RdsServiceImpl) FillsPageQuery(query map[string]interface{}, pageIndex,
 	return
 }
 
+func (s *RdsServiceImpl) GetLatestFills(query map[string]interface{}, limit int) (res []FillEvent, err error) {
+	fills := make([]FillEvent, 0)
+	err = s.db.Where(query).Where("fork=?", false).Order("create_time desc").Limit(limit).Find(&fills).Error
+	if err != nil {
+		return res, err
+	}
+	return fills, nil
+}
+
 func (s *RdsServiceImpl) QueryRecentFills(market, owner string, start int64, end int64) (fills []FillEvent, err error) {
 
 	query := make(map[string]interface{})
