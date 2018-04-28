@@ -478,7 +478,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 					fillsToPush = append(fillsToPush, fillInSocket)
 				}
 			}
-			resp.Data = fills
+			resp.Data = fillsToPush
 		} else {
 			resp = SocketIOJsonResp{Error: err.Error()}
 		}
@@ -498,7 +498,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
 					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
 					fmt.Println(fillKey)
-					fmt.Println(respMap)
+					fmt.Println(respMap[fillKey])
 					v.Emit(eventKeyTrades + EventPostfixRes, respMap[fillKey])
 				} else {
 					fmt.Println(err)
