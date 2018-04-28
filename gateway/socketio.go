@@ -17,10 +17,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/market/util"
-	"math/big"
-	"strconv"
 )
 
 type BusinessType int
@@ -48,12 +44,6 @@ type SocketIOJsonResp struct {
 	Error string      `json:"error"`
 	Code  string      `json:"code"`
 	Data  interface{} `json:"data"`
-}
-
-type FillInSocketIO struct {
-	CreateTime      int64
-	Price           float64
-	Amount          float64
 }
 
 func NewServer(s socketio.Server) Server {
@@ -462,14 +452,8 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
 		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress : delegate, Market: mkt}); if err == nil {
-			log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
-			fillsToPush := make([]FillInSocketIO, 0)
-			for _, f := range fills {
-				fillInSocket, err := ToFillInSocket(f); if err == nil {
-					fillsToPush = append(fillsToPush, fillInSocket)
-				}
-			}
-			resp.Data = fillsToPush
+			//log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
+			resp.Data = fills
 		} else {
 			resp = SocketIOJsonResp{Error: err.Error()}
 		}
@@ -494,34 +478,6 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 	})
 	return nil
 }
-
-func ToFillInSocket(f dao.FillEvent) (fillInSocketIO FillInSocketIO, err error) {
-	rst := FillInSocketIO{CreateTime:f.CreateTime}
-	price := util.CalculatePrice(f.AmountS, f.AmountB, f.TokenS, f.TokenB)
-	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
-	var amount float64
-	if util.GetSide(f.TokenS, f.TokenB) == util.SideBuy {
-		amountB, _ := new(big.Int).SetString(f.AmountB, 0)
-		tokenB, ok := util.AllTokens[util.AddressToAlias(f.TokenB)]
-		if !ok {
-			return fillInSocketIO, err
-		}
-		ratAmount := new(big.Rat).SetFrac(amountB, tokenB.Decimals)
-		amount, _ = ratAmount.Float64()
-		rst.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", amount), 64)
-	} else {
-		amountS, _ := new(big.Int).SetString(f.AmountS, 0)
-		tokenS, ok := util.AllTokens[util.AddressToAlias(f.TokenS)]
-		if !ok {
-			return fillInSocketIO, err
-		}
-		ratAmount := new(big.Rat).SetFrac(amountS, tokenS.Decimals)
-		amount, _ = ratAmount.Float64()
-		rst.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", amount), 64)
-	}
-	return rst, nil
-}
-
 
 func (so *SocketIOServiceImpl) getConnectedMarketForDepth() map[string]bool {
 	markets := make(map[string]bool, 0)

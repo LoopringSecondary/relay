@@ -249,6 +249,12 @@ type AccountJson struct {
 	Tokens          []Token `json:"tokens"`
 }
 
+type LatestFill struct {
+	CreateTime      int64 `json:"createTime"`
+	Price           float64 `json:"price"`
+	Amount          float64 `json:"amount"`
+}
+
 type WalletServiceImpl struct {
 	trendManager    market.TrendManager
 	orderManager    ordermanager.OrderManager
@@ -545,8 +551,8 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 	return result, nil
 }
 
-func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]dao.FillEvent, error) {
-	rst := make([]dao.FillEvent, 0)
+func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]LatestFill, error) {
+	rst := make([]LatestFill, 0)
 	fillQuery, _, _ := fillQueryToMap(query)
 	res, err := w.orderManager.GetLatestFills(fillQuery, 40)
 
@@ -555,10 +561,11 @@ func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]dao.FillEvent, er
 	}
 
 	for _, f := range res {
-		f.TokenS = util.AddressToAlias(f.TokenS)
-		f.TokenB = util.AddressToAlias(f.TokenB)
+		lf, err := toLatestFill(f); if err == nil {
+			rst = append(rst, lf)
+		}
 	}
-	return res, nil
+	return rst, nil
 }
 
 func (w *WalletServiceImpl) GetTicker() (res []market.Ticker, err error) {
@@ -1173,5 +1180,32 @@ func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDe
 	}
 
 	rst.RingInfo = ringInfo
+	return rst, nil
+}
+
+func toLatestFill(f dao.FillEvent) (latestFill LatestFill, err error) {
+	rst := LatestFill{CreateTime:f.CreateTime}
+	price := util.CalculatePrice(f.AmountS, f.AmountB, f.TokenS, f.TokenB)
+	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
+	var amount float64
+	if util.GetSide(f.TokenS, f.TokenB) == util.SideBuy {
+		amountB, _ := new(big.Int).SetString(f.AmountB, 0)
+		tokenB, ok := util.AllTokens[util.AddressToAlias(f.TokenB)]
+		if !ok {
+			return latestFill, err
+		}
+		ratAmount := new(big.Rat).SetFrac(amountB, tokenB.Decimals)
+		amount, _ = ratAmount.Float64()
+		rst.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", amount), 64)
+	} else {
+		amountS, _ := new(big.Int).SetString(f.AmountS, 0)
+		tokenS, ok := util.AllTokens[util.AddressToAlias(f.TokenS)]
+		if !ok {
+			return latestFill, err
+		}
+		ratAmount := new(big.Rat).SetFrac(amountS, tokenS.Decimals)
+		amount, _ = ratAmount.Float64()
+		rst.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", amount), 64)
+	}
 	return rst, nil
 }
