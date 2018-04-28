@@ -36,7 +36,7 @@ import (
 const (
 	USAGE_CLIENT_BLOCK = "usage_client_block_"
 	BLOCKS             = "blocks_"
-	blocks_count       = int64(10)
+	blocks_count       = int64(2000)
 	cacheDuration      = 86400 * 3
 )
 
@@ -63,12 +63,13 @@ func NewMutilClient(urls []string) *MutilClient {
 	mc.clients = make(map[string]*RpcClient)
 	mc.downedClients = make(map[string]*RpcClient)
 	for _, url := range urls {
+		rpcClient := &RpcClient{}
+		rpcClient.url = url
 		if client, err := rpc.DialHTTP(url); nil != err {
 			log.Errorf("rpc.Dail err : %s, url:%s", err.Error(), url)
+			mc.downedClients[url] = rpcClient
 		} else {
-			rpcClient := &RpcClient{}
 			rpcClient.client = client
-			rpcClient.url = url
 			mc.clients[url] = rpcClient
 		}
 	}
@@ -108,6 +109,18 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 			}
 		}
 	}
+
+	if len(urls) == 0 {
+		log.Debugf("len(urls) == 0")
+		mc.syncBlockNumber()
+		for url, client := range mc.clients {
+			if _, exists := mc.downedClients[url]; !exists && (nil == client.blockNumber || client.blockNumber.Cmp(blockNumber.BigInt()) >= 0) {
+				urls = append(urls, url)
+			}
+		}
+		log.Debugf("after syncBlockNumber len(urls) == %d", len(urls))
+	}
+
 	if len(urls) > 0 {
 		idx := 0
 		idx = rand.Intn(len(urls))

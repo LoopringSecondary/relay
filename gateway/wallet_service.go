@@ -31,6 +31,7 @@ import (
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/txmanager"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -723,12 +724,14 @@ func (w *WalletServiceImpl) GetSupportedTokens() (markets []types.Token, err err
 
 func (w *WalletServiceImpl) GetTransactions(query TransactionQuery) (PageResult, error) {
 	var (
-		rst           PageResult
-		txs           []txmanager.TransactionJsonResult
+		rst PageResult
+		// should be make
+		txs           = make([]txtyp.TransactionJsonResult, 0)
 		limit, offset int
 		err           error
 	)
 
+	rst.Data = make([]interface{}, 0)
 	rst.PageIndex, rst.PageSize, limit, offset = pagination(query.PageIndex, query.PageSize)
 	rst.Total, err = txmanager.GetAllTransactionCount(query.Owner, query.Symbol, query.Status, query.TxType)
 	if err != nil {
@@ -759,11 +762,11 @@ func pagination(pageIndex, pageSize int) (int, int, int, int) {
 	return pageIndex, pageSize, limit, offset
 }
 
-func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txmanager.TransactionJsonResult, err error) {
+func (w *WalletServiceImpl) GetTransactionsByHash(query TransactionQuery) (result []txtyp.TransactionJsonResult, err error) {
 	return txmanager.GetTransactionsByHash(query.Owner, query.TrxHashes)
 }
 
-func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txmanager.TransactionJsonResult, err error) {
+func (w *WalletServiceImpl) GetPendingTransactions(query SingleOwner) (result []txtyp.TransactionJsonResult, err error) {
 	return txmanager.GetPendingTransactions(query.Owner)
 }
 
@@ -1095,44 +1098,44 @@ func txTypeToUint8(status string) int {
 	}
 }
 
-func toTxJsonResult(tx types.Transaction) txmanager.TransactionJsonResult {
-	dst := txmanager.TransactionJsonResult{}
-	dst.Protocol = tx.Protocol
-	dst.Owner = tx.Owner
-	dst.From = tx.From
-	dst.To = tx.To
-	dst.TxHash = tx.TxHash
-
-	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
-		ctx, err := tx.GetCutoffPairContent()
-		if err == nil && ctx != nil {
-			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
-			if err == nil {
-				dst.Content = txmanager.TransactionContent{Market: mkt}
-			}
-		}
-	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
-		ctx, err := tx.GetCancelOrderHash()
-		if err == nil && ctx != "" {
-			dst.Content = txmanager.TransactionContent{OrderHash: ctx}
-		}
-	}
-
-	dst.BlockNumber = tx.BlockNumber.Int64()
-	dst.LogIndex = tx.LogIndex
-	if tx.Value == nil {
-		dst.Value = "0"
-	} else {
-		dst.Value = tx.Value.String()
-	}
-	dst.Type = tx.TypeStr()
-	dst.Status = tx.StatusStr()
-	dst.CreateTime = tx.CreateTime
-	dst.UpdateTime = tx.UpdateTime
-	dst.Symbol = tx.Symbol
-	dst.Nonce = tx.TxInfo.Nonce.String()
-	return dst
-}
+//func toTxJsonResult(tx types.Transaction) txmanager.TransactionJsonResult {
+//	dst := txmanager.TransactionJsonResult{}
+//	dst.Protocol = tx.Protocol
+//	dst.Owner = tx.Owner
+//	dst.From = tx.From
+//	dst.To = tx.To
+//	dst.TxHash = tx.TxHash
+//
+//	if tx.Type == types.TX_TYPE_CUTOFF_PAIR {
+//		ctx, err := tx.GetCutoffPairContent()
+//		if err == nil && ctx != nil {
+//			mkt, err := util.WrapMarketByAddress(ctx.Token1.Hex(), ctx.Token2.Hex())
+//			if err == nil {
+//				dst.Content = txmanager.TransactionContent{Market: mkt}
+//			}
+//		}
+//	} else if tx.Type == types.TX_TYPE_CANCEL_ORDER {
+//		ctx, err := tx.GetCancelOrderHash()
+//		if err == nil && ctx != "" {
+//			dst.Content = txmanager.TransactionContent{OrderHash: ctx}
+//		}
+//	}
+//
+//	dst.BlockNumber = tx.BlockNumber.Int64()
+//	dst.LogIndex = tx.TxLogIndex
+//	if tx.Value == nil {
+//		dst.Value = "0"
+//	} else {
+//		dst.Value = tx.Value.String()
+//	}
+//	dst.Type = tx.TypeStr()
+//	dst.Status = tx.StatusStr()
+//	dst.CreateTime = tx.CreateTime
+//	dst.UpdateTime = tx.UpdateTime
+//	dst.Symbol = tx.Symbol
+//	dst.Nonce = tx.TxInfo.Nonce.String()
+//	return dst
+//}
 
 func fillDetail(ring dao.RingMinedEvent, fills []dao.FillEvent) (rst RingMinedDetail, err error) {
 	rst = RingMinedDetail{Fills: fills}

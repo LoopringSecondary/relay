@@ -87,6 +87,11 @@ type GlobalConfig struct {
 	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
+	AccountManager AccountManagerOptions
+}
+
+type AccountManagerOptions struct {
+	CacheDuration int64
 }
 
 type JsonrpcOptions struct {
@@ -132,7 +137,6 @@ type ExtractorOptions struct {
 	ConfirmBlockNumber uint64
 	Debug              bool
 	Open               bool
-	MinerOnly          bool
 }
 
 type KeyStoreOptions struct {
@@ -164,6 +168,7 @@ type TimingMatcher struct {
 	Duration             int64
 	DelayedNumber        int64
 	MaxCacheRoundsLength int
+	LagBlocks            int64
 }
 
 type PercentMinerAddress struct {

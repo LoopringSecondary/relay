@@ -48,7 +48,7 @@ var (
 )
 
 func TestEthNodeAccessor_WethDeposit(t *testing.T) {
-	account := account2
+	account := account1
 	wethAddr := wethTokenAddress
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	callMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.WethAbi(), wethAddr)
@@ -86,7 +86,7 @@ func TestEthNodeAccessor_WethTransfer(t *testing.T) {
 }
 
 func TestEthNodeAccessor_EthTransfer(t *testing.T) {
-	sender := miner.Address
+	sender := account1
 	receiver := account2
 	amount := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(1))
 	if hash, err := ethaccessor.SignAndSendTransaction(sender, receiver, gas, gasPrice, amount, []byte("test")); err != nil {
@@ -247,7 +247,7 @@ func TestEthNodeAccessor_CancelOrder(t *testing.T) {
 		state        types.OrderState
 		err          error
 		result       string
-		orderhash    = common.HexToHash("0xb341b0b3d924ad628e5f8142af1679c92db23e74dbeb8259f1cd08e28f3da202")
+		orderhash    = common.HexToHash("0x8e25422e1e5f241245878ab2c9234640240ae1bb266d88b09379b1b7170bf57b")
 		cancelAmount = new(big.Int).Mul(big.NewInt(1e18), big.NewInt(2))
 	)
 
@@ -534,6 +534,16 @@ func TestEthNodeAccessor_GetTransactionReceipt(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_GetBlock(t *testing.T) {
+	hash := "0x25d526f4d913a563783fd09a1e5472c505d644fc2f3ac17eae8f2704943dd033"
+	var block ethaccessor.Block
+	if err := ethaccessor.GetBlockByHash(&block, hash, false); err != nil {
+		t.Fatalf(err.Error())
+	} else {
+		t.Logf("number:%s, hash:%s, time:%s", block.Number.BigInt().String(), block.Hash.Hex(), block.Timestamp.BigInt().String())
+	}
+}
+
 func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
 	var count types.Big
 	user := common.HexToAddress("0x71c079107b5af8619d54537a93dbf16e5aab4900")
@@ -542,6 +552,20 @@ func TestEthNodeAccessor_GetTransactionCount(t *testing.T) {
 	} else {
 		t.Logf("transaction count:%d", count.Int64())
 	}
+}
+
+func TestEthNodeAccessor_GetFullBlock(t *testing.T) {
+	blockNumber := big.NewInt(5514801)
+	withObject := true
+	ret, err := ethaccessor.GetFullBlock(blockNumber, withObject)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	block := ret.(*ethaccessor.BlockWithTxAndReceipt)
+	for _, v := range block.Transactions {
+		t.Logf("hash:%s", v.Hash)
+	}
+	t.Logf("length of block:%s is %d", blockNumber.String(), len(block.Transactions))
 }
 
 // 使用rpc.client调用eth call时应该使用 arg参数应该指针 保证unmarshal的正确性

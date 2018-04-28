@@ -75,7 +75,7 @@ func (f *FillEvent) ConvertDown(src *types.OrderFilledEvent) error {
 	f.TokenB = src.TokenB.Hex()
 	f.Owner = src.Owner.Hex()
 	f.FillIndex = src.FillIndex.Int64()
-	f.LogIndex = src.LogIndex
+	f.LogIndex = src.TxLogIndex
 	f.Market = src.Market
 
 	return nil
@@ -103,7 +103,7 @@ func (f *FillEvent) ConvertUp(dst *types.OrderFilledEvent) error {
 	dst.TokenB = common.HexToAddress(f.TokenB)
 	dst.Owner = common.HexToAddress(f.Owner)
 	dst.FillIndex = big.NewInt(f.FillIndex)
-	dst.LogIndex = f.LogIndex
+	dst.TxLogIndex = f.LogIndex
 	dst.Market = f.Market
 
 	return nil

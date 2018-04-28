@@ -7,6 +7,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/googollee/go-socket.io"
@@ -651,7 +652,7 @@ func (so *SocketIOServiceImpl) handleTransactionUpdate(input eventemitter.EventD
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input. %s", input)
 
-	req := input.(*types.Transaction)
+	req := input.(*txtyp.TransactionView)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
 	fmt.Println(so.connIdMap)
@@ -694,7 +695,7 @@ func (so *SocketIOServiceImpl) handlePendingTransaction(input eventemitter.Event
 
 	log.Infof("[SOCKETIO-RECEIVE-EVENT] transaction input (for pending). %s", input)
 
-	req := input.(*types.Transaction)
+	req := input.(*txtyp.TransactionView)
 	owner := req.Owner.Hex()
 	log.Infof("received owner is %s ", owner)
 	fmt.Println(so.connIdMap)

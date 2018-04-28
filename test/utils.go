@@ -60,7 +60,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.5"
-	DebugFile = "mainchain.toml"
+	DebugFile = "debug.toml"
 )
 
 var (
@@ -71,9 +71,11 @@ var (
 	creator       accounts.Account
 	protocol      common.Address
 	delegate      common.Address
+	Path          string
 )
 
 func init() {
+	Path = strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/config/" + DebugFile
 	cfg = loadConfig()
 	rds = GenerateDaoService()
 	txmanager.NewTxView(rds)
@@ -87,16 +89,14 @@ func init() {
 }
 
 func loadConfig() *config.GlobalConfig {
-	path := "/Users/jaice/relay.toml"
-	c := config.LoadConfig(path)
+	c := config.LoadConfig(Path)
 	log.Initialize(c.Log)
 
 	return c
 }
 
 func LoadConfig() *config.GlobalConfig {
-	path := "/Users/jaice/relay.toml"
-	c := config.LoadConfig(path)
+	c := config.LoadConfig(Path)
 	log.Initialize(c.Log)
 
 	return c
@@ -127,7 +127,6 @@ func loadTestData() *TestEntity {
 	}
 
 	file := strings.TrimSuffix(os.Getenv("GOPATH"), "/") + "/src/github.com/Loopring/relay/test/testdata.toml"
-
 	io, err := os.Open(file)
 	if err != nil {
 		panic(err)
@@ -212,7 +211,11 @@ func GenerateAccountManager() market.AccountManager {
 }
 
 func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
-	order := &types.Order{}
+	var (
+		order types.Order
+		state types.OrderState
+		model dao.Order
+	)
 	order.Protocol = protocol
 	order.DelegateAddress = delegate
 	order.TokenS = tokenS
@@ -230,10 +233,32 @@ func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner co
 	order.AuthAddr = order.AuthPrivateKey.Address()
 	order.WalletAddress = owner
 	order.Hash = order.GenerateHash()
+	order.GeneratePrice()
 	if err := order.GenerateAndSetSignature(owner); nil != err {
 		log.Fatalf(err.Error())
 	}
-	return order
+
+	state.RawOrder = order
+	state.DealtAmountS = big.NewInt(0)
+	state.DealtAmountB = big.NewInt(0)
+	state.SplitAmountS = big.NewInt(0)
+	state.SplitAmountB = big.NewInt(0)
+	state.CancelledAmountB = big.NewInt(0)
+	state.CancelledAmountS = big.NewInt(0)
+	state.UpdatedBlock = big.NewInt(0)
+	state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
+	state.Status = types.ORDER_NEW
+
+	market, err := util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	if err != nil {
+		log.Fatalf("get market error:%s", err.Error())
+	}
+	model.Market = market
+	model.ConvertDown(&state)
+
+	rds.Add(&model)
+
+	return &order
 }
 
 func getCallArg(a *abi.ABI, protocol common.Address, methodName string, args ...interface{}) *ethaccessor.CallArg {

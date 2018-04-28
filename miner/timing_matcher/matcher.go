@@ -25,6 +25,7 @@ import (
 	"math/big"
 
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
@@ -41,22 +42,28 @@ type TimingMatcher struct {
 	evaluator       *miner.Evaluator
 	lastRoundNumber *big.Int
 	duration        *big.Int
+	lagBlocks       int64
 	roundOrderCount int
 
 	maxCacheRoundsLength int
 	delayedNumber        int64
 	accountManager       *marketLib.AccountManager
+	isOrdersReady        bool
+	db                   dao.RdsService
 
 	stopFuncs []func()
 }
 
-func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager, accountManager *marketLib.AccountManager) *TimingMatcher {
+func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.RingSubmitter, evaluator *miner.Evaluator, om ordermanager.OrderManager, accountManager *marketLib.AccountManager, rds dao.RdsService) *TimingMatcher {
 	matcher := &TimingMatcher{}
 	matcher.submitter = submitter
 	matcher.evaluator = evaluator
 	matcher.accountManager = accountManager
 	matcher.roundOrderCount = matcherOptions.RoundOrdersCount
 	//matcher.rounds = NewRoundStates(matcherOptions.MaxCacheRoundsLength)
+	matcher.isOrdersReady = false
+	matcher.db = rds
+	matcher.lagBlocks = matcherOptions.LagBlocks
 
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(matcherOptions.Duration)
@@ -93,6 +100,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 
 func (matcher *TimingMatcher) Start() {
 	matcher.listenSubmitEvent()
+	matcher.listenOrderReady()
 	matcher.listenTimingRound()
 	//syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
 	//	log.Debugf("TimingMatcher Start......")

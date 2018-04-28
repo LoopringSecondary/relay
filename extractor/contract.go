@@ -57,7 +57,7 @@ func (event *EventData) FullFilled(tx *ethaccessor.Transaction, evtLog *ethacces
 	event.TxInfo = setTxInfo(tx, gasUsed, blockTime)
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
-	event.LogIndex = evtLog.LogIndex.Int64()
+	event.TxLogIndex = evtLog.LogIndex.Int64()
 	event.Status = types.TX_STATUS_SUCCESS
 }
 
@@ -67,7 +67,6 @@ type MethodData struct {
 	CAbi   *abi.ABI
 	Id     string
 	Name   string
-	Value  *big.Int
 	Input  string
 }
 
@@ -83,9 +82,8 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 
 func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus) {
 	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
-	method.Value = tx.Value.BigInt()
 	method.Input = tx.Input
-	method.LogIndex = 0
+	method.TxLogIndex = 0
 	method.Status = status
 }
 
@@ -100,12 +98,11 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	txinfo.Protocol = common.HexToAddress(tx.To)
 	txinfo.From = common.HexToAddress(tx.From)
 	txinfo.To = common.HexToAddress(tx.To)
-	txinfo.RawFrom = common.HexToAddress(tx.From)
-	txinfo.RawTo = common.HexToAddress(tx.To)
 	txinfo.GasLimit = tx.Gas.BigInt()
 	txinfo.GasUsed = gasUsed
 	txinfo.GasPrice = tx.GasPrice.BigInt()
 	txinfo.Nonce = tx.Nonce.BigInt()
+	txinfo.Value = tx.Value.BigInt()
 
 	if impl, ok := ethaccessor.ProtocolAddresses()[txinfo.To]; ok {
 		txinfo.DelegateAddress = impl.DelegateAddress
@@ -164,10 +161,6 @@ func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager, o
 	processor.db = db
 
 	processor.options = option
-	if processor.options.MinerOnly {
-		processor.loadMinerOnlyContract()
-		return processor
-	}
 
 	processor.loadProtocolAddress()
 	processor.loadErc20Contract()
@@ -281,34 +274,34 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 	}
 }
 
-func (processor *AbiProcessor) loadMinerOnlyContract() {
-	// load abi
-	for _, v := range ethaccessor.ProtocolAddresses() {
-		protocolSymbol := "loopring"
-		processor.protocols[v.ContractAddress] = protocolSymbol
-		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
-	}
-
-	// load event
-	event := ethaccessor.ProtocolImplAbi().Events[RINGMINED_EVT_NAME]
-	contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
-	contract.Event = &ethaccessor.RingMinedEvent{}
-	watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
-
-	eventemitter.On(contract.Id.Hex(), watcher)
-	processor.events[contract.Id] = contract
-	log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
-
-	// load method
-	method := ethaccessor.ProtocolImplAbi().Methods[SUBMITRING_METHOD_NAME]
-	contract1 := newMethodData(&method, ethaccessor.ProtocolImplAbi())
-	contract1.Method = &ethaccessor.SubmitRingMethod{}
-	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
-
-	eventemitter.On(contract1.Id, watcher1)
-	processor.methods[contract1.Id] = contract1
-	log.Infof("extractor,contract method name:%s -> key:%s", contract1.Name, contract1.Id)
-}
+//func (processor *AbiProcessor) loadMinerOnlyContract() {
+//	// load abi
+//	for _, v := range ethaccessor.ProtocolAddresses() {
+//		protocolSymbol := "loopring"
+//		processor.protocols[v.ContractAddress] = protocolSymbol
+//		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
+//	}
+//
+//	// load event
+//	event := ethaccessor.ProtocolImplAbi().Events[RINGMINED_EVT_NAME]
+//	contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
+//	contract.Event = &ethaccessor.RingMinedEvent{}
+//	watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
+//
+//	eventemitter.On(contract.Id.Hex(), watcher)
+//	processor.events[contract.Id] = contract
+//	log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
+//
+//	// load method
+//	method := ethaccessor.ProtocolImplAbi().Methods[SUBMITRING_METHOD_NAME]
+//	contract1 := newMethodData(&method, ethaccessor.ProtocolImplAbi())
+//	contract1.Method = &ethaccessor.SubmitRingMethod{}
+//	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
+//
+//	eventemitter.On(contract1.Id, watcher1)
+//	processor.methods[contract1.Id] = contract1
+//	log.Infof("extractor,contract method name:%s -> key:%s", contract1.Name, contract1.Id)
+//}
 
 func (processor *AbiProcessor) loadProtocolContract() {
 	for name, event := range ethaccessor.ProtocolImplAbi().Events {
@@ -615,7 +608,7 @@ func (processor *AbiProcessor) handleApproveMethod(input eventemitter.EventData)
 	approve.Owner = contractData.From
 	approve.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+	log.Debugf("extractor,tx:%s approve method owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Amount.String())
 
 	eventemitter.Emit(eventemitter.Approve, approve)
 
@@ -636,7 +629,7 @@ func (processor *AbiProcessor) handleTransferMethod(input eventemitter.EventData
 	transfer.Sender = contractData.From
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
+	log.Debugf("extractor,tx:%s transfer method sender:%s, receiver:%s, value:%s", transfer.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.Transfer, transfer)
 	return nil
@@ -647,10 +640,10 @@ func (processor *AbiProcessor) handleWethDepositMethod(input eventemitter.EventD
 
 	var deposit types.WethDepositEvent
 	deposit.Dst = contractData.From
-	deposit.Value = contractData.Value
+	deposit.Amount = contractData.Value
 	deposit.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), deposit.From.Hex(), deposit.To.Hex(), deposit.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), deposit.From.Hex(), deposit.To.Hex(), deposit.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethDeposit, &deposit)
 
@@ -671,7 +664,7 @@ func (processor *AbiProcessor) handleWethWithdrawalMethod(input eventemitter.Eve
 	withdrawal.Src = contractData.From
 	withdrawal.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal method from:%s, to:%s, value:%s", contractData.TxHash.Hex(), withdrawal.From.Hex(), withdrawal.To.Hex(), withdrawal.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawal, withdrawal)
 
@@ -711,10 +704,6 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 		ringmined.DelegateAddress.Hex())
 
 	eventemitter.Emit(eventemitter.RingMined, ringmined)
-
-	if processor.options.MinerOnly {
-		return nil
-	}
 
 	var (
 		fillList      []*types.OrderFilledEvent
@@ -854,7 +843,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	transfer := contractEvent.ConvertDown()
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Value.String())
+	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.Transfer, transfer)
 
@@ -875,7 +864,7 @@ func (processor *AbiProcessor) handleApprovalEvent(input eventemitter.EventData)
 	approve := contractEvent.ConvertDown()
 	approve.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Value.String())
+	log.Debugf("extractor,tx:%s approval event owner:%s, spender:%s, value:%s", contractData.TxHash.Hex(), approve.Owner.Hex(), approve.Spender.Hex(), approve.Amount.String())
 
 	eventemitter.Emit(eventemitter.Approve, approve)
 
@@ -962,7 +951,7 @@ func (processor *AbiProcessor) handleWethDepositEvent(input eventemitter.EventDa
 	evt.Dst = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Dst.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethDeposit event deposit to:%s, number:%s", contractData.TxHash.Hex(), evt.Dst.Hex(), evt.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethDeposit, evt)
 
@@ -982,7 +971,7 @@ func (processor *AbiProcessor) handleWethWithdrawalEvent(input eventemitter.Even
 	evt.Src = common.HexToAddress(contractData.Topics[1])
 	evt.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal to:%s, number:%s", contractData.TxHash.Hex(), evt.Src.Hex(), evt.Value.String())
+	log.Debugf("extractor,tx:%s wethWithdrawal event withdrawal to:%s, number:%s", contractData.TxHash.Hex(), evt.Src.Hex(), evt.Amount.String())
 
 	eventemitter.Emit(eventemitter.WethWithdrawal, evt)
 
@@ -994,11 +983,10 @@ func (processor *AbiProcessor) handleEthTransfer(tx *ethaccessor.Transaction, re
 
 	dst.From = common.HexToAddress(tx.From)
 	dst.To = common.HexToAddress(tx.To)
-	dst.RawFrom = common.HexToAddress(tx.From)
-	dst.RawTo = common.HexToAddress(tx.To)
 	dst.TxHash = common.HexToHash(tx.Hash)
+	dst.Amount = tx.Value.BigInt()
 	dst.Value = tx.Value.BigInt()
-	dst.LogIndex = 0
+	dst.TxLogIndex = 0
 	dst.BlockNumber = tx.BlockNumber.BigInt()
 	dst.BlockTime = time.Int64()
 

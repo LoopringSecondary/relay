@@ -85,7 +85,7 @@ func TestExtractorServiceImpl_UnpackWethWithdrawalMethod(t *testing.T) {
 	}
 
 	evt := withdrawal.ConvertDown()
-	t.Logf("withdrawal event value:%s", evt.Value)
+	t.Logf("withdrawal event value:%s", evt.Amount)
 }
 
 func TestExtractorServiceImpl_UnpackCancelOrderMethod(t *testing.T) {
@@ -146,7 +146,7 @@ func TestExtractorServiceImpl_UnpackApproveMethod(t *testing.T) {
 	}
 
 	approve := method.ConvertDown()
-	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Value.String())
+	t.Logf("approve spender:%s, value:%s", approve.Spender.Hex(), approve.Amount.String())
 }
 
 func TestExtractorServiceImpl_UnpackTransferMethod(t *testing.T) {
@@ -157,7 +157,7 @@ func TestExtractorServiceImpl_UnpackTransferMethod(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	transfer := method.ConvertDown()
-	t.Logf("transfer receiver:%s, value:%s", transfer.Receiver.Hex(), transfer.Value.String())
+	t.Logf("transfer receiver:%s, value:%s", transfer.Receiver.Hex(), transfer.Amount.String())
 }
 
 func TestExtractorServiceImpl_UnpackTransferEvent(t *testing.T) {

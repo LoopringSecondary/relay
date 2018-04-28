@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	rcache "github.com/Loopring/relay/cache"
+	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
@@ -33,6 +34,7 @@ import (
 )
 
 const (
+	UnlockedPrefix    = "unlock_"
 	BalancePrefix     = "balance_"
 	AllowancePrefix   = "allowance_"
 	CustomTokenPrefix = "customtoken_"
@@ -60,6 +62,10 @@ type AccountBalances struct {
 
 func balanceCacheKey(owner common.Address) string {
 	return BalancePrefix + strings.ToLower(owner.Hex())
+}
+
+func unlockCacheKey(owner common.Address) string {
+	return UnlockedPrefix + strings.ToLower(owner.Hex())
 }
 
 func balanceCacheField(token common.Address) []byte {
@@ -371,7 +377,7 @@ type ChangedOfBlock struct {
 func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
 	err := rcache.SAdd(b.cacheBalanceKey(), int64(0), b.cacheBalanceField(owner, token))
 	if err == nil {
-		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex()})
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner: owner.Hex()})
 	}
 	return err
 }
@@ -402,7 +408,7 @@ func (b *ChangedOfBlock) parseCacheAllowanceField(data []byte) (owner, token, sp
 func (b *ChangedOfBlock) saveAllowanceKey(owner, token, spender common.Address) error {
 	err := rcache.SAdd(b.cacheAllowanceKey(), int64(0), b.cacheAllowanceField(owner, token, spender))
 	if err == nil {
-		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner:owner.Hex(), DelegateAddress: spender.Hex()})
+		eventemitter.Emit(eventemitter.BalanceUpdated, types.BalanceUpdateEvent{Owner: owner.Hex(), DelegateAddress: spender.Hex()})
 	}
 	return err
 }
@@ -537,9 +543,13 @@ type AccountManager struct {
 	block          *ChangedOfBlock
 }
 
-func NewAccountManager() AccountManager {
+func NewAccountManager(options config.AccountManagerOptions) AccountManager {
 	accountManager := AccountManager{}
-	accountManager.cacheDuration = 3600 * 24 * 30
+	if options.CacheDuration > 0 {
+		accountManager.cacheDuration = options.CacheDuration
+	} else {
+		accountManager.cacheDuration = 3600 * 24 * 100
+	}
 	accountManager.maxBlockLength = 3000
 	b := &ChangedOfBlock{}
 	b.cachedDuration = big.NewInt(int64(500))
@@ -738,10 +748,11 @@ func (a *AccountManager) UnlockedWallet(owner string) (err error) {
 		return errors.New("owner isn't a valid hex-address")
 	}
 
-	accountBalances := AccountBalances{}
-	accountBalances.Owner = common.HexToAddress(owner)
-	accountBalances.Balances = make(map[common.Address]Balance)
-	err = accountBalances.getOrSave(a.cacheDuration)
+	//accountBalances := AccountBalances{}
+	//accountBalances.Owner = common.HexToAddress(owner)
+	//accountBalances.Balances = make(map[common.Address]Balance)
+	//err = accountBalances.getOrSave(a.cacheDuration)
+	rcache.Set(unlockCacheKey(common.HexToAddress(owner)), []byte("true"), a.cacheDuration)
 	return
 }
 
@@ -749,7 +760,7 @@ func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 	if !common.IsHexAddress(owner) {
 		return false, errors.New("owner isn't a valid hex-address")
 	}
-	return rcache.Exists(balanceCacheKey(common.HexToAddress(owner)))
+	return rcache.Exists(unlockCacheKey(common.HexToAddress(owner)))
 }
 
 func (a *AccountManager) handleBlockFork(input eventemitter.EventData) (err error) {
