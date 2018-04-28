@@ -497,7 +497,13 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 				fQuery := &FillQuery{}
 				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
 					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
+					fmt.Println(fillKey)
+					fmt.Println(respMap)
 					v.Emit(eventKeyTrades + EventPostfixRes, respMap[fillKey])
+				} else {
+					fmt.Println(err)
+					fmt.Println(fQuery.DelegateAddress)
+					fmt.Println(fQuery.Market)
 				}
 			}
 		}
@@ -509,7 +515,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 func ToFillInSocket(f dao.FillEvent) (fillInSocketIO FillInSocketIO, err error) {
 	rst := FillInSocketIO{CreateTime:f.CreateTime}
 	price := util.CalculatePrice(f.AmountS, f.AmountB, f.TokenS, f.TokenB)
-	rst.Price = price
+	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
 	var amount float64
 	if util.GetSide(f.TokenS, f.TokenB) == util.SideBuy {
 		amountB, _ := new(big.Int).SetString(f.AmountB, 0)
