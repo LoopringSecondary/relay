@@ -117,11 +117,11 @@ func (submitter *RingSubmitter) listenNewRings() {
 			case ringInfos := <-ringSubmitInfoChan:
 				if nil != ringInfos {
 					for _, ringState := range ringInfos {
-						txHash, err := submitter.submitRing(ringState)
+						txHash,status, err1 := submitter.submitRing(ringState)
 						ringState.SubmitTxHash = txHash
 
 						daoInfo := &dao.RingSubmitInfo{}
-						daoInfo.ConvertDown(ringState, err)
+						daoInfo.ConvertDown(ringState, err1)
 						if err := submitter.dbService.Add(daoInfo); nil != err {
 							log.Errorf("Miner submitter,insert new ring err:%s", err.Error())
 						} else {
@@ -133,6 +133,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 								}
 							}
 						}
+						submitter.submitResult(ringState.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err1)
 					}
 				}
 			}
@@ -160,26 +161,41 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 	return errors.New("had been processed")
 }
 
-func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, error) {
+func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, types.TxStatus, error) {
 	status := types.TX_STATUS_PENDING
 	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
 	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
 
 	txHash := types.NilHash
 	var err error
-	if _, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest"); nil == err {
-		txHashStr := "0x"
-		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
-		txHash = common.HexToHash(txHashStr)
+	lastTime := int64(0)
+	if nil != ringSubmitInfo.RawRing && len(ringSubmitInfo.RawRing.Orders) > 0 {
+		for _,order := range ringSubmitInfo.RawRing.Orders {
+			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
+			if lastTime <= thisTime {
+				lastTime = thisTime
+			}
+		}
 	}
 
-	if nil != err {
-		log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+	if time.Now().Unix() >= (lastTime + int64(15)) {
+		_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
+	}
+
+	if nil == err {
+		txHashStr := "0x"
+		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
+		if nil != err {
+			log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+			status = types.TX_STATUS_FAILED
+		}
+		txHash = common.HexToHash(txHashStr)
+	} else {
+		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(),ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
 		status = types.TX_STATUS_FAILED
 	}
 
-	submitter.submitResult(ringSubmitInfo.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err)
-	return txHash, err
+	return txHash, status, err
 }
 
 func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
