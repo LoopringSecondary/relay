@@ -298,10 +298,6 @@ func (so *SocketIOServiceImpl) EmitNowByEventType(bk string, v socketio.Conn, bv
 
 func (so *SocketIOServiceImpl) handleWith(eventType string, query interface{}, methodName string, ctx string) string {
 
-	fmt.Println(methodName)
-	fmt.Println(ctx)
-	fmt.Println(query)
-
 	results := make([]reflect.Value, 0)
 	var err error
 
@@ -419,8 +415,6 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
 
 	markets := so.getConnectedMarketForDepth()
-	fmt.Println(">>>>>>> markets described")
-	fmt.Println(markets)
 
 	respMap := make(map[string]string, 0)
 	for mk := range markets {
@@ -442,8 +436,6 @@ func (so *SocketIOServiceImpl) broadcastDepth(input eventemitter.EventData) (err
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			ctx, ok := businesses[eventKeyDepth]
-			fmt.Println("range depth contxt ")
-			fmt.Println(ctx)
 			if ok {
 				dQuery := &DepthQuery{}
 				err := json.Unmarshal([]byte(ctx), dQuery); if err == nil && len(dQuery.DelegateAddress) > 0 && len(dQuery.Market) > 0 {
@@ -462,8 +454,6 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 	//log.Infof("[SOCKETIO-RECEIVE-EVENT] loopring depth input. %s", input)
 
 	markets := so.getConnectedMarketForFill()
-	fmt.Println(">>>>>>> trade markets described")
-	fmt.Println(markets)
 
 	respMap := make(map[string]string, 0)
 	for mk := range markets {
@@ -475,9 +465,6 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 			log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
 			fillsToPush := make([]FillInSocketIO, 0)
 			for _, f := range fills {
-				fmt.Println("xxxxxxxxxx")
-				fmt.Println(f)
-				fmt.Println(fillsToPush)
 				fillInSocket, err := ToFillInSocket(f); if err == nil {
 					fillsToPush = append(fillsToPush, fillInSocket)
 				}
@@ -495,19 +482,11 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			ctx, ok := businesses[eventKeyTrades]
-			fmt.Println("range fill contxt ")
-			fmt.Println(ctx)
 			if ok {
 				fQuery := &FillQuery{}
 				err := json.Unmarshal([]byte(ctx), fQuery); if err == nil && len(fQuery.DelegateAddress) > 0 && len(fQuery.Market) > 0 {
 					fillKey := strings.ToLower(fQuery.DelegateAddress) + "_" + strings.ToLower(fQuery.Market)
-					fmt.Println(fillKey)
-					fmt.Println(respMap[fillKey])
 					v.Emit(eventKeyTrades + EventPostfixRes, respMap[fillKey])
-				} else {
-					fmt.Println(err)
-					fmt.Println(fQuery.DelegateAddress)
-					fmt.Println(fQuery.Market)
 				}
 			}
 		}
