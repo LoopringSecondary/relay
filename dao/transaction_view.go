@@ -101,7 +101,7 @@ func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(hash, owner string, non
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Update("status=?", types.TX_STATUS_FAILED)
-		
+
 	err := s.db.Where("owner=?", owner).
 		Where("tx_hash=?", hash).
 		Where("nonce=?", nonce).
