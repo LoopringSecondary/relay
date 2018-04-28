@@ -61,7 +61,7 @@ name = "Loopring corporation"
     max_broadcast_time = 3
 
 [accessor]
-    raw_urls = ["http://13.113.214.212:8545"]
+    raw_urls = ["http://127.0.0.1:8545"]
 
 [extractor]
     start_block_number = 5354906
