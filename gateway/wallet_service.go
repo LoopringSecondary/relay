@@ -561,7 +561,7 @@ func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]LatestFill, error
 	}
 
 	for _, f := range res {
-		lf, err := toLatestFill(f); if err == nil {
+		lf, err := toLatestFill(f); if err == nil && lf.Price > 0 && lf.Amount > 0 {
 			rst = append(rst, lf)
 		}
 	}
