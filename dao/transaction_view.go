@@ -95,6 +95,12 @@ func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(symbol, owner, hash str
 
 // 根据owner&nonce删除pending tx
 func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(owner, nonce string) error {
+	err := s.db.Model(&TransactionView{}).
+		Where("owner=?", owner).
+		Where("status=?", types.TX_STATUS_PENDING).
+		Where("nonce<?", nonce).
+		Update("status=?", types.TX_STATUS_FAILED).Error
+
 	err := s.db.Where("owner=?", owner).
 		Where("nonce=?", nonce).
 		Where("status=?", types.TX_STATUS_PENDING).
