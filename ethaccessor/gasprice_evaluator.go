@@ -33,17 +33,19 @@ type GasPriceEvaluator struct {
 }
 
 func (e *GasPriceEvaluator) GasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
+	gasPrice := new(big.Int)
 	if nil != e.gasPrice {
 		if nil != maxGasPrice && maxGasPrice.Cmp(e.gasPrice) < 0 {
-			return maxGasPrice
+			gasPrice.Set(maxGasPrice)
 		} else if nil != minGasPrice && minGasPrice.Cmp(e.gasPrice) > 0 {
-			return minGasPrice
+			gasPrice.Set(minGasPrice)
 		} else {
-			return e.gasPrice
+			gasPrice.Set(e.gasPrice)
 		}
 	} else {
-		return maxGasPrice
+		gasPrice.Set(maxGasPrice)
 	}
+	return gasPrice
 }
 
 func (e *GasPriceEvaluator) start() {
