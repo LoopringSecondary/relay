@@ -110,7 +110,7 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 					cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
-				log.Errorf("err:%s", err.Error())
+				log.Errorf("err:%s", err1.Error())
 			}
 		}
 	} else {
