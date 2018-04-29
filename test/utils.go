@@ -207,10 +207,10 @@ func GenerateMarketCap() *marketcap.CapProvider_CoinMarketCap {
 }
 
 func GenerateAccountManager() market.AccountManager {
-	return market.NewAccountManager()
+	return market.NewAccountManager(cfg.AccountManager)
 }
 
-func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
+func CreateOrder(tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	var (
 		order types.Order
 		state types.OrderState
@@ -229,7 +229,7 @@ func CreateOrder(privateKey crypto.EthPrivateKeyCrypto, tokenS, tokenB, owner co
 	order.MarginSplitPercentage = 0
 	order.Owner = owner
 	order.PowNonce = 1
-	order.AuthPrivateKey = privateKey
+	order.AuthPrivateKey = entity.PrivateKey
 	order.AuthAddr = order.AuthPrivateKey.Address()
 	order.WalletAddress = owner
 	order.Hash = order.GenerateHash()
