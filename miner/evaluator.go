@@ -357,7 +357,7 @@ func (e *Evaluator) evaluateReceived(ringState *types.Ring) {
 	costEth := new(big.Rat).SetInt(protocolCost)
 	ringState.LegalCost, _ = e.marketCapProvider.LegalCurrencyValueOfEth(costEth)
 
-	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s, realCostRate:%s", ringState.LegalFee.FloatString(2), ringState.LegalCost.FloatString(2), e.realCostRate.FloatString(2), e.realCostRate.FloatString(2))
+	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s, protocolCost:%s, gas:%s, gasPrice:%s", ringState.LegalFee.FloatString(2), ringState.LegalCost.FloatString(2), e.realCostRate.FloatString(2), protocolCost.String(), ringState.Gas.String(), ringState.GasPrice.String())
 	ringState.LegalCost.Mul(ringState.LegalCost, e.realCostRate)
 	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s", ringState.LegalFee.FloatString(2), ringState.LegalCost.FloatString(2), e.realCostRate.FloatString(2))
 	ringState.Received.Sub(ringState.LegalFee, ringState.LegalCost)
