@@ -219,6 +219,11 @@ func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int,
 	for idx, v := range reqElems {
 		repeatCnt := 0
 	mark:
+		if repeatCnt > 15*20 {
+			err := fmt.Errorf("can't get content of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
+		}
 		if v.Error == nil && v.Result != nil {
 			if tx, ok := v.Result.(*Transaction); ok && len(tx.Hash) > 0 {
 				hash := common.HexToHash(tx.Hash)
@@ -258,6 +263,11 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 	for idx, v := range reqElems {
 		repeatCnt := 0
 	mark:
+		if repeatCnt > 15*20 {
+			err := fmt.Errorf("can't get receipt of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
+		}
 		if v.Error == nil && v.Result != nil && !reqs[idx].TxContent.StatusInvalid() {
 			if tx, ok := v.Result.(*TransactionReceipt); ok && len(tx.TransactionHash) > 0 {
 				hash := common.HexToHash(tx.TransactionHash)

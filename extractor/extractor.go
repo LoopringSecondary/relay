@@ -97,7 +97,10 @@ func (l *ExtractorServiceImpl) Start() {
 			case <-l.stop:
 				return
 			default:
-				l.ProcessBlock()
+				if err := l.ProcessBlock(); nil != err {
+					log.Error(err.Error())
+					time.Sleep(1 * time.Second)
+				}
 			}
 		}
 	}()
@@ -157,10 +160,13 @@ func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.Eve
 	return l.ProcessPendingTransaction(tx)
 }
 
-func (l *ExtractorServiceImpl) ProcessBlock() {
+func (l *ExtractorServiceImpl) ProcessBlock() error {
 	inter, err := l.iterator.Next()
 	if err != nil {
-		l.Warning(fmt.Errorf("extractor,iterator next error:%s", err.Error()))
+		err1 := fmt.Errorf("extractor,iterator next error:%s", err.Error())
+		log.Error(err.Error())
+		return err1
+		//l.Warning(fmt.Errorf("extractor,iterator next error:%s", err.Error()))
 	}
 
 	// get current block
@@ -211,6 +217,7 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	}
 
 	eventemitter.Emit(eventemitter.Block_End, blockEvent)
+	return nil
 }
 
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {
