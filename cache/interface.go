@@ -33,6 +33,8 @@ type Cache interface {
 
 	Exists(key string) (bool, error)
 
+	Keys(keyFormat string) ([][]byte, error)
+
 	HMSet(key string, ttl int64, args ...[]byte) error
 
 	HMGet(key string, fields ...[]byte) ([][]byte, error)
@@ -67,6 +69,7 @@ func Set(key string, value []byte, ttl int64) error { return cache.Set(key, valu
 func Get(key string) ([]byte, error)                { return cache.Get(key) }
 func Del(key string) error                          { return cache.Del(key) }
 func Exists(key string) (bool, error)               { return cache.Exists(key) }
+func Keys(keyFormat string) ([][]byte, error)       { return cache.Keys(keyFormat) }
 
 func HMSet(key string, ttl int64, args ...[]byte) error {
 	return cache.HMSet(key, ttl, args...)

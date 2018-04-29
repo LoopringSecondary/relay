@@ -247,3 +247,19 @@ func DealtAmount(orderhash common.Hash) (dealtAmountS, dealtAmountB *big.Rat, er
 	ordC.orderhash = orderhash
 	return ordC.dealtAmount()
 }
+
+func CachedRinghashes() ([]common.Hash, error) {
+	prefixBytes := []byte(RingHashPrefix)
+	prefixLen := len(prefixBytes)
+	hashes := []common.Hash{}
+	if keysBytes, err := cache.Keys(RingHashPrefix + "*"); nil == err {
+		for _, key := range keysBytes {
+			hashBytes := key[prefixLen:]
+			ringhash := common.HexToHash(string(hashBytes))
+			hashes = append(hashes, ringhash)
+		}
+		return hashes, nil
+	} else {
+		return hashes, err
+	}
+}

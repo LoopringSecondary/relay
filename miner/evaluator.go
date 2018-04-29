@@ -349,6 +349,7 @@ func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Ra
 func (e *Evaluator) evaluateReceived(ringState *types.Ring) {
 	ringState.Received = big.NewRat(int64(0), int64(1))
 	ringState.GasPrice = ethaccessor.EstimateGasPrice(e.minGasPrice, e.maxGasPrice)
+	log.Debugf("len(ringState.Orders):%d", len(ringState.Orders))
 	ringState.Gas = e.gasUsedWithLength[len(ringState.Orders)]
 	protocolCost := new(big.Int)
 	protocolCost.Mul(ringState.Gas, ringState.GasPrice)
@@ -356,6 +357,7 @@ func (e *Evaluator) evaluateReceived(ringState *types.Ring) {
 	costEth := new(big.Rat).SetInt(protocolCost)
 	ringState.LegalCost, _ = e.marketCapProvider.LegalCurrencyValueOfEth(costEth)
 
+	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s, realCostRate:%s", ringState.LegalFee.FloatString(2), ringState.LegalCost.FloatString(2), e.realCostRate.FloatString(2), e.realCostRate.FloatString(2))
 	ringState.LegalCost.Mul(ringState.LegalCost, e.realCostRate)
 	log.Debugf("legalFee:%s, cost:%s, realCostRate:%s", ringState.LegalFee.FloatString(2), ringState.LegalCost.FloatString(2), e.realCostRate.FloatString(2))
 	ringState.Received.Sub(ringState.LegalFee, ringState.LegalCost)

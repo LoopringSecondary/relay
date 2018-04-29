@@ -140,6 +140,32 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	}
 	return err
 }
+func (impl *RedisCacheImpl) Keys(keyFormat string) ([][]byte, error) {
+
+	//log.Info("[REDIS-HMGET] key : " + key)
+
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, keyFormat)
+	reply, err := conn.Do("keys", vs...)
+
+	res := [][]byte{}
+	if nil != err {
+		log.Errorf(" key:%s, err:%s", keyFormat, err.Error())
+	} else if nil == err && nil != reply {
+		rs := reply.([]interface{})
+		for _, r := range rs {
+			if nil == r {
+				res = append(res, []byte{})
+			} else {
+				res = append(res, r.([]byte))
+			}
+		}
+	}
+	return res, err
+}
 
 func (impl *RedisCacheImpl) HMSet(key string, ttl int64, args ...[]byte) error {
 
