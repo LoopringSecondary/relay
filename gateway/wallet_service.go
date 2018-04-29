@@ -254,6 +254,7 @@ type LatestFill struct {
 	CreateTime int64   `json:"createTime"`
 	Price      float64 `json:"price"`
 	Amount     float64 `json:"amount"`
+	Side       string  `json:"side"`
 }
 
 type WalletServiceImpl struct {
@@ -1192,6 +1193,7 @@ func toLatestFill(f dao.FillEvent) (latestFill LatestFill, err error) {
 	rst := LatestFill{CreateTime: f.CreateTime}
 	price := util.CalculatePrice(f.AmountS, f.AmountB, f.TokenS, f.TokenB)
 	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
+	rst.Side = f.Side
 	var amount float64
 	if util.GetSide(f.TokenS, f.TokenB) == util.SideBuy {
 		amountB, _ := new(big.Int).SetString(f.AmountB, 0)
