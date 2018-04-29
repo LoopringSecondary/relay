@@ -240,6 +240,7 @@ type ethNodeAccessor struct {
 	gasPriceEvaluator *GasPriceEvaluator
 	mtx               sync.RWMutex
 	AddressNonce      map[common.Address]*big.Int
+	fetchTxRetryCount int
 }
 
 type AddressNonce struct {

@@ -219,6 +219,11 @@ func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int,
 	for idx, v := range reqElems {
 		repeatCnt := 0
 	mark:
+		if repeatCnt > accessor.fetchTxRetryCount {
+			err := fmt.Errorf("can't get content of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
+		}
 		if v.Error == nil && v.Result != nil {
 			if tx, ok := v.Result.(*Transaction); ok && len(tx.Hash) > 0 {
 				hash := common.HexToHash(tx.Hash)
@@ -258,6 +263,11 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 	for idx, v := range reqElems {
 		repeatCnt := 0
 	mark:
+		if repeatCnt > accessor.fetchTxRetryCount {
+			err := fmt.Errorf("can't get receipt of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
+		}
 		if v.Error == nil && v.Result != nil && !reqs[idx].TxContent.StatusInvalid() {
 			if tx, ok := v.Result.(*TransactionReceipt); ok && len(tx.TransactionHash) > 0 {
 				hash := common.HexToHash(tx.TransactionHash)
@@ -505,9 +515,21 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 				}
 
+				var txcnt types.Big
+				if err := accessor.RetryCall("latest", 2, &txcnt, "eth_getBlockTransactionCountByHash", blockWithTxAndReceipt.Hash.Hex()); err != nil {
+					return blockWithTxAndReceipt, err
+				}
+				txcntinblock := len(blockWithTxAndReceipt.Transactions)
+				if txcntinblock != txcnt.Int() || txcntinblock != len(blockWithTxAndReceipt.Receipts) {
+					err := fmt.Errorf("tx count isn't equal,txcount in chain:%d, txcount in block:%d, receipt count:%d", txcnt.Int(), txcntinblock, len(blockWithTxAndReceipt.Receipts))
+					log.Errorf("err:%s", err.Error())
+					return blockWithTxAndReceipt, err
+				}
+
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
 					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400))
 				}
+
 				return blockWithTxAndReceipt, nil
 			}
 

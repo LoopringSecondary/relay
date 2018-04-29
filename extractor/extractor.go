@@ -97,7 +97,10 @@ func (l *ExtractorServiceImpl) Start() {
 			case <-l.stop:
 				return
 			default:
-				l.ProcessBlock()
+				if err := l.ProcessBlock(); nil != err {
+					log.Error(err.Error())
+					time.Sleep(1 * time.Second)
+				}
 			}
 		}
 	}()
@@ -157,10 +160,13 @@ func (l *ExtractorServiceImpl) WatchingPendingTransaction(input eventemitter.Eve
 	return l.ProcessPendingTransaction(tx)
 }
 
-func (l *ExtractorServiceImpl) ProcessBlock() {
+func (l *ExtractorServiceImpl) ProcessBlock() error {
 	inter, err := l.iterator.Next()
 	if err != nil {
-		l.Warning(fmt.Errorf("extractor,iterator next error:%s", err.Error()))
+		err1 := fmt.Errorf("extractor,iterator next error:%s", err.Error())
+		log.Error(err.Error())
+		return err1
+		//l.Warning(fmt.Errorf("extractor,iterator next error:%s", err.Error()))
 	}
 
 	// get current block
@@ -192,25 +198,16 @@ func (l *ExtractorServiceImpl) ProcessBlock() {
 	blockEvent.BlockHash = block.Hash
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
-	var txcnt types.Big
-	if err := ethaccessor.GetBlockTransactionCountByHash(&txcnt, block.Hash.Hex(), block.Number.BigInt().String()); err != nil {
-		l.Warning(fmt.Errorf("extractor,getBlockTransactionCountByHash error:%s", err.Error()))
-	}
-	txcntinblock := len(block.Transactions)
-	if txcntinblock > 0 {
-		if txcnt.Int() != txcntinblock {
-			l.Warning(fmt.Errorf("extractor,transaction number %d != len(block.transactions) %d", txcnt.Int(), txcntinblock))
-		}
-
+	if len(block.Transactions) > 0 {
 		for idx, transaction := range block.Transactions {
 			receipt := block.Receipts[idx]
-
 			l.debug("extractor,tx:%s", transaction.Hash)
 			l.ProcessMinedTransaction(&transaction, &receipt, block.Timestamp.BigInt())
 		}
 	}
 
 	eventemitter.Emit(eventemitter.Block_End, blockEvent)
+	return nil
 }
 
 func (l *ExtractorServiceImpl) ProcessPendingTransaction(tx *ethaccessor.Transaction) error {

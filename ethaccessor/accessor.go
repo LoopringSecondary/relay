@@ -261,6 +261,11 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	var err error
 	accessor = &ethNodeAccessor{}
 	accessor.mtx = sync.RWMutex{}
+	if accessorOptions.FetchTxRetryCount > 0 {
+		accessor.fetchTxRetryCount = accessorOptions.FetchTxRetryCount
+	} else {
+		accessor.fetchTxRetryCount = 60
+	}
 	accessor.AddressNonce = make(map[common.Address]*big.Int)
 	accessor.MutilClient = NewMutilClient(accessorOptions.RawUrls)
 	if nil != err {
