@@ -182,7 +182,7 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoResult(submitResult *types.RingSubmitResultEvent) error {
 	items := map[string]interface{}{
-		"status":            submitResult.Status,
+		"status":            uint8(submitResult.Status),
 		"ring_index":        getBigIntString(submitResult.RingIndex),
 		"block_number":      getBigIntString(submitResult.BlockNumber),
 		"protocol_used_gas": getBigIntString(submitResult.UsedGas),

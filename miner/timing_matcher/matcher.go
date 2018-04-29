@@ -24,11 +24,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
+	"github.com/Loopring/relay/log"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
+	"strings"
 )
 
 /**
@@ -98,10 +101,29 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	return matcher
 }
 
+func (matcher *TimingMatcher) cleanMissedCache() {
+	//如果程序不正确的停止，清除错误的缓存数据
+	if ringhashes, err := CachedRinghashes(); nil == err {
+		for _, ringhash := range ringhashes {
+			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
+				if submitInfo.ID <= 0 {
+					cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
+				}
+			} else {
+				log.Errorf("err:%s", err.Error())
+			}
+		}
+	} else {
+		log.Errorf("err:%s", err.Error())
+	}
+}
+
 func (matcher *TimingMatcher) Start() {
 	matcher.listenSubmitEvent()
 	matcher.listenOrderReady()
 	matcher.listenTimingRound()
+	matcher.cleanMissedCache()
+
 	//syncWatcher := &eventemitter.Watcher{Concurrent: false, Handle: func(eventData eventemitter.EventData) error {
 	//	log.Debugf("TimingMatcher Start......")
 	//	matcher.listenTimingRound()
