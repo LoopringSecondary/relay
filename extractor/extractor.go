@@ -39,7 +39,7 @@ import (
 */
 
 const (
-	defaultEndBlockNumber = 1000000000
+	defaultEndBlockNumber  = 1000000000
 	defaultForkWaitingTime = 10
 )
 

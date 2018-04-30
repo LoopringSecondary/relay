@@ -88,7 +88,7 @@ func (detector *forkDetector) Detect(currentBlock *types.Block) (*types.ForkedEv
 	// mark fork block in database
 	model := dao.Block{}
 	model.ConvertDown(forkBlock)
-	if err := detector.db.SetForkBlock(forkEvent.ForkBlock, forkEvent.DetectedBlock); err != nil {
+	if err := detector.db.SetForkBlock(forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64()); err != nil {
 		return nil, fmt.Errorf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
 	}
 

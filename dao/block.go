@@ -72,8 +72,8 @@ func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
 	return &block, err
 }
 
-func (s *RdsServiceImpl) SetForkBlock(from, to *big.Int) error {
-	return s.db.Model(&Block{}).Where("block_number > ? and block_number <= ?", from.Int64(), to.Int64()).Update("fork = ?", true).Error
+func (s *RdsServiceImpl) SetForkBlock(from, to int64) error {
+	return s.db.Model(&Block{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
 
 func (s *RdsServiceImpl) SaveBlock(latest *Block) error {

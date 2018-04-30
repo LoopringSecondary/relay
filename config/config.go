@@ -136,7 +136,7 @@ type ExtractorOptions struct {
 	StartBlockNumber   *big.Int
 	EndBlockNumber     *big.Int
 	ConfirmBlockNumber uint64
-	ForkWaitingTime 	   int64
+	ForkWaitingTime    int64
 	Debug              bool
 	Open               bool
 }
