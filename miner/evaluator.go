@@ -350,7 +350,7 @@ func (e *Evaluator) getLegalCurrency(tokenAddress common.Address, amount *big.Ra
 func (e *Evaluator) evaluateReceived(ringState *types.Ring) {
 	ringState.Received = big.NewRat(int64(0), int64(1))
 	ringState.GasPrice = ethaccessor.EstimateGasPrice(e.minGasPrice, e.maxGasPrice)
-	log.Debugf("len(ringState.Orders):%d", len(ringState.Orders))
+	//log.Debugf("len(ringState.Orders):%d", len(ringState.Orders))
 	ringState.Gas = new(big.Int)
 	ringState.Gas.Set(e.gasUsedWithLength[len(ringState.Orders)])
 	protocolCost := new(big.Int)

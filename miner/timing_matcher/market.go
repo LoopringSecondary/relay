@@ -275,12 +275,12 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 
 func (market *Market) generateFilledOrder(order *types.OrderState) (*types.FilledOrder, error) {
 
-	lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.protocolImpl.LrcTokenAddress, market.protocolImpl.DelegateAddress)
+	lrcTokenBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, market.protocolImpl.LrcTokenAddress, market.protocolImpl.DelegateAddress, order.RawOrder.Hash)
 	if nil != err {
 		return nil, err
 	}
 
-	tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS, market.protocolImpl.DelegateAddress)
+	tokenSBalance, err := market.matcher.GetAccountAvailableAmount(order.RawOrder.Owner, order.RawOrder.TokenS, market.protocolImpl.DelegateAddress, order.RawOrder.Hash)
 	if nil != err {
 		return nil, err
 	}
