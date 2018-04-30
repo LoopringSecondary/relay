@@ -383,7 +383,8 @@ func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions co
 	} else {
 		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
 	}
-	e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
+	//todo:to fix bug
+	//e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
 	e.walletSplit = new(big.Rat)
 	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
 	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)
