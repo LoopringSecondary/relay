@@ -68,6 +68,7 @@ name = "Loopring corporation"
     start_block_number = 5354906
     end_block_number = 0
     confirm_block_number = 5
+    fork_waiting_time = 10
     debug = false
     open = true
 

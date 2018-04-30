@@ -38,7 +38,10 @@ import (
 区块链的listener, 得到order以及ring的事件，
 */
 
-const defaultEndBlockNumber = 1000000000
+const (
+	defaultEndBlockNumber = 1000000000
+	defaultForkWaitingTime = 10
+)
 
 type ExtractorService interface {
 	Start()
@@ -60,7 +63,6 @@ type ExtractorServiceImpl struct {
 	pendingTxWatcher *eventemitter.Watcher
 	syncComplete     bool
 	forkComplete     bool
-	forktest         bool
 }
 
 func NewExtractorService(options config.ExtractorOptions,
@@ -68,12 +70,15 @@ func NewExtractorService(options config.ExtractorOptions,
 	ac *market.AccountManager) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
+	if options.ForkWaitingTime <= 0 {
+		options.ForkWaitingTime = defaultForkWaitingTime
+	}
+
 	l.options = options
 	l.dao = db
 	l.processor = newAbiProcessor(db, ac, &options)
 	l.detector = newForkDetector(db, l.options.StartBlockNumber)
 	l.stop = make(chan bool, 1)
-
 	l.setBlockNumberRange()
 
 	l.pendingTxWatcher = &eventemitter.Watcher{Concurrent: false, Handle: l.WatchingPendingTransaction}
@@ -87,7 +92,7 @@ func (l *ExtractorServiceImpl) Start() {
 		return
 	}
 
-	log.Info("extractor start...")
+	log.Infof("extractor start from block:%s...", l.startBlockNumber.String())
 	l.syncComplete = false
 
 	l.iterator = ethaccessor.NewBlockIterator(l.startBlockNumber, l.endBlockNumber, true, l.options.ConfirmBlockNumber)
@@ -115,21 +120,33 @@ func (l *ExtractorServiceImpl) Stop() {
 }
 
 // 重启(分叉)时先关停subscribeEvents，然后关
-func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) {
+func (l *ExtractorServiceImpl) ForkProcess(currentBlock *types.Block) error {
 	forkEvent, err := l.detector.Detect(currentBlock)
 	if err != nil {
 		l.Warning(err)
+		return err
 	}
+
 	if forkEvent == nil {
-		return
+		return nil
 	}
 
 	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
 
 	l.Stop()
+
+	// emit event
 	eventemitter.Emit(eventemitter.ChainForkDetected, forkEvent)
+
+	// reset start blockNumber
 	l.startBlockNumber = new(big.Int).Add(forkEvent.ForkBlock, big.NewInt(1))
+
+	// waiting for the eth node catch up
+	time.Sleep(time.Duration(l.options.ForkWaitingTime) * time.Second)
+
 	l.Start()
+
+	return fmt.Errorf("extractor,detected chain fork")
 }
 
 func (l *ExtractorServiceImpl) Sync(blockNumber *big.Int) {
@@ -187,7 +204,9 @@ func (l *ExtractorServiceImpl) ProcessBlock() error {
 	}
 
 	// detect chain fork
-	l.ForkProcess(currentBlock)
+	if err := l.ForkProcess(currentBlock); err != nil {
+		return err
+	}
 
 	// emit new block
 	blockEvent := &types.BlockEvent{}
