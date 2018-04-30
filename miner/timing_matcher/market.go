@@ -266,7 +266,7 @@ func (market *Market) GenerateCandidateRing(orders ...*types.OrderState) (*Candi
 	} else {
 		candidateRing := &CandidateRing{cost: ringTmp.LegalCost, received: ringTmp.Received, filledOrders: make(map[common.Hash]*big.Rat)}
 		for _, filledOrder := range ringTmp.Orders {
-			log.Debugf("match, filledOrder.FilledAmountS:%s", filledOrder.FillAmountS.FloatString(3))
+			log.Debugf("match, orderhash:%s, filledOrder.FilledAmountS:%s", filledOrder.OrderState.RawOrder.Hash.Hex(), filledOrder.FillAmountS.FloatString(3))
 			candidateRing.filledOrders[filledOrder.OrderState.RawOrder.Hash] = filledOrder.FillAmountS
 		}
 		return candidateRing, nil
@@ -300,6 +300,7 @@ func (market *Market) generateRingSubmitInfo(orders ...*types.OrderState) (*type
 	for _, order := range orders {
 		if filledOrder, err := market.generateFilledOrder(order); nil != err {
 			log.Errorf("err:%s", err.Error())
+			return nil, err
 		} else {
 			filledOrders = append(filledOrders, filledOrder)
 		}
