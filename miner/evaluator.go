@@ -29,6 +29,7 @@ import (
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"fmt"
 )
 
 type Evaluator struct {
@@ -45,8 +46,8 @@ type Evaluator struct {
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 
-	if len(ringState.Orders) <= 0 {
-		return errors.New("length of ringState.Orders must > 0")
+	if len(ringState.Orders) <= 1 {
+		return fmt.Errorf("length of ringState.Orders must > 1 , ringhash:%s", ringState.Hash.Hex())
 	}
 
 	productAmountS := big.NewRat(int64(1), int64(1))
