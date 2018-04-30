@@ -163,5 +163,5 @@ func (h *EthPrivateKeyCrypto) MarshalText() ([]byte, error) {
 	if h.privateKey == nil {
 		return []byte{}, nil
 	}
-	return []byte(common.ToHex(h.privateKey.D.Bytes())), nil
+	return []byte(common.ToHex(common.LeftPadBytes(h.privateKey.D.Bytes(), 32))), nil
 }
