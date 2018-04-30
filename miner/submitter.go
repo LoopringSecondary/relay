@@ -41,21 +41,21 @@ const SubmitRingMethod_LastId = "submitringmethod_lastid"
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
-	minerAccountForSign accounts.Account
+	minerAccountForSign   accounts.Account
 	//minerNameInfos      map[common.Address][]*types.NameRegistryInfo
-	miner common.Address
+	feeReceipt            common.Address
 
-	maxGasLimit *big.Int
-	minGasLimit *big.Int
+	maxGasLimit           *big.Int
+	minGasLimit           *big.Int
 
 	normalMinerAddresses  []*NormalSenderAddress
 	percentMinerAddresses []*SplitMinerAddress
 
-	dbService         dao.RdsService
-	marketCapProvider marketcap.MarketCapProvider
-	matcher           Matcher
+	dbService             dao.RdsService
+	marketCapProvider     marketcap.MarketCapProvider
+	matcher               Matcher
 
-	stopFuncs []func()
+	stopFuncs             []func()
 }
 
 type RingSubmitFailed struct {
@@ -68,7 +68,7 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	submitter.maxGasLimit = big.NewInt(options.MaxGasLimit)
 	submitter.minGasLimit = big.NewInt(options.MinGasLimit)
 	if common.IsHexAddress(options.FeeReceipt) {
-		submitter.miner = common.HexToAddress(options.FeeReceipt)
+		submitter.feeReceipt = common.HexToAddress(options.FeeReceipt)
 	} else {
 		return submitter, errors.New("miner.feeReceipt must be a address")
 	}
@@ -338,7 +338,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 
 	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, ProtocolGasPrice: ringState.GasPrice, ProtocolGas: ringState.Gas}
 	if types.IsZeroHash(ringState.Hash) {
-		ringState.Hash = ringState.GenerateHash(submitter.miner)
+		ringState.Hash = ringState.GenerateHash(submitter.feeReceipt)
 	}
 
 	ringSubmitInfo.ProtocolAddress = protocolAddress
@@ -353,7 +353,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	}
 	//submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
 
-	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.miner); nil != err1 {
+	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.feeReceipt); nil != err1 {
 		return nil, err1
 	} else {
 		ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",

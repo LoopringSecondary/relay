@@ -38,10 +38,10 @@ type Evaluator struct {
 	gasUsedWithLength         map[int]*big.Int
 	realCostRate, walletSplit *big.Rat
 
-	minGasPrice, maxGasPrice *big.Int
-	miner                    common.Address
+	minGasPrice, maxGasPrice  *big.Int
+	feeReceipt                common.Address
 
-	matcher Matcher
+	matcher                   Matcher
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -180,12 +180,12 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 
 	var err error
-	var minerLrcAvailableAmount *big.Rat
+	var feeReceiptLrcAvailableAmount *big.Rat
 	var lrcAddress common.Address
 	if impl, exists := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol]; exists {
 		var err error
 		lrcAddress = impl.LrcTokenAddress
-		if minerLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.miner, lrcAddress, impl.DelegateAddress); nil != err {
+		if feeReceiptLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.feeReceipt, lrcAddress, impl.DelegateAddress, common.HexToHash("0x")); nil != err {
 			return err
 		}
 	} else {
@@ -243,17 +243,17 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			filledOrder.OrderState.RawOrder.Hash.Hex(),
 			filledOrder.OrderState.RawOrder.LrcFee.String(),
 			filledOrder.AvailableLrcBalance.FloatString(2),
-			legalAmountOfLrc.FloatString(2), legalAmountOfSaving.FloatString(2), minerLrcAvailableAmount.FloatString(2))
+			legalAmountOfLrc.FloatString(2), legalAmountOfSaving.FloatString(2), feeReceiptLrcAvailableAmount.FloatString(2))
 
 		lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
 		lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
-		if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcAvailableAmount.Cmp(filledOrder.LrcFee) > 0 {
+		if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && feeReceiptLrcAvailableAmount.Cmp(filledOrder.LrcFee) > 0 {
 			filledOrder.FeeSelection = 1
 			filledOrder.LegalFeeS.Sub(filledOrder.LegalFeeS, filledOrder.LegalLrcFee)
 			filledOrder.LrcReward = filledOrder.LegalLrcFee
 			ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFeeS)
 
-			minerLrcAvailableAmount.Sub(minerLrcAvailableAmount, filledOrder.LrcFee)
+			feeReceiptLrcAvailableAmount.Sub(feeReceiptLrcAvailableAmount, filledOrder.LrcFee)
 			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
 		} else {
 			filledOrder.FeeSelection = 0
@@ -380,6 +380,7 @@ func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions co
 	} else {
 		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
 	}
+	e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
 	e.walletSplit = new(big.Rat)
 	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
 	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)
