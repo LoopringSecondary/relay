@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -138,21 +137,19 @@ const (
 )
 
 type AbiProcessor struct {
-	events         map[common.Hash]EventData
-	methods        map[string]MethodData
-	erc20Events    map[common.Hash]bool
-	protocols      map[common.Address]string
-	delegates      map[common.Address]string
-	accountmanager *market.AccountManager
-	db             dao.RdsService
-	options        *config.ExtractorOptions
+	events      map[common.Hash]EventData
+	methods     map[string]MethodData
+	erc20Events map[common.Hash]bool
+	protocols   map[common.Address]string
+	delegates   map[common.Address]string
+	db          dao.RdsService
+	options     *config.ExtractorOptions
 }
 
 // 这里无需考虑版本问题，对解析来说，不接受版本升级带来数据结构变化的可能性
-func newAbiProcessor(db dao.RdsService, accountmanager *market.AccountManager, option *config.ExtractorOptions) *AbiProcessor {
+func newAbiProcessor(db dao.RdsService, option *config.ExtractorOptions) *AbiProcessor {
 	processor := &AbiProcessor{}
 
-	processor.accountmanager = accountmanager
 	processor.events = make(map[common.Hash]EventData)
 	processor.erc20Events = make(map[common.Hash]bool)
 	processor.methods = make(map[string]MethodData)

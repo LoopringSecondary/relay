@@ -25,7 +25,6 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -46,7 +45,7 @@ const (
 type ExtractorService interface {
 	Start()
 	Stop()
-	ForkProcess(block *types.Block)
+	ForkProcess(block *types.Block) error
 }
 
 // TODO(fukun):不同的channel，应当交给orderbook统一进行后续处理，可以将channel作为函数返回值、全局变量、参数等方式
@@ -65,9 +64,7 @@ type ExtractorServiceImpl struct {
 	forkComplete     bool
 }
 
-func NewExtractorService(options config.ExtractorOptions,
-	db dao.RdsService,
-	ac *market.AccountManager) *ExtractorServiceImpl {
+func NewExtractorService(options config.ExtractorOptions, db dao.RdsService) *ExtractorServiceImpl {
 	var l ExtractorServiceImpl
 
 	if options.ForkWaitingTime <= 0 {
@@ -76,7 +73,7 @@ func NewExtractorService(options config.ExtractorOptions,
 
 	l.options = options
 	l.dao = db
-	l.processor = newAbiProcessor(db, ac, &options)
+	l.processor = newAbiProcessor(db, &options)
 	l.detector = newForkDetector(db, l.options.StartBlockNumber)
 	l.stop = make(chan bool, 1)
 	l.setBlockNumberRange()

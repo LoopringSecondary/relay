@@ -54,7 +54,7 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 	accmanager := test.GenerateAccountManager()
 	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
 	tm.Start()
-	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds())
 	processor.ProcessPendingTransaction(&tx)
 }
 
@@ -74,6 +74,6 @@ func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
 	accmanager := test.GenerateAccountManager()
 	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
 	tm.Start()
-	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds())
 	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
 }
