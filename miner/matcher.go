@@ -26,5 +26,5 @@ import (
 type Matcher interface {
 	Start()
 	Stop()
-	GetAccountAvailableAmount(address, tokenAddress, spender common.Address) (*big.Rat, error)
+	GetAccountAvailableAmount(address, tokenAddress, spender common.Address, hash common.Hash) (*big.Rat, error)
 }

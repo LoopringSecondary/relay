@@ -141,19 +141,18 @@ func (matcher *TimingMatcher) Stop() {
 	}
 }
 
-func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address) (*big.Rat, error) {
+func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address, hash common.Hash) (*big.Rat, error) {
 	//log.Debugf("address: %s , token: %s , spender: %s", address.Hex(), tokenAddress.Hex(), spender.Hex())
 	if balance, allowance, err := matcher.accountManager.GetBalanceAndAllowance(address, tokenAddress, spender); nil != err {
 		return nil, err
 	} else {
 		availableAmount := new(big.Rat).SetInt(balance)
-		log.Debugf("owner:%s, token:%s, spender:%s, balance:%s, allowance:%s", address.Hex(), tokenAddress.Hex(), spender.Hex(), balance.String(), allowance.String(), )
 		allowanceAmount := new(big.Rat).SetInt(allowance)
 		if availableAmount.Cmp(allowanceAmount) > 0 {
 			availableAmount = allowanceAmount
 		}
 		matchedAmountS, _ := FilledAmountS(address, tokenAddress)
-		log.Debugf("owner:%s, token:%s, spender:%s, balance:%s, allowance:%s, matchedAmountS:%s", address.Hex(), tokenAddress.Hex(), spender.Hex(), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
+		log.Errorf("orderhash:%s, owner:%s, token:%s, spender:%s, availableAmount:%s, balance:%s, allowance:%s, matchedAmountS:%s", hash.Hex(), address.Hex(), tokenAddress.Hex(), spender.Hex(),availableAmount.FloatString(2), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
 
 		availableAmount.Sub(availableAmount, matchedAmountS)
 
