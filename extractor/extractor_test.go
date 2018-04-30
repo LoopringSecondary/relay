@@ -54,7 +54,7 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 	accmanager := test.GenerateAccountManager()
 	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
 	tm.Start()
-	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds())
 	processor.ProcessPendingTransaction(&tx)
 }
 
@@ -74,58 +74,6 @@ func TestExtractorServiceImpl_ProcessMinedTransaction(t *testing.T) {
 	accmanager := test.GenerateAccountManager()
 	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
 	tm.Start()
-	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
+	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds())
 	processor.ProcessMinedTransaction(tx, receipt, big.NewInt(100))
-}
-
-// 1.get tx from dao.transactions
-// 2.get transaction from chain
-// 3.get transaction receipt and transaction
-// 4.process it as mined transaction
-func TestTransactionViewImpl_CoverTransactions(t *testing.T) {
-	db := test.Rds()
-	accmanager := test.GenerateAccountManager()
-	tm := txmanager.NewTxManager(db, &accmanager)
-	tm.Start()
-
-	//processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds(), &accmanager)
-
-	start := 1
-	end := 1
-
-	for id := start; id < end; id++ {
-		var (
-			tx      ethaccessor.Transaction
-			receipt ethaccessor.TransactionReceipt
-			block   ethaccessor.Block
-		)
-
-		entity, err := db.GetTransactionById(id)
-		if err != nil {
-			t.Logf(err.Error())
-			continue
-		}
-		if entity.Status < 2 {
-			t.Logf("tx:%s is pending or unknown(%d)", entity.TxHash, entity.Status)
-		}
-
-		txhash := entity.TxHash
-		if err := ethaccessor.GetTransactionByHash(&tx, txhash, "latest"); err == nil {
-			t.Logf(err.Error())
-			continue
-		}
-
-		if err := ethaccessor.GetTransactionReceipt(&receipt, txhash, "latest"); err != nil {
-			t.Logf(err.Error())
-			continue
-		}
-
-		if err := ethaccessor.GetBlockByHash(&block, tx.BlockHash, false); err != nil {
-			t.Logf(err.Error())
-			continue
-		}
-
-		t.Log("")
-		// processor.ProcessMinedTransaction(&tx, &receipt, block.Timestamp.BigInt())
-	}
 }

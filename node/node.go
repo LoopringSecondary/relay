@@ -210,7 +210,7 @@ func (n *Node) registerAccessor() {
 }
 
 func (n *Node) registerExtractor() {
-	n.relayNode.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService, &n.accountManager)
+	n.relayNode.extractorService = extractor.NewExtractorService(n.globalConfig.Extractor, n.rdsService)
 }
 
 func (n *Node) registerIPFSSubService() {
