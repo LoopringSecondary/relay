@@ -185,33 +185,41 @@ func safeHash(bytes [32]uint8) common.Hash {
 	return common.Hash(bytes)
 }
 
-// safeAbsBig return abs value and isNeg
 func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
+	maxBytes := [32]uint8{}
+	for idx,_ := range maxBytes {
+		maxBytes[idx] = uint8(255)
+	}
+	maxBig := new(big.Int).SetBytes(maxBytes[:])
+
 	num := new(big.Int).SetBytes(bytes[:])
 
-	isNeg := bytes[0] == uint8(255)
+	isNeg := bytes[0] > uint8(128)
 	if isNeg {
-		bytes[0] = uint8(0)
 		num1 := new(big.Int).SetBytes(bytes[:])
-		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num1.Int64(), num1.String(), isNeg)
-		return num1, true
+		num1.Neg(num1)
+		num1.Xor(num1, maxBig)
+		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num1.Int64(), num1.Text(10), isNeg)
+		return num, true
 	} else {
 		println("----qqqqqqq", uint8(bytes[0]), num.Int64(), num.String(), isNeg)
 		return num, false
 	}
 }
 
-// safeBig contract bytes32 to *big.int
+// safeAbsBig return abs value and isNeg
 func safeBig(bytes [32]uint8) *big.Int {
 	var newbytes []byte = bytes[0:]
 	return new(big.Int).SetBytes(newbytes)
 }
 
-// safeAddress contract bytes32 to common.address
+// safeBig contract bytes32 to *big.int
 func safeAddress(bytes [32]uint8) common.Address {
 	var newbytes []byte = bytes[0:]
 	return common.BytesToAddress(newbytes)
 }
+
+// safeAddress contract bytes32 to common.address
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash `fieldName:"_orderHash" fieldId:"0"`
