@@ -916,12 +916,14 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 		var err error
 
 		if isAsk {
-			minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
+			minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
+			if err != nil {
 				log.Debug(err.Error())
 				continue
 			}
 		} else {
-			minAmountB, err = w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal); if err != nil {
+			minAmountB, err = w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal)
+			if err != nil {
 				log.Debug(err.Error())
 				continue
 			}
@@ -1004,7 +1006,8 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 
 	amount = depthAmount
 
-	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender); if err != nil {
+	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender)
+	if err != nil {
 		return
 	}
 

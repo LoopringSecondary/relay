@@ -42,10 +42,17 @@ type TransactionEntity struct {
 	BlockTime   int64          `json:"block_time"`
 }
 
+//go:generate gencodec -type ApproveContent -out gen_approve_json.go
 type ApproveContent struct {
 	Owner   string `json:"owner"`
 	Spender string `json:"spender"`
 	Amount  string `json:"amount"`
+}
+
+func ParseApproveContent(str string) (ApproveContent, error) {
+	var content ApproveContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
 }
 
 type CancelContent struct {
@@ -62,6 +69,12 @@ func ParseCancelContent(str string) (CancelContent, error) {
 type CutoffContent struct {
 	Owner           string `json:"owner"`
 	CutoffTimeStamp int64  `json:"cutoff"`
+}
+
+func ParseCutoffContent(str string) (CutoffContent, error) {
+	var content CutoffContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
 }
 
 type CutoffPairContent struct {
@@ -82,15 +95,33 @@ type WethWithdrawalContent struct {
 	Amount string `json:"amount"`
 }
 
+func ParseWethWithdrawalContent(str string) (WethWithdrawalContent, error) {
+	var content WethWithdrawalContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
+}
+
 type WethDepositContent struct {
 	Dst    string `json:"dst"`
 	Amount string `json:"amount"`
+}
+
+func ParseWethDepositContent(str string) (WethDepositContent, error) {
+	var content WethDepositContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
 }
 
 type TransferContent struct {
 	Sender   string `json:"sender"`
 	Receiver string `json:"receiver"`
 	Amount   string `json:"amount"`
+}
+
+func ParseTransferContent(str string) (TransferContent, error) {
+	var content TransferContent
+	err := json.Unmarshal([]byte(str), &content)
+	return content, err
 }
 
 // todo fill
