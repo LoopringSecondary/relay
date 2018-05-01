@@ -911,13 +911,20 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			continue
 		}
 
-		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
-			log.Debug(err.Error())
-			continue
-		}
-		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal); if err != nil {
-			log.Debug(err.Error())
-			continue
+		minAmountB := amountB
+		minAmountS := amountS
+		var err error
+
+		if isAsk {
+			minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
+				log.Debug(err.Error())
+				continue
+			}
+		} else {
+			minAmountB, err = w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal); if err != nil {
+				log.Debug(err.Error())
+				continue
+			}
 		}
 
 		if s.RawOrder.BuyNoMoreThanAmountB {
