@@ -196,7 +196,6 @@ func TestExtractorServiceImpl_UnpackRingMined(t *testing.T) {
 	}
 
 	for k, fill := range fills {
-		t.Logf("k:%d --> ringhash:%s", k, fill.Ringhash.Hex())
 		t.Logf("k:%d --> ringindex:%s", k, fill.RingIndex.String())
 		t.Logf("k:%d --> fillIndex:%s", k, fill.FillIndex.String())
 		t.Logf("k:%d --> orderhash:%s", k, fill.OrderHash.Hex())
