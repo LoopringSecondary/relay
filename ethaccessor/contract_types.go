@@ -187,25 +187,16 @@ func safeHash(bytes [32]uint8) common.Hash {
 
 // safeAbsBig return abs value and isNeg
 func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
-	maxBytes := [32]uint8{}
-	for idx,_ := range maxBytes {
-		maxBytes[idx] = uint8(255)
-	}
-	maxBig := new(big.Int).SetBytes(maxBytes[:])
 
 	num := new(big.Int).SetBytes(bytes[:])
 
 	isNeg := bytes[0] > uint8(128)
 	if isNeg {
-		num1 := new(big.Int).SetBytes(bytes[:])
-		num1.Neg(num1)
-		num1.Xor(num1, maxBig)
-		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num1.Int64(), num1.Text(10), isNeg)
-		return num, true
-	} else {
-		println("----qqqqqqq", uint8(bytes[0]), num.Int64(), num.String(), isNeg)
-		return num, false
+		num.Xor(types.MaxUint256, num)
+		num.Not(num)
+		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num.Int64(), num.Text(10), isNeg)
 	}
+	return num, isNeg
 }
 
 // safeBig contract bytes32 to *big.int

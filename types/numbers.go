@@ -104,3 +104,14 @@ func NewBigRat(v *big.Rat) *Rat {
 	(*big.Rat)(r).Set(v)
 	return r
 }
+
+var MaxUint256 = maxUint256()
+
+func maxUint256() *big.Int {
+	maxBytes := [32]uint8{}
+	for idx,_ := range maxBytes {
+		maxBytes[idx] = uint8(255)
+	}
+	maxBig := new(big.Int).SetBytes(maxBytes[:])
+	return maxBig
+}
