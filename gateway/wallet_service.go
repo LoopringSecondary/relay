@@ -997,7 +997,8 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 
 	amount = depthAmount
 
-	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender); if err != nil {
+	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender)
+	if err != nil {
 		return
 	}
 

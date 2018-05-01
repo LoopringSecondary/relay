@@ -375,6 +375,21 @@ func TestEthNodeAccessor_TokenUnRegister(t *testing.T) {
 	}
 }
 
+func TestEthNodeAccessor_IsTokenRegistried(t *testing.T) {
+	var result string
+
+	protocol := test.Protocol()
+	tokenRegistryAddress := ethaccessor.ProtocolAddresses()[protocol].TokenRegistryAddress
+	symbol := "LRC"
+	callMethod := ethaccessor.ContractCallMethod(ethaccessor.TokenRegistryAbi(), tokenRegistryAddress)
+
+	if err := callMethod(&result, "isTokenRegistered", "latest", symbol); nil != err {
+		t.Fatalf("call method isTokenRegistered error:%s", err.Error())
+	} else {
+		t.Logf("isTokenRegistered result:%s", result)
+	}
+}
+
 func TestEthNodeAccessor_GetAddressBySymbol(t *testing.T) {
 	var result string
 	protocol := test.Protocol()
