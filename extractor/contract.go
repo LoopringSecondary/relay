@@ -709,18 +709,21 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	for _, fill := range fills {
 		fill.TxInfo = contractData.TxInfo
 
-		log.Debugf("extractor,tx:%s orderFilled event delegate:%s, ringhash:%s, amountS:%s, amountB:%s, orderhash:%s, lrcFee:%s, lrcReward:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s",
+		log.Debugf("extractor,tx:%s orderFilled event delegate:%s, ringhash:%s, amountS:%s, amountB:%s, "+
+			"orderhash:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s, splitS:%s, splitB:%s, lrcFee:%s, lrcReward:%s",
 			contractData.TxHash.Hex(),
 			fill.DelegateAddress.Hex(),
 			fill.Ringhash.Hex(),
 			fill.AmountS.String(),
 			fill.AmountB.String(),
 			fill.OrderHash.Hex(),
-			fill.LrcFee.String(),
-			fill.LrcReward.String(),
 			fill.NextOrderHash.Hex(),
 			fill.PreOrderHash.Hex(),
 			fill.RingIndex.String(),
+			fill.SplitS.String(),
+			fill.SplitB.String(),
+			fill.LrcFee.String(),
+			fill.LrcReward.String(),
 		)
 
 		fillList = append(fillList, fill)

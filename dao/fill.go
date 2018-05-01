@@ -50,7 +50,7 @@ type FillEvent struct {
 	Market          string `gorm:"column:market;type:varchar(42)" json:"market"`
 	LogIndex        int64  `gorm:"column:log_index"`
 	Fork            bool   `gorm:"column:fork"`
-	Side            string `json:"side"`
+	Side            string `gorm:"column:side" json:"side"`
 }
 
 // convert chainclient/orderFilledEvent to dao/fill
