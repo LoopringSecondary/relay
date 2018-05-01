@@ -155,19 +155,19 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.LrcReward = safeBig(e.OrderInfoList[start+4])
 
 		// lrcFee or lrcReward, if >= 0 lrcFee, else lrcReward
-		if lrcFeeOrReward, isNeg := safeAbsBig(e.OrderInfoList[start+5]); !isNeg {
+		if lrcFeeOrReward := safeBig(e.OrderInfoList[start+5]); lrcFeeOrReward.Cmp(big.NewInt(0)) > 0 {
 			fill.LrcFee = lrcFeeOrReward
 		} else {
 			fill.LrcFee = big.NewInt(0)
 		}
 
-		// splitS or splitB: if < 0 splitS, else splitB
-		if split, isNeg := safeAbsBig(e.OrderInfoList[start+6]); !isNeg {
+		// splitS or splitB: if > 0 splitS, else splitB
+		if split := safeBig(e.OrderInfoList[start+6]); split.Cmp(big.NewInt(0)) > 0 {
 			fill.SplitS = split
 			fill.SplitB = big.NewInt(0)
 		} else {
 			fill.SplitS = big.NewInt(0)
-			fill.SplitB = split
+			fill.SplitB = new(big.Int).Mul(split, big.NewInt(-1))
 		}
 
 		totalLrcFee = totalLrcFee.Add(totalLrcFee, fill.LrcFee)
@@ -186,24 +186,20 @@ func safeHash(bytes [32]uint8) common.Hash {
 }
 
 // safeAbsBig return abs value and isNeg
-func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
-
+func safeBig(bytes [32]uint8) *big.Int {
 	num := new(big.Int).SetBytes(bytes[:])
-
-	isNeg := bytes[0] > uint8(128)
-	if isNeg {
+	if bytes[0] > uint8(128) {
 		num.Xor(types.MaxUint256, num)
 		num.Not(num)
-		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num.Int64(), num.Text(10), isNeg)
 	}
-	return num, isNeg
+	return num
 }
 
-// safeBig contract bytes32 to *big.int
-func safeBig(bytes [32]uint8) *big.Int {
-	var newbytes []byte = bytes[0:]
-	return new(big.Int).SetBytes(newbytes)
-}
+//// safeBig contract bytes32 to *big.int
+//func safeBig(bytes [32]uint8) *big.Int {
+//	var newbytes []byte = bytes[0:]
+//	return new(big.Int).SetBytes(newbytes)
+//}
 
 // safeAddress contract bytes32 to common.address
 func safeAddress(bytes [32]uint8) common.Address {
