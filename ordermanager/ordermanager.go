@@ -47,7 +47,7 @@ type OrderManager interface {
 	IsOrderCutoff(protocol, owner, token1, token2 common.Address, validsince *big.Int) bool
 	IsOrderFullFinished(state *types.OrderState) bool
 	IsValueDusted(tokenAddress common.Address, value *big.Rat) bool
-	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error)
+	GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus, delegateAddress common.Address) (*big.Int, error)
 	GetFrozenLRCFee(owner common.Address, statusSet []types.OrderStatus) (*big.Int, error)
 }
 
@@ -553,8 +553,8 @@ func (om *OrderManagerImpl) IsOrderCutoff(protocol, owner, token1, token2 common
 	return om.cutoffCache.IsOrderCutoff(protocol, owner, token1, token2, validsince)
 }
 
-func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) (*big.Int, error) {
-	orderList, err := om.rds.GetFrozenAmount(owner, token, statusSet)
+func (om *OrderManagerImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus, delegateAddress common.Address) (*big.Int, error) {
+	orderList, err := om.rds.GetFrozenAmount(owner, token, statusSet, delegateAddress)
 	if err != nil {
 		return nil, err
 	}
