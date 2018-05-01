@@ -122,8 +122,9 @@ type CutoffRequest struct {
 }
 
 type EstimatedAllocatedAllowanceQuery struct {
-	Owner string `json: "owner"`
-	Token string `json: "token"`
+	DelegateAddress string `json:"delegateAddress"`
+	Owner           string `json: "owner"`
+	Token           string `json: "token"`
 }
 
 type TransactionQuery struct {
@@ -664,7 +665,7 @@ func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAlloca
 	if tokenAddress.Hex() == "" {
 		return "", errors.New("unsupported token alias " + token)
 	}
-	amount, err := w.orderManager.GetFrozenAmount(common.HexToAddress(owner), tokenAddress, statusSet)
+	amount, err := w.orderManager.GetFrozenAmount(common.HexToAddress(owner), tokenAddress, statusSet, common.HexToAddress(query.DelegateAddress))
 	if err != nil {
 		return "", err
 	}

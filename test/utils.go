@@ -60,7 +60,7 @@ type TestEntity struct {
 
 const (
 	Version   = "v1.5"
-	DebugFile = "debug.toml"
+	DebugFile = "relay.toml"
 )
 
 var (
@@ -85,7 +85,7 @@ func init() {
 	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
 	unlockAccounts()
 	protocol = common.HexToAddress(cfg.Common.ProtocolImpl.Address[Version])
-	delegate = ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
+	//delegate = ethaccessor.ProtocolAddresses()[protocol].DelegateAddress
 }
 
 func loadConfig() *config.GlobalConfig {
@@ -213,8 +213,8 @@ func GenerateAccountManager() market.AccountManager {
 func CreateOrder(tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee *big.Int) *types.Order {
 	var (
 		order types.Order
-		state types.OrderState
-		model dao.Order
+		//state types.OrderState
+		//model dao.Order
 	)
 	order.Protocol = protocol
 	order.DelegateAddress = delegate
@@ -238,25 +238,25 @@ func CreateOrder(tokenS, tokenB, owner common.Address, amountS, amountB, lrcFee 
 		log.Fatalf(err.Error())
 	}
 
-	state.RawOrder = order
-	state.DealtAmountS = big.NewInt(0)
-	state.DealtAmountB = big.NewInt(0)
-	state.SplitAmountS = big.NewInt(0)
-	state.SplitAmountB = big.NewInt(0)
-	state.CancelledAmountB = big.NewInt(0)
-	state.CancelledAmountS = big.NewInt(0)
-	state.UpdatedBlock = big.NewInt(0)
-	state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
-	state.Status = types.ORDER_NEW
-
-	market, err := util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
-	if err != nil {
-		log.Fatalf("get market error:%s", err.Error())
-	}
-	model.Market = market
-	model.ConvertDown(&state)
-
-	rds.Add(&model)
+	//state.RawOrder = order
+	//state.DealtAmountS = big.NewInt(0)
+	//state.DealtAmountB = big.NewInt(0)
+	//state.SplitAmountS = big.NewInt(0)
+	//state.SplitAmountB = big.NewInt(0)
+	//state.CancelledAmountB = big.NewInt(0)
+	//state.CancelledAmountS = big.NewInt(0)
+	//state.UpdatedBlock = big.NewInt(0)
+	//state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
+	//state.Status = types.ORDER_NEW
+	//
+	//market, err := util.WrapMarketByAddress(state.RawOrder.TokenB.Hex(), state.RawOrder.TokenS.Hex())
+	//if err != nil {
+	//	log.Fatalf("get market error:%s", err.Error())
+	//}
+	//model.Market = market
+	//model.ConvertDown(&state)
+	//
+	//rds.Add(&model)
 
 	return &order
 }
