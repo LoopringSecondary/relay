@@ -514,7 +514,7 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		return
 	}
 
-	depth.Depth.Sell = calculateDepth(asks, defaultDepthLength, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
+	depth.Depth.Sell = w.calculateDepth(asks, defaultDepthLength, true, util.AllTokens[a].Decimals, util.AllTokens[b].Decimals)
 
 	bids, bidErr := w.orderManager.GetOrderBook(
 		common.HexToAddress(delegateAddress),
@@ -526,7 +526,7 @@ func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 		return
 	}
 
-	depth.Depth.Buy = calculateDepth(bids, defaultDepthLength, false, util.AllTokens[b].Decimals, util.AllTokens[a].Decimals)
+	depth.Depth.Buy = w.calculateDepth(bids, defaultDepthLength, false, util.AllTokens[b].Decimals, util.AllTokens[a].Decimals)
 
 	return depth, err
 }
@@ -879,7 +879,7 @@ func getStringStatus(order types.OrderState) string {
 	return "ORDER_UNKNOWN"
 }
 
-func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDecimal, tokenBDecimal *big.Int) [][]string {
+func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDecimal, tokenBDecimal *big.Int) [][]string {
 
 	if len(states) == 0 {
 		return [][]string{}
@@ -909,14 +909,37 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDec
 			continue
 		}
 
+		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress); if err != nil {
+			log.Debug(err.Error())
+			continue
+		}
+		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress); if err != nil {
+			log.Debug(err.Error())
+			continue
+		}
+
+		if s.RawOrder.BuyNoMoreThanAmountB {
+			sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
+			limitedAmountS := minAmountB.Mul(minAmountB, sellPrice)
+			if limitedAmountS.Cmp(minAmountS) < 0 {
+				minAmountS = limitedAmountS
+			}
+		} else {
+			buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
+			limitedAmountB := minAmountS.Mul(minAmountS, buyPrice)
+			if limitedAmountB.Cmp(minAmountB) < 0 {
+				minAmountB = limitedAmountB
+			}
+		}
+
 		if isAsk {
 			price = *price.Inv(&price)
 			priceFloatStr := price.FloatString(10)
 			if v, ok := depthMap[priceFloatStr]; ok {
 				amount := v.Amount
 				size := v.Size
-				amount = amount.Add(amount, amountS)
-				size = size.Add(size, amountB)
+				amount = amount.Add(amount, minAmountS)
+				size = size.Add(size, minAmountB)
 				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
 				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountS, Size: amountB}
@@ -957,6 +980,32 @@ func calculateDepth(states []types.OrderState, length int, isAsk bool, tokenSDec
 		return depth[:length]
 	}
 	return depth
+}
+
+func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, token, spender common.Address) (amount *big.Rat, err error) {
+
+	amount = depthAmount
+
+	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender); if err != nil {
+		return
+	}
+
+	balanceRat := new(big.Rat).SetFrac(balance, big.NewInt(1))
+	allowanceRat := new(big.Rat).SetFrac(allowance, big.NewInt(1))
+
+	if amount.Cmp(balanceRat) > 0 {
+		amount = balanceRat
+	}
+
+	if amount.Cmp(allowanceRat) > 0 {
+		amount = allowanceRat
+	}
+
+	if amount.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
+		return nil, errors.New("amount is zero, skipped")
+	}
+
+	return
 }
 
 func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
