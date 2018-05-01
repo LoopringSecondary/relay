@@ -75,8 +75,8 @@ type RelayNode struct {
 }
 
 func (n *RelayNode) Start() {
-	n.extractorService.Start()
 	n.txManager.Start()
+	n.extractorService.Start()
 
 	//gateway.NewJsonrpcService("8080").Start()
 	fmt.Println("step in relay node start")
