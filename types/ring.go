@@ -81,10 +81,10 @@ func (ring *Ring) GenerateUniqueId() common.Hash {
 	return ring.UniqueId
 }
 
-func (ring *Ring) GenerateHash(miner common.Address) common.Hash {
+func (ring *Ring) GenerateHash(feeReceipt common.Address) common.Hash {
 	hashBytes := crypto.GenerateHash(
 		ring.GenerateUniqueId().Bytes(),
-		miner.Bytes(),
+		feeReceipt.Bytes(),
 		common.LeftPadBytes(ring.FeeSelections().Bytes(), 2),
 	)
 	return common.BytesToHash(hashBytes)

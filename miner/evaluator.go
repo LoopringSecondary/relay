@@ -24,12 +24,12 @@ import (
 	"math"
 	"math/big"
 
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"fmt"
 )
 
 type Evaluator struct {
@@ -38,10 +38,10 @@ type Evaluator struct {
 	gasUsedWithLength         map[int]*big.Int
 	realCostRate, walletSplit *big.Rat
 
-	minGasPrice, maxGasPrice  *big.Int
-	feeReceipt                common.Address
+	minGasPrice, maxGasPrice *big.Int
+	feeReceipt               common.Address
 
-	matcher                   Matcher
+	matcher Matcher
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -185,7 +185,8 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 	if impl, exists := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol]; exists {
 		var err error
 		lrcAddress = impl.LrcTokenAddress
-		if feeReceiptLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.feeReceipt, lrcAddress, impl.DelegateAddress, common.HexToHash("0x")); nil != err {
+		//todo:the address transfer lrcreward should be msg.sender not feeReceipt
+		if feeReceiptLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.feeReceipt, lrcAddress, impl.DelegateAddress); nil != err {
 			return err
 		}
 	} else {
@@ -208,7 +209,6 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			if nil != err {
 				return err
 			}
-
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
@@ -219,7 +219,6 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 				return err
 			}
 		}
-
 
 		//compute lrcFee
 		rate := new(big.Rat).Quo(filledOrder.FillAmountS, new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS))
@@ -383,8 +382,7 @@ func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions co
 	} else {
 		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
 	}
-	//todo:to fix bug
-	//e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
+	e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
 	e.walletSplit = new(big.Rat)
 	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
 	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)
