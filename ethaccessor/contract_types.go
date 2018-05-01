@@ -152,23 +152,22 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		fill.TokenB = tokenB
 		fill.AmountS = safeBig(e.OrderInfoList[start+3])
 		fill.AmountB = amountB
+		fill.LrcReward = safeBig(e.OrderInfoList[start+4])
 
-		// lrcFee or lrcReward, if < 0 lrcReward, else lrcFee
-		if lrcFeeOrReward, isNeg := safeAbsBig(e.OrderInfoList[start+5]); isNeg {
-			fill.LrcFee = big.NewInt(0)
-			fill.LrcReward = lrcFeeOrReward
-		} else {
+		// lrcFee or lrcReward, if >= 0 lrcFee, else lrcReward
+		if lrcFeeOrReward, isNeg := safeAbsBig(e.OrderInfoList[start+5]); !isNeg {
 			fill.LrcFee = lrcFeeOrReward
-			fill.LrcReward = big.NewInt(0)
+		} else {
+			fill.LrcFee = big.NewInt(0)
 		}
 
-		// splitS or splitB: if < 0 splitB, else splitS
-		if split, isNeg := safeAbsBig(e.OrderInfoList[start+6]); isNeg {
-			fill.SplitS = big.NewInt(0)
-			fill.SplitB = split
-		} else {
+		// splitS or splitB: if < 0 splitS, else splitB
+		if split, isNeg := safeAbsBig(e.OrderInfoList[start+6]); !isNeg {
 			fill.SplitS = split
 			fill.SplitB = big.NewInt(0)
+		} else {
+			fill.SplitS = big.NewInt(0)
+			fill.SplitB = split
 		}
 
 		totalLrcFee = totalLrcFee.Add(totalLrcFee, fill.LrcFee)
@@ -186,14 +185,20 @@ func safeHash(bytes [32]uint8) common.Hash {
 	return common.Hash(bytes)
 }
 
-// safeAbsBig
+// safeAbsBig return abs value and isNeg
 func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
-	num := new(big.Int).SetBytes(bytes[0:])
-	isNeg := num.Sign() >= 0
+	num := new(big.Int).SetBytes(bytes[:])
+
+	isNeg := bytes[0] == uint8(255)
 	if isNeg {
-		num = new(big.Int).Mul(num, big.NewInt(-1))
+		bytes[0] = uint8(0)
+		num1 := new(big.Int).SetBytes(bytes[:])
+		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num1.Int64(), num1.String(), isNeg)
+		return num1, true
+	} else {
+		println("----qqqqqqq", uint8(bytes[0]), num.Int64(), num.String(), isNeg)
+		return num, false
 	}
-	return num, isNeg
 }
 
 // safeBig contract bytes32 to *big.int
