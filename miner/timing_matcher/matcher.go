@@ -152,7 +152,7 @@ func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, s
 			availableAmount = allowanceAmount
 		}
 		matchedAmountS, _ := FilledAmountS(address, tokenAddress)
-		log.Errorf("orderhash:%s, owner:%s, token:%s, spender:%s, availableAmount:%s, balance:%s, allowance:%s, matchedAmountS:%s", hash.Hex(), address.Hex(), tokenAddress.Hex(), spender.Hex(),availableAmount.FloatString(2), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
+		log.Errorf("orderhash:%s, owner:%s, token:%s, spender:%s, availableAmount:%s, balance:%s, allowance:%s, matchedAmountS:%s", hash.Hex(), address.Hex(), tokenAddress.Hex(), spender.Hex(), availableAmount.FloatString(2), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
 
 		availableAmount.Sub(availableAmount, matchedAmountS)
 

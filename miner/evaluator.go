@@ -24,12 +24,12 @@ import (
 	"math"
 	"math/big"
 
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"fmt"
 )
 
 type Evaluator struct {
@@ -38,10 +38,10 @@ type Evaluator struct {
 	gasUsedWithLength         map[int]*big.Int
 	realCostRate, walletSplit *big.Rat
 
-	minGasPrice, maxGasPrice  *big.Int
-	feeReceipt                common.Address
+	minGasPrice, maxGasPrice *big.Int
+	feeReceipt               common.Address
 
-	matcher                   Matcher
+	matcher Matcher
 }
 
 func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
@@ -219,7 +219,6 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 				return err
 			}
 		}
-
 
 		//compute lrcFee
 		rate := new(big.Rat).Quo(filledOrder.FillAmountS, new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountS))

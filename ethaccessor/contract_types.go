@@ -50,7 +50,7 @@ func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 
 type ApprovalEvent struct {
 	Owner   common.Address `fieldName:"owner" fieldId:"0"`
-	Spender common.Address `fieldName:"spender fieldId:"1""`
+	Spender common.Address `fieldName:"spender" fieldId:"1"`
 	Value   *big.Int       `fieldName:"value" fieldId:"2"`
 }
 
@@ -67,72 +67,106 @@ func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 /// _amountsList is an array of:
 /// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
 //event RingMined(
-//	uint                _ringIndex,
-//	bytes32     indexed _ringHash,
-//	address             _feeRecipient,
-//	bytes32[]           _orderHashList,
-//	uint[6][]           _amountsList
+//uint            _ringIndex,
+//bytes32 indexed _ringHash,
+//address         _miner,
+//address         _feeRecipient,
+//bytes32[]       _orderInfoList
 //);
+// orderInfoList = new bytes32[](ringSize * 7);
+// orderInfoList[q++] = bytes32(state.orderHash);
+//orderInfoList[q++] = bytes32(state.owner);
+//orderInfoList[q++] = bytes32(state.tokenS);
+//orderInfoList[q++] = bytes32(state.fillAmountS);
+//orderInfoList[q++] = bytes32(state.lrcReward);
+//orderInfoList[q++] = bytes32(
+//state.lrcFeeState > 0 ? int(state.lrcFeeState) : -int(state.lrcReward)
+//);
+//orderInfoList[q++] = bytes32(
+//state.splitS > 0 ? int(state.splitS) : -int(state.splitB)
+//);
+
 type RingMinedEvent struct {
 	RingIndex     *big.Int       `fieldName:"_ringIndex" fieldId:"0"`
 	RingHash      common.Hash    `fieldName:"_ringhash" fieldId:"1"`
-	FeeRecipient  common.Address `fieldName:"_feeRecipient" fieldId:"2"`
-	OrderHashList [][32]uint8    `fieldName:"_orderHashList" fieldId:"3"`
-	AmountsList   [][6]*big.Int  `fieldName:"_amountsList" fieldId:"4"`
+	Miner         common.Address `fieldName:"_miner" fieldId:"2"`
+	FeeRecipient  common.Address `fieldName:"_feeRecipient" fieldId:"3"`
+	OrderInfoList [][32]uint8    `fieldName:"_orderInfoList" fieldId:"4"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
-	length := len(e.OrderHashList)
+	length := len(e.OrderInfoList)
+	idx := length / 7
 
-	if length != len(e.AmountsList) || length < 2 {
-		return nil, nil, errors.New("ringMined event unpack error:orderHashList length invalid")
+	if length%7 != 0 || idx < 2 {
+		return nil, nil, errors.New("ringMined event unpack error:orderInfoList length invalid")
 	}
 
 	evt := &types.RingMinedEvent{}
 	evt.RingIndex = e.RingIndex
 	evt.Ringhash = e.RingHash
-	evt.Miner = e.FeeRecipient
+	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
 
 	var list []*types.OrderFilledEvent
-	lrcFee := big.NewInt(0)
-	for i := 0; i < length; i++ {
+	totalLrcFee := big.NewInt(0)
+
+	firstFill := 0
+	lastFill := idx - 1
+	for i := 0; i < idx; i++ {
 		var (
 			fill                        types.OrderFilledEvent
 			preOrderHash, nextOrderHash common.Hash
+			start                       = i * 7
 		)
 
-		if i == 0 {
-			preOrderHash = common.Hash(e.OrderHashList[length-1])
-			nextOrderHash = common.Hash(e.OrderHashList[1])
-		} else if i == length-1 {
-			preOrderHash = common.Hash(e.OrderHashList[length-2])
-			nextOrderHash = common.Hash(e.OrderHashList[0])
+		if i == firstFill {
+			preOrderHash = common.Hash(e.OrderInfoList[lastFill*7])
+			nextOrderHash = common.Hash(e.OrderInfoList[(i+1)*7])
+		} else if i == lastFill {
+			preOrderHash = common.Hash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = common.Hash(e.OrderInfoList[firstFill*7])
 		} else {
-			preOrderHash = common.Hash(e.OrderHashList[i-1])
-			nextOrderHash = common.Hash(e.OrderHashList[i+1])
+			preOrderHash = common.Hash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = common.Hash(e.OrderInfoList[(i+1)*7])
 		}
 
 		fill.Ringhash = e.RingHash
+		fill.RingIndex = e.RingIndex
+		fill.FillIndex = big.NewInt(int64(idx))
+
+		fill.OrderHash = common.Hash(e.OrderInfoList[start])
 		fill.PreOrderHash = preOrderHash
-		fill.OrderHash = common.Hash(e.OrderHashList[i])
 		fill.NextOrderHash = nextOrderHash
 
-		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
-		fill.RingIndex = e.RingIndex
-		fill.AmountS = e.AmountsList[i][0]
-		fill.AmountB = e.AmountsList[i][1]
-		fill.LrcReward = e.AmountsList[i][2]
-		fill.LrcFee = e.AmountsList[i][3]
-		fill.SplitS = e.AmountsList[i][4]
-		fill.SplitB = e.AmountsList[i][5]
-		fill.FillIndex = big.NewInt(int64(i))
+		fill.Owner = common.BytesToAddress([]byte(e.OrderInfoList[start+1]))
+		fill.TokenS = common.BytesToAddress([]byte(e.OrderInfoList[start+2]))
+		fill.AmountS = new(big.Int).SetBytes([]byte(e.OrderInfoList[start+3]))
+		fill.LrcReward = new(big.Int).SetBytes([]byte(e.OrderInfoList[start+4]))
 
-		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee)
+		// lrcFee or lrcReward, if > 0 lrcFee, else lrcReward
+		lrcFeeOrReward := new(big.Int).SetBytes([]byte(e.OrderInfoList[start+5]))
+		if lrcFeeOrReward.Cmp(big.NewInt(0)) > 0 {
+			fill.LrcFee = lrcFeeOrReward
+		} else {
+			fill.LrcFee = big.NewInt(0)
+		}
+
+		// splitS or splitB: if > 0 splitS, else splitB
+		split := new(big.Int).SetBytes([]byte(e.OrderInfoList[start+6]))
+		if split.Cmp(big.NewInt(0)) > 0 {
+			fill.SplitS = split
+			fill.SplitB = big.NewInt(0)
+		} else {
+			fill.SplitS = big.NewInt(0)
+			fill.SplitB = split
+		}
+
+		totalLrcFee = totalLrcFee.Add(totalLrcFee, fill.LrcFee)
 		list = append(list, &fill)
 	}
 
-	evt.TotalLrcFee = lrcFee
+	evt.TotalLrcFee = totalLrcFee
 	evt.TradeAmount = length
 
 	return evt, list, nil
