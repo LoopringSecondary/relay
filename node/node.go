@@ -157,8 +157,8 @@ func (n *Node) Start() {
 	n.marketCapProvider.Start()
 
 	if n.globalConfig.Mode != MODEL_MINER {
-		n.relayNode.Start()
 		n.accountManager.Start()
+		n.relayNode.Start()
 		go ethaccessor.IncludeGasPriceEvaluator()
 	}
 	if n.globalConfig.Mode != MODEL_RELAY {
