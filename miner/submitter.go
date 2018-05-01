@@ -41,21 +41,21 @@ const SubmitRingMethod_LastId = "submitringmethod_lastid"
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
-	minerAccountForSign   accounts.Account
+	minerAccountForSign accounts.Account
 	//minerNameInfos      map[common.Address][]*types.NameRegistryInfo
-	feeReceipt            common.Address
+	feeReceipt common.Address
 
-	maxGasLimit           *big.Int
-	minGasLimit           *big.Int
+	maxGasLimit *big.Int
+	minGasLimit *big.Int
 
 	normalMinerAddresses  []*NormalSenderAddress
 	percentMinerAddresses []*SplitMinerAddress
 
-	dbService             dao.RdsService
-	marketCapProvider     marketcap.MarketCapProvider
-	matcher               Matcher
+	dbService         dao.RdsService
+	marketCapProvider marketcap.MarketCapProvider
+	matcher           Matcher
 
-	stopFuncs             []func()
+	stopFuncs []func()
 }
 
 type RingSubmitFailed struct {
