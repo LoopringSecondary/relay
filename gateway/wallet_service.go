@@ -924,7 +924,7 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			log.Infof("amount b is %s", minAmountB)
 			sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
 			log.Infof("sellprice is %s", sellPrice.String())
-			limitedAmountS := minAmountB.Mul(minAmountB, sellPrice)
+			limitedAmountS := new(big.Rat).Mul(minAmountB, sellPrice)
 			log.Infof("limit amount s is %s", limitedAmountS)
 			if limitedAmountS.Cmp(minAmountS) < 0 {
 				minAmountS = limitedAmountS
@@ -934,7 +934,7 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			log.Infof("amount b is %s", minAmountB)
 			buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
 			log.Infof("buyprice is %s", buyPrice.String())
-			limitedAmountB := minAmountS.Mul(minAmountS, buyPrice)
+			limitedAmountB := new(big.Rat).Mul(minAmountS, buyPrice)
 			log.Infof("limit amount b is %s", limitedAmountB)
 			if limitedAmountB.Cmp(minAmountB) < 0 {
 				minAmountB = limitedAmountB
@@ -951,18 +951,18 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 				size = size.Add(size, minAmountB)
 				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountS, Size: amountB}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: minAmountS, Size: minAmountB}
 			}
 		} else {
 			priceFloatStr := price.FloatString(10)
 			if v, ok := depthMap[priceFloatStr]; ok {
 				amount := v.Amount
 				size := v.Size
-				amount = amount.Add(amount, amountB)
-				size = size.Add(size, amountS)
+				amount = amount.Add(amount, minAmountB)
+				size = size.Add(size, minAmountS)
 				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountB, Size: amountS}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: minAmountB, Size: minAmountS}
 			}
 		}
 	}
