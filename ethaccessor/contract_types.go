@@ -118,34 +118,44 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 			fill                        types.OrderFilledEvent
 			preOrderHash, nextOrderHash common.Hash
 			start                       = i * 7
+			tokenB common.Address
+			amountB *big.Int
 		)
 
 		if i == firstFill {
-			preOrderHash = common.Hash(e.OrderInfoList[lastFill*7])
-			nextOrderHash = common.Hash(e.OrderInfoList[(i+1)*7])
+			preOrderHash = safeHash(e.OrderInfoList[lastFill*7])
+			nextOrderHash = safeHash(e.OrderInfoList[(i+1)*7])
+			tokenB = safeAddress(e.OrderInfoList[lastFill * 7 + 2])
+			amountB = safeBig(e.OrderInfoList[lastFill * 7 + 3])
 		} else if i == lastFill {
-			preOrderHash = common.Hash(e.OrderInfoList[(i-1)*7])
-			nextOrderHash = common.Hash(e.OrderInfoList[firstFill*7])
+			preOrderHash = safeHash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = safeHash(e.OrderInfoList[firstFill*7])
+			tokenB = safeAddress(e.OrderInfoList[firstFill * 7 + 2])
+			amountB = safeBig(e.OrderInfoList[firstFill * 7 + 3])
 		} else {
-			preOrderHash = common.Hash(e.OrderInfoList[(i-1)*7])
-			nextOrderHash = common.Hash(e.OrderInfoList[(i+1)*7])
+			preOrderHash = safeHash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = safeHash(e.OrderInfoList[(i+1)*7])
+			tokenB = safeAddress(e.OrderInfoList[(i - 1) * 7 + 2])
+			amountB = safeBig(e.OrderInfoList[(i - 1) * 7 + 3])
 		}
 
 		fill.Ringhash = e.RingHash
 		fill.RingIndex = e.RingIndex
 		fill.FillIndex = big.NewInt(int64(idx))
 
-		fill.OrderHash = common.Hash(e.OrderInfoList[start])
+		fill.OrderHash = safeHash(e.OrderInfoList[start])
 		fill.PreOrderHash = preOrderHash
 		fill.NextOrderHash = nextOrderHash
 
-		fill.Owner = common.BytesToAddress([]byte(e.OrderInfoList[start+1]))
-		fill.TokenS = common.BytesToAddress([]byte(e.OrderInfoList[start+2]))
-		fill.AmountS = new(big.Int).SetBytes([]byte(e.OrderInfoList[start+3]))
-		fill.LrcReward = new(big.Int).SetBytes([]byte(e.OrderInfoList[start+4]))
+		fill.Owner = safeAddress(e.OrderInfoList[start+1])
+		fill.TokenS = safeAddress(e.OrderInfoList[start+2])
+		fill.TokenB = tokenB
+		fill.AmountS = safeBig(e.OrderInfoList[start+3])
+		fill.AmountB = amountB
+		fill.LrcReward = safeBig(e.OrderInfoList[start+4])
 
 		// lrcFee or lrcReward, if > 0 lrcFee, else lrcReward
-		lrcFeeOrReward := new(big.Int).SetBytes([]byte(e.OrderInfoList[start+5]))
+		lrcFeeOrReward := safeBig(e.OrderInfoList[start+5])
 		if lrcFeeOrReward.Cmp(big.NewInt(0)) > 0 {
 			fill.LrcFee = lrcFeeOrReward
 		} else {
@@ -153,7 +163,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 		}
 
 		// splitS or splitB: if > 0 splitS, else splitB
-		split := new(big.Int).SetBytes([]byte(e.OrderInfoList[start+6]))
+		split := safeBig(e.OrderInfoList[start+6])
 		if split.Cmp(big.NewInt(0)) > 0 {
 			fill.SplitS = split
 			fill.SplitB = big.NewInt(0)
@@ -167,9 +177,26 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	}
 
 	evt.TotalLrcFee = totalLrcFee
-	evt.TradeAmount = length
+	evt.TradeAmount = idx
 
 	return evt, list, nil
+}
+
+// sateHash contract bytes32 to common.hash
+func safeHash(bytes [32]uint8) common.Hash {
+	return common.Hash(bytes)
+}
+
+// safeBig contract bytes32 to *big.int
+func safeBig(bytes [32]uint8) *big.Int {
+	var newbytes []byte = bytes[0:]
+	return new(big.Int).SetBytes(newbytes)
+}
+
+// safeAddress contract bytes32 to common.address
+func safeAddress(bytes [32]uint8) common.Address {
+	var newbytes []byte = bytes[0:]
+	return common.BytesToAddress(newbytes)
 }
 
 type OrderCancelledEvent struct {
