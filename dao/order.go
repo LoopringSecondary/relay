@@ -200,18 +200,14 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 		return list, errors.New("should filter cutoff and finished orders")
 	}
 
-	//nowtime := time.Now().Unix()
-	//err = s.db.Where("delegate_address = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
-	//	Where("valid_since < ?", nowtime).
-	//	Where("valid_until >= ? ", nowtime).
-	//	Where("status not in (?) ", filterStatus).
-	//	Where("miner_block_mark between ? and ?", startBlockNumber, endBlockNumber).
-	//	Order("price desc").
-	//	Limit(length).
-	//	Find(&list).
-	//	Error
-	err = s.db.
-		Where("1=1").
+	nowtime := time.Now().Unix()
+	err = s.db.Where("delegate_address = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
+		Where("valid_since < ?", nowtime).
+		Where("valid_until >= ? ", nowtime).
+		Where("status not in (?) ", filterStatus).
+		Where("miner_block_mark between ? and ?", startBlockNumber, endBlockNumber).
+		Order("price desc").
+		Limit(length).
 		Find(&list).
 		Error
 
@@ -223,6 +219,7 @@ func (s *RdsServiceImpl) GetOrdersByHash(orderhashs []string) (map[string]Order,
 		list []Order
 		err  error
 	)
+
 	ret := make(map[string]Order)
 	if err = s.db.Where("order_hash in (?)", orderhashs).Find(&list).Error; err != nil {
 		return ret, err

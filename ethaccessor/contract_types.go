@@ -185,6 +185,7 @@ func safeHash(bytes [32]uint8) common.Hash {
 	return common.Hash(bytes)
 }
 
+// safeAbsBig return abs value and isNeg
 func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
 	maxBytes := [32]uint8{}
 	for idx,_ := range maxBytes {
@@ -207,19 +208,17 @@ func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
 	}
 }
 
-// safeAbsBig return abs value and isNeg
+// safeBig contract bytes32 to *big.int
 func safeBig(bytes [32]uint8) *big.Int {
 	var newbytes []byte = bytes[0:]
 	return new(big.Int).SetBytes(newbytes)
 }
 
-// safeBig contract bytes32 to *big.int
+// safeAddress contract bytes32 to common.address
 func safeAddress(bytes [32]uint8) common.Address {
 	var newbytes []byte = bytes[0:]
 	return common.BytesToAddress(newbytes)
 }
-
-// safeAddress contract bytes32 to common.address
 
 type OrderCancelledEvent struct {
 	OrderHash       common.Hash `fieldName:"_orderHash" fieldId:"0"`

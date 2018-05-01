@@ -21,6 +21,7 @@ package marketcap
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
@@ -29,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"math/big"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -274,25 +276,18 @@ func (p *CapProvider_CoinMarketCap) Start() {
 }
 
 func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
-	//url := fmt.Sprintf(p.baseUrl, p.currency)
-	//resp, err := http.Get(url)
-	//if err != nil {
-	// return err
-	//}
-	//defer func() {
-	// if nil != resp && nil != resp.Body {
-	//    resp.Body.Close()
-	// }
-	//}()
-	//
-	//body, err := ioutil.ReadAll(resp.Body)
+	url := fmt.Sprintf(p.baseUrl, p.currency)
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if nil != resp && nil != resp.Body {
+			resp.Body.Close()
+		}
+	}()
 
-	// todo after test
-	var (
-		body []byte
-		err  error
-	)
-	body, err = ioutil.ReadFile("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/default_market.json")
+	body, err := ioutil.ReadAll(resp.Body)
 	if nil != err {
 		return err
 	} else {
@@ -313,7 +308,7 @@ func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
 				}
 			}
 			for _, tokenCap := range p.tokenMarketCaps {
-				if _, exists := syncedTokens[tokenCap.Address]; !exists {
+				if _, exists := syncedTokens[tokenCap.Address]; !exists && "VITE" != tokenCap.Symbol && "ARP" != tokenCap.Symbol {
 					//todo:
 					log.Errorf("token:%s, id:%s, can't sync marketcap at time:%d, it't last updated time:%d", tokenCap.Symbol, tokenCap.Id, time.Now().Unix(), tokenCap.LastUpdated)
 				}
@@ -322,49 +317,6 @@ func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
 	}
 	return nil
 }
-
-//func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
-//	url := fmt.Sprintf(p.baseUrl, p.currency)
-//	resp, err := http.Get(url)
-//	if err != nil {
-//		return err
-//	}
-//	defer func() {
-//		if nil != resp && nil != resp.Body {
-//			resp.Body.Close()
-//		}
-//	}()
-//
-//	body, err := ioutil.ReadAll(resp.Body)
-//	if nil != err {
-//		return err
-//	} else {
-//		var caps []*types.CurrencyMarketCap
-//		if err := json.Unmarshal(body, &caps); nil != err {
-//			return err
-//		} else {
-//			syncedTokens := make(map[common.Address]bool)
-//			for _, tokenCap := range caps {
-//				if tokenAddress, exists := p.idToAddress[strings.ToUpper(tokenCap.Id)]; exists {
-//					p.tokenMarketCaps[tokenAddress].PriceUsd = tokenCap.PriceUsd
-//					p.tokenMarketCaps[tokenAddress].PriceBtc = tokenCap.PriceBtc
-//					p.tokenMarketCaps[tokenAddress].PriceCny = tokenCap.PriceCny
-//					p.tokenMarketCaps[tokenAddress].Volume24HCNY = tokenCap.Volume24HCNY
-//					p.tokenMarketCaps[tokenAddress].Volume24HUSD = tokenCap.Volume24HUSD
-//					p.tokenMarketCaps[tokenAddress].LastUpdated = tokenCap.LastUpdated
-//					syncedTokens[p.tokenMarketCaps[tokenAddress].Address] = true
-//				}
-//			}
-//			for _, tokenCap := range p.tokenMarketCaps {
-//				if _, exists := syncedTokens[tokenCap.Address]; !exists && "VITE" != tokenCap.Symbol && "ARP" != tokenCap.Symbol {
-//					//todo:
-//					log.Errorf("token:%s, id:%s, can't sync marketcap at time:%d, it't last updated time:%d", tokenCap.Symbol, tokenCap.Id, time.Now().Unix(), tokenCap.LastUpdated)
-//				}
-//			}
-//		}
-//	}
-//	return nil
-//}
 
 func NewMarketCapProvider(options config.MarketCapOptions) *CapProvider_CoinMarketCap {
 	provider := &CapProvider_CoinMarketCap{}
