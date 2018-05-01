@@ -920,27 +920,31 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			continue
 		}
 
+
+		sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
+		buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
 		if s.RawOrder.BuyNoMoreThanAmountB {
 			//log.Info("order BuyNoMoreThanAmountB is true")
 			//log.Infof("amount s is %s", minAmountS)
 			//log.Infof("amount b is %s", minAmountB)
-			sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
 			//log.Infof("sellprice is %s", sellPrice.String())
 			limitedAmountS := new(big.Rat).Mul(minAmountB, sellPrice)
 			//log.Infof("limit amount s is %s", limitedAmountS)
 			if limitedAmountS.Cmp(minAmountS) < 0 {
 				minAmountS = limitedAmountS
 			}
+
+			minAmountB = minAmountB.Mul(minAmountS, buyPrice)
 		} else {
 			//log.Infof("amount s is %s", minAmountS)
 			//log.Infof("amount b is %s", minAmountB)
-			buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
 			//log.Infof("buyprice is %s", buyPrice.String())
 			limitedAmountB := new(big.Rat).Mul(minAmountS, buyPrice)
 			//log.Infof("limit amount b is %s", limitedAmountB)
 			if limitedAmountB.Cmp(minAmountB) < 0 {
 				minAmountB = limitedAmountB
 			}
+			minAmountS = minAmountS.Mul(minAmountB, sellPrice)
 		}
 
 		if isAsk {
@@ -1017,7 +1021,7 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 		amount = allowanceRat
 	}
 
-	if amount.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
+	if amount.Cmp(new(big.Rat).SetFloat64(1e-8)) < 0 {
 		return nil, errors.New("amount is zero, skipped")
 	}
 
