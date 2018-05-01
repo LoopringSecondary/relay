@@ -185,7 +185,8 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 	if impl, exists := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol]; exists {
 		var err error
 		lrcAddress = impl.LrcTokenAddress
-		if feeReceiptLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.feeReceipt, lrcAddress, impl.DelegateAddress, common.HexToHash("0x")); nil != err {
+		//todo:the address transfer lrcreward should be msg.sender not feeReceipt
+		if feeReceiptLrcAvailableAmount, err = e.matcher.GetAccountAvailableAmount(e.feeReceipt, lrcAddress, impl.DelegateAddress); nil != err {
 			return err
 		}
 	} else {
@@ -208,7 +209,6 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 			if nil != err {
 				return err
 			}
-
 		} else {
 			savingAmount := new(big.Rat).Set(filledOrder.FillAmountB)
 			savingAmount.Mul(savingAmount, ringState.ReducedRate)
@@ -382,8 +382,7 @@ func NewEvaluator(marketCapProvider marketcap.MarketCapProvider, minerOptions co
 	} else {
 		e.realCostRate.SetFloat64(float64(1.0) - minerOptions.Subsidy)
 	}
-	//todo:to fix bug
-	//e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
+	e.feeReceipt = common.HexToAddress(minerOptions.FeeReceipt)
 	e.walletSplit = new(big.Rat)
 	e.walletSplit.SetFloat64(minerOptions.WalletSplit)
 	e.minGasPrice = big.NewInt(minerOptions.MinGasLimit)

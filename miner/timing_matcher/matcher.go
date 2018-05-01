@@ -105,8 +105,9 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 	//如果程序不正确的停止，清除错误的缓存数据
 	if ringhashes, err := CachedRinghashes(); nil == err {
 		for _, ringhash := range ringhashes {
+
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
-				if submitInfo.ID <= 0 {
+				if submitInfo.ID > 0 {
 					cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
@@ -141,7 +142,7 @@ func (matcher *TimingMatcher) Stop() {
 	}
 }
 
-func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address, hash common.Hash) (*big.Rat, error) {
+func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, spender common.Address) (*big.Rat, error) {
 	//log.Debugf("address: %s , token: %s , spender: %s", address.Hex(), tokenAddress.Hex(), spender.Hex())
 	if balance, allowance, err := matcher.accountManager.GetBalanceAndAllowance(address, tokenAddress, spender); nil != err {
 		return nil, err
@@ -152,7 +153,7 @@ func (matcher *TimingMatcher) GetAccountAvailableAmount(address, tokenAddress, s
 			availableAmount = allowanceAmount
 		}
 		matchedAmountS, _ := FilledAmountS(address, tokenAddress)
-		log.Errorf("orderhash:%s, owner:%s, token:%s, spender:%s, availableAmount:%s, balance:%s, allowance:%s, matchedAmountS:%s", hash.Hex(), address.Hex(), tokenAddress.Hex(), spender.Hex(), availableAmount.FloatString(2), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
+		log.Debugf("owner:%s, token:%s, spender:%s, availableAmount:%s, balance:%s, allowance:%s, matchedAmountS:%s", address.Hex(), tokenAddress.Hex(), spender.Hex(), availableAmount.FloatString(2), balance.String(), allowance.String(), matchedAmountS.FloatString(2))
 
 		availableAmount.Sub(availableAmount, matchedAmountS)
 
