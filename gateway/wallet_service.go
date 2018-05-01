@@ -909,11 +909,11 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			continue
 		}
 
-		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress); if err != nil {
+		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
 			log.Debug(err.Error())
 			continue
 		}
-		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress); if err != nil {
+		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal); if err != nil {
 			log.Debug(err.Error())
 			continue
 		}
@@ -991,7 +991,7 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 	return depth
 }
 
-func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, token, spender common.Address) (amount *big.Rat, err error) {
+func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, token, spender common.Address, decimal *big.Int) (amount *big.Rat, err error) {
 
 	amount = depthAmount
 
@@ -999,8 +999,8 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 		return
 	}
 
-	balanceRat := new(big.Rat).SetFrac(balance, big.NewInt(1))
-	allowanceRat := new(big.Rat).SetFrac(allowance, big.NewInt(1))
+	balanceRat := new(big.Rat).SetFrac(balance, decimal)
+	allowanceRat := new(big.Rat).SetFrac(allowance, decimal)
 
 	log.Info(amount.String())
 	log.Info(balanceRat.String())
