@@ -51,6 +51,8 @@ func NewTxManager(db dao.RdsService, accountmanager *market.AccountManager) Tran
 
 // Start start orderbook as a service
 func (tm *TransactionManager) Start() {
+	log.Debugf("transaction manager start...")
+
 	tm.approveEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveApproveEvent}
 	eventemitter.On(eventemitter.Approve, tm.approveEventWatcher)
 
