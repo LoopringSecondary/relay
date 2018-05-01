@@ -57,19 +57,6 @@ func TestMatch(t *testing.T) {
 	ks.Unlock(acc1, "1")
 	ks.Unlock(acc2, "1")
 	ks.Unlock(acc3, "1")
-	sender := accounts.Account{Address: common.HexToAddress("0x3acdf3e3d8ec52a768083f718e763727b0210650")}
-	ks.Unlock(sender, "loopring")
-	c := crypto.NewKSCrypto(false, ks)
-	crypto.Initialize(c)
-
-	sendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), common.HexToAddress("0xef68e7c694f40c8202821edf525de3782458639f"))
-
-	lrcAmount := new(big.Int)
-	lrcAmount.SetString("1000000000000000000000000000", 10)
-	if txHash, err := sendMethod(sender.Address, "approve", big.NewInt(int64(1000000)), big.NewInt(int64(1500000000)), big.NewInt(int64(0)), common.HexToAddress("0x5567ee920f7E62274284985D793344351A00142B"), lrcAmount); nil != err {
-	} else {
-		t.Logf("have send addParticipant transaction with hash:%s, you can see this in etherscan.io.\n", txHash)
-	}
 	//rdsService := dao.NewRdsService(cfg.Mysql)
 	//userManager := usermanager.NewUserManager(&cfg.UserManager, rdsService)
 	//ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
@@ -130,21 +117,20 @@ func TestMiner_PrepareOrders(t *testing.T) {
 	account1 := entity.Accounts[0]
 	account2 := entity.Accounts[1]
 
-	privkey := entity.PrivateKey
+	//privkey := entity.PrivateKey
 
 	db := test.GenerateDaoService()
 	db.Prepare()
 	// set order and marshal to json
 	//protocol := common.HexToAddress(c.Common.ProtocolImpl.Address[test.Version])
 	lrcFee1 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(5)) // 20个lrc
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 20; i++ {
 
 		// 卖出0.1个eth， 买入300个lrc,lrcFee为20个lrc
 		amountS1, _ := new(big.Int).SetString("10"+suffix, 0)
 		amountB1, _ := new(big.Int).SetString("1000"+suffix, 0)
 		lrcFee1.Add(lrcFee1, big.NewInt(int64(1)))
 		order1 := test.CreateOrder(
-			privkey,
 			eth,
 			lrc,
 			account1.Address,
@@ -157,7 +143,7 @@ func TestMiner_PrepareOrders(t *testing.T) {
 		state1 := &types.OrderState{}
 		state1.RawOrder = *order1
 		if model, err := newOrderEntity(state1); nil == err {
-			go db.Add(model)
+			db.Add(model)
 		} else {
 			t.Fatalf("err:%s", err.Error())
 		}
@@ -168,7 +154,6 @@ func TestMiner_PrepareOrders(t *testing.T) {
 		//lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(3))
 		lrcFee1.Add(lrcFee1, big.NewInt(int64(1)))
 		order2 := test.CreateOrder(
-			privkey,
 			lrc,
 			eth,
 			account2.Address,
@@ -182,7 +167,7 @@ func TestMiner_PrepareOrders(t *testing.T) {
 		state2 := &types.OrderState{}
 		state2.RawOrder = *order2
 		if model, err := newOrderEntity(state2); nil == err {
-			go db.Add(model)
+			db.Add(model)
 		} else {
 			t.Fatalf("err:%s", err.Error())
 		}

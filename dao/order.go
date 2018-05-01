@@ -460,14 +460,14 @@ func (s *RdsServiceImpl) UpdateOrderWhileRollbackCutoff(orderhash common.Hash, s
 	return s.db.Model(&Order{}).Where("order_hash = ?", orderhash.Hex()).Update(items).Error
 }
 
-func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {
+func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus, delegateAddress common.Address) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
 	now := time.Now().Unix()
 	err = s.db.Model(&Order{}).
-		Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).
+		Where("token_s = ? and owner = ? and delegate_address = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex(), delegateAddress.Hex()).
 		Where("valid_since < ?", now).
 		Where("valid_until >= ? ", now).
 		Find(&list).Error

@@ -187,14 +187,13 @@ func safeHash(bytes [32]uint8) common.Hash {
 
 // safeAbsBig return abs value and isNeg
 func safeAbsBig(bytes [32]uint8) (*big.Int, bool) {
+	//num := new(big.Int).SetBytes([]byte("0xffffffffffffffffffffffffffffffffffffffffffffffffba9c6e7dbb0c0000"))
 	num := new(big.Int).SetBytes(bytes[:])
-
 	isNeg := bytes[0] == uint8(255)
 	if isNeg {
-		bytes[0] = uint8(0)
-		num1 := new(big.Int).SetBytes(bytes[:])
-		println("----kkkkkkk", uint8(bytes[0]), num.Int64(), num1.Int64(), num1.String(), isNeg)
-		return num1, true
+		t := new(big.Int).SetBytes(bytes[:])
+		println("----kkkkkkk", t.Int64(), t.String(), isNeg)
+		return num, true
 	} else {
 		println("----qqqqqqq", uint8(bytes[0]), num.Int64(), num.String(), isNeg)
 		return num, false
