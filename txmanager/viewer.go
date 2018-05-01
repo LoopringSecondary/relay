@@ -161,20 +161,32 @@ func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp
 
 		res.Content = txtyp.SetDefaultContent()
 
-		if view.Type == txtyp.TX_TYPE_CANCEL_ORDER {
-			if entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex); err == nil {
-				if cancel, err := txtyp.ParseCancelContent(entity.Content); err == nil {
-					res.Content = txtyp.SetCancelContent(cancel.OrderHash)
+		entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex)
+		if err != nil {
+			continue
+		}
+
+		res.Protocol = common.HexToAddress(entity.Protocol)
+		res.From = common.HexToAddress(entity.From)
+		res.To = common.HexToAddress(entity.To)
+
+		switch view.Type {
+		case txtyp.TX_TYPE_CANCEL_ORDER:
+			if cancel, err := txtyp.ParseCancelContent(entity.Content); err == nil {
+				res.Content = txtyp.SetCancelContent(cancel.OrderHash)
+			}
+
+		case txtyp.TX_TYPE_CUTOFF_PAIR:
+			if cutoff, err := txtyp.ParseCutoffPairContent(entity.Content); err == nil {
+				if market, err := util.WrapMarket(cutoff.Token1, cutoff.Token2); err == nil {
+					res.Content = txtyp.SetCutoffContent(market)
 				}
 			}
-		}
-		if view.Type == txtyp.TX_TYPE_CUTOFF_PAIR {
-			if entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex); err == nil {
-				if cutoff, err := txtyp.ParseCutoffPairContent(entity.Content); err == nil {
-					if market, err := util.WrapMarket(cutoff.Token1, cutoff.Token2); err == nil {
-						res.Content = txtyp.SetCutoffContent(market)
-					}
-				}
+
+		case txtyp.TX_TYPE_TRANSFER, txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
+			if transfer, err := txtyp.ParseTransferContent(entity.Content); err == nil {
+				res.From = common.HexToAddress(transfer.Sender)
+				res.To = common.HexToAddress(transfer.Receiver)
 			}
 		}
 
