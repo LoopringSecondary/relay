@@ -104,7 +104,7 @@ func (b AccountBalances) batchReqs(tokens ...common.Address) ethaccessor.BatchBa
 func (accountBalances AccountBalances) save(ttl int64) error {
 	data := [][]byte{}
 	for token, balance := range accountBalances.Balances {
-		log.Debugf("balance %s, %s", token.Hex(), balance.Balance.BigInt().String())
+		//log.Debugf("balance owner:%s, token:%s, amount:", accountBalances.Owner.Hex(), token.Hex(), balance.Balance.BigInt().String())
 		if balanceData, err := json.Marshal(balance); nil == err {
 			data = append(data, balanceCacheField(token), balanceData)
 		} else {
@@ -724,7 +724,7 @@ func (a *AccountManager) handleBlockEnd(input eventemitter.EventData) error {
 	a.block.syncAndSaveBalances()
 	a.block.syncAndSaveAllowances()
 
-	go removeExpiredBlock(a.block.currentBlockNumber, a.block.cachedDuration)
+	removeExpiredBlock(a.block.currentBlockNumber, a.block.cachedDuration)
 
 	return nil
 }

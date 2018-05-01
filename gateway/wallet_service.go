@@ -123,8 +123,8 @@ type CutoffRequest struct {
 
 type EstimatedAllocatedAllowanceQuery struct {
 	DelegateAddress string `json:"delegateAddress"`
-	Owner string `json: "owner"`
-	Token string `json: "token"`
+	Owner           string `json: "owner"`
+	Token           string `json: "token"`
 }
 
 type TransactionQuery struct {
