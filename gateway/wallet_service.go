@@ -894,6 +894,8 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 
 	for _, s := range states {
 
+		//log.Infof("handle order ....... %s", s.RawOrder.Hash.Hex())
+
 		price := *s.RawOrder.Price
 		amountS, amountB := s.RemainedAmount()
 		amountS = amountS.Quo(amountS, new(big.Rat).SetFrac(tokenSDecimal, big.NewInt(1)))
@@ -909,15 +911,22 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			continue
 		}
 
-		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
-		if err != nil {
-			log.Debug(err.Error())
-			continue
-		}
-		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal)
-		if err != nil {
-			log.Debug(err.Error())
-			continue
+		minAmountB := amountB
+		minAmountS := amountS
+		var err error
+
+		if isAsk {
+			minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
+			if err != nil {
+				log.Debug(err.Error())
+				continue
+			}
+		} else {
+			minAmountB, err = w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress, tokenBDecimal)
+			if err != nil {
+				log.Debug(err.Error())
+				continue
+			}
 		}
 
 		if s.RawOrder.BuyNoMoreThanAmountB {
