@@ -76,13 +76,13 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindRingMinedByRingIndex(protocol, index string) (*RingMinedEvent, error) {
+func (s *RdsServiceImpl) FindRingMined(txhash string) (*RingMinedEvent, error) {
 	var (
 		model RingMinedEvent
 		err   error
 	)
 
-	err = s.db.Where("contract_address=?", protocol).Where("ring_index = ?", index).Where("fork = ?", false).First(&model).Error
+	err = s.db.Where("tx_hash=?", txhash).Where("fork = ?", false).First(&model).Error
 
 	return &model, err
 }

@@ -193,7 +193,7 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 		err   error
 	)
 
-	model, err = om.rds.FindRingMinedByRingIndex(event.Protocol.Hex(), event.RingIndex.String())
+	model, err = om.rds.FindRingMined(event.TxHash.Hex())
 	if err == nil {
 		return fmt.Errorf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
 	}
@@ -216,7 +216,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// save fill event
-	_, err := om.rds.FindFillEventByRinghashAndOrderhash(event.Ringhash, event.OrderHash)
+	_, err := om.rds.FindFillEvent(event.TxHash.Hex(), event.TxLogIndex)
 	if err == nil {
 		log.Debugf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
 		return nil
