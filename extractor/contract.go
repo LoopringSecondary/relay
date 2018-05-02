@@ -163,8 +163,8 @@ func newAbiProcessor(db dao.RdsService, option *config.ExtractorOptions) *AbiPro
 	processor.loadErc20Contract()
 	processor.loadWethContract()
 	processor.loadProtocolContract()
-	processor.loadTokenRegisterContract()
-	processor.loadTokenTransferDelegateProtocol()
+	//processor.loadTokenRegisterContract()
+	//processor.loadTokenTransferDelegateProtocol()
 
 	return processor
 }
