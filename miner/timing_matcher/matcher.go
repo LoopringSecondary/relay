@@ -24,14 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
-	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
-	"strings"
 )
 
 /**
@@ -110,7 +108,8 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
 				if submitInfo.ID > 0 {
-					cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
+					RemoveMinedRing(ringhash)
+					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
 				log.Errorf("err:%s", err1.Error())
