@@ -63,17 +63,21 @@ func NewMutilClient(urls []string) *MutilClient {
 	mc.clients = make(map[string]*RpcClient)
 	mc.downedClients = make(map[string]*RpcClient)
 	for _, url := range urls {
-		rpcClient := &RpcClient{}
-		rpcClient.url = url
-		if client, err := rpc.DialHTTP(url); nil != err {
-			log.Errorf("rpc.Dail err : %s, url:%s", err.Error(), url)
-			mc.downedClients[url] = rpcClient
-		} else {
-			rpcClient.client = client
-			mc.clients[url] = rpcClient
-		}
+		mc.newRpcClient(url)
 	}
 	return mc
+}
+
+func (mc *MutilClient) newRpcClient(url string) {
+	rpcClient := &RpcClient{}
+	rpcClient.url = url
+	if client, err := rpc.DialHTTP(url); nil != err {
+		log.Errorf("rpc.Dail err : %s, url:%s", err.Error(), url)
+		mc.downedClients[url] = rpcClient
+	} else {
+		rpcClient.client = client
+		mc.clients[url] = rpcClient
+	}
 }
 
 func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
@@ -102,6 +106,13 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 	}
 
 	urls, _ := mc.useageClient(blockNumber.BigInt().String())
+
+	for _,url := range urls {
+		if _,exists := mc.clients[url]; !exists {
+			mc.newRpcClient(url)
+		}
+	}
+
 	if len(urls) <= 0 {
 		for url, client := range mc.clients {
 			if _, exists := mc.downedClients[url]; !exists && (nil == client.blockNumber || client.blockNumber.Cmp(blockNumber.BigInt()) >= 0) {
