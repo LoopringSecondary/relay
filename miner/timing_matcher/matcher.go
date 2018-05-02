@@ -47,6 +47,7 @@ type TimingMatcher struct {
 	duration        *big.Int
 	lagBlocks       int64
 	roundOrderCount int
+	reservedTime    int64
 
 	maxCacheRoundsLength int
 	delayedNumber        int64
@@ -67,6 +68,7 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	matcher.isOrdersReady = false
 	matcher.db = rds
 	matcher.lagBlocks = matcherOptions.LagBlocks
+	matcher.reservedTime = matcherOptions.SubmitRingTime
 
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(matcherOptions.Duration)

@@ -107,8 +107,8 @@ func (mc *MutilClient) bestClient(routeParam string) *RpcClient {
 
 	urls, _ := mc.useageClient(blockNumber.BigInt().String())
 
-	for _,url := range urls {
-		if _,exists := mc.clients[url]; !exists {
+	for _, url := range urls {
+		if _, exists := mc.clients[url]; !exists {
 			mc.newRpcClient(url)
 		}
 	}
