@@ -216,7 +216,7 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 	}
 
 	// save fill event
-	_, err := om.rds.FindFillEvent(event.TxHash.Hex(), event.TxLogIndex)
+	_, err := om.rds.FindFillEvent(event.TxHash.Hex(), event.FillIndex.Int64())
 	if err == nil {
 		log.Debugf("order manager,handle order filled event,fill already exist ringIndex:%s orderHash:%s", event.RingIndex.String(), event.OrderHash.Hex())
 		return nil
