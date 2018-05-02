@@ -79,52 +79,24 @@ func (tx *TransactionView) ConvertUp(dst *txtyp.TransactionView) error {
 
 //////////// write related
 
-// 根据owner&hash查询pending tx
-func (s *RdsServiceImpl) FindPendingTxViewByOwnerAndHash(symbol, owner, hash string) ([]TransactionView, error) {
-	var txs []TransactionView
-
-	err := s.db.Where("owner=?", owner).
-		Where("symbol=?", symbol).
-		Where("tx_hash=?", hash).
+// 更新交易发起者相同nonce下tx为failed
+func (s *RdsServiceImpl) SetPendingTxViewFailed(hashlist []string) error {
+	err := s.db.Model(&TransactionView{}).
+		Where("tx_hash in (?)", hashlist).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
-		Find(&txs).Error
+		Update("status", types.TX_STATUS_FAILED).Error
 
-	return txs, err
+	return err
 }
 
-// 根据owner&nonce删除pending tx
-func (s *RdsServiceImpl) DelPendingTxViewByOwnerAndNonce(hash, owner string, nonce int64) error {
-	s.db.Model(&TransactionView{}).
-		Where("owner=?", owner).
-		Where("tx_hash<>?", hash).
-		Where("nonce=?", nonce).
-		Where("status=?", types.TX_STATUS_PENDING).
-		Where("fork=?", false).
-		Update("status=?", types.TX_STATUS_FAILED)
-
-	err := s.db.Where("owner=?", owner).
-		Where("tx_hash=?", hash).
-		Where("nonce=?", nonce).
+// 根据hash删除pending tx
+func (s *RdsServiceImpl) DelPendingTxView(hash string) error {
+	err := s.db.Where("tx_hash=?", hash).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Delete(&TransactionView{}).Error
 	return err
-}
-
-// 根据owner&hash&logIndex查询mined tx
-func (s *RdsServiceImpl) FindMinedTxViewByOwnerAndEvent(symbol, owner, hash string, logIndex int64) ([]TransactionView, error) {
-	var txs []TransactionView
-
-	err := s.db.Where("owner=?", owner).
-		Where("symbol=?", symbol).
-		Where("tx_hash=?", hash).
-		Where("tx_log_index=?", logIndex).
-		Where("status<>?", types.TX_STATUS_PENDING).
-		Where("fork=?", false).
-		Find(&txs).Error
-
-	return txs, err
 }
 
 //////////// read related

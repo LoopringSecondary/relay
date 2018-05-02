@@ -161,7 +161,7 @@ func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp
 
 		res.Content = txtyp.SetDefaultContent()
 
-		entity, err := impl.db.FindTxEntityByHashAndLogIndex(view.TxHash.Hex(), view.LogIndex)
+		entity, err := impl.db.FindTxEntity(view.TxHash.Hex(), view.LogIndex)
 		if err != nil {
 			continue
 		}

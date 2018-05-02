@@ -113,15 +113,16 @@ type RdsService interface {
 	GetTransactionById(id int) (Transaction, error)
 
 	// transactionEntity
-	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
-	FindPendingTxEntityByHash(hash string) ([]TransactionEntity, error)
-	DelPendingTxEntityByHash(hash string) error
+	FindPendingTxEntity(hash string) (TransactionEntity, error)
+	FindTxEntity(txhash string, logIndex int64) (TransactionEntity, error)
+	GetPendingTxEntity(from string, nonce int64) ([]TransactionEntity, error)
+	SetPendingTxEntityFailed(hashlist []string) error
+	DelPendingTxEntity(hash string) error
 	RollBackTxEntity(from, to int64) error
 
 	// transactionView
-	FindPendingTxViewByOwnerAndHash(symbol, owner, hash string) ([]TransactionView, error)
-	DelPendingTxViewByOwnerAndNonce(hash, owner string, nonce int64) error
-	FindMinedTxViewByOwnerAndEvent(symbol, owner, hash string, logIndex int64) ([]TransactionView, error)
+	DelPendingTxView(hash string) error
+	SetPendingTxViewFailed(hashlist []string) error
 	GetTxViewByOwnerAndHashs(owner string, hashs []string) ([]TransactionView, error)
 	GetPendingTxViewByOwner(owner string) ([]TransactionView, error)
 	GetTxViewCountByOwner(owner string, symbol string, status types.TxStatus, typ txtyp.TxType) (int, error)
