@@ -197,14 +197,6 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 	return list
 }
 
-func RelatedOwners(viewList []TransactionView) []common.Address {
-	var list []common.Address
-	for _, v := range viewList {
-		list = append(list, v.Owner)
-	}
-	return list
-}
-
 func (tx *TransactionView) fullFilled(src types.TxInfo) {
 	tx.TxHash = src.TxHash
 	tx.BlockNumber = src.BlockNumber.Int64()

@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/market"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type TransactionManager struct {
@@ -226,81 +227,123 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
-	// save entity
 	if tx.Status == types.TX_STATUS_PENDING {
-		tm.savePendingEntity(tx, list)
-	} else {
-		tm.saveMinedEntity(tx, list)
+		return tm.savePendingTx(tx, list)
+	}
+	return tm.saveMinedTx(tx, list)
+}
+
+func (tm *TransactionManager) savePendingTx(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
+	// get users unlocked map
+	ump := tm.getUnlockedMap(list)
+
+	// save entity if either owner unlocked
+	if !ump.invalidEntity() {
+		return nil
+	}
+
+	// find pending tx entity, return if tx already exist
+	// todo 验证查不到时是否返回err
+	if _, err := tm.db.FindPendingTxEntity(tx.Hash.Hex()); err == nil {
+		log.Debugf("transaction manager,tx pending entity:%s already exist", tx.Hash.Hex())
+		return nil
+	}
+
+	// save entity
+	if err := tm.addEntity(tx); err != nil {
+		log.Errorf("transaction manager,add tx pending entity:%s error:%s", tx.Hash.Hex(), err.Error())
+		return err
 	}
 
 	// save views
-	for _, v := range list {
-		if tx.Status == types.TX_STATUS_PENDING {
-			tm.savePendingView(&v)
-		} else {
-			tm.saveMinedView(&v)
+	for _, view := range list {
+		if !ump.invalidView(view.Owner) {
+			continue
+		}
+		if err := tm.addView(&view); err != nil {
+			log.Errorf("transaction manager,add tx pending view:%s owner:%s error:%s", tx.Hash.Hex(), err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (tm *TransactionManager) savePendingEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
-	if !tm.validateEntity(viewList) {
-		return nil
-	}
-	if list, _ := tm.db.FindPendingTxEntityByHash(tx.Hash.Hex()); len(list) > 0 {
-		log.Debugf("transaction manager,tx pending entity:%s already exist", tx.Hash.Hex())
+func (tm *TransactionManager) saveMinedTx(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
+	// get users unlocked map
+	ump := tm.getUnlockedMap(list)
+	if !ump.invalidEntity() {
 		return nil
 	}
 
-	log.Debugf("transaction manager,tx pending entity:%s", tx.Hash.Hex())
-	return tm.addEntity(tx)
-}
+	// process pending txs
+	tm.processPendingTxWhileMined(tx)
 
-func (tm *TransactionManager) saveMinedEntity(tx *txtyp.TransactionEntity, viewList []txtyp.TransactionView) error {
-	if !tm.validateEntity(viewList) {
-		return nil
-	}
-	if err := tm.db.DelPendingTxEntityByHash(tx.Hash.Hex()); err != nil {
-		log.Errorf(err.Error())
-	}
-	if _, err := tm.db.FindTxEntityByHashAndLogIndex(tx.Hash.Hex(), tx.LogIndex); err == nil {
+	// save entity
+	if _, err := tm.db.FindTxEntity(tx.Hash.Hex(), tx.LogIndex); err == nil {
 		log.Debugf("transaction manager,tx mined entity:%s logIndex:%d already exist", tx.Hash.Hex(), tx.LogIndex)
 		return nil
 	}
+	if err := tm.addEntity(tx); err != nil {
+		log.Errorf("transaction manager,tx mined entity:%s error:%s", tx.Hash.Hex(), err.Error())
+		return err
+	}
 
-	log.Debugf("transaction manager,tx mined entity:%s status:%s", tx.Hash.Hex(), txtyp.StatusStr(tx.Status))
-	return tm.addEntity(tx)
+	// save views
+	for _, view := range list {
+		if !ump.invalidView(view.Owner) {
+			continue
+		}
+		log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", view.TxHash.Hex(), txtyp.TypeStr(view.Type), view.Owner.Hex(), view.LogIndex, txtyp.StatusStr(view.Status))
+		return tm.addView(&view)
+	}
+
+	return nil
 }
 
-func (tm *TransactionManager) savePendingView(tx *txtyp.TransactionView) error {
-	if !tm.validateView(tx) {
-		return nil
-	}
-	if list, _ := tm.db.FindPendingTxViewByOwnerAndHash(tx.Symbol, tx.Owner.Hex(), tx.TxHash.Hex()); len(list) > 0 {
-		log.Debugf("transaction manager,tx pending view:%s symbol:%s owner:%s already exist", tx.TxHash.Hex(), tx.Symbol, tx.Owner.Hex())
-		return nil
-	}
-
-	log.Debugf("transaction manager,tx pending view:%s type:%s owner:%s", tx.TxHash.Hex(), txtyp.TypeStr(tx.Type), tx.Owner.Hex())
-	return tm.addView(tx)
-}
-
-func (tm *TransactionManager) saveMinedView(tx *txtyp.TransactionView) error {
-	if !tm.validateView(tx) {
-		return nil
-	}
-	if err := tm.db.DelPendingTxViewByOwnerAndNonce(tx.TxHash.Hex(), tx.Owner.Hex(), tx.Nonce.Int64()); err != nil {
-		log.Errorf(err.Error())
-	}
-	if list, _ := tm.db.FindMinedTxViewByOwnerAndEvent(tx.Symbol, tx.Owner.Hex(), tx.TxHash.Hex(), tx.LogIndex); len(list) > 0 {
-		log.Debugf("transaction manager,tx mined view:%s symbol:%s owner:%s logIndex:%d already exist", tx.TxHash.Hex(), tx.Symbol, tx.Owner.Hex(), tx.LogIndex)
-		return nil
+func (tm *TransactionManager) processPendingTxWhileMined(tx *txtyp.TransactionEntity) {
+	// find the same nonce pending txs and delete
+	// todo(fuk): redo it as cron task
+	txs, _ := tm.db.GetPendingTxEntity(tx.From.Hex(), tx.Nonce.Int64())
+	if len(txs) == 0 {
+		return
 	}
 
-	log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", tx.TxHash.Hex(), txtyp.TypeStr(tx.Type), tx.Owner.Hex(), tx.LogIndex, txtyp.StatusStr(tx.Status))
-	return tm.addView(tx)
+	var (
+		preHashList          []string
+		currentHashIsPending bool = false
+	)
+
+	for _, v := range txs {
+		if common.HexToHash(v.TxHash) != tx.Hash {
+			preHashList = append(preHashList, v.TxHash)
+		} else {
+			currentHashIsPending = true
+		}
+	}
+
+	// 将相同nonce的其他hash更新为failed
+	if len(preHashList) > 0 {
+		if err := tm.db.SetPendingTxEntityFailed(preHashList); err != nil {
+			log.Errorf("transaction manager,set pending tx entities:%s err:", err.Error())
+		}
+		if err := tm.db.SetPendingTxViewFailed(preHashList); err != nil {
+			log.Errorf("transaction manager,set pending tx view:%s err:", err.Error())
+		}
+	}
+
+	// 删除当前pending tx
+	if currentHashIsPending {
+		// delete pending tx entity
+		// todo 通过delete是否成功然后delete pending txview
+		if err := tm.db.DelPendingTxEntity(tx.Hash.Hex()); err != nil {
+			log.Errorf("transaction manager,delete pending tx entity:%s err:", tx.Hash.Hex(), err.Error())
+		}
+
+		// delete pending tx views
+		if err := tm.db.DelPendingTxView(tx.Hash.Hex()); err != nil {
+			log.Errorf("transaction manager,delete pending tx view:%s err:", tx.Hash.Hex(), err.Error())
+		}
+	}
 }
 
 func (tm *TransactionManager) addEntity(tx *txtyp.TransactionEntity) error {
@@ -317,26 +360,40 @@ func (tm *TransactionManager) addView(tx *txtyp.TransactionView) error {
 		return err
 	}
 
-	// todo(fuk): emit to frontend and use new tx type
 	eventemitter.Emit(eventemitter.TransactionEvent, &tx)
 	return nil
 }
 
-func (tm *TransactionManager) validateEntity(viewList []txtyp.TransactionView) bool {
-	owners := txtyp.RelatedOwners(viewList)
+type unlockedMap map[common.Address]bool
 
-	unlocked := false
-	for _, v := range owners {
-		if ok, _ := tm.accountmanager.HasUnlocked(v.Hex()); ok {
-			unlocked = true
-			break
+func (tm *TransactionManager) getUnlockedMap(list []txtyp.TransactionView) unlockedMap {
+	ret := make(map[common.Address]bool)
+
+	for _, v := range list {
+		if ok, _ := tm.accountmanager.HasUnlocked(v.Owner.Hex()); ok {
+			ret[v.Owner] = true
+		} else {
+			ret[v.Owner] = false
 		}
 	}
 
-	return unlocked
+	return ret
 }
 
-func (tm *TransactionManager) validateView(view *txtyp.TransactionView) bool {
-	unlocked, _ := tm.accountmanager.HasUnlocked(view.Owner.Hex())
-	return unlocked
+func (m unlockedMap) invalidEntity() bool {
+	ret := false
+	for _, unlocked := range m {
+		if unlocked {
+			ret = true
+			break
+		}
+	}
+	return ret
+}
+
+func (m unlockedMap) invalidView(owner common.Address) bool {
+	if unlocked, ok := m[owner]; ok && unlocked {
+		return true
+	}
+	return false
 }

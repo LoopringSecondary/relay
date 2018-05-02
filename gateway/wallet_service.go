@@ -915,11 +915,11 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 		minAmountS := amountS
 		var err error
 
-		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
+		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
+		if err != nil {
 			log.Debug(err.Error())
 			continue
 		}
-
 
 		sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
 		buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
