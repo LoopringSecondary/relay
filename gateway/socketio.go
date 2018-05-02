@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/Loopring/relay/market/util"
 )
 
 type BusinessType int
@@ -454,7 +455,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		delegate := mktAndDelegate[0]
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
-		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress: delegate, Market: mkt})
+		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress: delegate, Market: mkt, Side: util.SideSell})
 		if err == nil {
 			//log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
 			resp.Data = fills
