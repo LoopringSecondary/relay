@@ -304,6 +304,7 @@ func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte,
 	if err = accessor.RetryCall(routeParam, 2, &gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
+	log.Debugf("EstimateGas finished")
 	gasPrice = gasPriceBig.BigInt()
 	gas = gasBig.BigInt()
 	return
@@ -590,6 +591,7 @@ func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *bi
 	}
 	nonce := new(big.Int)
 	nonce.Set(accessor.AddressNonce[address])
+	log.Debugf("addressCurrentNonce nonce:%s", nonce.String())
 	return nonce
 }
 
