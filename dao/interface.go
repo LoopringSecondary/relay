@@ -65,7 +65,7 @@ type RdsService interface {
 	SaveBlock(latest *Block) error
 
 	// fill event table
-	FindFillEvent(txhash string, logIndex int64) (*FillEvent, error)
+	FindFillEvent(txhash string, FillIndex int64) (*FillEvent, error)
 	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
 	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
