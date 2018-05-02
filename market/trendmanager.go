@@ -1050,6 +1050,11 @@ func (t *TrendManager) HandleOrderFilled(input eventemitter.EventData) (err erro
 			newFillModel.Side = util.GetSide(newFillModel.TokenS, newFillModel.TokenB)
 		}
 
+		if newFillModel.Side == util.SideBuy {
+			log.Debug("only calculate sell fill for ticker when ring length is 2")
+			return
+		}
+
 		market, wrapErr := util.WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)
 
 		if wrapErr != nil {
