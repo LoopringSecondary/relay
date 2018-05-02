@@ -692,7 +692,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	}
 	ringmined.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s ringMined event  delegate:%s, ringhash:%s, ringIndex:%s, tx:%s",
+	log.Debugf("extractor,tx:%s ringMined event delegate:%s, ringhash:%s, ringIndex:%s, tx:%s",
 		contractData.TxHash.Hex(),
 		ringmined.DelegateAddress.Hex(),
 		ringmined.Ringhash.Hex(),
@@ -761,7 +761,7 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 			fill.BuyFrom = fillList[i-1].Owner
 		}
 
-		log.Debugf("extractor,tx:%s orderFilled event cann't match order %s", contractData.TxHash.Hex(), ord.OrderHash)
+		log.Debugf("extractor,tx:%s orderFilled event match fillIndex:%d and order:%s", contractData.TxHash.Hex(), fill.FillIndex.Int64(), ord.OrderHash)
 
 		eventemitter.Emit(eventemitter.OrderFilled, fill)
 	}
