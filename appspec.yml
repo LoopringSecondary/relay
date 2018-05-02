@@ -1,0 +1,31 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /opt/loopring/relay/src
+  
+permissions:
+  - object: /opt/loopring/relay
+    pattern: "**"
+    group: ubuntu
+    owner: ubuntu
+
+hooks:
+  BeforeInstall:
+    - location: bin/install-svc.sh
+      timeout: 300
+    - location: bin/prepare.sh
+      timeout: 300
+      runas: root
+  AfterInstall:
+    - location: bin/build.sh
+      timeout: 30
+      runas: ubuntu
+  ApplicationStart:
+    - location: bin/start.sh
+      timeout: 60
+      runas: ubuntu
+  ValidateService:
+    - location: bin/check.sh
+      timeout: 120
+      runas: ubuntu

@@ -16,13 +16,21 @@
 
 */
 
-package dao
+package dao_test
 
-type EventLog struct {
-	ID          int    `gorm:"column:id;primary_key;"`
-	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
-	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	BlockNumber int64  `gorm:"column:block_number"`
-	CreateTime  int64  `gorm:"column:create_time"`
-	Data        []byte `gorm:"column:data;type:text"`
+import (
+	"github.com/Loopring/relay/test"
+	"testing"
+)
+
+func TestRdsServiceImpl_FindPendingTxEntity(t *testing.T) {
+	db := test.GenerateDaoService()
+
+	txhash := "0x8dd14dc43dbe47247042c57065a1f3a6de7b65a6247f52c28c4350a219f654c8"
+	if entity, err := db.FindPendingTxEntity(txhash); err != nil {
+		t.Fatalf("no record is error:%s", err.Error())
+	} else {
+		t.Logf("txhash:%s, from:%s, to:%s, nonce:%d", entity.TxHash, entity.From, entity.To, entity.Nonce)
+	}
+
 }

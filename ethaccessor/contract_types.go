@@ -34,50 +34,72 @@ func NewAbi(abiStr string) (*abi.ABI, error) {
 }
 
 type TransferEvent struct {
-	From  common.Address `fieldName:"from"`
-	To    common.Address `fieldName:"to"`
-	Value *big.Int       `fieldName:"value"`
+	Sender   common.Address `fieldName:"from" fieldId:"0"`
+	Receiver common.Address `fieldName:"to" fieldId:"1"`
+	Value    *big.Int       `fieldName:"value" fieldId:"2"`
 }
 
 func (e *TransferEvent) ConvertDown() *types.TransferEvent {
 	evt := &types.TransferEvent{}
-	evt.From = e.From
-	evt.To = e.To
-	evt.Value = e.Value
+	evt.Sender = e.Sender
+	evt.Receiver = e.Receiver
+	evt.Amount = e.Value
 
 	return evt
 }
 
 type ApprovalEvent struct {
-	Owner   common.Address `fieldName:"owner"`
-	Spender common.Address `fieldName:"spender"`
-	Value   *big.Int       `fieldName:"value"`
+	Owner   common.Address `fieldName:"owner" fieldId:"0"`
+	Spender common.Address `fieldName:"spender" fieldId:"1"`
+	Value   *big.Int       `fieldName:"value" fieldId:"2"`
 }
 
 func (e *ApprovalEvent) ConvertDown() *types.ApprovalEvent {
 	evt := &types.ApprovalEvent{}
 	evt.Owner = e.Owner
 	evt.Spender = e.Spender
-	evt.Value = e.Value
+	evt.Amount = e.Value
 
 	return evt
 }
 
+/// @dev Event to emit if a ring is successfully mined.
+/// _amountsList is an array of:
+/// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB].
+//event RingMined(
+//uint            _ringIndex,
+//bytes32 indexed _ringHash,
+//address         _miner,
+//address         _feeRecipient,
+//bytes32[]       _orderInfoList
+//);
+// orderInfoList = new bytes32[](ringSize * 7);
+// orderInfoList[q++] = bytes32(state.orderHash);
+//orderInfoList[q++] = bytes32(state.owner);
+//orderInfoList[q++] = bytes32(state.tokenS);
+//orderInfoList[q++] = bytes32(state.fillAmountS);
+//orderInfoList[q++] = bytes32(state.lrcReward);
+//orderInfoList[q++] = bytes32(
+//state.lrcFeeState > 0 ? int(state.lrcFeeState) : -int(state.lrcReward)
+//);
+//orderInfoList[q++] = bytes32(
+//state.splitS > 0 ? int(state.splitS) : -int(state.splitB)
+//);
+
 type RingMinedEvent struct {
-	RingIndex          *big.Int       `fieldName:"_ringIndex"`
-	RingHash           common.Hash    `fieldName:"_ringhash"`
-	Miner              common.Address `fieldName:"_miner"`
-	FeeRecipient       common.Address `fieldName:"_feeRecipient"`
-	IsRingHashReserved bool           `fieldName:"_isRinghashReserved"`
-	OrderHashList      [][32]uint8    `fieldName:"_orderHashList"`
-	AmountsList        [][6]*big.Int  `fieldName:"_amountsList"`
+	RingIndex     *big.Int       `fieldName:"_ringIndex" fieldId:"0"`
+	RingHash      common.Hash    `fieldName:"_ringhash" fieldId:"1"`
+	Miner         common.Address `fieldName:"_miner" fieldId:"2"`
+	FeeRecipient  common.Address `fieldName:"_feeRecipient" fieldId:"3"`
+	OrderInfoList [][32]uint8    `fieldName:"_orderInfoList" fieldId:"4"`
 }
 
 func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFilledEvent, error) {
-	length := len(e.OrderHashList)
+	length := len(e.OrderInfoList)
+	idx := length / 7
 
-	if length != len(e.AmountsList) || length < 2 {
-		return nil, nil, errors.New("ringMined event unpack error:orderHashList length invalid")
+	if length%7 != 0 || idx < 2 {
+		return nil, nil, errors.New("ringMined event unpack error:orderInfoList length invalid")
 	}
 
 	evt := &types.RingMinedEvent{}
@@ -85,55 +107,109 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 	evt.Ringhash = e.RingHash
 	evt.Miner = e.Miner
 	evt.FeeRecipient = e.FeeRecipient
-	evt.IsRinghashReserved = e.IsRingHashReserved
 
 	var list []*types.OrderFilledEvent
-	lrcFee := big.NewInt(0)
-	for i := 0; i < length; i++ {
+	totalLrcFee := big.NewInt(0)
+
+	firstFill := 0
+	lastFill := idx - 1
+	for i := 0; i < idx; i++ {
 		var (
 			fill                        types.OrderFilledEvent
 			preOrderHash, nextOrderHash common.Hash
+			start                       = i * 7
+			tokenB                      common.Address
+			amountB                     *big.Int
 		)
 
-		if i == 0 {
-			preOrderHash = common.Hash(e.OrderHashList[length-1])
-			nextOrderHash = common.Hash(e.OrderHashList[1])
-		} else if i == length-1 {
-			preOrderHash = common.Hash(e.OrderHashList[length-2])
-			nextOrderHash = common.Hash(e.OrderHashList[0])
+		if i == firstFill {
+			preOrderHash = safeHash(e.OrderInfoList[lastFill*7])
+			nextOrderHash = safeHash(e.OrderInfoList[(i+1)*7])
+			tokenB = safeAddress(e.OrderInfoList[lastFill*7+2])
+			amountB = safeBig(e.OrderInfoList[lastFill*7+3])
+		} else if i == lastFill {
+			preOrderHash = safeHash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = safeHash(e.OrderInfoList[firstFill*7])
+			tokenB = safeAddress(e.OrderInfoList[firstFill*7+2])
+			amountB = safeBig(e.OrderInfoList[firstFill*7+3])
 		} else {
-			preOrderHash = common.Hash(e.OrderHashList[i-1])
-			nextOrderHash = common.Hash(e.OrderHashList[i+1])
+			preOrderHash = safeHash(e.OrderInfoList[(i-1)*7])
+			nextOrderHash = safeHash(e.OrderInfoList[(i+1)*7])
+			tokenB = safeAddress(e.OrderInfoList[(i-1)*7+2])
+			amountB = safeBig(e.OrderInfoList[(i-1)*7+3])
 		}
 
 		fill.Ringhash = e.RingHash
+		fill.RingIndex = e.RingIndex
+		fill.FillIndex = big.NewInt(int64(idx))
+
+		fill.OrderHash = safeHash(e.OrderInfoList[start])
 		fill.PreOrderHash = preOrderHash
-		fill.OrderHash = common.Hash(e.OrderHashList[i])
 		fill.NextOrderHash = nextOrderHash
 
-		// [_amountS, _amountB, _lrcReward, _lrcFee, splitS, splitB]. amountS&amountB为单次成交量
-		fill.RingIndex = e.RingIndex
-		fill.AmountS = e.AmountsList[i][0]
-		fill.AmountB = e.AmountsList[i][1]
-		fill.LrcReward = e.AmountsList[i][2]
-		fill.LrcFee = e.AmountsList[i][3]
-		fill.SplitS = e.AmountsList[i][4]
-		fill.SplitB = e.AmountsList[i][5]
-		fill.FillIndex = big.NewInt(int64(i))
+		fill.Owner = safeAddress(e.OrderInfoList[start+1])
+		fill.TokenS = safeAddress(e.OrderInfoList[start+2])
+		fill.TokenB = tokenB
+		fill.AmountS = safeBig(e.OrderInfoList[start+3])
+		fill.AmountB = amountB
+		fill.LrcReward = safeBig(e.OrderInfoList[start+4])
 
-		lrcFee = lrcFee.Add(lrcFee, fill.LrcFee)
+		// lrcFee or lrcReward, if >= 0 lrcFee, else lrcReward
+		if lrcFeeOrReward := safeBig(e.OrderInfoList[start+5]); lrcFeeOrReward.Cmp(big.NewInt(0)) > 0 {
+			fill.LrcFee = lrcFeeOrReward
+		} else {
+			fill.LrcFee = big.NewInt(0)
+		}
+
+		// splitS or splitB: if > 0 splitS, else splitB
+		if split := safeBig(e.OrderInfoList[start+6]); split.Cmp(big.NewInt(0)) > 0 {
+			fill.SplitS = split
+			fill.SplitB = big.NewInt(0)
+		} else {
+			fill.SplitS = big.NewInt(0)
+			fill.SplitB = new(big.Int).Mul(split, big.NewInt(-1))
+		}
+
+		totalLrcFee = totalLrcFee.Add(totalLrcFee, fill.LrcFee)
 		list = append(list, &fill)
 	}
 
-	evt.TotalLrcFee = lrcFee
-	evt.TradeAmount = length
+	evt.TotalLrcFee = totalLrcFee
+	evt.TradeAmount = idx
 
 	return evt, list, nil
 }
 
+// sateHash contract bytes32 to common.hash
+func safeHash(bytes [32]uint8) common.Hash {
+	return common.Hash(bytes)
+}
+
+// safeAbsBig return abs value and isNeg
+func safeBig(bytes [32]uint8) *big.Int {
+	num := new(big.Int).SetBytes(bytes[:])
+	if bytes[0] > uint8(128) {
+		num.Xor(types.MaxUint256, num)
+		num.Not(num)
+	}
+	return num
+}
+
+//// safeBig contract bytes32 to *big.int
+//func safeBig(bytes [32]uint8) *big.Int {
+//	var newbytes []byte = bytes[0:]
+//	return new(big.Int).SetBytes(newbytes)
+//}
+
+// safeAddress contract bytes32 to common.address
+func safeAddress(bytes [32]uint8) common.Address {
+	var newbytes []byte = bytes[0:]
+	return common.BytesToAddress(newbytes)
+}
+
 type OrderCancelledEvent struct {
-	OrderHash       common.Hash `fieldName:"_orderHash"`
-	AmountCancelled *big.Int    `fieldName:"_amountCancelled"` // amountCancelled为多次取消累加总量，根据orderhash以及amountCancelled可以确定其唯一性
+	OrderHash       common.Hash `fieldName:"_orderHash" fieldId:"0"`
+	AmountCancelled *big.Int    `fieldName:"_amountCancelled" fieldId:"1"` // amountCancelled为多次取消累加总量，根据orderhash以及amountCancelled可以确定其唯一性
 }
 
 func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
@@ -144,12 +220,12 @@ func (e *OrderCancelledEvent) ConvertDown() *types.OrderCancelledEvent {
 	return evt
 }
 
-type CutoffTimestampChangedEvent struct {
-	Owner  common.Address `fieldName:"_address"`
-	Cutoff *big.Int       `fieldName:"_cutoff"`
+type CutoffEvent struct {
+	Owner  common.Address `fieldName:"_address" fieldId:"0"`
+	Cutoff *big.Int       `fieldName:"_cutoff" fieldId:"1"`
 }
 
-func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
+func (e *CutoffEvent) ConvertDown() *types.CutoffEvent {
 	evt := &types.CutoffEvent{}
 	evt.Owner = e.Owner
 	evt.Cutoff = e.Cutoff
@@ -157,9 +233,26 @@ func (e *CutoffTimestampChangedEvent) ConvertDown() *types.CutoffEvent {
 	return evt
 }
 
+type CutoffPairEvent struct {
+	Owner  common.Address `fieldName:"_address" fieldId:"0"`
+	Token1 common.Address `fieldName:"_token1" fieldId:"1"`
+	Token2 common.Address `fieldName:"_token2" fieldId:"2"`
+	Cutoff *big.Int       `fieldName:"_cutoff" fieldId:"3"`
+}
+
+func (e *CutoffPairEvent) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.Owner = e.Owner
+	evt.Token1 = e.Token1
+	evt.Token2 = e.Token2
+	evt.Cutoff = e.Cutoff
+
+	return evt
+}
+
 type TokenRegisteredEvent struct {
-	Token  common.Address `fieldName:"addr"`
-	Symbol string         `fieldName:"symbol"`
+	Token  common.Address `fieldName:"addr" fieldId:"0"`
+	Symbol string         `fieldName:"symbol" fieldId:"1"`
 }
 
 func (e *TokenRegisteredEvent) ConvertDown() *types.TokenRegisterEvent {
@@ -171,8 +264,8 @@ func (e *TokenRegisteredEvent) ConvertDown() *types.TokenRegisterEvent {
 }
 
 type TokenUnRegisteredEvent struct {
-	Token  common.Address `fieldName:"addr"`
-	Symbol string         `fieldName:"symbol"`
+	Token  common.Address `fieldName:"addr" fieldId:"0"`
+	Symbol string         `fieldName:"symbol" fieldId:"1"`
 }
 
 func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
@@ -183,23 +276,9 @@ func (e *TokenUnRegisteredEvent) ConvertDown() *types.TokenUnRegisterEvent {
 	return evt
 }
 
-type RingHashSubmittedEvent struct {
-	RingHash  common.Hash    `fieldName:"_ringhash"`
-	RingMiner common.Address `fieldName:"_ringminer"`
-}
-
-func (e *RingHashSubmittedEvent) ConvertDown() *types.RinghashSubmittedEvent {
-	evt := &types.RinghashSubmittedEvent{}
-
-	evt.RingHash = e.RingHash
-	evt.RingMiner = e.RingMiner
-
-	return evt
-}
-
 type AddressAuthorizedEvent struct {
-	ContractAddress common.Address `fieldName:"addr"`
-	Number          int            `fieldName:"number"`
+	ContractAddress common.Address `fieldName:"addr" fieldId:"0"`
+	Number          int            `fieldName:"number" fieldId:"1"`
 }
 
 func (e *AddressAuthorizedEvent) ConvertDown() *types.AddressAuthorizedEvent {
@@ -211,8 +290,8 @@ func (e *AddressAuthorizedEvent) ConvertDown() *types.AddressAuthorizedEvent {
 }
 
 type AddressDeAuthorizedEvent struct {
-	ContractAddress common.Address `fieldName:"addr"`
-	Number          int            `fieldName:"number"`
+	ContractAddress common.Address `fieldName:"addr" fieldId:"0"`
+	Number          int            `fieldName:"number" fieldId:"1"`
 }
 
 func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent {
@@ -223,16 +302,42 @@ func (e *AddressDeAuthorizedEvent) ConvertDown() *types.AddressDeAuthorizedEvent
 	return evt
 }
 
+// event  Deposit(address indexed dst, uint wad);
+type WethDepositEvent struct {
+	DstAddress common.Address `fieldName:"dst" fieldId:"0"` // 充值到哪个地址
+	Value      *big.Int       `fieldName:"wad" fieldId:"1"`
+}
+
+func (e *WethDepositEvent) ConvertDown() *types.WethDepositEvent {
+	evt := &types.WethDepositEvent{}
+	evt.Amount = e.Value
+
+	return evt
+}
+
+// event  Withdrawal(address indexed src, uint wad);
+type WethWithdrawalEvent struct {
+	SrcAddress common.Address `fieldName:"src" fieldId:"0"`
+	Value      *big.Int       `fieldName:"wad" fieldId:"1"`
+}
+
+func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
+	evt := &types.WethWithdrawalEvent{}
+	evt.Amount = e.Value
+
+	return evt
+}
+
 type SubmitRingMethod struct {
-	AddressList        [][2]common.Address `fieldName:"addressList"`   // tokenS,tokenB
-	UintArgsList       [][7]*big.Int       `fieldName:"uintArgsList"`  // amountS, amountB, timestamp, ttl, salt, lrcFee, rateAmountS.
-	Uint8ArgsList      [][2]uint8          `fieldName:"uint8ArgsList"` // marginSplitPercentageList,feeSelectionList
-	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList"`
-	VList              []uint8             `fieldName:"vList"`
-	RList              [][32]uint8         `fieldName:"rList"`
-	SList              [][32]uint8         `fieldName:"sList"`
-	RingMiner          common.Address      `fieldName:"ringminer"`
-	FeeRecipient       common.Address      `fieldName:"feeRecipient"`
+	AddressList        [][4]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
+	UintArgsList       [][6]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS.
+	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
+	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
+	VList              []uint8             `fieldName:"vList" fieldId:"4"`
+	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
+	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
+	Miner              common.Address      `fieldName:"miner" fieldId:"7"`
+	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
 	Protocol           common.Address
 }
 
@@ -240,9 +345,9 @@ type SubmitRingMethod struct {
 func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 	var list []*types.Order
 	length := len(m.AddressList)
+	vsrLength := 2*length + 1
 
-	// length of v.s.r list = length  +  1, they contained ring'vsr
-	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || length != len(m.VList)-1 || length != len(m.SList)-1 || length != len(m.RList)-1 || length < 2 {
+	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
 		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
 	}
 
@@ -257,13 +362,15 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		} else {
 			order.TokenB = m.AddressList[i+1][1]
 		}
+		order.WalletAddress = m.AddressList[i][2]
+		order.AuthAddr = m.AddressList[i][3]
 
 		order.AmountS = m.UintArgsList[i][0]
 		order.AmountB = m.UintArgsList[i][1]
-		order.Timestamp = m.UintArgsList[i][2]
-		order.Ttl = m.UintArgsList[i][3]
-		order.Salt = m.UintArgsList[i][4]
-		order.LrcFee = m.UintArgsList[i][5]
+		order.ValidSince = m.UintArgsList[i][2]
+		order.ValidUntil = m.UintArgsList[i][3]
+		order.LrcFee = m.UintArgsList[i][4]
+		// order.rateAmountS
 
 		order.MarginSplitPercentage = m.Uint8ArgsList[i][0]
 
@@ -280,29 +387,31 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 }
 
 type CancelOrderMethod struct {
-	AddressList    [3]common.Address `fieldName:"addresses"`   //  owner, tokenS, tokenB
-	OrderValues    [7]*big.Int       `fieldName:"orderValues"` //  amountS, amountB, timestamp, ttl, salt, lrcFee, cancelAmountS, and cancelAmountB
-	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB"`
-	MarginSplit    uint8             `fieldName:"marginSplitPercentage"`
-	V              uint8             `fieldName:"v"`
-	R              [32]byte          `fieldName:"r"`
-	S              [32]byte          `fieldName:"s"`
+	AddressList    [5]common.Address `fieldName:"addresses" fieldId:"0"`   //  owner, tokenS, tokenB, authAddr
+	OrderValues    [6]*big.Int       `fieldName:"orderValues" fieldId:"1"` //  amountS, amountB, validSince (second), validUntil (second), lrcFee, and cancelAmount
+	BuyNoMoreThanB bool              `fieldName:"buyNoMoreThanAmountB" fieldId:"2"`
+	MarginSplit    uint8             `fieldName:"marginSplitPercentage" fieldId:"3"`
+	V              uint8             `fieldName:"v" fieldId:"4"`
+	R              [32]byte          `fieldName:"r" fieldId:"5"`
+	S              [32]byte          `fieldName:"s" fieldId:"6"`
 }
 
-// should add protocol
-func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
+// todo(fuk): modify internal cancelOrderMethod and implement related functions
+func (m *CancelOrderMethod) ConvertDown() (*types.Order, *big.Int, error) {
 	var order types.Order
 
 	order.Owner = m.AddressList[0]
 	order.TokenS = m.AddressList[1]
 	order.TokenB = m.AddressList[2]
+	order.WalletAddress = m.AddressList[3]
+	order.AuthAddr = m.AddressList[4]
 
 	order.AmountS = m.OrderValues[0]
 	order.AmountB = m.OrderValues[1]
-	order.Timestamp = m.OrderValues[2]
-	order.Ttl = m.OrderValues[3]
-	order.Salt = m.OrderValues[4]
-	order.LrcFee = m.OrderValues[5]
+	order.ValidSince = m.OrderValues[2]
+	order.ValidUntil = m.OrderValues[3]
+	order.LrcFee = m.OrderValues[4]
+	cancelAmount := m.OrderValues[5]
 
 	order.BuyNoMoreThanAmountB = bool(m.BuyNoMoreThanB)
 	order.MarginSplitPercentage = m.MarginSplit
@@ -311,66 +420,69 @@ func (m *CancelOrderMethod) ConvertDown() (*types.Order, error) {
 	order.S = m.S
 	order.R = m.R
 
-	return &order, nil
+	return &order, cancelAmount, nil
 }
 
-type SubmitRingHashMethod struct {
-	RingMiner common.Address `fieldName:"ringminer"`
-	RingHash  common.Hash    `fieldName:"ringhash"`
+type CutoffMethod struct {
+	Cutoff *big.Int `fieldName:"cutoff" fieldId:"0"`
 }
 
-func (m *SubmitRingHashMethod) ConvertDown() (*types.RingHashSubmitMethodEvent, error) {
-	var dst types.RingHashSubmitMethodEvent
+func (method *CutoffMethod) ConvertDown() *types.CutoffEvent {
+	evt := &types.CutoffEvent{}
+	evt.Cutoff = method.Cutoff
 
-	dst.RingMiner = m.RingMiner
-	dst.RingHash = m.RingHash
-
-	return &dst, nil
+	return evt
 }
 
-type BatchSubmitRingHashMethod struct {
-	RingMinerList []common.Address `fieldName:"ringminerList"`
-	RingHashList  [][32]uint8      `fieldName:"ringhashList"`
+type CutoffPairMethod struct {
+	Token1 common.Address `fieldName:"token1" fieldId:"0"`
+	Token2 common.Address `fieldName:"token2" fieldId:"1"`
+	Cutoff *big.Int       `fieldName:"cutoff" fieldId:"2"`
 }
 
-func (m *BatchSubmitRingHashMethod) ConvertDown() (*types.BatchSubmitRingHashMethodEvent, error) {
-	var dst types.BatchSubmitRingHashMethodEvent
+func (method *CutoffPairMethod) ConvertDown() *types.CutoffPairEvent {
+	evt := &types.CutoffPairEvent{}
+	evt.Cutoff = method.Cutoff
+	evt.Token1 = method.Token1
+	evt.Token2 = method.Token2
 
-	length := len(m.RingMinerList)
-	if len(m.RingHashList) != length || length < 1 {
-		return nil, fmt.Errorf("batchSubmitRingHash method unpack error:orders length invalid")
-	}
-
-	dst.RingHashMinerMap = make(map[common.Hash]common.Address)
-	for i := 0; i < length; i++ {
-		ringhash := m.RingHashList[i]
-		ringminer := m.RingMinerList[i]
-		dst.RingHashMinerMap[ringhash] = ringminer
-	}
-
-	return &dst, nil
+	return evt
 }
 
 type WethWithdrawalMethod struct {
-	Value *big.Int `fieldName:"amount"`
+	Value *big.Int `fieldName:"wad" fieldId:"0"`
 }
 
-func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalMethodEvent {
-	evt := &types.WethWithdrawalMethodEvent{}
-	evt.Value = e.Value
+func (e *WethWithdrawalMethod) ConvertDown() *types.WethWithdrawalEvent {
+	evt := &types.WethWithdrawalEvent{}
+	evt.Amount = e.Value
 
 	return evt
 }
 
 type ApproveMethod struct {
-	Spender common.Address `fieldName:"spender"`
-	Value   *big.Int       `fieldName:"value"`
+	Spender common.Address `fieldName:"spender" fieldId:"0"`
+	Value   *big.Int       `fieldName:"value" fieldId:"1"`
 }
 
-func (e *ApproveMethod) ConvertDown() *types.ApproveMethodEvent {
-	evt := &types.ApproveMethodEvent{}
+func (e *ApproveMethod) ConvertDown() *types.ApprovalEvent {
+	evt := &types.ApprovalEvent{}
 	evt.Spender = e.Spender
-	evt.Value = e.Value
+	evt.Amount = e.Value
+
+	return evt
+}
+
+// function transfer(address to, uint256 value) public returns (bool);
+type TransferMethod struct {
+	Receiver common.Address `fieldName:"to" fieldId:"0"`
+	Value    *big.Int       `fieldName:"value" fieldId:"1"`
+}
+
+func (e *TransferMethod) ConvertDown() *types.TransferEvent {
+	evt := &types.TransferEvent{}
+	evt.Receiver = e.Receiver
+	evt.Amount = e.Value
 
 	return evt
 }
@@ -383,7 +495,7 @@ type ProtocolAddress struct {
 
 	TokenRegistryAddress common.Address
 
-	RinghashRegistryAddress common.Address
+	//NameRegistryAddress common.Address
 
 	DelegateAddress common.Address
 }

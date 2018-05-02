@@ -21,16 +21,17 @@ package dao_test
 import (
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/test"
+	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
 
 func TestRdsServiceImpl_Prepare(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	s := test.GenerateDaoService()
 	s.Prepare()
 }
 
 func TestRdsServiceImpl_Add(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	s := test.GenerateDaoService()
 	s.Prepare()
 
 	ord := dao.Order{OrderHash: "111222"}
@@ -39,7 +40,7 @@ func TestRdsServiceImpl_Add(t *testing.T) {
 }
 
 func TestRdsServiceImpl_First(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	s := test.GenerateDaoService()
 	ord := &dao.Order{}
 
 	if err := s.First(ord); err != nil {
@@ -50,7 +51,7 @@ func TestRdsServiceImpl_First(t *testing.T) {
 }
 
 func TestRdsServiceImpl_Update(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	s := test.GenerateDaoService()
 
 	model := &dao.Order{}
 	if err := s.First(model); err != nil {
@@ -58,13 +59,13 @@ func TestRdsServiceImpl_Update(t *testing.T) {
 	}
 
 	model.OrderHash = "hahahahah"
-	if err := s.Update(model); err != nil {
+	if err := s.Save(model); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestRdsServiceImpl_FindAll(t *testing.T) {
-	s := test.LoadConfigAndGenerateDaoService()
+	s := test.GenerateDaoService()
 	var orders []dao.Order
 
 	if err := s.FindAll(&orders); err != nil {
@@ -74,4 +75,9 @@ func TestRdsServiceImpl_FindAll(t *testing.T) {
 	for _, v := range orders {
 		t.Log(v.ID)
 	}
+}
+
+func TestRdsServiceImpl_Hash(t *testing.T) {
+	orderhash := common.HexToHash("")
+	t.Log(orderhash.Hex())
 }

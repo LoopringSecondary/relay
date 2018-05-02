@@ -63,7 +63,7 @@ type NodeIterator interface {
 	// Error returns the error status of the iterator.
 	Error() error
 
-	// Hash returns the hash of the current node.
+	// TxHash returns the hash of the current node.
 	Hash() common.Hash
 	// Parent returns the hash of the parent of the current node. The hash may be the one
 	// grandparent if the immediate parent is an internal node with no hash.
@@ -85,9 +85,9 @@ type NodeIterator interface {
 // nodeIteratorState represents the iteration state at one particular node of the
 // trie, which can be resumed at a later invocation.
 type nodeIteratorState struct {
-	hash    common.Hash // Hash of the node being iterated (nil if not standalone)
+	hash    common.Hash // TxHash of the node being iterated (nil if not standalone)
 	node    node        // Trie node being iterated
-	parent  common.Hash // Hash of the first full ancestor node (nil if current is the root)
+	parent  common.Hash // TxHash of the first full ancestor node (nil if current is the root)
 	index   int         // Child to be processed next
 	pathlen int         // Length of the path to this node
 }

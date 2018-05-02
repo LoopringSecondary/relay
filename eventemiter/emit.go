@@ -28,51 +28,66 @@ import (
 type Topic string
 
 const (
-	OrderCanceled                  = "OrderCanceled"
-	OrderFilled                    = "OrderFilled"
-	ExtractorFork                  = "ExtractorFork" //chain forked
-	OrderManagerFork               = "OrderManagerFork"
-	RingSubmitFailed               = "RingSubmitFailed" //submit ring failed
-	Transaction                    = "Transaction"
-	Gateway                        = "Gateway"
-	AccountTransfer                = "AccountTransfer"
-	AccountApproval                = "AccountApproval"
-	TokenRegistered                = "TokenRegistered"
-	TokenUnRegistered              = "TokenUnRegistered"
-	RingHashSubmitted              = "RingHashSubmitted"
-	AddressAuthorized              = "AddressAuthorized"
-	AddressDeAuthorized            = "AddressDeAuthorized"
-	OrderManagerGatewayNewOrder    = "OrderManagerGatewayNewOrder"
-	OrderManagerExtractorRingMined = "OrderManagerRingMined"
-	OrderManagerExtractorFill      = "OrderManagerExtractorFill"
-	OrderManagerExtractorCancel    = "OrderManagerExtractorCancel"
-	OrderManagerExtractorCutoff    = "OrderManagerExtractorCutoff"
-	MinedOrderState                = "MinedOrderState" //orderbook send orderstate to miner
+	NewOrder = "NewOrder"
+
+	// Methods
+	WethDeposit      = "WethDepositEvent"
+	WethWithdrawal   = "WethWithdrawalEvent"
+	Approve          = "ApproveMethod"
+	Transfer         = "Transfer"
+	EthTransferEvent = "EthTransferEvent"
+
+	RingMined           = "RingMined"
+	OrderFilled         = "OrderFilled"
+	CancelOrder         = "CancelOrder"
+	CutoffAll           = "Cutoff"
+	CutoffPair          = "CutoffPair"
+	TokenRegistered     = "TokenRegistered"
+	TokenUnRegistered   = "TokenUnRegistered"
+	RingHashSubmitted   = "RingHashSubmitted"
+	AddressAuthorized   = "AddressAuthorized"
+	AddressDeAuthorized = "AddressDeAuthorized"
+
+	MinedOrderState            = "MinedOrderState" //orderbook send orderstate to miner
+	WalletTransactionSubmitted = "WalletTransactionSubmitted"
+
+	ExtractorFork   = "ExtractorFork" //chain forked
+	Transaction     = "Transaction"
+	GatewayNewOrder = "GatewayNewOrder"
 
 	//Miner
 	Miner_DeleteOrderState           = "Miner_DeleteOrderState"
 	Miner_NewOrderState              = "Miner_NewOrderState"
 	Miner_NewRing                    = "Miner_NewRing"
 	Miner_RingMined                  = "Miner_RingMined"
-	Miner_RingSubmitFailed           = "Miner_RingSubmitFailed"
+	Miner_RingSubmitResult           = "Miner_RingSubmitResult"
 	Miner_SubmitRing_Method          = "Miner_SubmitRing_Method"
 	Miner_SubmitRingHash_Method      = "Miner_SubmitRingHash_Method"
 	Miner_BatchSubmitRingHash_Method = "Miner_BatchSubmitRingHash_Method"
 
 	// Block
 	Block_New = "Block_New"
+	Block_End = "Block_End"
 
 	// Extractor
 	SyncChainComplete = "SyncChainComplete"
 	ChainForkDetected = "ChainForkDetected"
-	ChainForkProcess  = "ChainForkProcess"
+	ExtractorWarning  = "ExtractorWarning"
 
-	// Methods
-	WethDepositMethod    = "WethDepositMethod"
-	WethWithdrawalMethod = "WethWithdrawalMethod"
-	ApproveMethod        = "ApproveMethod"
+	// Transaction
+	TransactionEvent   = "TransactionEvent"
+	PendingTransaction = "PendingTransaction"
+
+	// socketio notify event types
+	LoopringTickerUpdated = "LoopringTickerUpdated"
+	TrendUpdated          = "TrendUpdated"
+	PortfolioUpdated      = "PortfolioUpdated"
+	BalanceUpdated        = "BalanceUpdated"
+	DepthUpdated          = "DepthUpdated"
+	TransactionUpdated    = "TransactionUpdated"
 )
 
+//change map to sync.Map
 var watchers map[string][]*Watcher
 var mtx *sync.Mutex
 

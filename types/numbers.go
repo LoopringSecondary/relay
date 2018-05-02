@@ -81,3 +81,37 @@ func (h *Big) SetInt(v *big.Int) Big {
 	(*big.Int)(h).Set(v)
 	return *h
 }
+
+type Rat big.Rat
+
+func (r *Rat) UnmarshalText(input []byte) error {
+	rn := (*big.Rat)(r)
+	rn.SetString(string(input))
+	return nil
+}
+
+func (r *Rat) MarshalText() ([]byte, error) {
+	rn := (*big.Rat)(r)
+	bytes := []byte(rn.RatString())
+	return bytes, nil
+}
+
+func (r *Rat) BigRat() *big.Rat {
+	return (*big.Rat)(r)
+}
+func NewBigRat(v *big.Rat) *Rat {
+	r := new(Rat)
+	(*big.Rat)(r).Set(v)
+	return r
+}
+
+var MaxUint256 = maxUint256()
+
+func maxUint256() *big.Int {
+	maxBytes := [32]uint8{}
+	for idx, _ := range maxBytes {
+		maxBytes[idx] = uint8(255)
+	}
+	maxBig := new(big.Int).SetBytes(maxBytes[:])
+	return maxBig
+}

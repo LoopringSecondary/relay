@@ -21,6 +21,9 @@ package dao
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/crypto"
+	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -34,34 +37,39 @@ import (
 type Order struct {
 	ID                    int     `gorm:"column:id;primary_key;"`
 	Protocol              string  `gorm:"column:protocol;type:varchar(42)"`
+	DelegateAddress       string  `gorm:"column:delegate_address;type:varchar(42)"`
 	Owner                 string  `gorm:"column:owner;type:varchar(42)"`
+	AuthAddress           string  `gorm:"column:auth_address;type:varchar(42)"`
+	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
+	WalletAddress         string  `gorm:"column:wallet_address;type:varchar(42)"`
 	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
-	AmountS               string  `gorm:"column:amount_s;type:varchar(30)"`
-	AmountB               string  `gorm:"column:amount_b;type:varchar(30)"`
+	AmountS               string  `gorm:"column:amount_s;type:varchar(40)"`
+	AmountB               string  `gorm:"column:amount_b;type:varchar(40)"`
 	CreateTime            int64   `gorm:"column:create_time;type:bigint"`
-	ValidTime             int64   `gorm:"column:valid_time;type:bigint"`
-	Ttl                   int64   `gorm:"column:ttl;type:bigint"`
-	Salt                  int64   `gorm:"column:salt;type:bigint"`
-	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(30)"`
+	ValidSince            int64   `gorm:"column:valid_since;type:bigint"`
+	ValidUntil            int64   `gorm:"column:valid_until;type:bigint"`
+	LrcFee                string  `gorm:"column:lrc_fee;type:varchar(40)"`
 	BuyNoMoreThanAmountB  bool    `gorm:"column:buy_nomore_than_amountb"`
 	MarginSplitPercentage uint8   `gorm:"column:margin_split_percentage;type:tinyint(4)"`
 	V                     uint8   `gorm:"column:v;type:tinyint(4)"`
 	R                     string  `gorm:"column:r;type:varchar(66)"`
 	S                     string  `gorm:"column:s;type:varchar(66)"`
+	PowNonce              uint64  `gorm:"column:pow_nonce;type:bigint"`
 	Price                 float64 `gorm:"column:price;type:decimal(28,16);"`
 	UpdatedBlock          int64   `gorm:"column:updated_block;type:bigint"`
-	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(30)"`
-	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(30)"`
-	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(30)"`
-	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(30)"`
-	SplitAmountS          string  `gorm:"column:split_amount_s;type:varchar(30)"`
-	SplitAmountB          string  `gorm:"column:split_amount_b;type:varchar(30)"`
+	DealtAmountS          string  `gorm:"column:dealt_amount_s;type:varchar(40)"`
+	DealtAmountB          string  `gorm:"column:dealt_amount_b;type:varchar(40)"`
+	CancelledAmountS      string  `gorm:"column:cancelled_amount_s;type:varchar(40)"`
+	CancelledAmountB      string  `gorm:"column:cancelled_amount_b;type:varchar(40)"`
+	SplitAmountS          string  `gorm:"column:split_amount_s;type:varchar(40)"`
+	SplitAmountB          string  `gorm:"column:split_amount_b;type:varchar(40)"`
 	Status                uint8   `gorm:"column:status;type:tinyint(4)"`
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 	Market                string  `gorm:"column:market;type:varchar(40)"`
+	Side                  string  `gorm:"column:side;type:varchar(40)`
 }
 
 // convert types/orderState to dao/order
@@ -69,10 +77,6 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	src := state.RawOrder
 
 	o.Price, _ = src.Price.Float64()
-	if o.Price > 1e12 || o.Price < 0.0000000000000001 {
-		return fmt.Errorf("dao order convert down,price out of range")
-	}
-
 	o.AmountS = src.AmountS.String()
 	o.AmountB = src.AmountB.String()
 	o.DealtAmountS = state.DealtAmountS.String()
@@ -84,14 +88,21 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.LrcFee = src.LrcFee.String()
 
 	o.Protocol = src.Protocol.Hex()
+	o.DelegateAddress = src.DelegateAddress.Hex()
 	o.Owner = src.Owner.Hex()
+
+	auth, _ := src.AuthPrivateKey.MarshalText()
+	o.PrivateKey = string(auth)
+	o.AuthAddress = src.AuthAddr.Hex()
+	o.WalletAddress = src.WalletAddress.Hex()
+
 	o.OrderHash = src.Hash.Hex()
 	o.TokenB = src.TokenB.Hex()
 	o.TokenS = src.TokenS.Hex()
 	o.CreateTime = time.Now().Unix()
-	o.ValidTime = src.Timestamp.Int64()
-	o.Ttl = src.Ttl.Int64()
-	o.Salt = src.Salt.Int64()
+	o.ValidSince = src.ValidSince.Int64()
+	o.ValidUntil = src.ValidUntil.Int64()
+
 	o.BuyNoMoreThanAmountB = src.BuyNoMoreThanAmountB
 	o.MarginSplitPercentage = src.MarginSplitPercentage
 	if state.UpdatedBlock != nil {
@@ -101,7 +112,9 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.V = src.V
 	o.S = src.S.Hex()
 	o.R = src.R.Hex()
+	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
+	o.Side = state.RawOrder.Side
 
 	return nil
 }
@@ -120,27 +133,42 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 
 	state.RawOrder.Price = new(big.Rat).SetFloat64(o.Price)
 	state.RawOrder.Protocol = common.HexToAddress(o.Protocol)
+	state.RawOrder.DelegateAddress = common.HexToAddress(o.DelegateAddress)
 	state.RawOrder.TokenS = common.HexToAddress(o.TokenS)
 	state.RawOrder.TokenB = common.HexToAddress(o.TokenB)
-	state.RawOrder.Timestamp = big.NewInt(o.ValidTime)
-	state.RawOrder.Ttl = big.NewInt(o.Ttl)
-	state.RawOrder.Salt = big.NewInt(o.Salt)
+	state.RawOrder.ValidSince = big.NewInt(o.ValidSince)
+	state.RawOrder.ValidUntil = big.NewInt(o.ValidUntil)
+
+	if len(o.AuthAddress) > 0 {
+		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
+	}
+	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
+	state.RawOrder.WalletAddress = common.HexToAddress(o.WalletAddress)
+
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
 	state.RawOrder.MarginSplitPercentage = o.MarginSplitPercentage
 	state.RawOrder.V = o.V
 	state.RawOrder.S = types.HexToBytes32(o.S)
 	state.RawOrder.R = types.HexToBytes32(o.R)
+	state.RawOrder.PowNonce = o.PowNonce
 	state.RawOrder.Owner = common.HexToAddress(o.Owner)
 	state.RawOrder.Hash = common.HexToHash(o.OrderHash)
 
 	if state.RawOrder.Hash != state.RawOrder.GenerateHash() {
+		log.Debug("different order hash found......")
+		log.Debug(state.RawOrder.Hash.Hex())
+		log.Debug(state.RawOrder.GenerateHash().Hex())
 		return fmt.Errorf("dao order convert down generate hash error")
 	}
 
 	state.UpdatedBlock = big.NewInt(o.UpdatedBlock)
 	state.Status = types.OrderStatus(o.Status)
 	state.BroadcastTime = o.BroadcastTime
+	state.RawOrder.Market = o.Market
+	state.RawOrder.CreateTime = o.CreateTime
+	state.RawOrder.Side = o.Side
 
+	state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
 	return nil
 }
 
@@ -173,9 +201,9 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 	}
 
 	nowtime := time.Now().Unix()
-	err = s.db.Where("protocol = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
-		Where("valid_time < ?", nowtime).
-		Where("valid_time + ttl > ? ", nowtime).
+	err = s.db.Where("delegate_address = ? and token_s = ? and token_b = ?", protocol, tokenS, tokenB).
+		Where("valid_since < ?", nowtime).
+		Where("valid_until >= ? ", nowtime).
 		Where("status not in (?) ", filterStatus).
 		Where("miner_block_mark between ? and ?", startBlockNumber, endBlockNumber).
 		Order("price desc").
@@ -204,55 +232,49 @@ func (s *RdsServiceImpl) GetOrdersByHash(orderhashs []string) (map[string]Order,
 	return ret, err
 }
 
-func (s *RdsServiceImpl) GetOrdersWithBlockNumberRange(from, to int64) ([]Order, error) {
+func (s *RdsServiceImpl) GetCutoffOrders(owner common.Address, cutoffTime *big.Int) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
 
-	if from >= to {
-		return list, fmt.Errorf("dao/order GetOrdersWithBlockNumberRange invalid block number")
-	}
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	err = s.db.Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Find(&list).Error
+	return list, err
+}
 
-	nowtime := time.Now().Unix()
-	err = s.db.Where("updated_block > ? and updated_block <= ?", from, to).
-		Where("valid_time < ?", nowtime).
-		Where("valid_time + ttl > ?", nowtime).
+func (s *RdsServiceImpl) GetCutoffPairOrders(owner, token1, token2 common.Address, cutoffTime *big.Int) ([]Order, error) {
+	var (
+		list []Order
+		err  error
+	)
+
+	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
+	tokens := []string{token1.Hex(), token2.Hex()}
+	err = s.db.Model(&Order{}).Where("valid_since < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).
+		Where("token_s in (?)", tokens).
+		Where("token_b in (?)", tokens).
 		Find(&list).Error
 
 	return list, err
 }
 
-// todo useless
-func (s *RdsServiceImpl) GetCutoffOrders(cutoffTime int64) ([]Order, error) {
-	var (
-		list []Order
-		err  error
-	)
+func (s *RdsServiceImpl) SetCutOffOrders(orderHashList []common.Hash, blockNumber *big.Int) error {
+	var list []string
 
-	err = s.db.Where("valid_time < ?", cutoffTime).Find(&list).Error
-
-	return list, err
-}
-
-// todo useless
-func (s *RdsServiceImpl) CheckOrderCutoff(orderhash string, cutoff int64) bool {
-	model := Order{}
-	err := s.db.Where("order_hash = ? and valid_time < ?").Find(&model).Error
-	if err != nil {
-		return false
+	items := map[string]interface{}{
+		"status":        uint8(types.ORDER_CUTOFF),
+		"updated_block": blockNumber.Int64(),
 	}
 
-	return true
-}
-
-func (s *RdsServiceImpl) SetCutOff(owner common.Address, cutoffTime *big.Int) error {
-	filterStatus := []types.OrderStatus{types.ORDER_PARTIAL, types.ORDER_NEW}
-	err := s.db.Model(&Order{}).Where("valid_time < ? and owner = ? and status in (?)", cutoffTime.Int64(), owner.Hex(), filterStatus).Update("status", types.ORDER_CUTOFF).Error
+	for _, v := range orderHashList {
+		list = append(list, v.Hex())
+	}
+	err := s.db.Model(&Order{}).Where("order_hash in (?)", list).Update(items).Error
 	return err
 }
 
-func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, length int) ([]Order, error) {
+func (s *RdsServiceImpl) GetOrderBook(delegate, tokenS, tokenB common.Address, length int) ([]Order, error) {
 	var (
 		list []Order
 		err  error
@@ -260,11 +282,11 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 
 	filterStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
 	nowtime := time.Now().Unix()
-	err = s.db.Where("protocol = ?", protocol.Hex()).
+	err = s.db.Where("delegate_address = ?", delegate.Hex()).
 		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
 		Where("status in (?)", filterStatus).
-		Where("valid_time < ?", nowtime).
-		Where("valid_time + ttl > ? ", nowtime).
+		Where("valid_since < ?", nowtime).
+		Where("valid_until >= ? ", nowtime).
 		Order("price desc").
 		Limit(length).
 		Find(&list).Error
@@ -272,12 +294,13 @@ func (s *RdsServiceImpl) GetOrderBook(protocol, tokenS, tokenB common.Address, l
 	return list, err
 }
 
-func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex, pageSize int) (PageResult, error) {
+func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, statusList []int, pageIndex, pageSize int) (PageResult, error) {
 	var (
-		orders     []Order
-		err        error
-		data       = make([]interface{}, 0)
-		pageResult PageResult
+		orders        []Order
+		err           error
+		data          = make([]interface{}, 0)
+		pageResult    PageResult
+		statusStrList = make([]string, 0)
 	)
 
 	if pageIndex <= 0 {
@@ -288,22 +311,119 @@ func (s *RdsServiceImpl) OrderPageQuery(query map[string]interface{}, pageIndex,
 		pageSize = 20
 	}
 
-	if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
-		return pageResult, err
+	pageResult = PageResult{data, pageIndex, pageSize, 0}
+
+	openedStatus := []types.OrderStatus{types.ORDER_NEW, types.ORDER_PARTIAL}
+	now := time.Now().Unix()
+
+	if len(statusList) == 1 {
+		if statusList[0] == 6 {
+			if err = s.db.Where(query).
+				Where("valid_until < ?", now).
+				Where("status in (?)", openedStatus).
+				Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+
+			err = s.db.Model(&Order{}).Where(query).
+				Where("valid_until < ?", now).
+				Where("status in (?)", openedStatus).Count(&pageResult.Total).Error
+
+			if err != nil {
+				return pageResult, err
+			}
+
+		} else {
+			query["status"] = statusList[0]
+			if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+
+			err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+			if err != nil {
+				return pageResult, err
+			}
+		}
+
+	} else if len(statusList) > 1 {
+		for _, s := range statusList {
+			statusStrList = append(statusStrList, strconv.Itoa(s))
+		}
+
+		queryOpened := allContain(statusList, openedStatus)
+		if queryOpened {
+			if err = s.db.Where(query).
+				Where("status in (?)", statusStrList).
+				Where("valid_since < ?", now).
+				Where("valid_until >= ? ", now).
+				Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+
+			err = s.db.Model(&Order{}).Where(query).
+				Where("valid_since < ?", now).
+				Where("valid_until >= ? ", now).
+				Where("status in (?)", openedStatus).Count(&pageResult.Total).Error
+
+			if err != nil {
+				return pageResult, err
+			}
+
+		} else {
+			if err = s.db.Where(query).Where("status in (?)", statusStrList).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+				return pageResult, err
+			}
+
+			err = s.db.Model(&Order{}).Where(query).
+				Where("status in (?)", openedStatus).Count(&pageResult.Total).Error
+
+			if err != nil {
+				return pageResult, err
+			}
+		}
+
+	} else {
+		if err = s.db.Where(query).Offset((pageIndex - 1) * pageSize).Order("create_time DESC").Limit(pageSize).Find(&orders).Error; err != nil {
+			return pageResult, err
+		}
+
+		err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
+		if err != nil {
+			return pageResult, err
+		}
 	}
 
 	for _, v := range orders {
 		data = append(data, v)
 	}
 
-	pageResult = PageResult{data, pageIndex, pageSize, 0}
-
-	err = s.db.Model(&Order{}).Where(query).Count(&pageResult.Total).Error
-	if err != nil {
-		return pageResult, err
-	}
+	pageResult.Data = data
 
 	return pageResult, err
+}
+
+func containStatus(status int, statusList []types.OrderStatus) bool {
+	if len(statusList) == 0 {
+		return false
+	}
+
+	for _, s := range statusList {
+		if status == int(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func allContain(left []int, right []types.OrderStatus) bool {
+
+	for _, l := range left {
+		if !containStatus(l, right) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *RdsServiceImpl) UpdateBroadcastTimeByHash(hash string, bt int) error {
@@ -332,16 +452,24 @@ func (s *RdsServiceImpl) UpdateOrderWhileCancel(hash common.Hash, status types.O
 	return s.db.Model(&Order{}).Where("order_hash = ?", hash.Hex()).Update(items).Error
 }
 
-func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus) ([]Order, error) {
+func (s *RdsServiceImpl) UpdateOrderWhileRollbackCutoff(orderhash common.Hash, status types.OrderStatus, blockNumber *big.Int) error {
+	items := map[string]interface{}{
+		"status":        uint8(status),
+		"updated_block": blockNumber.Int64(),
+	}
+	return s.db.Model(&Order{}).Where("order_hash = ?", orderhash.Hex()).Update(items).Error
+}
+
+func (s *RdsServiceImpl) GetFrozenAmount(owner common.Address, token common.Address, statusSet []types.OrderStatus, delegateAddress common.Address) ([]Order, error) {
 	var (
 		list []Order
 		err  error
 	)
 	now := time.Now().Unix()
 	err = s.db.Model(&Order{}).
-		Where("token_s = ? and owner = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex()).
-		Where("valid_time < ?", now).
-		Where("valid_time + ttl > ? ", now).
+		Where("token_s = ? and owner = ? and delegate_address = ? and status in "+buildStatusInSet(statusSet), token.Hex(), owner.Hex(), delegateAddress.Hex()).
+		Where("valid_since < ?", now).
+		Where("valid_until >= ? ", now).
 		Find(&list).Error
 	return list, err
 }
@@ -355,8 +483,8 @@ func (s *RdsServiceImpl) GetFrozenLrcFee(owner common.Address, statusSet []types
 	now := time.Now().Unix()
 	err = s.db.Model(&Order{}).
 		Where("lrc_fee > 0 and owner = ? and status in "+buildStatusInSet(statusSet), owner.Hex()).
-		Where("valid_time < ?", now).
-		Where("valid_time + ttl > ? ", now).
+		Where("valid_since < ?", now).
+		Where("valid_until >= ? ", now).
 		Find(&list).Error
 	return list, err
 }
