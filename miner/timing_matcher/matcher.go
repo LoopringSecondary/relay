@@ -24,14 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
-	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
-	"strings"
 )
 
 /**
