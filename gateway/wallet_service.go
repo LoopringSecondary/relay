@@ -894,6 +894,8 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 
 	for _, s := range states {
 
+		//log.Infof("handle order ....... %s", s.RawOrder.Hash.Hex())
+
 		price := *s.RawOrder.Price
 		amountS, amountB := s.RemainedAmount()
 		amountS = amountS.Quo(amountS, new(big.Rat).SetFrac(tokenSDecimal, big.NewInt(1)))
@@ -909,24 +911,33 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 			continue
 		}
 
-		minAmountS, err := w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress); if err != nil {
-			log.Debug(err.Error())
-			continue
-		}
-		minAmountB, err := w.getAvailableMinAmount(amountB, s.RawOrder.Owner, s.RawOrder.TokenB, s.RawOrder.DelegateAddress); if err != nil {
+		minAmountB := amountB
+		minAmountS := amountS
+		var err error
+
+		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
 			log.Debug(err.Error())
 			continue
 		}
 
 		if s.RawOrder.BuyNoMoreThanAmountB {
+			//log.Info("order BuyNoMoreThanAmountB is true")
+			//log.Infof("amount s is %s", minAmountS)
+			//log.Infof("amount b is %s", minAmountB)
 			sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
-			limitedAmountS := minAmountB.Mul(minAmountB, sellPrice)
+			//log.Infof("sellprice is %s", sellPrice.String())
+			limitedAmountS := new(big.Rat).Mul(minAmountB, sellPrice)
+			//log.Infof("limit amount s is %s", limitedAmountS)
 			if limitedAmountS.Cmp(minAmountS) < 0 {
 				minAmountS = limitedAmountS
 			}
 		} else {
+			//log.Infof("amount s is %s", minAmountS)
+			//log.Infof("amount b is %s", minAmountB)
 			buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
-			limitedAmountB := minAmountS.Mul(minAmountS, buyPrice)
+			//log.Infof("buyprice is %s", buyPrice.String())
+			limitedAmountB := new(big.Rat).Mul(minAmountS, buyPrice)
+			//log.Infof("limit amount b is %s", limitedAmountB)
 			if limitedAmountB.Cmp(minAmountB) < 0 {
 				minAmountB = limitedAmountB
 			}
@@ -942,18 +953,18 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 				size = size.Add(size, minAmountB)
 				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountS, Size: amountB}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: minAmountS, Size: minAmountB}
 			}
 		} else {
 			priceFloatStr := price.FloatString(10)
 			if v, ok := depthMap[priceFloatStr]; ok {
 				amount := v.Amount
 				size := v.Size
-				amount = amount.Add(amount, amountB)
-				size = size.Add(size, amountS)
+				amount = amount.Add(amount, minAmountB)
+				size = size.Add(size, minAmountS)
 				depthMap[priceFloatStr] = DepthElement{Price: v.Price, Amount: amount, Size: size}
 			} else {
-				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: amountB, Size: amountS}
+				depthMap[priceFloatStr] = DepthElement{Price: priceFloatStr, Amount: minAmountB, Size: minAmountS}
 			}
 		}
 	}
@@ -982,16 +993,21 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 	return depth
 }
 
-func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, token, spender common.Address) (amount *big.Rat, err error) {
+func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, token, spender common.Address, decimal *big.Int) (amount *big.Rat, err error) {
 
 	amount = depthAmount
 
-	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender); if err != nil {
+	balance, allowance, err := w.accountManager.GetBalanceAndAllowance(owner, token, spender)
+	if err != nil {
 		return
 	}
 
-	balanceRat := new(big.Rat).SetFrac(balance, big.NewInt(1))
-	allowanceRat := new(big.Rat).SetFrac(allowance, big.NewInt(1))
+	balanceRat := new(big.Rat).SetFrac(balance, decimal)
+	allowanceRat := new(big.Rat).SetFrac(allowance, decimal)
+
+	//log.Info(amount.String())
+	//log.Info(balanceRat.String())
+	//log.Info(allowanceRat.String())
 
 	if amount.Cmp(balanceRat) > 0 {
 		amount = balanceRat
@@ -1004,6 +1020,8 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 	if amount.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
 		return nil, errors.New("amount is zero, skipped")
 	}
+
+	//log.Infof("get reuslt amount is  %s", amount)
 
 	return
 }

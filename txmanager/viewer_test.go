@@ -55,8 +55,8 @@ func TestTransactionViewImpl_GetAllTransactionCount(t *testing.T) {
 func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 	txmanager.NewTxView(test.Rds())
 
-	owner := "0x43e85E2c882bbcE41C69740Eed4BfFFb45E3f9dd"
-	symbol := "foo"
+	owner := "0xb1018949b241D76A1AB2094f473E9bEfeAbB5Ead"
+	symbol := "weth"
 	status := "all"
 	typ := "all"
 
@@ -65,6 +65,6 @@ func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	for k, v := range txs {
-		t.Logf("%d >>>>>> txhash:%s, symbol:%s, from:%s, to:%s, type:%s, status:%s", k, v.TxHash.Hex(), v.Symbol, v.From.Hex(), v.To.Hex(), v.Type, v.Status)
+		t.Logf("%d >>>>>> txhash:%s, symbol:%s, protocol:%s, from:%s, to:%s, type:%s, status:%s", k, v.TxHash.Hex(), v.Symbol, v.Protocol.Hex(), v.From.Hex(), v.To.Hex(), v.Type, v.Status)
 	}
 }

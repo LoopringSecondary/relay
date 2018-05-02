@@ -272,7 +272,6 @@ func (c *CollectorImpl) GetTickers(market string) ([]Ticker, error) {
 
 			//log.Infof("get ticker from redis cache, ex : %s, market : %s", e.name, market)
 			tickerMap, err := getAllMarketFromRedis(e.name)
-			fmt.Println(tickerMap)
 			if err != nil {
 				continue
 			}
