@@ -38,7 +38,7 @@ type RdsService interface {
 	FindAll(item interface{}) error
 
 	// ring mined table
-	FindRingMinedByRingIndex(protocol, index string) (*RingMinedEvent, error)
+	FindRingMined(txhash string) (*RingMinedEvent, error)
 	RollBackRingMined(from, to int64) error
 
 	// order table
@@ -65,7 +65,7 @@ type RdsService interface {
 	SaveBlock(latest *Block) error
 
 	// fill event table
-	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
+	FindFillEvent(txhash string, logIndex int64) (*FillEvent, error)
 	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
 	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
