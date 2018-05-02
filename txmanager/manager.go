@@ -243,7 +243,6 @@ func (tm *TransactionManager) savePendingTx(tx *txtyp.TransactionEntity, list []
 	}
 
 	// find pending tx entity, return if tx already exist
-	// todo 验证查不到时是否返回err
 	if _, err := tm.db.FindPendingTxEntity(tx.Hash.Hex()); err == nil {
 		log.Debugf("transaction manager,tx pending entity:%s already exist", tx.Hash.Hex())
 		return nil
@@ -300,9 +299,9 @@ func (tm *TransactionManager) saveMinedTx(tx *txtyp.TransactionEntity, list []tx
 	return nil
 }
 
+// todo(fuk): redo it as cron task
 func (tm *TransactionManager) processPendingTxWhileMined(tx *txtyp.TransactionEntity) {
 	// find the same nonce pending txs and delete
-	// todo(fuk): redo it as cron task
 	txs, _ := tm.db.GetPendingTxEntity(tx.From.Hex(), tx.Nonce.Int64())
 	if len(txs) == 0 {
 		return
@@ -333,13 +332,9 @@ func (tm *TransactionManager) processPendingTxWhileMined(tx *txtyp.TransactionEn
 
 	// 删除当前pending tx
 	if currentHashIsPending {
-		// delete pending tx entity
-		// todo 通过delete是否成功然后delete pending txview
 		if err := tm.db.DelPendingTxEntity(tx.Hash.Hex()); err != nil {
 			log.Errorf("transaction manager,delete pending tx entity:%s err:", tx.Hash.Hex(), err.Error())
 		}
-
-		// delete pending tx views
 		if err := tm.db.DelPendingTxView(tx.Hash.Hex()); err != nil {
 			log.Errorf("transaction manager,delete pending tx view:%s err:", tx.Hash.Hex(), err.Error())
 		}
