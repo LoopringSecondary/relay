@@ -148,10 +148,10 @@ func (market *Market) reduceReceivedOfCandidateRing(list CandidateRingList, fill
 				rate.Quo(remainedAmountS, amountS)
 				remainedReceived := new(big.Rat).Add(ring.received, ring.cost)
 				remainedReceived.Mul(remainedReceived, rate).Sub(remainedReceived, ring.cost)
-				//todo:for test, release this limit
-				//if remainedReceived.Sign() <= 0 {
-				//	continue
-				//}
+				//todo:
+				if remainedReceived.Sign() <= 0 {
+					continue
+				}
 				for hash, amount := range ring.filledOrders {
 					ring.filledOrders[hash] = amount.Mul(amount, rate)
 				}
