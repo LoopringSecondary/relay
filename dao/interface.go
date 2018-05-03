@@ -115,6 +115,7 @@ type RdsService interface {
 	// transactionEntity
 	FindPendingTxEntity(hash string) (TransactionEntity, error)
 	FindTxEntity(txhash string, logIndex int64) (TransactionEntity, error)
+	GetTxEntity(hashlist []string) ([]TransactionEntity, error)
 	GetPendingTxEntity(from string, nonce int64) ([]TransactionEntity, error)
 	SetPendingTxEntityFailed(hashlist []string) error
 	DelPendingTxEntity(hash string) error
