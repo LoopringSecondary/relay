@@ -154,40 +154,47 @@ func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp
 	list := make([]txtyp.TransactionJsonResult, 0)
 
 	for _, v := range items {
-		var view txtyp.TransactionView
+		var (
+			view   txtyp.TransactionView
+			entity txtyp.TransactionEntity
+			model  dao.TransactionEntity
+			err    error
+		)
 
 		v.ConvertUp(&view)
 		res := txtyp.NewResult(&view)
+		if model, err = impl.db.FindTxEntity(view.TxHash.Hex(), view.LogIndex); err != nil {
+			continue
+		}
+		model.ConvertUp(&entity)
 
-		res.Content = txtyp.SetDefaultContent()
-
-		entity, err := impl.db.FindTxEntity(view.TxHash.Hex(), view.LogIndex)
-		if err != nil {
+		if entity.Content == "" {
+			res.FromOtherEntity(&entity)
+			list = append(list, res)
 			continue
 		}
 
-		res.Protocol = common.HexToAddress(entity.Protocol)
-		res.From = common.HexToAddress(entity.From)
-		res.To = common.HexToAddress(entity.To)
-
 		switch view.Type {
+		case txtyp.TX_TYPE_APPROVE:
+			err = res.FromApproveEntity(&entity)
+
 		case txtyp.TX_TYPE_CANCEL_ORDER:
-			if cancel, err := txtyp.ParseCancelContent(entity.Content); err == nil {
-				res.Content = txtyp.SetCancelContent(cancel.OrderHash)
-			}
+			err = res.FromCancelEntity(&entity)
+
+		case txtyp.TX_TYPE_CUTOFF:
+			err = res.FromCutoffEntity(&entity)
 
 		case txtyp.TX_TYPE_CUTOFF_PAIR:
-			if cutoff, err := txtyp.ParseCutoffPairContent(entity.Content); err == nil {
-				if market, err := util.WrapMarket(cutoff.Token1, cutoff.Token2); err == nil {
-					res.Content = txtyp.SetCutoffContent(market)
-				}
-			}
+			err = res.FromCutoffPairEntity(&entity)
 
-		case txtyp.TX_TYPE_TRANSFER, txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
-			if transfer, err := txtyp.ParseTransferContent(entity.Content); err == nil {
-				res.From = common.HexToAddress(transfer.Sender)
-				res.To = common.HexToAddress(transfer.Receiver)
-			}
+		case txtyp.TX_TYPE_CONVERT_INCOME:
+			err = res.FromWethDepositEntity(&entity)
+
+		case txtyp.TX_TYPE_WITHDRAWAL:
+			err = res.FromWethWithdrawalEntity(&entity)
+
+		case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
+			err = res.FromTransferEntity(&entity)
 		}
 
 		list = append(list, res)
