@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"time"
+	"qiniupkg.com/x/errors.v7"
 )
 
 type Gateway struct {
@@ -130,6 +131,7 @@ func HandleInputOrder(input eventemitter.EventData) (orderHash string, err error
 	} else {
 		//broadcastTime = state.BroadcastTime
 		log.Infof("gateway,order %s exist,will not insert again", order.Hash.Hex())
+		return orderHash, errors.New("order existed, please not submit again")
 	}
 
 	//if gateway.isBroadcast && broadcastTime < gateway.maxBroadcastTime {

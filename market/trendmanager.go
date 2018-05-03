@@ -934,6 +934,11 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 				v.Last, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 				v.High, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.High), 64)
 				v.Low, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Low), 64)
+
+				if v.Change == "+0.00%" || v.Change == "-0.00%" {
+					v.Change = "0.00%"
+				}
+
 				tickers = append(tickers, v)
 			}
 
