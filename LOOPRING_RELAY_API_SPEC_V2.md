@@ -223,7 +223,7 @@ params: [{
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrderByHash","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrders","params":{see above},"id":64}'
 
 // Result
 {
@@ -344,7 +344,7 @@ params: [{}]
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_ticker","params":[{see above}],"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getTicker","params":[{see above}],"id":64}'
 
 // Result
 {
@@ -431,7 +431,7 @@ params: [{
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_tickers","params":{see above}},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getTickers","params":{see above}},"id":64}'
 
 // Result
 {
