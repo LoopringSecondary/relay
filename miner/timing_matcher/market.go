@@ -54,7 +54,8 @@ func (market *Market) match() {
 	//step 1: evaluate received
 	for _, a2BOrder := range market.AtoBOrders {
 		for _, b2AOrder := range market.BtoAOrders {
-			if miner.PriceValid(a2BOrder, b2AOrder) {
+			//todo:move a2BOrder.RawOrder.Owner != b2AOrder.RawOrder.Owner after contract fix bug
+			if miner.PriceValid(a2BOrder, b2AOrder) && a2BOrder.RawOrder.Owner != b2AOrder.RawOrder.Owner {
 				if candidateRing, err := market.GenerateCandidateRing(a2BOrder, b2AOrder); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
