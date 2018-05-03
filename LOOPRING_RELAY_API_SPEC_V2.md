@@ -151,7 +151,7 @@ params: [{
   "tokenB" : "Lrc",
   "amountS" : "0x0001234d234",
   "amountB" : "0x002a7d",
-  "validSince" 1406014710,
+  "validSince" : 1406014710,
   "valiUntil": 1200,
   "lrcFee" : "0x14",
   "buyNoMoreThanAmountB" : true,
