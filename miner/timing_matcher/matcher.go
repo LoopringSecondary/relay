@@ -30,6 +30,7 @@ import (
 	"github.com/Loopring/relay/log"
 	marketLib "github.com/Loopring/relay/market"
 	marketUtilLib "github.com/Loopring/relay/market/util"
+	"strings"
 )
 
 /**
@@ -107,11 +108,14 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 		for _, ringhash := range ringhashes {
 
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
-				if submitInfo.ID > 0 {
+				if submitInfo.ID <= 0 {
 					RemoveMinedRing(ringhash)
 					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
+				if strings.Contains(err.Error(), "record not found") {
+					RemoveMinedRing(ringhash)
+				}
 				log.Errorf("err:%s", err1.Error())
 			}
 		}
