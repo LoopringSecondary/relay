@@ -27,6 +27,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
@@ -78,7 +79,7 @@ func TestRing(t *testing.T) {
 	test.CreateOrder(eth, lrc, account1.Address, amountS1, amountB1, lrcFee1)
 
 	// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-	amountS2, _ := new(big.Int).SetString("100000"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("30000"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(3))
 	test.CreateOrder(lrc, eth, account2.Address, amountS2, amountB2, lrcFee2)
@@ -224,4 +225,47 @@ func TestMatcher_Case2(t *testing.T) {
 	tokenCallMethodB(&tokenAmountBAfterMatch, "balanceOf", "latest", entity.Accounts[0].Address)
 	t.Logf("before match, addressA:%s -> tokenA:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressA.Hex(), tokenAmountAAfterMatch.BigInt().String())
 	t.Logf("before match, addressA:%s -> tokenB:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressB.Hex(), tokenAmountBAfterMatch.BigInt().String())
+}
+
+func TestBalanceSub(t *testing.T) {
+	db := test.Rds()
+	orders, _ := db.GetOrdersByHash([]string{"0xf6c48786f9e60bd3167af90dfddafc0730085b885c0d7fc0659b0875a17aee98", "0xc036238a89cf6ee43ed1580a9a1ffb0a3abf7926bd84e1b29c5edddc43b2c563"})
+
+	for _, v := range orders {
+		if common.HexToAddress(v.Owner) == common.HexToAddress("0x1B978a1D302335a6F2Ebe4B8823B5E17c3C84135") {
+			symbolS, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenS))
+			symbolB, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenB))
+
+			t.Logf("acc1 order,sell %s:%s, buy %s:%s, dealtAmount %s:%s dealtAmount %s:%s, split %s:%s, split %s:%s", symbolS, v.AmountS, symbolB, v.AmountB, symbolS, v.DealtAmountS, symbolB, v.DealtAmountB, symbolS, v.SplitAmountS, symbolB, v.SplitAmountB)
+		} else {
+			symbolS, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenS))
+			symbolB, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenB))
+
+			t.Logf("acc2 order,sell %s:%s, buy %s:%s, dealtAmount %s:%s dealtAmount %s:%s, split %s:%s, split %s:%s", symbolS, v.AmountS, symbolB, v.AmountB, symbolS, v.DealtAmountS, symbolB, v.DealtAmountB, symbolS, v.SplitAmountS, symbolB, v.SplitAmountB)
+		}
+	}
+
+	t.Log("------------------------------------------------------------------------")
+	acclrcbegin1, _ := new(big.Int).SetString("2009273560920082658190608", 0)
+	acclrcbegin2, _ := new(big.Int).SetString("1990629691999571131031008", 0)
+	acclrcbegin3, _ := new(big.Int).SetString("100000096747080346210778384", 0)
+	accethbegin1, _ := new(big.Int).SetString("10067403806388012173890", 0)
+	accethbegin2, _ := new(big.Int).SetString("10144596193611987826110", 0)
+	accethbegin3, _ := new(big.Int).SetString("1000000000000000000", 0)
+
+	acclrcend1, _ := new(big.Int).SetString("2009568560920082658190608", 0)
+	acclrcend2, _ := new(big.Int).SetString("1990328291999571131031008", 0)
+	acclrcend3, _ := new(big.Int).SetString("100000103147080346210778384", 0)
+	accethend1, _ := new(big.Int).SetString("10067303806388012173890", 0)
+	accethend2, _ := new(big.Int).SetString("10144696193611987826110", 0)
+	accethend3, _ := new(big.Int).SetString("1000000000000000000", 0)
+
+	t.Logf("acc1 lrc:%s", new(big.Int).Sub(acclrcend1, acclrcbegin1).String())
+	t.Logf("acc1 eth:%s", new(big.Int).Sub(accethend1, accethbegin1).String())
+
+	t.Logf("acc2 lrc:%s", new(big.Int).Sub(acclrcend2, acclrcbegin2).String())
+	t.Logf("acc2 eth:%s", new(big.Int).Sub(accethend2, accethbegin2).String())
+
+	t.Logf("miner lrc:%s", new(big.Int).Sub(acclrcend3, acclrcbegin3).String())
+	t.Logf("miner eth:%s", new(big.Int).Sub(accethend3, accethbegin3).String())
 }
