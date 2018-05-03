@@ -81,26 +81,21 @@ type TransferContent struct {
 	Amount   string `json:"amount"`
 }
 
-// todo fill
 type OrderFilledContent struct {
-	RingHash      string `json:"ring_hash"`
-	PreOrderHash  string `json:"pre_order_hash"`
-	OrderHash     string `json:"order_hash"`
-	NextOrderHash string `json:"next_order_hash"`
-	Owner         string `json:"owner"`
-	TokenS        string `json:"token_s"`
-	TokenB        string `json:"token_b"`
-	SellTo        string `json:"sell_to"`
-	BuyFrom       string `json:"buy_from"`
-	RingIndex     string `json:"ring_index"`
-	AmountS       string `json:"amount_s"`
-	AmountB       string `json:"amount_b"`
-	LrcReward     string `json:"lrc_reward"`
-	LrcFee        string `json:"lrc_fee"`
-	SplitS        string `json:"split_s"`
-	SplitB        string `json:"split_b"`
-	Market        string `json:"market"`
-	FillIndex     string `json:"fill_index"`
+	RingHash  string `json:"ring_hash"`
+	OrderHash string `json:"order_hash"`
+	Owner     string `json:"owner"`
+	TokenS    string `json:"token_s"`
+	TokenB    string `json:"token_b"`
+	RingIndex string `json:"ring_index"`
+	AmountS   string `json:"amount_s"`
+	AmountB   string `json:"amount_b"`
+	LrcReward string `json:"lrc_reward"`
+	LrcFee    string `json:"lrc_fee"`
+	SplitS    string `json:"split_s"`
+	SplitB    string `json:"split_b"`
+	Market    string `json:"market"`
+	FillIndex string `json:"fill_index"`
 }
 
 func (tx *TransactionEntity) FromApproveEvent(src *types.ApprovalEvent) error {
@@ -223,6 +218,33 @@ func (tx *TransactionEntity) FromTransferEvent(src *types.TransferEvent) error {
 func (tx *TransactionEntity) FromEthTransferEvent(src *types.TransferEvent) error {
 	tx.fullFilled(src.TxInfo)
 	tx.Content = ""
+	return nil
+}
+
+func (tx *TransactionEntity) FromOrderFilledEvent(src *types.OrderFilledEvent) error {
+	tx.fullFilled(src.TxInfo)
+
+	var content OrderFilledContent
+	content.RingHash = src.Ringhash.Hex()
+	content.OrderHash = src.OrderHash.Hex()
+	content.TokenS = src.TokenS.Hex()
+	content.TokenB = src.TokenB.Hex()
+	content.RingIndex = src.RingIndex.String()
+	content.AmountS = src.AmountS.String()
+	content.AmountB = src.AmountB.String()
+	content.LrcReward = src.LrcReward.String()
+	content.LrcFee = src.LrcFee.String()
+	content.SplitS = src.SplitS.String()
+	content.SplitB = src.SplitB.String()
+	content.Market = src.Market
+	content.FillIndex = src.FillIndex.String()
+
+	bs, err := json.Marshal(&content)
+	if err != nil {
+		return err
+	}
+
+	tx.Content = string(bs)
 	return nil
 }
 

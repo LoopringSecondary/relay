@@ -190,6 +190,47 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 	return list
 }
 
+//type OrderFilledEvent struct {
+//	Ringhash      common.Hash
+//	PreOrderHash  common.Hash
+//	OrderHash     common.Hash
+//	NextOrderHash common.Hash
+//	Owner         common.Address
+//	TokenS        common.Address
+//	TokenB        common.Address
+//	SellTo        common.Address
+//	BuyFrom       common.Address
+//	RingIndex     *big.Int
+//	AmountS       *big.Int
+//	AmountB       *big.Int
+//	LrcReward     *big.Int
+//	LrcFee        *big.Int
+//	SplitS        *big.Int
+//	SplitB        *big.Int
+//	Market        string
+//	FillIndex     *big.Int
+//}
+
+func OrderFilledView(src *types.OrderFilledEvent) (TransactionView, error) {
+	var (
+		tx  TransactionView
+		err error
+	)
+
+	if tx.Symbol, err = util.GetSymbolWithAddress(src.TokenS); err != nil {
+		return tx, err
+	}
+
+	// tokenS -> sell
+	tx.fullFilled(src.TxInfo)
+	tx.Owner = src.Owner
+	tx.Amount = src.AmountS
+	tx.Symbol = ETH_SYMBOL
+	tx.Type = TX_TYPE_CONVERT_OUTCOME
+
+	return tx, err
+}
+
 func (tx *TransactionView) fullFilled(src types.TxInfo) {
 	tx.TxHash = src.TxHash
 	tx.BlockNumber = src.BlockNumber.Int64()

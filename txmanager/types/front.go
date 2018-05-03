@@ -48,6 +48,7 @@ type TransactionJsonResult struct {
 type TransactionContent struct {
 	Market    string `json:"market"`
 	OrderHash string `json:"orderHash"`
+	Fill      string `json:"fill"`
 }
 
 func NewResult(tx *TransactionView) TransactionJsonResult {
@@ -66,17 +67,6 @@ func NewResult(tx *TransactionView) TransactionJsonResult {
 	res.UpdateTime = tx.UpdateTime
 	res.Nonce = tx.Nonce.String()
 
-	return res
-}
-
-func SetCutoffContent(market string) TransactionContent {
-	var res TransactionContent
-	res.Market = market
-	return res
-}
-
-func SetDefaultContent() TransactionContent {
-	var res TransactionContent
 	return res
 }
 
@@ -176,6 +166,28 @@ func (r *TransactionJsonResult) FromTransferEntity(entity *TransactionEntity) er
 	r.To = common.HexToAddress(content.Receiver)
 	r.Value = content.Amount
 
+	return nil
+}
+
+type fill struct {
+	RingHash  string `json:"ring_hash"`
+	OrderHash string `json:"order_hash"`
+	Owner     string `json:"owner"`
+	SymbolS   string `json:"symbol_s"`
+	SymbolB   string `json:"symbol_b"`
+	RingIndex string `json:"ring_index"`
+	FillIndex string `json:"fill_index"`
+	AmountS   string `json:"amount_s"`
+	AmountB   string `json:"amount_b"`
+	LrcReward string `json:"lrc_reward"`
+	LrcFee    string `json:"lrc_fee"`
+	SplitS    string `json:"split_s"`
+	SplitB    string `json:"split_b"`
+	Market    string `json:"market"`
+}
+
+// todo
+func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity) error {
 	return nil
 }
 
