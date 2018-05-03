@@ -113,7 +113,7 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
-				if strings.Contains(err.Error(), "record not found") {
+				if strings.Contains(err1.Error(), "record not found") {
 					RemoveMinedRing(ringhash)
 				}
 				log.Errorf("err:%s", err1.Error())
