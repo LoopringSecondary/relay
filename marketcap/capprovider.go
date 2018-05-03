@@ -209,6 +209,7 @@ func (p *CapProvider_CoinMarketCap) LegalCurrencyValueByCurrency(tokenAddress co
 		v := new(big.Rat).SetInt(c.Decimals)
 		v.Quo(amount, v)
 		price, _ := p.GetMarketCapByCurrency(tokenAddress, currencyStr)
+		log.Debugf("LegalCurrencyValueByCurrency token:%s,decimals:%s, amount:%s, currency:%s, price:%s", tokenAddress.Hex(), c.Decimals.String(), amount.FloatString(2), currencyStr, price.FloatString(2) )
 		v.Mul(price, v)
 		return v, nil
 	}
@@ -304,6 +305,7 @@ func (p *CapProvider_CoinMarketCap) syncMarketCap() error {
 					p.tokenMarketCaps[tokenAddress].Volume24HCNY = tokenCap.Volume24HCNY
 					p.tokenMarketCaps[tokenAddress].Volume24HUSD = tokenCap.Volume24HUSD
 					p.tokenMarketCaps[tokenAddress].LastUpdated = tokenCap.LastUpdated
+					log.Debugf("token:%s, priceUsd:%s", tokenAddress.Hex(), tokenCap.PriceUsd.FloatString(2))
 					syncedTokens[p.tokenMarketCaps[tokenAddress].Address] = true
 				}
 			}
