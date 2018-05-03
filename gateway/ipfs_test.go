@@ -19,6 +19,7 @@
 package gateway_test
 
 import (
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
@@ -228,8 +229,42 @@ func TestMatcher_Case2(t *testing.T) {
 }
 
 func TestBalanceSub(t *testing.T) {
-	db := test.Rds()
-	orders, _ := db.GetOrdersByHash([]string{"0xf6c48786f9e60bd3167af90dfddafc0730085b885c0d7fc0659b0875a17aee98", "0xc036238a89cf6ee43ed1580a9a1ffb0a3abf7926bd84e1b29c5edddc43b2c563"})
+	account1 := test.Entity().Accounts[0].Address
+	account2 := test.Entity().Accounts[1].Address
+	miner := test.Entity().Creator.Address
+
+	lrcTokenAddress := util.AllTokens["LRC"].Protocol
+	wethTokenAddress := util.AllTokens["WETH"].Protocol
+
+	accounts := []common.Address{account1, account2, miner}
+	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
+
+	redisprefix := "testmatch_"
+	for _, tokenAddress := range tokens {
+		for _, account := range accounts {
+			key := redisprefix + tokenAddress.Hex() + "_" + account.Hex()
+			bs, err := cache.Get(key)
+			if err != nil {
+				balanceAfterSave, _ := ethaccessor.Erc20Balance(tokenAddress, account, "latest")
+				cache.Set(key, []byte(balanceAfterSave.String()), 0)
+			} else {
+				balanceBeforeSave, _ := new(big.Int).SetString(string(bs), 0)
+				balanceAfterSave, _ := ethaccessor.Erc20Balance(tokenAddress, account, "latest")
+				cache.Set(key, []byte(balanceAfterSave.String()), 0)
+				balance := new(big.Int).Sub(balanceAfterSave, balanceBeforeSave)
+
+				symbol, _ := util.GetSymbolWithAddress(tokenAddress)
+				t.Logf("symbol:%s account:%s amount:%s", symbol, account.Hex(), balance.String())
+			}
+		}
+	}
+}
+
+func TestOrderFilled(t *testing.T) {
+	order1 := "0x2b4be18b97b734f9c619367d7b422086f4476a78d2f946edf66f39ad0604cc20"
+	order2 := "0xae99509109129fc957410242c56a576bf7600d173d90ed04f3bfd91e9d0ea268"
+	hashlist := []string{order1, order2}
+	orders, _ := test.Rds().GetOrdersByHash(hashlist)
 
 	for _, v := range orders {
 		if common.HexToAddress(v.Owner) == common.HexToAddress("0x1B978a1D302335a6F2Ebe4B8823B5E17c3C84135") {
@@ -244,28 +279,4 @@ func TestBalanceSub(t *testing.T) {
 			t.Logf("acc2 order,sell %s:%s, buy %s:%s, dealtAmount %s:%s dealtAmount %s:%s, split %s:%s, split %s:%s", symbolS, v.AmountS, symbolB, v.AmountB, symbolS, v.DealtAmountS, symbolB, v.DealtAmountB, symbolS, v.SplitAmountS, symbolB, v.SplitAmountB)
 		}
 	}
-
-	t.Log("------------------------------------------------------------------------")
-	acclrcbegin1, _ := new(big.Int).SetString("2009273560920082658190608", 0)
-	acclrcbegin2, _ := new(big.Int).SetString("1990629691999571131031008", 0)
-	acclrcbegin3, _ := new(big.Int).SetString("100000096747080346210778384", 0)
-	accethbegin1, _ := new(big.Int).SetString("10067403806388012173890", 0)
-	accethbegin2, _ := new(big.Int).SetString("10144596193611987826110", 0)
-	accethbegin3, _ := new(big.Int).SetString("1000000000000000000", 0)
-
-	acclrcend1, _ := new(big.Int).SetString("2009568560920082658190608", 0)
-	acclrcend2, _ := new(big.Int).SetString("1990328291999571131031008", 0)
-	acclrcend3, _ := new(big.Int).SetString("100000103147080346210778384", 0)
-	accethend1, _ := new(big.Int).SetString("10067303806388012173890", 0)
-	accethend2, _ := new(big.Int).SetString("10144696193611987826110", 0)
-	accethend3, _ := new(big.Int).SetString("1000000000000000000", 0)
-
-	t.Logf("acc1 lrc:%s", new(big.Int).Sub(acclrcend1, acclrcbegin1).String())
-	t.Logf("acc1 eth:%s", new(big.Int).Sub(accethend1, accethbegin1).String())
-
-	t.Logf("acc2 lrc:%s", new(big.Int).Sub(acclrcend2, acclrcbegin2).String())
-	t.Logf("acc2 eth:%s", new(big.Int).Sub(accethend2, accethbegin2).String())
-
-	t.Logf("miner lrc:%s", new(big.Int).Sub(acclrcend3, acclrcbegin3).String())
-	t.Logf("miner eth:%s", new(big.Int).Sub(accethend3, accethbegin3).String())
 }
