@@ -144,6 +144,7 @@ func (r *TransactionJsonResult) FromWethDepositEntity(entity *TransactionEntity)
 	}
 
 	r.beforeConvert(entity)
+	r.From = common.HexToAddress(content.Dst)
 	r.To = common.HexToAddress(content.Dst)
 	r.Value = content.Amount
 
@@ -158,6 +159,7 @@ func (r *TransactionJsonResult) FromWethWithdrawalEntity(entity *TransactionEnti
 
 	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Src)
+	r.To = common.HexToAddress(content.Src)
 	r.Value = content.Amount
 
 	return nil
