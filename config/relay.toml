@@ -91,7 +91,6 @@ name = "Loopring corporation"
     minGasLimit = 1000000000
     maxGasLimit = 100000000000
     feeReceipt = "0x750aD4351bB728ceC7d639A9511F9D6488f1E259"
-    submitRingTime = 45
     [[miner.normal_miners]]
         address = "0x750aD4351bB728ceC7d639A9511F9D6488f1E259"
         maxPendingTtl = 40
@@ -103,6 +102,7 @@ name = "Loopring corporation"
     		delayed_number = 10000
     		max_cache_rounds_length = 1000
     		lag_blocks = 200
+    		submitRingTime = 45
 
 [market]
     token_file = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/tokens.json"
