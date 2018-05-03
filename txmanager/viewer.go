@@ -154,10 +154,8 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 func (impl *TransactionViewerImpl) assemble(daoviews []dao.TransactionView) []txtyp.TransactionJsonResult {
 	list := make([]txtyp.TransactionJsonResult, 0)
 
-	var (
-		hashlist     []string
-		daoentitymap map[string]dao.TransactionEntity
-	)
+	hashlist := make([]string, 0)
+	daoentitymap := make(map[string]dao.TransactionEntity)
 
 	// get dao.TransactionEntity
 	for _, v := range daoviews {
@@ -186,7 +184,7 @@ func (impl *TransactionViewerImpl) assemble(daoviews []dao.TransactionView) []tx
 		// from dao.TransactionView to txtyp.TransactionView
 		v.ConvertUp(&view)
 
-		// get entity
+		// get entity from map
 		key := txLogIndexStr(view.TxHash.Hex(), view.LogIndex)
 		if t, ok := daoentitymap[key]; !ok {
 			continue
@@ -230,10 +228,18 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 		err = res.FromCutoffPairEntity(entity)
 
 	case txtyp.TX_TYPE_CONVERT_INCOME:
-		err = res.FromWethDepositEntity(entity)
+		if view.Symbol == txtyp.WETH_SYMBOL {
+			err = res.FromWethDepositEntity(entity)
+		} else {
+			err = res.FromWethWithdrawalEntity(entity)
+		}
 
-	case txtyp.TX_TYPE_WITHDRAWAL:
-		err = res.FromWethWithdrawalEntity(entity)
+	case txtyp.TX_TYPE_CONVERT_OUTCOME:
+		if view.Symbol == txtyp.WETH_SYMBOL {
+			err = res.FromWethWithdrawalEntity(entity)
+		} else {
+			err = res.FromWethDepositEntity(entity)
+		}
 
 	case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
 		err = res.FromTransferEntity(entity)

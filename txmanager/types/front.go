@@ -169,6 +169,7 @@ func (r *TransactionJsonResult) FromTransferEntity(entity *TransactionEntity) er
 		return err
 	}
 
+	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Sender)
 	r.To = common.HexToAddress(content.Receiver)
 	r.Value = content.Amount

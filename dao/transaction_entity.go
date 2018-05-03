@@ -103,9 +103,9 @@ func (s *RdsServiceImpl) FindPendingTxEntity(hash string) (TransactionEntity, er
 func (s *RdsServiceImpl) GetTxEntity(hashlist []string) ([]TransactionEntity, error) {
 	var txs []TransactionEntity
 
-	err := s.db.Model(&TransactionEntity{}).
-		Where("tx_hash in (?)", hashlist).
-		Where("fork=?", false).Error
+	err := s.db.Where("tx_hash in (?)", hashlist).
+		Where("fork=?", false).
+		Find(&txs).Error
 
 	return txs, err
 }
