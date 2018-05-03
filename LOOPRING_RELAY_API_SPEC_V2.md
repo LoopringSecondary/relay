@@ -123,6 +123,8 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
   - `walletAddress` - The wallet margin address.
   - `owner` - user's wallet address
+  - `AuthAddr` - The wallet auth public key.
+  - `AuthPrivateKey` - The wallet auth private key to sign ring when submitting ring.
   - `tokenS` - Token to sell.
   - `tokenB` - Token to buy.
   - `amountS` - Maximum amount of tokenS to sell.
@@ -135,6 +137,7 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `v` - ECDSA signature parameter v.
   - `r` - ECDSA signature parameter r.
   - `s` - ECDSA signature parameter s.
+  - `powNonce` - Order submitting must be verified by our pow check logic. If orders submitted exceeded in certain team, we will increase pow difficult.
 
 ```js
 params: [{
@@ -142,6 +145,8 @@ params: [{
   "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
   "walletAddress" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
+  "authAddr" : "0xcE862ca5e8DE3c5258B05C558daFDC4B7703a217",
+  "authPrivateKey" : "0xe84989447467e438565dd2715d93d7537e9bc07fe7dc3044d8cbf4bd10967a69",
   "tokenS" : "Eth",
   "tokenB" : "Lrc",
   "amountS" : "0x0001234d234",
@@ -154,6 +159,7 @@ params: [{
   "v" : 112,
   "r" : "239dskjfsn23ck34323434md93jchek3",
   "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
+  "powNonce" : 10,
 }]
 ```
 
