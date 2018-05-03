@@ -107,11 +107,12 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 		for _, ringhash := range ringhashes {
 
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
-				if submitInfo.ID > 0 {
+				if submitInfo.ID <= 0 {
 					RemoveMinedRing(ringhash)
 					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
+				RemoveMinedRing(ringhash)
 				log.Errorf("err:%s", err1.Error())
 			}
 		}
