@@ -99,28 +99,28 @@ func Initialize(filterOptions *config.GatewayFiltersOptions, options *config.Gat
 	gateway.filters = append(gateway.filters, cutoffFilter)
 }
 
-func HandleOrder(input eventemitter.EventData) error {
+func HandleInputOrder(input eventemitter.EventData) (orderHash string, err error) {
 	var (
 		state *types.OrderState
-		err   error
 	)
 
 	order := input.(*types.Order)
 	order.Hash = order.GenerateHash()
+	orderHash = order.Hash.Hex()
 
 	//var broadcastTime int
 
 	//TODO(xiaolu) 这里需要测试一下，超时error和查询数据为空的error，处理方式不应该一样
 	if state, err = gateway.om.GetOrderByHash(order.Hash); err != nil && err.Error() == "record not found" {
 		if err = generatePrice(order); err != nil {
-			return err
+			return orderHash, err
 		}
 
 		for _, v := range gateway.filters {
 			valid, err := v.filter(order)
 			if !valid {
 				log.Errorf(err.Error())
-				return err
+				return orderHash, err
 			}
 		}
 		state = &types.OrderState{}
@@ -144,7 +144,12 @@ func HandleOrder(input eventemitter.EventData) error {
 	//		}
 	//	}
 	//}
-	return nil
+	return orderHash, err
+}
+
+func HandleOrder(input eventemitter.EventData) error {
+	_, err := HandleInputOrder(input)
+	return err
 }
 
 func generatePrice(order *types.Order) error {
