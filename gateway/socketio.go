@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/googollee/go-socket.io"
 	"github.com/robfig/cron"
-	"gopkg.in/googollee/go-engine.io.v1"
 	"net/http"
 	"reflect"
 	"strings"
