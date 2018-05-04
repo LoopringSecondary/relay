@@ -197,10 +197,9 @@ func TestEthNodeAccessor_ERC20Balance(t *testing.T) {
 			if err != nil {
 				t.Fatalf("accessor get erc20 balance error:%s", err.Error())
 			}
-			amount := balance
-			//amount := new(big.Rat).SetFrac(balance, big.NewInt(1e18)).FloatString(2)
+			amount := new(big.Rat).SetFrac(balance, big.NewInt(1e18)).FloatString(2)
 			symbol, _ := util.GetSymbolWithAddress(tokenAddress)
-			t.Logf("symbol:%s account:%s amount:%s", symbol, account.Hex(), amount)
+			t.Logf("token:%s account:%s amount:%s", symbol, account.Hex(), amount)
 		}
 	}
 }
