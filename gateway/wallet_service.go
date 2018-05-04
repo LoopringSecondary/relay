@@ -792,7 +792,7 @@ func (w *WalletServiceImpl) GetPendingRawTxByHash(query TransactionQuery) (resul
 }
 
 func (w *WalletServiceImpl) GetEstimateGasPrice() (result string, err error) {
-	return ethaccessor.EstimateGasPrice(nil, nil).String(), nil
+	return types.BigintToHex(ethaccessor.EstimateGasPrice(nil, nil)), nil
 }
 
 func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, statusList []types.OrderStatus, pageIndex int, pageSize int) {
