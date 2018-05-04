@@ -112,30 +112,6 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	return txinfo
 }
 
-const (
-	RINGMINED_EVT_NAME           = "RingMined"
-	CANCEL_EVT_NAME              = "OrderCancelled"
-	CUTOFF_EVT_NAME              = "AllOrdersCancelled"
-	CUTOFFPAIR_EVT_NAME          = "OrdersCancelled"
-	TOKENREGISTERED_EVT_NAME     = "TokenRegistered"
-	TOKENUNREGISTERED_EVT_NAME   = "TokenUnregistered"
-	ADDRESSAUTHORIZED_EVT_NAME   = "AddressAuthorized"
-	ADDRESSDEAUTHORIZED_EVT_NAME = "AddressDeauthorized"
-	TRANSFER_EVT_NAME            = "Transfer"
-	APPROVAL_EVT_NAME            = "Approval"
-	WETHDEPOSIT_EVT_NAME         = "Deposit"
-	WETHWITHDRAWAL_EVT_NAME      = "Withdrawal"
-
-	SUBMITRING_METHOD_NAME      = "submitRing"
-	CANCELORDER_METHOD_NAME     = "cancelOrder"
-	CUTOFF_METHOD_NAME          = "cancelAllOrders"
-	CUTOFFPAIR_METHOD_NAME      = "cancelAllOrdersByTradingPair"
-	WETH_DEPOSIT_METHOD_NAME    = "deposit"
-	WETH_WITHDRAWAL_METHOD_NAME = "withdraw"
-	APPROVAL_METHOD_NAME        = "approve"
-	TRANSFER_METHOD_NAME        = "transfer"
-)
-
 type AbiProcessor struct {
 	events      map[common.Hash]EventData
 	methods     map[string]MethodData
@@ -280,7 +256,7 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 //	}
 //
 //	// load event
-//	event := ethaccessor.ProtocolImplAbi().Events[RINGMINED_EVT_NAME]
+//	event := ethaccessor.ProtocolImplAbi().Events[EVENT_RING_MINED]
 //	contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
 //	contract.Event = &ethaccessor.RingMinedEvent{}
 //	watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
@@ -290,7 +266,7 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 //	log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
 //
 //	// load method
-//	method := ethaccessor.ProtocolImplAbi().Methods[SUBMITRING_METHOD_NAME]
+//	method := ethaccessor.ProtocolImplAbi().Methods[METHOD_SUBMIT_RING]
 //	contract1 := newMethodData(&method, ethaccessor.ProtocolImplAbi())
 //	contract1.Method = &ethaccessor.SubmitRingMethod{}
 //	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
@@ -302,7 +278,7 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 
 func (processor *AbiProcessor) loadProtocolContract() {
 	for name, event := range ethaccessor.ProtocolImplAbi().Events {
-		if name != RINGMINED_EVT_NAME && name != CANCEL_EVT_NAME && name != CUTOFF_EVT_NAME && name != CUTOFFPAIR_EVT_NAME {
+		if name != ethaccessor.EVENT_RING_MINED && name != ethaccessor.EVENT_ORDER_CANCELLED && name != ethaccessor.EVENT_CUTOFF_ALL && name != ethaccessor.EVENT_CUTOFF_PAIR {
 			continue
 		}
 
@@ -310,16 +286,16 @@ func (processor *AbiProcessor) loadProtocolContract() {
 		contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
 
 		switch contract.Name {
-		case RINGMINED_EVT_NAME:
+		case ethaccessor.EVENT_RING_MINED:
 			contract.Event = &ethaccessor.RingMinedEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
-		case CANCEL_EVT_NAME:
+		case ethaccessor.EVENT_ORDER_CANCELLED:
 			contract.Event = &ethaccessor.OrderCancelledEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleOrderCancelledEvent}
-		case CUTOFF_EVT_NAME:
+		case ethaccessor.EVENT_CUTOFF_ALL:
 			contract.Event = &ethaccessor.CutoffEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffEvent}
-		case CUTOFFPAIR_EVT_NAME:
+		case ethaccessor.EVENT_CUTOFF_PAIR:
 			contract.Event = &ethaccessor.CutoffPairEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairEvent}
 		}
@@ -330,7 +306,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 	}
 
 	for name, method := range ethaccessor.ProtocolImplAbi().Methods {
-		if name != SUBMITRING_METHOD_NAME && name != CANCELORDER_METHOD_NAME && name != CUTOFF_METHOD_NAME && name != CUTOFFPAIR_METHOD_NAME {
+		if name != ethaccessor.METHOD_SUBMIT_RING && name != ethaccessor.METHOD_CANCEL_ORDER && name != ethaccessor.METHOD_CUTOFF_ALL && name != ethaccessor.METHOD_CUTOFF_PAIR {
 			continue
 		}
 
@@ -338,16 +314,16 @@ func (processor *AbiProcessor) loadProtocolContract() {
 		watcher := &eventemitter.Watcher{}
 
 		switch contract.Name {
-		case SUBMITRING_METHOD_NAME:
+		case ethaccessor.METHOD_SUBMIT_RING:
 			contract.Method = &ethaccessor.SubmitRingMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
-		case CANCELORDER_METHOD_NAME:
+		case ethaccessor.METHOD_CANCEL_ORDER:
 			contract.Method = &ethaccessor.CancelOrderMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCancelOrderMethod}
-		case CUTOFF_METHOD_NAME:
+		case ethaccessor.METHOD_CUTOFF_ALL:
 			contract.Method = &ethaccessor.CutoffMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffMethod}
-		case CUTOFFPAIR_METHOD_NAME:
+		case ethaccessor.METHOD_CUTOFF_PAIR:
 			contract.Method = &ethaccessor.CutoffPairMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleCutoffPairMethod}
 		}
@@ -360,7 +336,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 
 func (processor *AbiProcessor) loadErc20Contract() {
 	for name, event := range ethaccessor.Erc20Abi().Events {
-		if name != TRANSFER_EVT_NAME && name != APPROVAL_EVT_NAME {
+		if name != ethaccessor.EVENT_TRANSFER && name != ethaccessor.EVENT_APPROVAL {
 			continue
 		}
 
@@ -368,10 +344,10 @@ func (processor *AbiProcessor) loadErc20Contract() {
 		contract := newEventData(&event, ethaccessor.Erc20Abi())
 
 		switch contract.Name {
-		case TRANSFER_EVT_NAME:
+		case ethaccessor.EVENT_TRANSFER:
 			contract.Event = &ethaccessor.TransferEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleTransferEvent}
-		case APPROVAL_EVT_NAME:
+		case ethaccessor.EVENT_APPROVAL:
 			contract.Event = &ethaccessor.ApprovalEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApprovalEvent}
 		}
@@ -383,7 +359,7 @@ func (processor *AbiProcessor) loadErc20Contract() {
 	}
 
 	for name, method := range ethaccessor.Erc20Abi().Methods {
-		if name != TRANSFER_METHOD_NAME && name != APPROVAL_METHOD_NAME {
+		if name != ethaccessor.METHOD_TRANSFER && name != ethaccessor.METHOD_APPROVE {
 			continue
 		}
 
@@ -391,10 +367,10 @@ func (processor *AbiProcessor) loadErc20Contract() {
 		contract := newMethodData(&method, ethaccessor.Erc20Abi())
 
 		switch contract.Name {
-		case TRANSFER_METHOD_NAME:
+		case ethaccessor.METHOD_TRANSFER:
 			contract.Method = &ethaccessor.TransferMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleTransferMethod}
-		case APPROVAL_METHOD_NAME:
+		case ethaccessor.METHOD_APPROVE:
 			contract.Method = &ethaccessor.ApproveMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleApproveMethod}
 		}
@@ -407,7 +383,7 @@ func (processor *AbiProcessor) loadErc20Contract() {
 
 func (processor *AbiProcessor) loadWethContract() {
 	for name, method := range ethaccessor.WethAbi().Methods {
-		if name != WETH_DEPOSIT_METHOD_NAME && name != WETH_WITHDRAWAL_METHOD_NAME {
+		if name != ethaccessor.METHOD_WETH_DEPOSIT && name != ethaccessor.METHOD_WETH_WITHDRAWAL {
 			continue
 		}
 
@@ -415,10 +391,10 @@ func (processor *AbiProcessor) loadWethContract() {
 		contract := newMethodData(&method, ethaccessor.WethAbi())
 
 		switch contract.Name {
-		case WETH_DEPOSIT_METHOD_NAME:
+		case ethaccessor.METHOD_WETH_DEPOSIT:
 			// weth deposit without any inputs,use transaction.value as input
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethDepositMethod}
-		case WETH_WITHDRAWAL_METHOD_NAME:
+		case ethaccessor.METHOD_WETH_WITHDRAWAL:
 			contract.Method = &ethaccessor.WethWithdrawalMethod{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethWithdrawalMethod}
 		}
@@ -429,7 +405,7 @@ func (processor *AbiProcessor) loadWethContract() {
 	}
 
 	for name, event := range ethaccessor.WethAbi().Events {
-		if name != WETHDEPOSIT_EVT_NAME && name != WETHWITHDRAWAL_EVT_NAME {
+		if name != ethaccessor.EVENT_WETH_DEPOSIT && name != ethaccessor.EVENT_WETH_WITHDRAWAL {
 			continue
 		}
 
@@ -437,10 +413,10 @@ func (processor *AbiProcessor) loadWethContract() {
 		contract := newEventData(&event, ethaccessor.WethAbi())
 
 		switch contract.Name {
-		case WETHDEPOSIT_EVT_NAME:
+		case ethaccessor.EVENT_WETH_DEPOSIT:
 			contract.Event = &ethaccessor.WethDepositEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethDepositEvent}
-		case WETHWITHDRAWAL_EVT_NAME:
+		case ethaccessor.EVENT_WETH_WITHDRAWAL:
 			contract.Event = &ethaccessor.WethWithdrawalEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleWethWithdrawalEvent}
 		}
@@ -453,7 +429,7 @@ func (processor *AbiProcessor) loadWethContract() {
 
 func (processor *AbiProcessor) loadTokenRegisterContract() {
 	for name, event := range ethaccessor.TokenRegistryAbi().Events {
-		if name != TOKENREGISTERED_EVT_NAME && name != TOKENUNREGISTERED_EVT_NAME {
+		if name != ethaccessor.EVENT_TOKEN_REGISTERED && name != ethaccessor.EVENT_TOKEN_UNREGISTERED {
 			continue
 		}
 
@@ -461,10 +437,10 @@ func (processor *AbiProcessor) loadTokenRegisterContract() {
 		contract := newEventData(&event, ethaccessor.TokenRegistryAbi())
 
 		switch contract.Name {
-		case TOKENREGISTERED_EVT_NAME:
+		case ethaccessor.EVENT_TOKEN_REGISTERED:
 			contract.Event = &ethaccessor.TokenRegisteredEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleTokenRegisteredEvent}
-		case TOKENUNREGISTERED_EVT_NAME:
+		case ethaccessor.EVENT_TOKEN_UNREGISTERED:
 			contract.Event = &ethaccessor.TokenUnRegisteredEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleTokenUnRegisteredEvent}
 		}
@@ -477,7 +453,7 @@ func (processor *AbiProcessor) loadTokenRegisterContract() {
 
 func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 	for name, event := range ethaccessor.DelegateAbi().Events {
-		if name != ADDRESSAUTHORIZED_EVT_NAME && name != ADDRESSDEAUTHORIZED_EVT_NAME {
+		if name != ethaccessor.EVENT_ADDRESS_AUTHORIZED && name != ethaccessor.EVENT_ADDRESS_DEAUTHORIZED {
 			continue
 		}
 
@@ -485,10 +461,10 @@ func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 		contract := newEventData(&event, ethaccessor.DelegateAbi())
 
 		switch contract.Name {
-		case ADDRESSAUTHORIZED_EVT_NAME:
+		case ethaccessor.EVENT_ADDRESS_AUTHORIZED:
 			contract.Event = &ethaccessor.AddressAuthorizedEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleAddressAuthorizedEvent}
-		case ADDRESSDEAUTHORIZED_EVT_NAME:
+		case ethaccessor.EVENT_ADDRESS_DEAUTHORIZED:
 			contract.Event = &ethaccessor.AddressDeAuthorizedEvent{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleAddressDeAuthorizedEvent}
 		}
