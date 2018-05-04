@@ -147,7 +147,7 @@ func (c *conn) serveError() {
 			return
 		case msg := <-c.errorChan:
 			if handler := c.namespace(msg.namespace); handler != nil {
-				handler.onError(msg.error)
+				handler.onError(errors.New(c.ID() + "SOCKETFORLOOPRING" + msg.error.Error()))
 			}
 		}
 	}
