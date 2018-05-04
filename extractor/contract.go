@@ -649,13 +649,12 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	}
 	ringmined.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s ringMined event delegate:%s, ringhash:%s, ringIndex:%s, tx:%s",
+	log.Debugf("extractor,tx:%s ringMined event logIndex:%d delegate:%s, ringhash:%s, ringIndex:%s",
 		contractData.TxHash.Hex(),
+		ringmined.TxLogIndex,
 		ringmined.DelegateAddress.Hex(),
 		ringmined.Ringhash.Hex(),
-		ringmined.RingIndex.String(),
-		ringmined.TxHash.Hex(),
-		ringmined.DelegateAddress.Hex())
+		ringmined.RingIndex.String())
 
 	eventemitter.Emit(eventemitter.RingMined, ringmined)
 
@@ -801,7 +800,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	transfer := contractEvent.ConvertDown()
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s tokenTransfer event, methodName:%s, from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Identify, transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
+	log.Debugf("extractor,tx:%s tokenTransfer event, methodName:%s, logIndex:%d, from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Identify, transfer.TxLogIndex, transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.Transfer, transfer)
 
