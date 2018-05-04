@@ -20,6 +20,7 @@ package txmanager
 
 import (
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
@@ -204,6 +205,17 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 		return err
 	}
 
+	// view过滤fill owner的转账,entity仍然存储transfer
+	if ethaccessor.TxIsSubmitRing(event.Identify) {
+		var filterList []txtyp.TransactionView
+		for _, v := range list {
+			if ok, _ := ExistFillOwner(v.TxHash, v.Owner); !ok {
+				filterList = append(filterList, v)
+			}
+		}
+		list = filterList
+	}
+
 	return tm.saveTransaction(&entity, list)
 }
 
@@ -221,7 +233,9 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
-	// todo
+	event := input.(*types.OrderFilledEvent)
+
+	SetFillOwner(event.TxHash, event.Owner)
 
 	return nil
 }
