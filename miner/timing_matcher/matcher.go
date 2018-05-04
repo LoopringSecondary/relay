@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 
-	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
@@ -109,10 +108,14 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 		for _, ringhash := range ringhashes {
 
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
-				if submitInfo.ID > 0 {
-					cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
+				if submitInfo.ID <= 0 {
+					RemoveMinedRing(ringhash)
+					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
+				if strings.Contains(err1.Error(), "record not found") {
+					RemoveMinedRing(ringhash)
+				}
 				log.Errorf("err:%s", err1.Error())
 			}
 		}

@@ -458,13 +458,7 @@ func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res str
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
-	log.Debug("order input from wallet...................." + order.Hash.Hex())
-	err = HandleOrder(types.ToOrder(order))
-	if err != nil {
-		fmt.Println(err)
-	}
-	res = "SUBMIT_SUCCESS"
-	return res, err
+	return HandleInputOrder(types.ToOrder(order))
 }
 
 func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
@@ -918,7 +912,7 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 
 		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
 		if err != nil {
-			log.Debug(err.Error())
+			//log.Debug(err.Error())
 			continue
 		}
 

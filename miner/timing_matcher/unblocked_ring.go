@@ -197,12 +197,13 @@ func RemoveMinedRing(ringhash common.Hash) error {
 func AddMinedRing(ringState *types.RingSubmitInfo) {
 	ringC := ringCache{}
 	ringC.ringhash = ringState.RawRing.Hash
-	ringFieldData := [][]byte{}
+	//ringFieldData := [][]byte{}
 	for _, filledOrder := range ringState.RawRing.Orders {
 		orderhash := filledOrder.OrderState.RawOrder.Hash
 		owner := filledOrder.OrderState.RawOrder.Owner
 		tokenS := filledOrder.OrderState.RawOrder.TokenS
-		ringFieldData = append(ringFieldData, ringC.cacheFiled(orderhash, owner, tokenS))
+		//ringFieldData = append(ringFieldData, ringC.cacheFiled(orderhash, owner, tokenS))
+		ringC.save(ringC.cacheFiled(orderhash, owner, tokenS))
 
 		ordC := orderCache{}
 		ordC.orderhash = orderhash
@@ -216,7 +217,7 @@ func AddMinedRing(ringState *types.RingSubmitInfo) {
 		ownerC.tokenS = tokenS
 		ownerC.save(orderhash)
 	}
-	ringC.save(ringFieldData...)
+	//ringC.save(ringFieldData...)
 }
 
 func FilledAmountS(owner, tokenS common.Address) (filledAmountS *big.Rat, err error) {

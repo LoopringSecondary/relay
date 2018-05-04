@@ -18,6 +18,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/Loopring/relay/market/util"
 )
 
 type BusinessType int
@@ -454,7 +455,7 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 		delegate := mktAndDelegate[0]
 		mkt := mktAndDelegate[1]
 		resp := SocketIOJsonResp{}
-		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress: delegate, Market: mkt})
+		fills, err := so.walletService.GetLatestFills(FillQuery{DelegateAddress: delegate, Market: mkt, Side: util.SideSell})
 		if err == nil {
 			//log.Infof("fetch fill from wallet %d, %s", len(fills), mkt)
 			resp.Data = fills
@@ -486,8 +487,10 @@ func (so *SocketIOServiceImpl) broadcastTrades(input eventemitter.EventData) (er
 
 func (so *SocketIOServiceImpl) getConnectedMarketForDepth() map[string]bool {
 	markets := make(map[string]bool, 0)
+	count := 0
 	so.connIdMap.Range(func(key, value interface{}) bool {
 		v := value.(socketio.Conn)
+		count++
 		if v.Context() != nil {
 			businesses := v.Context().(map[string]string)
 			DCtx, ok := businesses[eventKeyDepth]
@@ -501,6 +504,7 @@ func (so *SocketIOServiceImpl) getConnectedMarketForDepth() map[string]bool {
 		}
 		return true
 	})
+	log.Infof("SOCKETIO current conn number is %d", count)
 	return markets
 }
 
