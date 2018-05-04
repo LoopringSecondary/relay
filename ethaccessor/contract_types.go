@@ -60,6 +60,14 @@ const (
 	METHOD_TRANSFER        = "transfer"
 )
 
+func TxIsSubmitRing(methodName string) bool {
+	if methodName == METHOD_SUBMIT_RING {
+		return true
+	}
+
+	return false
+}
+
 type TransferEvent struct {
 	Sender   common.Address `fieldName:"from" fieldId:"0"`
 	Receiver common.Address `fieldName:"to" fieldId:"1"`
