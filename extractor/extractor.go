@@ -257,13 +257,15 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 	}
 
 	gas, status := l.processor.getGasAndStatus(tx, receipt)
-	method.FullFilled(tx, gas, blockTime, status)
+	method.FullFilled(tx, gas, blockTime, status, method.Name)
 	eventemitter.Emit(method.Id, method)
 
 	return nil
 }
 
 func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
+	methodName := l.processor.GetMethodName(tx)
+
 	for _, evtLog := range receipt.Logs {
 		event, ok := l.processor.GetEvent(evtLog)
 		if !ok {
@@ -279,7 +281,7 @@ func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt
 			}
 		}
 
-		event.FullFilled(tx, &evtLog, receipt.GasUsed.BigInt(), blockTime)
+		event.FullFilled(tx, &evtLog, receipt.GasUsed.BigInt(), blockTime, methodName)
 		eventemitter.Emit(event.Id.Hex(), event)
 	}
 

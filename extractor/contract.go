@@ -52,8 +52,8 @@ func newEventData(event *abi.Event, cabi *abi.ABI) EventData {
 	return c
 }
 
-func (event *EventData) FullFilled(tx *ethaccessor.Transaction, evtLog *ethaccessor.Log, gasUsed, blockTime *big.Int) {
-	event.TxInfo = setTxInfo(tx, gasUsed, blockTime)
+func (event *EventData) FullFilled(tx *ethaccessor.Transaction, evtLog *ethaccessor.Log, gasUsed, blockTime *big.Int, methodName string) {
+	event.TxInfo = setTxInfo(tx, gasUsed, blockTime, methodName)
 	event.Topics = evtLog.Topics
 	event.Protocol = common.HexToAddress(evtLog.Address)
 	event.TxLogIndex = evtLog.LogIndex.Int64()
@@ -79,14 +79,14 @@ func newMethodData(method *abi.Method, cabi *abi.ABI) MethodData {
 	return c
 }
 
-func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus) {
-	method.TxInfo = setTxInfo(tx, gasUsed, blockTime)
+func (method *MethodData) FullFilled(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, status types.TxStatus, methodName string) {
+	method.TxInfo = setTxInfo(tx, gasUsed, blockTime, methodName)
 	method.Input = tx.Input
 	method.TxLogIndex = 0
 	method.Status = status
 }
 
-func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.TxInfo {
+func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int, methodName string) types.TxInfo {
 	var txinfo types.TxInfo
 
 	txinfo.BlockNumber = tx.BlockNumber.BigInt()
@@ -108,6 +108,8 @@ func setTxInfo(tx *ethaccessor.Transaction, gasUsed, blockTime *big.Int) types.T
 	} else {
 		txinfo.DelegateAddress = types.NilAddress
 	}
+
+	txinfo.Identify = methodName
 
 	return txinfo
 }
@@ -175,6 +177,14 @@ func (processor *AbiProcessor) GetMethod(tx *ethaccessor.Transaction) (MethodDat
 
 	method, ok = processor.methods[id]
 	return method, ok
+}
+
+// GetMethodName
+func (processor *AbiProcessor) GetMethodName(tx *ethaccessor.Transaction) string {
+	if method, ok := processor.GetMethod(tx); ok {
+		return method.Name
+	}
+	return ethaccessor.METHOD_UNKNOWN
 }
 
 // SupportedContract judge protocol have ever been load
@@ -656,9 +666,10 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	for _, fill := range fills {
 		fill.TxInfo = contractData.TxInfo
 
-		log.Debugf("extractor,tx:%s orderFilled event delegate:%s, ringhash:%s, amountS:%s, amountB:%s, "+
+		log.Debugf("extractor,tx:%s orderFilled event methodName:%s, delegate:%s, ringhash:%s, amountS:%s, amountB:%s, "+
 			"orderhash:%s, nextOrderhash:%s, preOrderhash:%s, ringIndex:%s, splitS:%s, splitB:%s, lrcFee:%s, lrcReward:%s",
 			contractData.TxHash.Hex(),
+			fill.Identify,
 			fill.DelegateAddress.Hex(),
 			fill.Ringhash.Hex(),
 			fill.AmountS.String(),
@@ -790,7 +801,7 @@ func (processor *AbiProcessor) handleTransferEvent(input eventemitter.EventData)
 	transfer := contractEvent.ConvertDown()
 	transfer.TxInfo = contractData.TxInfo
 
-	log.Debugf("extractor,tx:%s tokenTransfer event from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
+	log.Debugf("extractor,tx:%s tokenTransfer event, methodName:%s, from:%s, to:%s, value:%s", contractData.TxHash.Hex(), transfer.Identify, transfer.Sender.Hex(), transfer.Receiver.Hex(), transfer.Amount.String())
 
 	eventemitter.Emit(eventemitter.Transfer, transfer)
 

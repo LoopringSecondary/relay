@@ -49,6 +49,7 @@ type TxInfo struct {
 	GasUsed         *big.Int       `json:"gas_used"`
 	GasPrice        *big.Int       `json:"gas_price"`
 	Nonce           *big.Int       `json:"nonce"`
+	Identify        string         `json:"identify"`
 }
 
 type TokenRegisterEvent struct {
