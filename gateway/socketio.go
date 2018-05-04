@@ -7,6 +7,7 @@ import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
+	"github.com/Loopring/relay/market/util"
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/Loopring/relay/market/util"
 )
 
 type BusinessType int

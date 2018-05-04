@@ -211,6 +211,12 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 //	FillIndex     *big.Int
 //}
 
+// 用户币种tokenS,tokenB,lrc
+// 相关转账amountS,amountB,splitS,splitB,lrcReward,lrcFee
+// 最多2个账户:user1, user2生成最多6条记录
+// (只记录fill.owner相关,miner,feeReceipt,wallet无法从fill中获取,
+// 如果强行需要只能在txmanager接收到fill后从ethaccessor获取miner/feeReceipt)
+//
 func OrderFilledView(src *types.OrderFilledEvent) (TransactionView, error) {
 	var (
 		tx  TransactionView
