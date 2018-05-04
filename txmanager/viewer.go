@@ -25,6 +25,7 @@ import (
 	txtyp "github.com/Loopring/relay/txmanager/types"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
+	"strconv"
 	"strings"
 )
 
@@ -145,55 +146,106 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 	}
 
 	list = impl.assemble(views)
-	//list = collector(list)
+
 	return list, nil
 }
 
 // 如果transaction包含多条记录,则将protocol不同的记录放到content里
-func (impl *TransactionViewerImpl) assemble(items []dao.TransactionView) []txtyp.TransactionJsonResult {
+func (impl *TransactionViewerImpl) assemble(daoviews []dao.TransactionView) []txtyp.TransactionJsonResult {
 	list := make([]txtyp.TransactionJsonResult, 0)
 
-	for _, v := range items {
-		var view txtyp.TransactionView
+	hashlist := make([]string, 0)
+	daoentitymap := make(map[string]dao.TransactionEntity)
 
+	// get dao.TransactionEntity
+	for _, v := range daoviews {
+		hashlist = append(hashlist, v.TxHash)
+	}
+	daoentitys, err := impl.db.GetTxEntity(hashlist)
+	if err != nil {
+		return list
+	}
+
+	// set dao.TransactionEntity in map
+	for _, v := range daoentitys {
+		key := txLogIndexStr(v.TxHash, v.LogIndex)
+		if _, ok := daoentitymap[key]; !ok {
+			daoentitymap[key] = v
+		}
+	}
+
+	for _, v := range daoviews {
+		var (
+			view   txtyp.TransactionView
+			entity txtyp.TransactionEntity
+			model  dao.TransactionEntity
+		)
+
+		// from dao.TransactionView to txtyp.TransactionView
 		v.ConvertUp(&view)
-		res := txtyp.NewResult(&view)
 
-		res.Content = txtyp.SetDefaultContent()
-
-		entity, err := impl.db.FindTxEntity(view.TxHash.Hex(), view.LogIndex)
-		if err != nil {
+		// get entity from map
+		key := txLogIndexStr(view.TxHash.Hex(), view.LogIndex)
+		if t, ok := daoentitymap[key]; !ok {
 			continue
+		} else {
+			model = t
 		}
 
-		res.Protocol = common.HexToAddress(entity.Protocol)
-		res.From = common.HexToAddress(entity.From)
-		res.To = common.HexToAddress(entity.To)
+		// from dao.TransactionEntity to txtyp.TransactionEntity
+		model.ConvertUp(&entity)
 
-		switch view.Type {
-		case txtyp.TX_TYPE_CANCEL_ORDER:
-			if cancel, err := txtyp.ParseCancelContent(entity.Content); err == nil {
-				res.Content = txtyp.SetCancelContent(cancel.OrderHash)
-			}
-
-		case txtyp.TX_TYPE_CUTOFF_PAIR:
-			if cutoff, err := txtyp.ParseCutoffPairContent(entity.Content); err == nil {
-				if market, err := util.WrapMarket(cutoff.Token1, cutoff.Token2); err == nil {
-					res.Content = txtyp.SetCutoffContent(market)
-				}
-			}
-
-		case txtyp.TX_TYPE_TRANSFER, txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
-			if transfer, err := txtyp.ParseTransferContent(entity.Content); err == nil {
-				res.From = common.HexToAddress(transfer.Sender)
-				res.To = common.HexToAddress(transfer.Receiver)
-			}
+		// convert txtyp.TransactionView & txtyp.TransactionEntity to txtyp.TransactionJsonResult
+		if res, err := getTransactionJsonResult(&view, &entity); err == nil {
+			list = append(list, res)
 		}
-
-		list = append(list, res)
 	}
 
 	return list
+}
+
+func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.TransactionEntity) (txtyp.TransactionJsonResult, error) {
+	res := txtyp.NewResult(view)
+
+	if entity.Content == "" {
+		res.FromOtherEntity(entity)
+		return res, nil
+	}
+
+	var err error
+
+	switch view.Type {
+	case txtyp.TX_TYPE_APPROVE:
+		err = res.FromApproveEntity(entity)
+
+	case txtyp.TX_TYPE_CANCEL_ORDER:
+		err = res.FromCancelEntity(entity)
+
+	case txtyp.TX_TYPE_CUTOFF:
+		err = res.FromCutoffEntity(entity)
+
+	case txtyp.TX_TYPE_CUTOFF_PAIR:
+		err = res.FromCutoffPairEntity(entity)
+
+	case txtyp.TX_TYPE_CONVERT_INCOME:
+		if view.Symbol == txtyp.WETH_SYMBOL {
+			err = res.FromWethDepositEntity(entity)
+		} else {
+			err = res.FromWethWithdrawalEntity(entity)
+		}
+
+	case txtyp.TX_TYPE_CONVERT_OUTCOME:
+		if view.Symbol == txtyp.WETH_SYMBOL {
+			err = res.FromWethWithdrawalEntity(entity)
+		} else {
+			err = res.FromWethDepositEntity(entity)
+		}
+
+	case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
+		err = res.FromTransferEntity(entity)
+	}
+
+	return res, err
 }
 
 func validateOwner(ownerStr string) bool {
@@ -229,4 +281,9 @@ func symbolToProtocol(symbol string) common.Address {
 		return types.NilAddress
 	}
 	return util.AliasToAddress(symbol)
+}
+
+func txLogIndexStr(txhash string, logindex int64) string {
+	logindexstr := strconv.Itoa(int(logindex))
+	return txhash + "-" + logindexstr
 }

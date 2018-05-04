@@ -31,24 +31,27 @@ const (
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
 const (
-	TX_TYPE_UNKNOWN TxType = 0
-	TX_TYPE_APPROVE TxType = 1
-	TX_TYPE_SEND    TxType = 2 // SEND
-	TX_TYPE_RECEIVE TxType = 3
-	TX_TYPE_SELL    TxType = 4 // SELL
-	TX_TYPE_BUY     TxType = 5
-	//TX_TYPE_WRAP         TxType= 6 // WETH DEPOSIT
-	TX_TYPE_CONVERT_INCOME  TxType = 7 // WETH WITHDRAWAL
-	TX_TYPE_CONVERT_OUTCOME TxType = 8
-	TX_TYPE_CANCEL_ORDER    TxType = 9
-	TX_TYPE_CUTOFF          TxType = 10
-	TX_TYPE_CUTOFF_PAIR     TxType = 11
-
+	// common type
+	TX_TYPE_UNKNOWN              TxType = 0
+	TX_TYPE_APPROVE              TxType = 1
+	TX_TYPE_CONVERT_INCOME       TxType = 7
+	TX_TYPE_CONVERT_OUTCOME      TxType = 8
+	TX_TYPE_CANCEL_ORDER         TxType = 9
+	TX_TYPE_CUTOFF               TxType = 10
+	TX_TYPE_CUTOFF_PAIR          TxType = 11
 	TX_TYPE_UNSUPPORTED_CONTRACT TxType = 12
 
+	// front type
+	TX_TYPE_SEND    TxType = 2
+	TX_TYPE_RECEIVE TxType = 3
+	TX_TYPE_SELL    TxType = 4
+	TX_TYPE_BUY     TxType = 5
+
+	// backend type
 	TX_TYPE_TRANSFER   TxType = 21
 	TX_TYPE_DEPOSIT    TxType = 22
 	TX_TYPE_WITHDRAWAL TxType = 23
+	TX_TYPE_FILL       TxType = 24
 )
 
 func StatusStr(status types.TxStatus) string {

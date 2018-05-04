@@ -100,6 +100,16 @@ func (s *RdsServiceImpl) FindPendingTxEntity(hash string) (TransactionEntity, er
 	return tx, err
 }
 
+func (s *RdsServiceImpl) GetTxEntity(hashlist []string) ([]TransactionEntity, error) {
+	var txs []TransactionEntity
+
+	err := s.db.Where("tx_hash in (?)", hashlist).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
 // 根据交易发起者from地址及nonce获取pending tx
 func (s *RdsServiceImpl) GetPendingTxEntity(from string, nonce int64) ([]TransactionEntity, error) {
 	var txs []TransactionEntity

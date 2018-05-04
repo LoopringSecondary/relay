@@ -19,6 +19,7 @@
 package gateway_test
 
 import (
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/ethaccessor"
@@ -27,6 +28,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ipfs/go-ipfs-api"
 	"math/big"
 	"testing"
@@ -78,7 +80,7 @@ func TestRing(t *testing.T) {
 	test.CreateOrder(eth, lrc, account1.Address, amountS1, amountB1, lrcFee1)
 
 	// 卖出1000个lrc,买入0.1个eth,lrcFee为20个lrc
-	amountS2, _ := new(big.Int).SetString("100000"+suffix, 0)
+	amountS2, _ := new(big.Int).SetString("30000"+suffix, 0)
 	amountB2, _ := new(big.Int).SetString("10"+suffix, 0)
 	lrcFee2 := new(big.Int).Mul(big.NewInt(1e18), big.NewInt(3))
 	test.CreateOrder(lrc, eth, account2.Address, amountS2, amountB2, lrcFee2)
@@ -224,4 +226,57 @@ func TestMatcher_Case2(t *testing.T) {
 	tokenCallMethodB(&tokenAmountBAfterMatch, "balanceOf", "latest", entity.Accounts[0].Address)
 	t.Logf("before match, addressA:%s -> tokenA:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressA.Hex(), tokenAmountAAfterMatch.BigInt().String())
 	t.Logf("before match, addressA:%s -> tokenB:%s, amount:%s", entity.Accounts[0].Address.Hex(), tokenAddressB.Hex(), tokenAmountBAfterMatch.BigInt().String())
+}
+
+func TestBalanceSub(t *testing.T) {
+	account1 := test.Entity().Accounts[0].Address
+	account2 := test.Entity().Accounts[1].Address
+	miner := test.Entity().Creator.Address
+
+	lrcTokenAddress := util.AllTokens["LRC"].Protocol
+	wethTokenAddress := util.AllTokens["WETH"].Protocol
+
+	accounts := []common.Address{account1, account2, miner}
+	tokens := []common.Address{lrcTokenAddress, wethTokenAddress}
+
+	redisprefix := "testmatch_"
+	for _, tokenAddress := range tokens {
+		for _, account := range accounts {
+			key := redisprefix + tokenAddress.Hex() + "_" + account.Hex()
+			bs, err := cache.Get(key)
+			if err != nil {
+				balanceAfterSave, _ := ethaccessor.Erc20Balance(tokenAddress, account, "latest")
+				cache.Set(key, []byte(balanceAfterSave.String()), 0)
+			} else {
+				balanceBeforeSave, _ := new(big.Int).SetString(string(bs), 0)
+				balanceAfterSave, _ := ethaccessor.Erc20Balance(tokenAddress, account, "latest")
+				cache.Set(key, []byte(balanceAfterSave.String()), 0)
+				balance := new(big.Int).Sub(balanceAfterSave, balanceBeforeSave)
+
+				symbol, _ := util.GetSymbolWithAddress(tokenAddress)
+				t.Logf("symbol:%s account:%s amount:%s", symbol, account.Hex(), balance.String())
+			}
+		}
+	}
+}
+
+func TestOrderFilled(t *testing.T) {
+	order1 := "0x2b4be18b97b734f9c619367d7b422086f4476a78d2f946edf66f39ad0604cc20"
+	order2 := "0xae99509109129fc957410242c56a576bf7600d173d90ed04f3bfd91e9d0ea268"
+	hashlist := []string{order1, order2}
+	orders, _ := test.Rds().GetOrdersByHash(hashlist)
+
+	for _, v := range orders {
+		if common.HexToAddress(v.Owner) == common.HexToAddress("0x1B978a1D302335a6F2Ebe4B8823B5E17c3C84135") {
+			symbolS, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenS))
+			symbolB, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenB))
+
+			t.Logf("acc1 order,sell %s:%s, buy %s:%s, dealtAmount %s:%s dealtAmount %s:%s, split %s:%s, split %s:%s", symbolS, v.AmountS, symbolB, v.AmountB, symbolS, v.DealtAmountS, symbolB, v.DealtAmountB, symbolS, v.SplitAmountS, symbolB, v.SplitAmountB)
+		} else {
+			symbolS, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenS))
+			symbolB, _ := util.GetSymbolWithAddress(common.HexToAddress(v.TokenB))
+
+			t.Logf("acc2 order,sell %s:%s, buy %s:%s, dealtAmount %s:%s dealtAmount %s:%s, split %s:%s, split %s:%s", symbolS, v.AmountS, symbolB, v.AmountB, symbolS, v.DealtAmountS, symbolB, v.DealtAmountB, symbolS, v.SplitAmountS, symbolB, v.SplitAmountB)
+		}
+	}
 }
