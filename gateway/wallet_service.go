@@ -912,7 +912,7 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 
 		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
 		if err != nil {
-			log.Debug(err.Error())
+			//log.Debug(err.Error())
 			continue
 		}
 
