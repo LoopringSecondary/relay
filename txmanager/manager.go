@@ -20,7 +20,6 @@ package txmanager
 
 import (
 	"github.com/Loopring/relay/dao"
-	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
@@ -213,11 +212,6 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 // 当value等于0时认为是调用系统不支持的合约,默认使用fromTransferEvent/send type为unsupported_contract
 func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData) error {
 	event := input.(*types.TransferEvent)
-
-	// todo:判断是否为下单用户
-	if ethaccessor.TxIsSubmitRing(event.Identify) {
-		return nil
-	}
 
 	var entity txtyp.TransactionEntity
 	entity.FromEthTransferEvent(event)

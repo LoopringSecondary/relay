@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 )
@@ -265,6 +266,25 @@ func (l *ExtractorServiceImpl) ProcessMethod(tx *ethaccessor.Transaction, receip
 
 func (l *ExtractorServiceImpl) ProcessEvent(tx *ethaccessor.Transaction, receipt *ethaccessor.TransactionReceipt, blockTime *big.Int) error {
 	methodName := l.processor.GetMethodName(tx)
+
+	if ethaccessor.TxIsSubmitRing(methodName) && len(receipt.Logs) > 1 {
+		sort.Slice(receipt.Logs, func(i, j int) bool {
+			cmpEventName := ethaccessor.EVENT_RING_MINED
+
+			evti, _ := l.processor.GetEvent(receipt.Logs[i])
+			evtj, _ := l.processor.GetEvent(receipt.Logs[j])
+
+			if evti.Name == cmpEventName {
+				return true
+			} else if evtj.Name == cmpEventName {
+				return false
+			} else if evti.TxLogIndex > evtj.TxLogIndex {
+				return true
+			} else {
+				return false
+			}
+		})
+	}
 
 	for _, evtLog := range receipt.Logs {
 		event, ok := l.processor.GetEvent(evtLog)
