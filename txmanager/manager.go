@@ -235,9 +235,14 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
 	event := input.(*types.OrderFilledEvent)
 
+	// 存储fill关联的用户及tx
 	SetFillOwner(event.TxHash, event.Owner)
 
-	return nil
+	var entity txtyp.TransactionEntity
+	entity.FromOrderFilledEvent(event)
+	list := txtyp.OrderFilledView(event)
+
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {

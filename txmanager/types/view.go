@@ -192,7 +192,7 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 
 // 用户币种最多3个tokenS,tokenB,lrc
 // 一个fill只有一个owner,我们这里最多存储3条数据
-func OrderFilledView(src *types.OrderFilledEvent) ([]TransactionView, error) {
+func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	var (
 		fill innerFill
 		err  error
@@ -244,7 +244,7 @@ func OrderFilledView(src *types.OrderFilledEvent) ([]TransactionView, error) {
 		list = append(list, tx)
 	}
 
-	return list, err
+	return list
 }
 
 func (tx *TransactionView) fullFilled(src types.TxInfo) {
