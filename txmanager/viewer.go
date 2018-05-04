@@ -243,6 +243,9 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 
 	case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
 		err = res.FromTransferEntity(entity)
+
+	case txtyp.TX_TYPE_SELL, txtyp.TX_TYPE_BUY:
+		err = res.FromFillEntity(entity, view.Amount)
 	}
 
 	return res, err

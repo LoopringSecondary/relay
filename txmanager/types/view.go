@@ -195,7 +195,6 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	var (
 		fill innerFill
-		err  error
 		list []TransactionView
 	)
 

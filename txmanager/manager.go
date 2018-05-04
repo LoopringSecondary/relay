@@ -238,6 +238,9 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 	// 存储fill关联的用户及tx
 	SetFillOwner(event.TxHash, event.Owner)
 
+	// 一个ringmined可以生成多个fill,他们的tx&logIndex都相等,这里将其放大存储到entity及view
+	event.TxLogIndex = event.TxLogIndex*10 + event.FillIndex.Int64()
+
 	var entity txtyp.TransactionEntity
 	entity.FromOrderFilledEvent(event)
 	list := txtyp.OrderFilledView(event)

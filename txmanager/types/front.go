@@ -169,25 +169,55 @@ func (r *TransactionJsonResult) FromTransferEntity(entity *TransactionEntity) er
 	return nil
 }
 
-type fill struct {
-	RingHash  string `json:"ring_hash"`
-	OrderHash string `json:"order_hash"`
-	Owner     string `json:"owner"`
-	SymbolS   string `json:"symbol_s"`
-	SymbolB   string `json:"symbol_b"`
-	RingIndex string `json:"ring_index"`
-	FillIndex string `json:"fill_index"`
-	AmountS   string `json:"amount_s"`
-	AmountB   string `json:"amount_b"`
-	LrcReward string `json:"lrc_reward"`
-	LrcFee    string `json:"lrc_fee"`
-	SplitS    string `json:"split_s"`
-	SplitB    string `json:"split_b"`
-	Market    string `json:"market"`
-}
+func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity, value *big.Int) error {
+	type frontfill struct {
+		RingHash  string `json:"ring_hash"`
+		OrderHash string `json:"order_hash"`
+		Owner     string `json:"owner"`
+		SymbolS   string `json:"symbol_s"`
+		SymbolB   string `json:"symbol_b"`
+		RingIndex string `json:"ring_index"`
+		FillIndex string `json:"fill_index"`
+		AmountS   string `json:"amount_s"`
+		AmountB   string `json:"amount_b"`
+		LrcReward string `json:"lrc_reward"`
+		LrcFee    string `json:"lrc_fee"`
+		SplitS    string `json:"split_s"`
+		SplitB    string `json:"split_b"`
+		Market    string `json:"market"`
+	}
 
-// todo
-func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity) error {
+	var (
+		content OrderFilledContent
+		fill    frontfill
+	)
+	if err := json.Unmarshal([]byte(entity.Content), &content); err != nil {
+		return err
+	}
+
+	r.beforeConvert(entity)
+	fill.RingHash = content.RingHash
+	fill.OrderHash = content.OrderHash
+	fill.Owner = content.Owner
+	fill.SymbolS = util.AddressToAlias(content.TokenS)
+	fill.SymbolB = util.AddressToAlias(content.TokenB)
+	fill.RingIndex = content.RingIndex
+	fill.FillIndex = content.FillIndex
+	fill.AmountS = content.AmountS
+	fill.AmountB = content.AmountB
+	fill.LrcReward = content.LrcReward
+	fill.LrcFee = content.LrcFee
+	fill.SplitS = content.SplitS
+	fill.SplitB = content.SplitB
+	fill.Market = content.Market
+
+	if bs, err := json.Marshal(&fill); err != nil {
+		return err
+	} else {
+		r.Content.Fill = string(bs)
+	}
+	r.Value = value.String()
+
 	return nil
 }
 
