@@ -247,35 +247,6 @@ func (processor *AbiProcessor) loadProtocolAddress() {
 	}
 }
 
-//func (processor *AbiProcessor) loadMinerOnlyContract() {
-//	// load abi
-//	for _, v := range ethaccessor.ProtocolAddresses() {
-//		protocolSymbol := "loopring"
-//		processor.protocols[v.ContractAddress] = protocolSymbol
-//		log.Infof("extractor,contract protocol %s->%s", protocolSymbol, v.ContractAddress.Hex())
-//	}
-//
-//	// load event
-//	event := ethaccessor.ProtocolImplAbi().Events[EVENT_RING_MINED]
-//	contract := newEventData(&event, ethaccessor.ProtocolImplAbi())
-//	contract.Event = &ethaccessor.RingMinedEvent{}
-//	watcher := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleRingMinedEvent}
-//
-//	eventemitter.On(contract.Id.Hex(), watcher)
-//	processor.events[contract.Id] = contract
-//	log.Infof("extractor,contract event name:%s -> key:%s", contract.Name, contract.Id.Hex())
-//
-//	// load method
-//	method := ethaccessor.ProtocolImplAbi().Methods[METHOD_SUBMIT_RING]
-//	contract1 := newMethodData(&method, ethaccessor.ProtocolImplAbi())
-//	contract1.Method = &ethaccessor.SubmitRingMethod{}
-//	watcher1 := &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
-//
-//	eventemitter.On(contract1.Id, watcher1)
-//	processor.methods[contract1.Id] = contract1
-//	log.Infof("extractor,contract method name:%s -> key:%s", contract1.Name, contract1.Id)
-//}
-
 func (processor *AbiProcessor) loadProtocolContract() {
 	for name, event := range ethaccessor.ProtocolImplAbi().Events {
 		if name != ethaccessor.EVENT_RING_MINED && name != ethaccessor.EVENT_ORDER_CANCELLED && name != ethaccessor.EVENT_CUTOFF_ALL && name != ethaccessor.EVENT_CUTOFF_PAIR {
