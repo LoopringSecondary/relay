@@ -61,7 +61,7 @@ func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
 func CancelView(src *types.OrderCancelledEvent) TransactionView {
 	var tx TransactionView
 
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.fullFilled(src.TxInfo)
 
 	tx.Owner = src.From
@@ -75,7 +75,7 @@ func CutoffView(src *types.CutoffEvent) TransactionView {
 	var tx TransactionView
 
 	tx.fullFilled(src.TxInfo)
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.Owner = src.Owner
 	tx.Amount = src.Cutoff
 	tx.Type = TX_TYPE_CUTOFF
@@ -88,7 +88,7 @@ func CutoffPairView(src *types.CutoffPairEvent) TransactionView {
 	var tx TransactionView
 
 	tx.fullFilled(src.TxInfo)
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.Amount = src.Cutoff
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF_PAIR
@@ -105,11 +105,11 @@ func WethDepositView(src *types.WethDepositEvent) []TransactionView {
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Dst
 	tx1.Amount = src.Amount
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 	tx1.Type = TX_TYPE_CONVERT_OUTCOME
 
 	tx2 = tx1
-	tx2.Symbol = WETH_SYMBOL
+	tx2.Symbol = SYMBOL_WETH
 	tx2.Type = TX_TYPE_CONVERT_INCOME
 
 	list = append(list, tx1, tx2)
@@ -125,11 +125,11 @@ func WethWithdrawalView(src *types.WethWithdrawalEvent) []TransactionView {
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Src
 	tx1.Amount = src.Amount
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 	tx1.Type = TX_TYPE_CONVERT_INCOME
 
 	tx2 = tx1
-	tx2.Symbol = WETH_SYMBOL
+	tx2.Symbol = SYMBOL_WETH
 	tx2.Type = TX_TYPE_CONVERT_OUTCOME
 
 	list = append(list, tx1, tx2)
@@ -169,7 +169,7 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 
 	tx1.fullFilled(src.TxInfo)
 	tx1.Amount = src.Value
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 
 	if src.Value.Cmp(big.NewInt(0)) > 0 {
 		tx1.Owner = src.From
@@ -190,51 +190,61 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 	return list
 }
 
-//type OrderFilledEvent struct {
-//	Ringhash      common.Hash
-//	PreOrderHash  common.Hash
-//	OrderHash     common.Hash
-//	NextOrderHash common.Hash
-//	Owner         common.Address
-//	TokenS        common.Address
-//	TokenB        common.Address
-//	SellTo        common.Address
-//	BuyFrom       common.Address
-//	RingIndex     *big.Int
-//	AmountS       *big.Int
-//	AmountB       *big.Int
-//	LrcReward     *big.Int
-//	LrcFee        *big.Int
-//	SplitS        *big.Int
-//	SplitB        *big.Int
-//	Market        string
-//	FillIndex     *big.Int
-//}
-
-// 用户币种tokenS,tokenB,lrc
-// 相关转账amountS,amountB,splitS,splitB,lrcReward,lrcFee
-// 最多2个账户:user1, user2生成最多6条记录
-// (只记录fill.owner相关,miner,feeReceipt,wallet无法从fill中获取,
-// 如果强行需要只能在txmanager接收到fill后从ethaccessor获取miner/feeReceipt)
-//
-func OrderFilledView(src *types.OrderFilledEvent) (TransactionView, error) {
+// 用户币种最多3个tokenS,tokenB,lrc
+// 一个fill只有一个owner,我们这里最多存储3条数据
+func OrderFilledView(src *types.OrderFilledEvent) ([]TransactionView, error) {
 	var (
-		tx  TransactionView
-		err error
+		fill innerFill
+		err  error
+		list []TransactionView
 	)
 
-	if tx.Symbol, err = util.GetSymbolWithAddress(src.TokenS); err != nil {
-		return tx, err
+	fill.FromOrderFilledEvent(src)
+	fill.calculateLrc()
+
+	if fill.SymbolS = util.AddressToAlias(fill.TokenS.Hex()); fill.SymbolS != "" {
+		fill.calculateAmountS()
+		fill.calculateSellLrc()
+	}
+	if fill.SymbolB = util.AddressToAlias(fill.TokenB.Hex()); fill.SymbolB != "" {
+		fill.calculateAmountB()
+		fill.calculateBuyLrc()
 	}
 
-	// tokenS -> sell
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.Amount = src.AmountS
-	tx.Symbol = ETH_SYMBOL
-	tx.Type = TX_TYPE_CONVERT_OUTCOME
+	if fill.TotalAmountS.Cmp(big.NewInt(0)) != 0 {
+		var tx TransactionView
+		tx.Owner = src.Owner
+		tx.Symbol = fill.SymbolS
+		tx.Type = TX_TYPE_SELL
+		tx.Amount = new(big.Int).Mul(fill.TotalAmountS, big.NewInt(-1))
+		list = append(list, tx)
+	}
 
-	return tx, err
+	if fill.TotalAmountB.Cmp(big.NewInt(0)) != 0 {
+		var tx TransactionView
+		tx.Owner = src.Owner
+		tx.Symbol = fill.SymbolB
+		tx.Type = TX_TYPE_BUY
+		tx.Amount = fill.TotalAmountB
+		list = append(list, tx)
+	}
+
+	if fill.TotalAmountLrc.Cmp(big.NewInt(0)) != 0 {
+		var tx TransactionView
+		tx.Owner = src.Owner
+		tx.Symbol = SYMBOL_LRC
+
+		if fill.TotalAmountLrc.Cmp(big.NewInt(0)) > 0 {
+			tx.Type = TX_TYPE_BUY
+			tx.Amount = fill.TotalAmountB
+		} else {
+			tx.Type = TX_TYPE_SELL
+			tx.Amount = new(big.Int).Mul(fill.TotalAmountLrc, big.NewInt(-1))
+		}
+		list = append(list, tx)
+	}
+
+	return list, err
 }
 
 func (tx *TransactionView) fullFilled(src types.TxInfo) {

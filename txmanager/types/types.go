@@ -25,8 +25,9 @@ import (
 type TxType uint8
 
 const (
-	ETH_SYMBOL  = "ETH"
-	WETH_SYMBOL = "WETH"
+	SYMBOL_ETH  = "ETH"
+	SYMBOL_WETH = "WETH"
+	SYMBOL_LRC  = "LRC"
 )
 
 // send/receive/sell/buy/wrap/unwrap/cancelOrder/approve
