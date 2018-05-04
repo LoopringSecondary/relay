@@ -17,7 +17,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 	"github.com/Loopring/relay/market/util"
 )
 
