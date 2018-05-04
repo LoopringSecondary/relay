@@ -787,11 +787,13 @@ Get the total frozen amount of all unfinished orders
 
 1. `owner` - The address.
 2. `token` - The specify token which you want to get.
+3. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ```js
 params: [{
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
-  "token" : "WETH"
+  "token" : "WETH",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
 }]
 ```
 
@@ -807,7 +809,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getEstimatedAllocatedAll
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": ["0x2347ad6c"]
+  "result": "0x2347ad6c"
 }
 ```
 ***
@@ -819,10 +821,12 @@ Get the total frozen lrcFee of all unfinished orders
 ##### Parameters
 
 1. `owner` - The address, if is null, will query all orders.
+2. `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 
 ```js
 params: [{
   "owner" : "0x8888f1f195afa192cfee860698584c030f4c9db1",
+  "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
 }]
 ```
 
@@ -838,7 +842,7 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getGetFrozenLRCFee","par
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": ["0x2347ad6c"]
+  "result": "0x2347ad6c"
 }
 ```
 ***
