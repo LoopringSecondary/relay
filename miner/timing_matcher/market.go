@@ -53,13 +53,20 @@ func (market *Market) match() {
 
 	//step 1: evaluate received
 	for _, a2BOrder := range market.AtoBOrders {
+		if failedCount,err1 := OrderExecuteFailedCount(a2BOrder.RawOrder.Hash); nil == err1 && failedCount > 1 {
+			continue
+		}
 		for _, b2AOrder := range market.BtoAOrders {
+			if failedCount,err1 := OrderExecuteFailedCount(b2AOrder.RawOrder.Hash); nil == err1 && failedCount > 1 {
+				continue
+			}
 			//todo:move a2BOrder.RawOrder.Owner != b2AOrder.RawOrder.Owner after contract fix bug
 			if miner.PriceValid(a2BOrder, b2AOrder) && a2BOrder.RawOrder.Owner != b2AOrder.RawOrder.Owner {
 				if candidateRing, err := market.GenerateCandidateRing(a2BOrder, b2AOrder); nil != err {
 					log.Errorf("err:%s", err.Error())
 					continue
 				} else {
+
 					if candidateRing.received.Sign() > 0 {
 						candidateRingList = append(candidateRingList, *candidateRing)
 					} else {
@@ -202,7 +209,7 @@ func (market *Market) getOrdersForMatching(delegateAddress common.Address) {
 		} else {
 			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
-		log.Debugf("order status in this new round, orderhash:%s, DealtAmountS:%s, ", order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
+		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s, ",market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
 
 	for _, order := range btoAOrders {
@@ -212,7 +219,7 @@ func (market *Market) getOrdersForMatching(delegateAddress common.Address) {
 		} else {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
-		log.Debugf("order status in this new round, orderhash:%s, DealtAmountS:%s", order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
+		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s",market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
 }
 

@@ -107,6 +107,7 @@ func (daoFilledOrder *FilledOrder) ConvertUp(filledOrder *types.FilledOrder, rds
 type RingSubmitInfo struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
+	UniqueId         string `gorm:"column:unique_id;type:varchar(82)"`
 	ProtocolAddress  string `gorm:"column:protocol_address;type:varchar(42)"`
 	OrdersCount      int64  `gorm:"column:order_count;type:bigint"`
 	ProtocolData     string `gorm:"column:protocol_data;type:text"`
@@ -132,6 +133,7 @@ func getBigIntString(v *big.Int) string {
 
 func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo, err error) error {
 	info.RingHash = typesInfo.Ringhash.Hex()
+	info.UniqueId = typesInfo.RawRing.GenerateUniqueId().Hex()
 	info.ProtocolAddress = typesInfo.ProtocolAddress.Hex()
 	info.OrdersCount = typesInfo.OrdersCount.Int64()
 	info.ProtocolData = common.ToHex(typesInfo.ProtocolData)

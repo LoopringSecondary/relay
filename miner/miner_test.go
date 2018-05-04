@@ -22,13 +22,17 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
-	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
+	"github.com/Loopring/relay/marketcap"
+	"github.com/Loopring/relay/miner"
+	"github.com/Loopring/relay/miner/timing_matcher"
+	"github.com/Loopring/relay/ordermanager"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/types"
+	"github.com/Loopring/relay/usermanager"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -36,6 +40,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+	"github.com/Loopring/relay/crypto"
 )
 
 func loadConfig() *config.GlobalConfig {
@@ -46,7 +52,7 @@ func loadConfig() *config.GlobalConfig {
 	return c
 }
 
-func TestMatch(t *testing.T) {
+func TestApprove(t *testing.T) {
 	cfg := loadConfig()
 	cache.NewCache(cfg.Redis)
 	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -57,21 +63,48 @@ func TestMatch(t *testing.T) {
 	ks.Unlock(acc1, "1")
 	ks.Unlock(acc2, "1")
 	ks.Unlock(acc3, "1")
-	//rdsService := dao.NewRdsService(cfg.Mysql)
-	//userManager := usermanager.NewUserManager(&cfg.UserManager, rdsService)
-	//ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
-	//ethaccessor.IncludeGasPriceEvaluator()
-	//
-	//marketCapProvider := marketcap.NewMarketCapProvider(cfg.MarketCap)
-	//om := ordermanager.NewOrderManager(&cfg.OrderManager, rdsService, userManager, marketCapProvider)
-	//submitter,_ := miner.NewSubmitter(cfg.Miner, rdsService, marketCapProvider)
-	//evaluator := miner.NewEvaluator(marketCapProvider, cfg.Miner)
-	//matcher := timing_matcher.NewTimingMatcher(cfg.Miner.TimingMatcher, submitter, evaluator, om, &accountManager)
-	//submitter.SetMatcher(matcher)
-	//
-	//m := miner.NewMiner(submitter, matcher, evaluator, marketCapProvider)
-	//m.Start()
-	//time.Sleep(1 * time.Minute)
+	sender := accounts.Account{Address: common.HexToAddress("0x3acdf3e3d8ec52a768083f718e763727b0210650")}
+	ks.Unlock(sender, "loopring")
+	c := crypto.NewKSCrypto(false, ks)
+	crypto.Initialize(c)
+
+	sendMethod := ethaccessor.ContractSendTransactionMethod("latest", ethaccessor.Erc20Abi(), common.HexToAddress("0xef68e7c694f40c8202821edf525de3782458639f"))
+
+	lrcAmount := new(big.Int)
+	lrcAmount.SetString("100000000000000000000", 10)
+	if txHash, err := sendMethod(sender.Address, "approve", big.NewInt(int64(1000000)), big.NewInt(int64(15000000000)), big.NewInt(int64(0)), common.HexToAddress("0x17233e07c67d086464fD408148c3ABB56245FA64"), lrcAmount); nil != err {
+	} else {
+		t.Logf("have send addParticipant transaction with hash:%s, you can see this in etherscan.io.\n", txHash)
+	}
+}
+
+func TestMatch(t *testing.T) {
+	cfg := loadConfig()
+	cache.NewCache(cfg.Redis)
+	ks := keystore.NewKeyStore(cfg.Keystore.Keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+	accountManager := test.GenerateAccountManager()
+	acc1 := accounts.Account{Address: common.HexToAddress("0xb5fab0b11776aad5ce60588c16bd59dcfd61a1c2")}
+	acc2 := accounts.Account{Address: common.HexToAddress("0x48ff2269e58a373120ffdbbdee3fbcea854ac30a")}
+	acc3 := accounts.Account{Address: common.HexToAddress("0x750ad4351bb728cec7d639a9511f9d6488f1e259")}
+	ks.Unlock(acc1, "1")
+	ks.Unlock(acc2, "1")
+	ks.Unlock(acc3, "1")
+	rdsService := dao.NewRdsService(cfg.Mysql)
+	userManager := usermanager.NewUserManager(&cfg.UserManager, rdsService)
+	ethaccessor.Initialize(cfg.Accessor, cfg.Common, util.WethTokenAddress())
+	ethaccessor.IncludeGasPriceEvaluator()
+
+	marketCapProvider := marketcap.NewMarketCapProvider(cfg.MarketCap)
+	om := ordermanager.NewOrderManager(&cfg.OrderManager, rdsService, userManager, marketCapProvider)
+	submitter, _ := miner.NewSubmitter(cfg.Miner, rdsService, marketCapProvider)
+	evaluator := miner.NewEvaluator(marketCapProvider, cfg.Miner)
+	rds := test.GenerateDaoService()
+	matcher := timing_matcher.NewTimingMatcher(cfg.Miner.TimingMatcher, submitter, evaluator, om, &accountManager, rds)
+	evaluator.SetMatcher(matcher)
+
+	m := miner.NewMiner(submitter, matcher, evaluator, marketCapProvider)
+	m.Start()
+	time.Sleep(1 * time.Minute)
 }
 
 func TestPrepareTestData(t *testing.T) {

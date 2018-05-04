@@ -305,6 +305,25 @@ func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 		return res, err
 	}
 }
+func (impl *RedisCacheImpl) SCard(key string) (int64,error) {
+
+	//log.Info("[REDIS-SCARD] key : " + key)
+
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	vs := []interface{}{}
+	vs = append(vs, key)
+	reply, err := conn.Do("scard", vs...)
+
+	if err != nil {
+		log.Errorf(" key:%s, err:%s", key, err.Error())
+		return 0, err
+	} else {
+		res := reply.(int64)
+		return res, err
+	}
+}
 
 func (impl *RedisCacheImpl) ZRemRangeByScore(key string, start, stop int64) (int64, error) {
 

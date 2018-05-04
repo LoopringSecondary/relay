@@ -235,8 +235,12 @@ func (e *Evaluator) computeFeeOfRingAndOrder(ringState *types.Ring) error {
 		}
 
 		filledOrder.LegalLrcFee = legalAmountOfLrc
-
-		splitPer := new(big.Rat).SetFrac64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage), int64(100))
+		splitPer := new(big.Rat)
+		if filledOrder.OrderState.RawOrder.MarginSplitPercentage > 100 {
+			splitPer.SetFrac64(int64(100), int64(100))
+		} else {
+			splitPer.SetFrac64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage), int64(100))
+		}
 		legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
 		filledOrder.LegalFeeS = legalAmountOfSaving
 		log.Debugf("orderhash:%s, raw.lrc:%s, AvailableLrcBalance:%s, lrcFee:%s, feeS:%s, legalAmountOfLrc:%s,  legalAmountOfSaving:%s, minerLrcAvailable:%s",

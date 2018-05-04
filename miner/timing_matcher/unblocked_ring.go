@@ -37,6 +37,9 @@ const (
 	OwnerPrefix     = "matcher_owner_"
 	RingHashPrefix  = "matcher_ringhash_"
 	RoundPrefix     = "matcher_round_"
+	FailedRingPrefix = "failed_ring_"
+	FailedOrderPrefix = "failed_order_"
+	RinghashToUniqueIdPrefix = "ringhash_uniqid_"
 	cacheTtl        = 86400 * 2
 )
 
@@ -162,16 +165,18 @@ func (c orderCache) dealtAmount() (dealtAmountS *big.Rat, dealtAmountB *big.Rat,
 	return dealtAmountS, dealtAmountB, err
 }
 
-func RemoveMinedRing(ringhash common.Hash) error {
+func RemoveMinedRingAndReturnOrderhashes(ringhash common.Hash) ([]common.Hash, error) {
 	c := ringCache{}
 	c.ringhash = ringhash
 
 	cacheKey := c.cacheKey()
+	orderhashes := []common.Hash{}
 	if data, err := cache.SMembers(cacheKey); nil != err {
-		return err
+		return orderhashes, err
 	} else {
 		for _, d := range data {
 			orderhash, owner, tokenS := c.parseFiled(d)
+			orderhashes = append(orderhashes, orderhash)
 			ordCache := orderCache{}
 			ordCache.orderhash = orderhash
 			if err := ordCache.removeRinghash(ringhash); nil != err {
@@ -187,9 +192,9 @@ func RemoveMinedRing(ringhash common.Hash) error {
 	}
 
 	if err := cache.Del(cacheKey); nil != err {
-		return err
+		return orderhashes, err
 	} else {
-		return nil
+		return orderhashes, nil
 	}
 }
 
@@ -263,4 +268,37 @@ func CachedRinghashes() ([]common.Hash, error) {
 	} else {
 		return hashes, err
 	}
+}
+
+func CacheRinghashToUniqueId(ringhash,uniqueId common.Hash) {
+	cache.Set(RinghashToUniqueIdPrefix + strings.ToLower(ringhash.Hex()), []byte(uniqueId.Hex()), cacheTtl)
+}
+
+func GetUniqueIdByRinghash(ringhash common.Hash) (common.Hash, error) {
+	if data,err := cache.Get(RinghashToUniqueIdPrefix + strings.ToLower(ringhash.Hex())); nil == err {
+		return common.BytesToHash(data), err
+	} else {
+		return types.NilHash, err
+	}
+}
+
+func AddFailedRingCache(ringhash, txhash common.Hash, orderhashes []common.Hash) {
+	if uniqueId,err := GetUniqueIdByRinghash(ringhash);nil == err && !types.IsZeroHash(uniqueId) {
+		cache.SAdd(FailedRingPrefix + strings.ToLower(uniqueId.Hex()),cacheTtl, []byte(strings.ToLower(txhash.Hex())))
+		for _,orderhash := range orderhashes {
+			cache.SAdd(FailedOrderPrefix + strings.ToLower(orderhash.Hex()), cacheTtl, []byte(strings.ToLower(uniqueId.Hex())))
+		}
+	}
+}
+
+func RingExecuteFailedCount(ringhash common.Hash) (int64, error) {
+	if uniqueId,err := GetUniqueIdByRinghash(ringhash);nil == err && !types.IsZeroHash(uniqueId) {
+		return cache.SCard(FailedRingPrefix + strings.ToLower(uniqueId.Hex()))
+	} else {
+		return 0, err
+	}
+}
+
+func OrderExecuteFailedCount(orderhash common.Hash) (int64, error) {
+	return cache.SCard(FailedOrderPrefix + strings.ToLower(orderhash.Hex()))
 }

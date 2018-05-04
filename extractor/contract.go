@@ -507,7 +507,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	var evt types.SubmitRingMethodEvent
 	evt.TxInfo = contract.TxInfo
 	if evt.Status == types.TX_STATUS_FAILED {
-		evt.Err = fmt.Errorf("method %s transaction failed", contract.Name)
+		evt.Err = fmt.Errorf("failed to execute ring: method %s transaction failed", contract.Name)
 	} else {
 		evt.Err = nil
 	}

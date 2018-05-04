@@ -231,7 +231,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
 							} else {
 								var err1 error
 								if nil != evt.Err {
-									err1 = errors.New("failed to execute ring:" + evt.Err.Error())
+									err1 = evt.Err
 								} else {
 									err1 = errors.New("")
 								}
