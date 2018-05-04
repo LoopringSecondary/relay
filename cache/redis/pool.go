@@ -350,6 +350,19 @@ func (impl *RedisCacheImpl) SRem(key string, members ...[]byte) (int64, error) {
 	}
 }
 
+func (impl *RedisCacheImpl) SIsMember(key string, member []byte) (bool, error) {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	reply, err := conn.Do("sismember", key, member)
+	if err != nil {
+		log.Errorf("key:%s, err:%s", key, err.Error())
+		return false, err
+	} else {
+		return reply.(int64) > 0, nil
+	}
+}
+
 func (impl *RedisCacheImpl) HGetAll(key string) ([][]byte, error) {
 
 	//log.Info("[REDIS-HGetAll] key : " + key)
