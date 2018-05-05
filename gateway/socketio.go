@@ -262,10 +262,7 @@ func (so *SocketIOServiceImpl) Start() {
 		fmt.Println("meet error:", e)
 		infos := strings.Split(e.Error(), "SOCKETFORLOOPRING")
 		if len(infos) == 2 {
-			connId := infos[0]
-			if strings.Contains(infos[1], "1001") && strings.Contains(infos[1], "going away") {
-				so.connIdMap.Delete(connId)
-			}
+			so.connIdMap.Delete(infos[0])
 		}
 
 	})
