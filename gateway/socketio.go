@@ -17,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"github.com/Loopring/relay/market/util"
+	"time"
+	"gopkg.in/googollee/go-engine.io.v1"
 )
 
 type BusinessType int
@@ -154,7 +156,10 @@ func NewSocketIOService(port string, walletService WalletServiceImpl) *SocketIOS
 }
 
 func (so *SocketIOServiceImpl) Start() {
-	server, err := socketio.NewServer(nil)
+	server, err := socketio.NewServer(&engineio.Options{
+		PingInterval: time.Second * 60 * 60,
+		PingTimeout:  time.Second * 60 * 60,
+	})
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
