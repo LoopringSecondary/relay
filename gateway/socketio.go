@@ -12,13 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/googollee/go-socket.io"
 	"github.com/robfig/cron"
-	"gopkg.in/googollee/go-engine.io.v1"
 	"net/http"
 	"reflect"
 	"strings"
 	"sync"
-	"time"
 	"github.com/Loopring/relay/market/util"
+	"time"
+	"gopkg.in/googollee/go-engine.io.v1"
 )
 
 type BusinessType int
@@ -265,6 +265,11 @@ func (so *SocketIOServiceImpl) Start() {
 
 	server.OnError("/", func(e error) {
 		fmt.Println("meet error:", e)
+		infos := strings.Split(e.Error(), "SOCKETFORLOOPRING")
+		if len(infos) == 2 {
+			so.connIdMap.Delete(infos[0])
+		}
+
 	})
 
 	server.OnDisconnect("/", func(s socketio.Conn, msg string) {
