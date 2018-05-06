@@ -212,6 +212,7 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 
 	if fill.TotalAmountS.Cmp(big.NewInt(0)) != 0 {
 		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
 		tx.Owner = src.Owner
 		tx.Symbol = fill.SymbolS
 		tx.Type = TX_TYPE_SELL
@@ -221,6 +222,7 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 
 	if fill.TotalAmountB.Cmp(big.NewInt(0)) != 0 {
 		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
 		tx.Owner = src.Owner
 		tx.Symbol = fill.SymbolB
 		tx.Type = TX_TYPE_BUY
@@ -230,6 +232,7 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 
 	if fill.TotalAmountLrc.Cmp(big.NewInt(0)) != 0 {
 		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
 		tx.Owner = src.Owner
 		tx.Symbol = SYMBOL_LRC
 

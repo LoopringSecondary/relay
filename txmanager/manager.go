@@ -40,6 +40,7 @@ type TransactionManager struct {
 	wethWithdrawalEventWatcher *eventemitter.Watcher
 	transferEventWatcher       *eventemitter.Watcher
 	ethTransferEventWatcher    *eventemitter.Watcher
+	orderFilledEventWatcher    *eventemitter.Watcher
 	forkDetectedEventWatcher   *eventemitter.Watcher
 }
 
@@ -79,6 +80,9 @@ func (tm *TransactionManager) Start() {
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
 	eventemitter.On(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 
+	tm.orderFilledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderFilledEvent}
+	eventemitter.On(eventemitter.OrderFilled, tm.orderFilledEventWatcher)
+
 	tm.forkDetectedEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.ForkProcess}
 	eventemitter.On(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
@@ -92,6 +96,7 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
 	eventemitter.Un(eventemitter.Transfer, tm.transferEventWatcher)
 	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.Un(eventemitter.OrderFilled, tm.orderFilledEventWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
