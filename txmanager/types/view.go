@@ -19,6 +19,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -141,11 +142,10 @@ func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 	var (
 		list     []TransactionView
 		tx1, tx2 TransactionView
-		err      error
 	)
 
-	if tx1.Symbol, err = util.GetSymbolWithAddress(src.Protocol); err != nil {
-		return list, err
+	if tx1.Symbol = util.AddressToAlias(src.Protocol.Hex()); tx1.Symbol == "" {
+		return list, fmt.Errorf("transaction manager,transfer view, unsupported symbol")
 	}
 	tx1.fullFilled(src.TxInfo)
 	tx1.Amount = src.Amount
