@@ -321,7 +321,7 @@ func (tm *TransactionManager) saveMinedTx(tx *txtyp.TransactionEntity, list []tx
 		if err := tm.addView(&view); err != nil {
 			log.Errorf("transaction manager,add tx mined view:%s error:%s", tx.Hash.Hex(), err.Error())
 		}
-		log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", view.TxHash.Hex(), txtyp.TypeStr(view.Type), view.Owner.Hex(), view.LogIndex, txtyp.StatusStr(view.Status))
+		log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", view.TxHash.Hex(), txtyp.TypeStr(view.Type), view.Owner.Hex(), view.LogIndex, types.StatusStr(view.Status))
 	}
 
 	return nil

@@ -62,7 +62,7 @@ func NewResult(tx *TransactionView) TransactionJsonResult {
 	res.Value = tx.Amount.String()
 	res.LogIndex = tx.LogIndex
 	res.Type = TypeStr(tx.Type)
-	res.Status = StatusStr(tx.Status)
+	res.Status = types.StatusStr(tx.Status)
 	res.CreateTime = tx.CreateTime
 	res.UpdateTime = tx.UpdateTime
 	res.Nonce = tx.Nonce.String()

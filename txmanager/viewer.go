@@ -266,7 +266,7 @@ func validateTxHashList(list []string) bool {
 }
 
 func safeOwner(ownerStr string) string           { return common.HexToAddress(ownerStr).Hex() }
-func safeStatus(statusStr string) types.TxStatus { return txtyp.StrToTxStatus(statusStr) }
+func safeStatus(statusStr string) types.TxStatus { return types.StrToTxStatus(statusStr) }
 func safeType(typStr string) txtyp.TxType        { return txtyp.StrToTxType(typStr) }
 func safeSymbol(symbol string) string            { return strings.ToUpper(symbol) }
 

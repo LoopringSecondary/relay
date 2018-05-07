@@ -18,10 +18,6 @@
 
 package types
 
-import (
-	"github.com/Loopring/relay/types"
-)
-
 type TxType uint8
 
 const (
@@ -48,38 +44,6 @@ const (
 	TX_TYPE_LRC_FEE              TxType = 13
 	TX_TYPE_LRC_REWARD           TxType = 14
 )
-
-func StatusStr(status types.TxStatus) string {
-	var ret string
-	switch status {
-	case types.TX_STATUS_PENDING:
-		ret = "pending"
-	case types.TX_STATUS_SUCCESS:
-		ret = "success"
-	case types.TX_STATUS_FAILED:
-		ret = "failed"
-	default:
-		ret = "unknown"
-	}
-
-	return ret
-}
-
-func StrToTxStatus(txType string) types.TxStatus {
-	var ret types.TxStatus
-	switch txType {
-	case "pending":
-		ret = types.TX_STATUS_PENDING
-	case "success":
-		ret = types.TX_STATUS_SUCCESS
-	case "failed":
-		ret = types.TX_STATUS_FAILED
-	default:
-		ret = types.TX_STATUS_UNKNOWN
-	}
-
-	return ret
-}
 
 func TypeStr(typ TxType) string {
 	var ret string

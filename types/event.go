@@ -32,6 +32,38 @@ const (
 	TX_STATUS_FAILED  TxStatus = 3
 )
 
+func StatusStr(status TxStatus) string {
+	var ret string
+	switch status {
+	case TX_STATUS_PENDING:
+		ret = "pending"
+	case TX_STATUS_SUCCESS:
+		ret = "success"
+	case TX_STATUS_FAILED:
+		ret = "failed"
+	default:
+		ret = "unknown"
+	}
+
+	return ret
+}
+
+func StrToTxStatus(txType string) TxStatus {
+	var ret TxStatus
+	switch txType {
+	case "pending":
+		ret = TX_STATUS_PENDING
+	case "success":
+		ret = TX_STATUS_SUCCESS
+	case "failed":
+		ret = TX_STATUS_FAILED
+	default:
+		ret = TX_STATUS_UNKNOWN
+	}
+
+	return ret
+}
+
 type TxInfo struct {
 	Protocol        common.Address `json:"from"`
 	DelegateAddress common.Address `json:"to"`
