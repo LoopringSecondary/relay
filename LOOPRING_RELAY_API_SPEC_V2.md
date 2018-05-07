@@ -855,7 +855,7 @@ Get relay supported all market pairs
 no input params.
 
 ```js
-params: {}
+params: [{}]
 ```
 
 ##### Returns
@@ -883,7 +883,7 @@ Get relay supported all tokens
 no input params.
 
 ```js
-params: {}
+params: [{}]
 ```
 
 ##### Returns
@@ -892,7 +892,7 @@ params: {}
 ##### Example
 ```js
 // Request
-curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","params":{see above},"id":64}'
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","params":[{}],"id":64}'
 
 // Result
 {
