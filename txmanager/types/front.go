@@ -23,7 +23,6 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 )
 
 type TransactionJsonResult struct {
@@ -82,7 +81,6 @@ func (r *TransactionJsonResult) FromApproveEntity(entity *TransactionEntity) err
 	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Owner)
 	r.To = common.HexToAddress(content.Spender)
-	r.Value = content.Amount
 
 	return nil
 }
@@ -95,7 +93,6 @@ func (r *TransactionJsonResult) FromCancelEntity(entity *TransactionEntity) erro
 
 	r.beforeConvert(entity)
 	r.Content.OrderHash = content.OrderHash
-	r.Value = content.Amount
 
 	return nil
 }
@@ -107,7 +104,6 @@ func (r *TransactionJsonResult) FromCutoffEntity(entity *TransactionEntity) erro
 	}
 
 	r.beforeConvert(entity)
-	r.Value = big.NewInt(content.CutoffTimeStamp).String()
 
 	return nil
 }
@@ -125,7 +121,6 @@ func (r *TransactionJsonResult) FromCutoffPairEntity(entity *TransactionEntity) 
 	} else {
 		return err
 	}
-	r.Value = big.NewInt(content.CutoffTimeStamp).String()
 
 	return nil
 }
@@ -139,7 +134,6 @@ func (r *TransactionJsonResult) FromWethDepositEntity(entity *TransactionEntity)
 	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Dst)
 	r.To = common.HexToAddress(content.Dst)
-	r.Value = content.Amount
 
 	return nil
 }
@@ -153,7 +147,6 @@ func (r *TransactionJsonResult) FromWethWithdrawalEntity(entity *TransactionEnti
 	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Src)
 	r.To = common.HexToAddress(content.Src)
-	r.Value = content.Amount
 
 	return nil
 }
@@ -167,12 +160,11 @@ func (r *TransactionJsonResult) FromTransferEntity(entity *TransactionEntity) er
 	r.beforeConvert(entity)
 	r.From = common.HexToAddress(content.Sender)
 	r.To = common.HexToAddress(content.Receiver)
-	r.Value = content.Amount
 
 	return nil
 }
 
-func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity, value *big.Int) error {
+func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity) error {
 	type frontfill struct {
 		RingHash  string `json:"ring_hash"`
 		OrderHash string `json:"order_hash"`
@@ -219,7 +211,6 @@ func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity, value 
 	} else {
 		r.Content.Fill = string(bs)
 	}
-	r.Value = value.String()
 
 	return nil
 }
@@ -227,7 +218,6 @@ func (r *TransactionJsonResult) FromFillEntity(entity *TransactionEntity, value 
 // 普通的eth转账及其他合约无需转换
 func (r *TransactionJsonResult) FromOtherEntity(entity *TransactionEntity) error {
 	r.beforeConvert(entity)
-	r.Value = entity.Value.String()
 	return nil
 }
 
