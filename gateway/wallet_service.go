@@ -463,6 +463,11 @@ func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res str
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
+
+	if order.OrderType != types.ORDER_TYPE_MARKET && order.OrderType != types.ORDER_TYPE_P2P {
+		order.OrderType = types.ORDER_TYPE_MARKET
+	}
+
 	return HandleInputOrder(types.ToOrder(order))
 }
 
@@ -673,6 +678,7 @@ func (w *WalletServiceImpl) GetEstimatedAllocatedAllowance(query EstimatedAlloca
 	statusSet := make([]types.OrderStatus, 0)
 	statusSet = append(statusSet, types.ORDER_NEW)
 	statusSet = append(statusSet, types.ORDER_PARTIAL)
+	statusSet = append(statusSet, types.ORDER_PENDING_FOR_P2P)
 
 	token := query.Token
 	owner := query.Owner
@@ -693,6 +699,7 @@ func (w *WalletServiceImpl) GetFrozenLRCFee(query SingleOwner) (frozenAmount str
 	statusSet := make([]types.OrderStatus, 0)
 	statusSet = append(statusSet, types.ORDER_NEW)
 	statusSet = append(statusSet, types.ORDER_PARTIAL)
+	statusSet = append(statusSet, types.ORDER_PENDING_FOR_P2P)
 
 	owner := query.Owner
 
@@ -839,7 +846,7 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 		query["order_hash"] = orderQuery.OrderHash
 	}
 
-	if orderQuery.OrderType != "" {
+	if orderQuery.OrderType == types.ORDER_TYPE_MARKET || orderQuery.OrderType == types.ORDER_TYPE_P2P {
 		query["order_type"] = orderQuery.OrderType
 	} else {
 		query["order_type"] = types.ORDER_TYPE_MARKET
