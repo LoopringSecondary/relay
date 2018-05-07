@@ -31,6 +31,8 @@ type Cache interface {
 
 	Del(key string) error
 
+	Dels(keys []string) error
+
 	Exists(key string) (bool, error)
 
 	Keys(keyFormat string) ([][]byte, error)
@@ -53,6 +55,8 @@ type Cache interface {
 
 	SMembers(key string) ([][]byte, error)
 
+	SIsMember(key string, member []byte) (bool, error)
+
 	ZAdd(key string, ttl int64, args ...[]byte) error
 
 	ZRange(key string, start, stop int64, withScores bool) ([][]byte, error)
@@ -68,6 +72,7 @@ func NewCache(cfg interface{}) {
 func Set(key string, value []byte, ttl int64) error { return cache.Set(key, value, ttl) }
 func Get(key string) ([]byte, error)                { return cache.Get(key) }
 func Del(key string) error                          { return cache.Del(key) }
+func Dels(keys []string) error                      { return cache.Dels(keys) }
 func Exists(key string) (bool, error)               { return cache.Exists(key) }
 func Keys(keyFormat string) ([][]byte, error)       { return cache.Keys(keyFormat) }
 
@@ -96,6 +101,10 @@ func SAdd(key string, ttl int64, members ...[]byte) error {
 
 func SMembers(key string) ([][]byte, error) {
 	return cache.SMembers(key)
+}
+
+func SIsMember(key string, member []byte) (bool, error) {
+	return cache.SIsMember(key, member)
 }
 
 func SRem(key string, members ...[]byte) (int64, error) {

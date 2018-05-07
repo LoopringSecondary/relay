@@ -19,6 +19,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -61,7 +62,7 @@ func ApproveView(src *types.ApprovalEvent) (TransactionView, error) {
 func CancelView(src *types.OrderCancelledEvent) TransactionView {
 	var tx TransactionView
 
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.fullFilled(src.TxInfo)
 
 	tx.Owner = src.From
@@ -75,7 +76,7 @@ func CutoffView(src *types.CutoffEvent) TransactionView {
 	var tx TransactionView
 
 	tx.fullFilled(src.TxInfo)
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.Owner = src.Owner
 	tx.Amount = src.Cutoff
 	tx.Type = TX_TYPE_CUTOFF
@@ -88,7 +89,7 @@ func CutoffPairView(src *types.CutoffPairEvent) TransactionView {
 	var tx TransactionView
 
 	tx.fullFilled(src.TxInfo)
-	tx.Symbol = ETH_SYMBOL
+	tx.Symbol = SYMBOL_ETH
 	tx.Amount = src.Cutoff
 	tx.Owner = src.Owner
 	tx.Type = TX_TYPE_CUTOFF_PAIR
@@ -105,11 +106,11 @@ func WethDepositView(src *types.WethDepositEvent) []TransactionView {
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Dst
 	tx1.Amount = src.Amount
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 	tx1.Type = TX_TYPE_CONVERT_OUTCOME
 
 	tx2 = tx1
-	tx2.Symbol = WETH_SYMBOL
+	tx2.Symbol = SYMBOL_WETH
 	tx2.Type = TX_TYPE_CONVERT_INCOME
 
 	list = append(list, tx1, tx2)
@@ -125,11 +126,11 @@ func WethWithdrawalView(src *types.WethWithdrawalEvent) []TransactionView {
 	tx1.fullFilled(src.TxInfo)
 	tx1.Owner = src.Src
 	tx1.Amount = src.Amount
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 	tx1.Type = TX_TYPE_CONVERT_INCOME
 
 	tx2 = tx1
-	tx2.Symbol = WETH_SYMBOL
+	tx2.Symbol = SYMBOL_WETH
 	tx2.Type = TX_TYPE_CONVERT_OUTCOME
 
 	list = append(list, tx1, tx2)
@@ -141,11 +142,10 @@ func TransferView(src *types.TransferEvent) ([]TransactionView, error) {
 	var (
 		list     []TransactionView
 		tx1, tx2 TransactionView
-		err      error
 	)
 
-	if tx1.Symbol, err = util.GetSymbolWithAddress(src.Protocol); err != nil {
-		return list, err
+	if tx1.Symbol = util.AddressToAlias(src.Protocol.Hex()); tx1.Symbol == "" {
+		return list, fmt.Errorf("transaction manager,transfer view, unsupported symbol")
 	}
 	tx1.fullFilled(src.TxInfo)
 	tx1.Amount = src.Amount
@@ -169,7 +169,7 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 
 	tx1.fullFilled(src.TxInfo)
 	tx1.Amount = src.Value
-	tx1.Symbol = ETH_SYMBOL
+	tx1.Symbol = SYMBOL_ETH
 
 	if src.Value.Cmp(big.NewInt(0)) > 0 {
 		tx1.Owner = src.From
@@ -190,45 +190,71 @@ func EthTransferView(src *types.TransferEvent) []TransactionView {
 	return list
 }
 
-//type OrderFilledEvent struct {
-//	Ringhash      common.Hash
-//	PreOrderHash  common.Hash
-//	OrderHash     common.Hash
-//	NextOrderHash common.Hash
-//	Owner         common.Address
-//	TokenS        common.Address
-//	TokenB        common.Address
-//	SellTo        common.Address
-//	BuyFrom       common.Address
-//	RingIndex     *big.Int
-//	AmountS       *big.Int
-//	AmountB       *big.Int
-//	LrcReward     *big.Int
-//	LrcFee        *big.Int
-//	SplitS        *big.Int
-//	SplitB        *big.Int
-//	Market        string
-//	FillIndex     *big.Int
-//}
-
-func OrderFilledView(src *types.OrderFilledEvent) (TransactionView, error) {
+// 用户币种最多3个tokenS,tokenB,lrc
+// 一个fill只有一个owner,我们这里最多存储3条数据
+func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	var (
-		tx  TransactionView
-		err error
+		list []TransactionView
 	)
 
-	if tx.Symbol, err = util.GetSymbolWithAddress(src.TokenS); err != nil {
-		return tx, err
+	symbolS := util.AddressToAlias(src.TokenS.Hex())
+	symbolB := util.AddressToAlias(src.TokenB.Hex())
+
+	if symbolS != "" {
+		totalAmountS := big.NewInt(0)
+		totalAmountS = new(big.Int).Add(totalAmountS, src.AmountS)
+		totalAmountS = new(big.Int).Add(totalAmountS, src.SplitS)
+		if symbolS == SYMBOL_LRC {
+			totalAmountS = new(big.Int).Add(totalAmountS, src.LrcFee)
+			totalAmountS = new(big.Int).Sub(totalAmountS, src.LrcReward)
+		}
+
+		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
+		tx.Owner = src.Owner
+		tx.Symbol = symbolS
+		tx.Type = TX_TYPE_SELL
+		tx.Amount = totalAmountS
+		list = append(list, tx)
 	}
 
-	// tokenS -> sell
-	tx.fullFilled(src.TxInfo)
-	tx.Owner = src.Owner
-	tx.Amount = src.AmountS
-	tx.Symbol = ETH_SYMBOL
-	tx.Type = TX_TYPE_CONVERT_OUTCOME
+	if symbolB != "" {
+		totalAmountB := big.NewInt(0)
+		totalAmountB = new(big.Int).Add(totalAmountB, src.AmountB)
+		totalAmountB = new(big.Int).Sub(totalAmountB, src.SplitB)
+		if symbolB == SYMBOL_LRC {
+			totalAmountB = new(big.Int).Add(totalAmountB, src.LrcReward)
+			totalAmountB = new(big.Int).Sub(totalAmountB, src.LrcFee)
+		}
 
-	return tx, err
+		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
+		tx.Owner = src.Owner
+		tx.Symbol = symbolB
+		tx.Type = TX_TYPE_BUY
+		tx.Amount = totalAmountB
+		list = append(list, tx)
+	}
+
+	// lrcReward&lrcFee只会有一个大于0
+	if symbolS != SYMBOL_LRC && symbolB != SYMBOL_LRC {
+		var tx TransactionView
+		tx.fullFilled(src.TxInfo)
+		tx.Owner = src.Owner
+		tx.Symbol = SYMBOL_LRC
+
+		if src.LrcFee.Cmp(big.NewInt(0)) > 0 {
+			tx.Type = TX_TYPE_LRC_FEE
+			tx.Amount = src.LrcFee
+			list = append(list, tx)
+		} else if src.LrcReward.Cmp(big.NewInt(0)) > 0 {
+			tx.Type = TX_TYPE_LRC_REWARD
+			tx.Amount = src.LrcReward
+			list = append(list, tx)
+		}
+	}
+
+	return list
 }
 
 func (tx *TransactionView) fullFilled(src types.TxInfo) {

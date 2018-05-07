@@ -154,45 +154,24 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 func (impl *TransactionViewerImpl) assemble(daoviews []dao.TransactionView) []txtyp.TransactionJsonResult {
 	list := make([]txtyp.TransactionJsonResult, 0)
 
-	hashlist := make([]string, 0)
-	daoentitymap := make(map[string]dao.TransactionEntity)
-
 	// get dao.TransactionEntity
-	for _, v := range daoviews {
-		hashlist = append(hashlist, v.TxHash)
-	}
-	daoentitys, err := impl.db.GetTxEntity(hashlist)
-	if err != nil {
-		return list
-	}
-
-	// set dao.TransactionEntity in map
-	for _, v := range daoentitys {
-		key := txLogIndexStr(v.TxHash, v.LogIndex)
-		if _, ok := daoentitymap[key]; !ok {
-			daoentitymap[key] = v
-		}
-	}
+	entitymap := GetEntityCache(impl.db, daoviews)
 
 	for _, v := range daoviews {
 		var (
 			view   txtyp.TransactionView
 			entity txtyp.TransactionEntity
 			model  dao.TransactionEntity
+			ok     bool
 		)
 
-		// from dao.TransactionView to txtyp.TransactionView
-		v.ConvertUp(&view)
-
 		// get entity from map
-		key := txLogIndexStr(view.TxHash.Hex(), view.LogIndex)
-		if t, ok := daoentitymap[key]; !ok {
+		if model, ok = entitymap.getEntity(v.TxHash, v.LogIndex); !ok {
 			continue
-		} else {
-			model = t
 		}
 
-		// from dao.TransactionEntity to txtyp.TransactionEntity
+		// convert data struct
+		v.ConvertUp(&view)
 		model.ConvertUp(&entity)
 
 		// convert txtyp.TransactionView & txtyp.TransactionEntity to txtyp.TransactionJsonResult
@@ -228,14 +207,14 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 		err = res.FromCutoffPairEntity(entity)
 
 	case txtyp.TX_TYPE_CONVERT_INCOME:
-		if view.Symbol == txtyp.WETH_SYMBOL {
+		if view.Symbol == txtyp.SYMBOL_WETH {
 			err = res.FromWethDepositEntity(entity)
 		} else {
 			err = res.FromWethWithdrawalEntity(entity)
 		}
 
 	case txtyp.TX_TYPE_CONVERT_OUTCOME:
-		if view.Symbol == txtyp.WETH_SYMBOL {
+		if view.Symbol == txtyp.SYMBOL_WETH {
 			err = res.FromWethWithdrawalEntity(entity)
 		} else {
 			err = res.FromWethDepositEntity(entity)
@@ -243,6 +222,9 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 
 	case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
 		err = res.FromTransferEntity(entity)
+
+	case txtyp.TX_TYPE_SELL, txtyp.TX_TYPE_BUY, txtyp.TX_TYPE_LRC_FEE, txtyp.TX_TYPE_LRC_REWARD:
+		err = res.FromFillEntity(entity)
 	}
 
 	return res, err
@@ -263,13 +245,13 @@ func validateTxHashList(list []string) bool {
 }
 
 func safeOwner(ownerStr string) string           { return common.HexToAddress(ownerStr).Hex() }
-func safeStatus(statusStr string) types.TxStatus { return txtyp.StrToTxStatus(statusStr) }
+func safeStatus(statusStr string) types.TxStatus { return types.StrToTxStatus(statusStr) }
 func safeType(typStr string) txtyp.TxType        { return txtyp.StrToTxType(typStr) }
 func safeSymbol(symbol string) string            { return strings.ToUpper(symbol) }
 
 func protocolToSymbol(address common.Address) string {
 	if address == types.NilAddress {
-		return txtyp.ETH_SYMBOL
+		return txtyp.SYMBOL_ETH
 	}
 	symbol := util.AddressToAlias(address.Hex())
 	return safeSymbol(symbol)
@@ -277,7 +259,7 @@ func protocolToSymbol(address common.Address) string {
 
 func symbolToProtocol(symbol string) common.Address {
 	symbol = safeSymbol(symbol)
-	if symbol == txtyp.ETH_SYMBOL {
+	if symbol == txtyp.SYMBOL_ETH {
 		return types.NilAddress
 	}
 	return util.AliasToAddress(symbol)

@@ -24,15 +24,16 @@ import (
 	"github.com/Loopring/relay/extractor"
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
 	"time"
 )
 
 func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
-	accounts := []string{common.HexToAddress("0x1b978a1d302335a6f2ebe4b8823b5e17c3c84135").Hex(),
-		common.HexToAddress("0xb1018949b241d76a1ab2094f473e9befeabb5ead").Hex(),
+	accounts := []string{
+		test.Entity().Accounts[0].Address.Hex(),
+		test.Entity().Accounts[1].Address.Hex(),
+		test.Entity().Creator.Address.Hex(),
 	}
 	for _, account := range accounts {
 		manager := test.GenerateAccountManager()

@@ -248,20 +248,20 @@ func (tx *TransactionEntity) FromOrderFilledEvent(src *types.OrderFilledEvent) e
 	return nil
 }
 
-func (entity *TransactionEntity) fullFilled(src types.TxInfo) {
-	entity.Hash = src.TxHash
-	entity.Protocol = src.Protocol
-	entity.From = src.From
-	entity.To = src.To
-	entity.BlockNumber = src.BlockNumber.Int64()
-	entity.LogIndex = src.TxLogIndex
-	entity.Value = src.Value
-	entity.Status = src.Status
-	entity.GasLimit = src.GasLimit
-	entity.GasUsed = src.GasUsed
-	entity.GasPrice = src.GasPrice
-	entity.Nonce = src.Nonce
-	entity.BlockTime = src.BlockTime
+func (tx *TransactionEntity) fullFilled(src types.TxInfo) {
+	tx.Hash = src.TxHash
+	tx.Protocol = src.Protocol
+	tx.From = src.From
+	tx.To = src.To
+	tx.BlockNumber = src.BlockNumber.Int64()
+	tx.LogIndex = src.TxLogIndex
+	tx.Value = src.Value
+	tx.Status = src.Status
+	tx.GasLimit = src.GasLimit
+	tx.GasUsed = src.GasUsed
+	tx.GasPrice = src.GasPrice
+	tx.Nonce = src.Nonce
+	tx.BlockTime = src.BlockTime
 }
 
 // Compare return true: is the same

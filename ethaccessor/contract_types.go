@@ -33,6 +33,41 @@ func NewAbi(abiStr string) (*abi.ABI, error) {
 	return a, err
 }
 
+const (
+	EVENT_RING_MINED           = "RingMined"
+	EVENT_ORDER_CANCELLED      = "OrderCancelled"
+	EVENT_CUTOFF_ALL           = "AllOrdersCancelled"
+	EVENT_CUTOFF_PAIR          = "OrdersCancelled"
+	EVENT_TOKEN_REGISTERED     = "TokenRegistered"
+	EVENT_TOKEN_UNREGISTERED   = "TokenUnregistered"
+	EVENT_ADDRESS_AUTHORIZED   = "AddressAuthorized"
+	EVENT_ADDRESS_DEAUTHORIZED = "AddressDeauthorized"
+	EVENT_TRANSFER             = "Transfer"
+	EVENT_APPROVAL             = "Approval"
+	EVENT_WETH_DEPOSIT         = "Deposit"
+	EVENT_WETH_WITHDRAWAL      = "Withdrawal"
+)
+
+const (
+	METHOD_UNKNOWN         = ""
+	METHOD_SUBMIT_RING     = "submitRing"
+	METHOD_CANCEL_ORDER    = "cancelOrder"
+	METHOD_CUTOFF_ALL      = "cancelAllOrders"
+	METHOD_CUTOFF_PAIR     = "cancelAllOrdersByTradingPair"
+	METHOD_WETH_DEPOSIT    = "deposit"
+	METHOD_WETH_WITHDRAWAL = "withdraw"
+	METHOD_APPROVE         = "approve"
+	METHOD_TRANSFER        = "transfer"
+)
+
+func TxIsSubmitRing(methodName string) bool {
+	if methodName == METHOD_SUBMIT_RING {
+		return true
+	}
+
+	return false
+}
+
 type TransferEvent struct {
 	Sender   common.Address `fieldName:"from" fieldId:"0"`
 	Receiver common.Address `fieldName:"to" fieldId:"1"`
