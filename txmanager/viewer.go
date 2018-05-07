@@ -154,45 +154,24 @@ func (impl *TransactionViewerImpl) GetAllTransactions(ownerStr, symbolStr, statu
 func (impl *TransactionViewerImpl) assemble(daoviews []dao.TransactionView) []txtyp.TransactionJsonResult {
 	list := make([]txtyp.TransactionJsonResult, 0)
 
-	hashlist := make([]string, 0)
-	daoentitymap := make(map[string]dao.TransactionEntity)
-
 	// get dao.TransactionEntity
-	for _, v := range daoviews {
-		hashlist = append(hashlist, v.TxHash)
-	}
-	daoentitys, err := impl.db.GetTxEntity(hashlist)
-	if err != nil {
-		return list
-	}
-
-	// set dao.TransactionEntity in map
-	for _, v := range daoentitys {
-		key := txLogIndexStr(v.TxHash, v.LogIndex)
-		if _, ok := daoentitymap[key]; !ok {
-			daoentitymap[key] = v
-		}
-	}
+	entitymap := GetEntityCache(impl.db, daoviews)
 
 	for _, v := range daoviews {
 		var (
 			view   txtyp.TransactionView
 			entity txtyp.TransactionEntity
 			model  dao.TransactionEntity
+			ok     bool
 		)
 
-		// from dao.TransactionView to txtyp.TransactionView
-		v.ConvertUp(&view)
-
 		// get entity from map
-		key := txLogIndexStr(view.TxHash.Hex(), view.LogIndex)
-		if t, ok := daoentitymap[key]; !ok {
+		if model, ok = entitymap.getEntity(v.TxHash, v.LogIndex); !ok {
 			continue
-		} else {
-			model = t
 		}
 
-		// from dao.TransactionEntity to txtyp.TransactionEntity
+		// convert data struct
+		v.ConvertUp(&view)
 		model.ConvertUp(&entity)
 
 		// convert txtyp.TransactionView & txtyp.TransactionEntity to txtyp.TransactionJsonResult

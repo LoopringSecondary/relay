@@ -100,6 +100,7 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
+// todo: check and test
 func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	log.Debugf("txmanager,processing chain fork......")
 
@@ -108,10 +109,13 @@ func (tm *TransactionManager) ForkProcess(input eventemitter.EventData) error {
 	from := forkEvent.ForkBlock.Int64()
 	to := forkEvent.DetectedBlock.Int64()
 	if err := tm.db.RollBackTxEntity(from, to); err != nil {
-		log.Warnf("txmanager,process fork error:%s", err.Error())
+		log.Debugf("txmanager,process fork error:%s", err.Error())
 	}
 	if err := tm.db.RollBackTxView(from, to); err != nil {
-		log.Warnf("txmanager,process fork error:%s", err.Error())
+		log.Debugf("txmanager,process fork error:%s", err.Error())
+	}
+	if err := RollbackCache(from, to); err != nil {
+		log.Debugf("txmanager,process cache rollback error:%s", err.Error())
 	}
 	tm.Start()
 
@@ -214,7 +218,7 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 	if ethaccessor.TxIsSubmitRing(event.Identify) {
 		var filterList []txtyp.TransactionView
 		for _, v := range list {
-			if ok, _ := ExistFillOwner(v.TxHash, v.Owner); !ok {
+			if ok, _ := ExistFillOwnerCache(v.TxHash, v.Owner); !ok {
 				filterList = append(filterList, v)
 			}
 		}
@@ -241,7 +245,7 @@ func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData)
 	event := input.(*types.OrderFilledEvent)
 
 	// 存储fill关联的用户及tx
-	SetFillOwner(event.TxHash, event.Owner)
+	SetFillOwnerCache(event.TxHash, event.Owner)
 
 	// 一个ringmined可以生成多个fill,他们的tx&logIndex都相等,这里将其放大存储到entity及view
 	event.TxLogIndex = event.TxLogIndex*10 + event.FillIndex.Int64()

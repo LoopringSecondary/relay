@@ -140,6 +140,27 @@ func (impl *RedisCacheImpl) Del(key string) error {
 	}
 	return err
 }
+
+func (impl *RedisCacheImpl) Dels(keys []string) error {
+	conn := impl.pool.Get()
+	defer conn.Close()
+
+	var list []interface{}
+
+	for _, v := range keys {
+		list = append(list, v)
+	}
+
+	num, err := conn.Do("del", list...)
+	if err != nil {
+		log.Debugf("delete multi keys error:%s", err.Error())
+	} else {
+		log.Debugf("delete %d keys", num.(int64))
+	}
+
+	return nil
+}
+
 func (impl *RedisCacheImpl) Keys(keyFormat string) ([][]byte, error) {
 
 	//log.Info("[REDIS-HMGET] key : " + key)
@@ -150,7 +171,6 @@ func (impl *RedisCacheImpl) Keys(keyFormat string) ([][]byte, error) {
 	vs := []interface{}{}
 	vs = append(vs, keyFormat)
 	reply, err := conn.Do("keys", vs...)
-
 	res := [][]byte{}
 	if nil != err {
 		log.Errorf(" key:%s, err:%s", keyFormat, err.Error())
