@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	FillOwnerPrefix = "txmanager_submitring_"
+	FillOwnerPrefix = "txm_fill_owner_"
 	FillOwnerTtl    = 600 // todo 临时数据,只存储10分钟,系统性宕机后无法重启后丢失?
 )
 
