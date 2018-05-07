@@ -20,6 +20,7 @@ package txmanager
 
 import (
 	"github.com/Loopring/relay/dao"
+	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market"
@@ -39,6 +40,7 @@ type TransactionManager struct {
 	wethWithdrawalEventWatcher *eventemitter.Watcher
 	transferEventWatcher       *eventemitter.Watcher
 	ethTransferEventWatcher    *eventemitter.Watcher
+	orderFilledEventWatcher    *eventemitter.Watcher
 	forkDetectedEventWatcher   *eventemitter.Watcher
 }
 
@@ -78,6 +80,9 @@ func (tm *TransactionManager) Start() {
 	tm.ethTransferEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveEthTransferEvent}
 	eventemitter.On(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
 
+	tm.orderFilledEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.SaveOrderFilledEvent}
+	eventemitter.On(eventemitter.OrderFilled, tm.orderFilledEventWatcher)
+
 	tm.forkDetectedEventWatcher = &eventemitter.Watcher{Concurrent: false, Handle: tm.ForkProcess}
 	eventemitter.On(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
@@ -91,6 +96,7 @@ func (tm *TransactionManager) Stop() {
 	eventemitter.Un(eventemitter.WethWithdrawal, tm.wethWithdrawalEventWatcher)
 	eventemitter.Un(eventemitter.Transfer, tm.transferEventWatcher)
 	eventemitter.Un(eventemitter.EthTransferEvent, tm.ethTransferEventWatcher)
+	eventemitter.Un(eventemitter.OrderFilled, tm.orderFilledEventWatcher)
 	eventemitter.Un(eventemitter.ChainForkDetected, tm.forkDetectedEventWatcher)
 }
 
@@ -204,6 +210,17 @@ func (tm *TransactionManager) SaveTransferEvent(input eventemitter.EventData) er
 		return err
 	}
 
+	// view过滤fill owner的转账,entity仍然存储transfer
+	if ethaccessor.TxIsSubmitRing(event.Identify) {
+		var filterList []txtyp.TransactionView
+		for _, v := range list {
+			if ok, _ := ExistFillOwner(v.TxHash, v.Owner); !ok {
+				filterList = append(filterList, v)
+			}
+		}
+		list = filterList
+	}
+
 	return tm.saveTransaction(&entity, list)
 }
 
@@ -221,9 +238,19 @@ func (tm *TransactionManager) SaveEthTransferEvent(input eventemitter.EventData)
 }
 
 func (tm *TransactionManager) SaveOrderFilledEvent(input eventemitter.EventData) error {
-	// todo
+	event := input.(*types.OrderFilledEvent)
 
-	return nil
+	// 存储fill关联的用户及tx
+	SetFillOwner(event.TxHash, event.Owner)
+
+	// 一个ringmined可以生成多个fill,他们的tx&logIndex都相等,这里将其放大存储到entity及view
+	event.TxLogIndex = event.TxLogIndex*10 + event.FillIndex.Int64()
+
+	var entity txtyp.TransactionEntity
+	entity.FromOrderFilledEvent(event)
+	list := txtyp.OrderFilledView(event)
+
+	return tm.saveTransaction(&entity, list)
 }
 
 func (tm *TransactionManager) saveTransaction(tx *txtyp.TransactionEntity, list []txtyp.TransactionView) error {
@@ -294,7 +321,7 @@ func (tm *TransactionManager) saveMinedTx(tx *txtyp.TransactionEntity, list []tx
 		if err := tm.addView(&view); err != nil {
 			log.Errorf("transaction manager,add tx mined view:%s error:%s", tx.Hash.Hex(), err.Error())
 		}
-		log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", view.TxHash.Hex(), txtyp.TypeStr(view.Type), view.Owner.Hex(), view.LogIndex, txtyp.StatusStr(view.Status))
+		log.Debugf("transaction manager,tx mined view:%s type:%s owner:%s logIndex:%d status:%s", view.TxHash.Hex(), txtyp.TypeStr(view.Type), view.Owner.Hex(), view.LogIndex, types.StatusStr(view.Status))
 	}
 
 	return nil

@@ -228,14 +228,14 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 		err = res.FromCutoffPairEntity(entity)
 
 	case txtyp.TX_TYPE_CONVERT_INCOME:
-		if view.Symbol == txtyp.WETH_SYMBOL {
+		if view.Symbol == txtyp.SYMBOL_WETH {
 			err = res.FromWethDepositEntity(entity)
 		} else {
 			err = res.FromWethWithdrawalEntity(entity)
 		}
 
 	case txtyp.TX_TYPE_CONVERT_OUTCOME:
-		if view.Symbol == txtyp.WETH_SYMBOL {
+		if view.Symbol == txtyp.SYMBOL_WETH {
 			err = res.FromWethWithdrawalEntity(entity)
 		} else {
 			err = res.FromWethDepositEntity(entity)
@@ -243,6 +243,9 @@ func getTransactionJsonResult(view *txtyp.TransactionView, entity *txtyp.Transac
 
 	case txtyp.TX_TYPE_SEND, txtyp.TX_TYPE_RECEIVE:
 		err = res.FromTransferEntity(entity)
+
+	case txtyp.TX_TYPE_SELL, txtyp.TX_TYPE_BUY, txtyp.TX_TYPE_LRC_FEE, txtyp.TX_TYPE_LRC_REWARD:
+		err = res.FromFillEntity(entity)
 	}
 
 	return res, err
@@ -263,13 +266,13 @@ func validateTxHashList(list []string) bool {
 }
 
 func safeOwner(ownerStr string) string           { return common.HexToAddress(ownerStr).Hex() }
-func safeStatus(statusStr string) types.TxStatus { return txtyp.StrToTxStatus(statusStr) }
+func safeStatus(statusStr string) types.TxStatus { return types.StrToTxStatus(statusStr) }
 func safeType(typStr string) txtyp.TxType        { return txtyp.StrToTxType(typStr) }
 func safeSymbol(symbol string) string            { return strings.ToUpper(symbol) }
 
 func protocolToSymbol(address common.Address) string {
 	if address == types.NilAddress {
-		return txtyp.ETH_SYMBOL
+		return txtyp.SYMBOL_ETH
 	}
 	symbol := util.AddressToAlias(address.Hex())
 	return safeSymbol(symbol)
@@ -277,7 +280,7 @@ func protocolToSymbol(address common.Address) string {
 
 func symbolToProtocol(symbol string) common.Address {
 	symbol = safeSymbol(symbol)
-	if symbol == txtyp.ETH_SYMBOL {
+	if symbol == txtyp.SYMBOL_ETH {
 		return types.NilAddress
 	}
 	return util.AliasToAddress(symbol)

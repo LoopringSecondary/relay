@@ -53,6 +53,8 @@ type Cache interface {
 
 	SMembers(key string) ([][]byte, error)
 
+	SIsMember(key string, member []byte) (bool, error)
+
 	ZAdd(key string, ttl int64, args ...[]byte) error
 
 	ZRange(key string, start, stop int64, withScores bool) ([][]byte, error)
@@ -96,6 +98,10 @@ func SAdd(key string, ttl int64, members ...[]byte) error {
 
 func SMembers(key string) ([][]byte, error) {
 	return cache.SMembers(key)
+}
+
+func SIsMember(key string, member []byte) (bool, error) {
+	return cache.SIsMember(key, member)
 }
 
 func SRem(key string, members ...[]byte) (int64, error) {
