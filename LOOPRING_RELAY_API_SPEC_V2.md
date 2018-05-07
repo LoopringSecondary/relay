@@ -30,6 +30,7 @@ SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 * [loopring_getBalance](#loopring_getbalance)
 * [loopring_submitOrder](#loopring_submitorder)
 * [loopring_getOrders](#loopring_getorders)
+* [loopring_getOrderByHash](#loopring_getorderbyhash)
 * [loopring_getDepth](#loopring_getdepth)
 * [loopring_getTicker](#loopring_getticker)
 * [loopring_getTickers](#loopring_gettickers)
@@ -42,10 +43,13 @@ SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 * [loopring_getGetFrozenLRCFee](#loopring_getgetfrozenlrcfee)
 * [loopring_getSupportedMarket](#loopring_getsupportedmarket)
 * [loopring_getSupportedTokens](#loopring_getsupportedtokens)
+* [loopring_getLooprSupportedMarket](#loopring_getlooprsupportedmarket)
+* [loopring_getLooprSupportedTokens](#loopring_getlooprsupportedtokens)
 * [loopring_getPortfolio](#loopring_getportfolio)
 * [loopring_getTransactions](#loopring_gettransactions)
 * [loopring_unlockWallet](#loopring_unlockwallet)
 * [loopring_notifyTransactionSubmitted](#loopring_notifytransactionsubmitted)
+* [loopring_submitRingForP2P](#loopring_submitringforp2p)
 
 ## SocketIO Events
 
@@ -138,6 +142,7 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `r` - ECDSA signature parameter r.
   - `s` - ECDSA signature parameter s.
   - `powNonce` - Order submitting must be verified by our pow check logic. If orders submitted exceeded in certain team, we will increase pow difficult.
+  - `orderType` - The order type, enum is (market|p2p), default is market.
 
 ```js
 params: [{
@@ -160,6 +165,7 @@ params: [{
   "r" : "239dskjfsn23ck34323434md93jchek3",
   "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
   "powNonce" : 10,
+  "orderType" : "market",
 }]
 ```
 
@@ -194,6 +200,7 @@ Get loopring order list.
 - `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 - `market` - The market of the order.(format is LRC-WETH)
 - `side` - The side of order. only support "buy" and "sell".
+- `orderType` - The type of order. only support "market" and "p2p", default is "market".
 - `pageIndex` - The page want to query, default is 1.
 - `pageSize` - The size per page, default is 50.
 
@@ -203,6 +210,7 @@ params: [{
   "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
   "status" : "ORDER_CANCEL",
   "side" : "buy",
+  "orderType" : "market",
   "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
   "market" : "coss-weth",
   "pageIndex" : 2,
@@ -237,35 +245,111 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrders","params":{se
   "jsonrpc": "2.0",
   "result": {
     "data" : [
-      {
-          "orginalOrder" : {
-              "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-              "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
-              "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-              "tokenS" : "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
-              "tokenB" : "0xef68e7c694f40c8202821edf525de3782458639f",
-              "amountS" : "0xde0b6b3a7640000",
-              "amountB" : "0xde0b6b3a7640000",
-              "timestamp" : 1506014710,
-              "ttl": "0xd2f00",
-              "salt" : "0xb3a6cc8cc77e88",
-              "lrcFee" : "0x470de4df820000",
-              "buyNoMoreThanAmountB" : true,
-              "marginSplitPercentage" : 50, // 0~100
-              "v" : "0x1c",
-              "r" : "239dskjfsn23ck34323434md93jchek3",
-              "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy"
-          },
-          "status" : "ORDER_CANCEL",
-          "dealtAmountB" : "0x1a055690d9db80000",
-          "dealtAmountS" : "0x1a055690d9db80000",
-          "cancelledAmountS" : "0x1a055690d9db80000",
-          "cancelledAmountB" : "0x1a055690d9db80000",
-      }
+        {
+             "originalOrder":{
+                 "protocol":"0x8d8812b72d1e4ffCeC158D25f56748b7d67c1e78",
+                 "delegateAddress":"0x17233e07c67d086464fD408148c3ABB56245FA64",
+                 "address":"0x71C079107B5af8619D54537A93dbF16e5aab4900",
+                 "hash":"0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
+                 "tokenS":"LRC",
+                 "tokenB":"WETH",
+                 "amountS":"0x1b1ae4d6e2ef500000",
+                 "amountB":"0xde0b6b3a7640000",
+                 "validSince":"0x5aefd848",
+                 "validUntil":"0x5af129c8",
+                 "lrcFee":"0x19ac8532c2790000",
+                 "buyNoMoreThanAmountB":false,
+                 "marginSplitPercentage":"0x32",
+                 "v":"0x1c",
+                 "r":"0x8eb60e6b1ebfbb9ab7aaf1b54a78497f112cb1f6430cd414ffc2a1366639f35e",
+                 "s":"0x1b65ca88a645d3540e8a89232b73e67818be5cd81c66fa0cc38802e7a8358226",
+                 "walletAddress":"0xb94065482Ad64d4c2b9252358D746B39e820A582",
+                 "authAddr":"0xEf04F928F89cFF2a86CB4C2086D2aDa7D3A29200",
+                 "authPrivateKey":"0x94866e133eb0cc774ca09a9de59c4c671fee6f7e871104d5e14004ac46fcee2b",
+                 "market":"LRC-WETH",
+                 "side":"sell",
+                 "createTime":1525667919
+             },
+             "dealtAmountS":"0x0",
+             "dealtAmountB":"0x0",
+             "cancelledAmountS":"0x0",
+             "cancelledAmountB":"0x0",
+             "status":"ORDER_OPENED",
+        }
     ]
     "total" : 12,
     "pageIndex" : 1,
     "pageSize" : 10
+  }
+}
+```
+
+***
+
+#### loopring_getOrderByHash
+
+Get loopring order by order hash.
+
+##### Parameters
+
+- `orderHash` - The order hash.
+
+```js
+params: [{
+  "orderHash" : "0xf0b75ed18109403b88713cd7a1a8423352b9ed9260e39cb1ea0f423e2b6664f0",
+}]
+```
+
+##### Returns
+
+`Object of Order` - Order detail info.
+
+- `orginalOrder` - The original order info when submitting.(refer to [LoopringProtocol](https://github.com/Loopring/protocol/blob/master/contracts/LoopringProtocol.sol))
+- `status` - The current order status.
+- `dealtAmountS` - Dealt amount of token S.
+- `dealtAmountB` - Dealt amount of token B.
+- `cancelledAmountS` - cancelled amount of token S.
+- `cancelledAmountB` - cancelled amount of token B.
+
+##### Example
+```js
+// Request
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getOrders","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": {
+     "originalOrder":{
+         "protocol":"0x8d8812b72d1e4ffCeC158D25f56748b7d67c1e78",
+         "delegateAddress":"0x17233e07c67d086464fD408148c3ABB56245FA64",
+         "address":"0x71C079107B5af8619D54537A93dbF16e5aab4900",
+         "hash":"0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
+         "tokenS":"LRC",
+         "tokenB":"WETH",
+         "amountS":"0x1b1ae4d6e2ef500000",
+         "amountB":"0xde0b6b3a7640000",
+         "validSince":"0x5aefd848",
+         "validUntil":"0x5af129c8",
+         "lrcFee":"0x19ac8532c2790000",
+         "buyNoMoreThanAmountB":false,
+         "marginSplitPercentage":"0x32",
+         "v":"0x1c",
+         "r":"0x8eb60e6b1ebfbb9ab7aaf1b54a78497f112cb1f6430cd414ffc2a1366639f35e",
+         "s":"0x1b65ca88a645d3540e8a89232b73e67818be5cd81c66fa0cc38802e7a8358226",
+         "walletAddress":"0xb94065482Ad64d4c2b9252358D746B39e820A582",
+         "authAddr":"0xEf04F928F89cFF2a86CB4C2086D2aDa7D3A29200",
+         "authPrivateKey":"0x94866e133eb0cc774ca09a9de59c4c671fee6f7e871104d5e14004ac46fcee2b",
+         "market":"LRC-WETH",
+         "side":"sell",
+         "createTime":1525667919
+     },
+     "dealtAmountS":"0x0",
+     "dealtAmountB":"0x0",
+     "cancelledAmountS":"0x0",
+     "cancelledAmountB":"0x0",
+     "status":"ORDER_OPENED",
   }
 }
 ```
@@ -912,6 +996,14 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","par
 ```
 ***
 
+#### loopring_getLooprSupportedMarket
+
+Get Loopr wallet supported market pairs. Exactly same to loopring_getSupportedMarket but only method name.
+
+#### loopring_getLooprSupportedTokens
+
+Get Loopr wallet supported tokens. Exactly same to loopring_getSupportedTokens but only method name.
+
 #### loopring_getPortfolio
 
 Get user's portfolio info.
@@ -1035,6 +1127,8 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_getTransactions","param
 }
 ```
 
+***
+
 #### loopring_unlockWallet
 
 Tell the relay the unlocked wallet info.
@@ -1067,6 +1161,9 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_unlockWallet","params":
   "result": ["unlock_notice_success"]
 }
 ```
+
+***
+
 #### loopring_notifyTransactionSubmitted
 
 wallet should notify relay there was a transaction sending to eth network, then relay will get and save the pending transaction immediately.
@@ -1100,7 +1197,43 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmit
 }
 ```
 
+
 ***
+
+#### loopring_submitRingForP2P
+
+submit signed raw transaction of ring information, then relay can help submitting the ring while tracing the status of orders for wallet. 
+
+##### Parameters
+
+- `makerOrderHash` - The maker order hash.
+- `takeOrderHash` - The taker order hash.
+- `rawTx` - The raw transaction.
+
+```js
+params: [{
+  "makerOrderHash" : "0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
+  "takerOrderHash" : "0x636352f193cf16a89afc33f7154e12fe1262c1fa0a14cfb501fdcc58553d8058",
+  "rawTx" : "f889808609184e72a00082271094000000000000000000000000000000000000000080a47f74657374320000000000000000000000000000000000000000000000000000006000571ca08a8bbf888cfa37bbf0bb965423625641fc956967b81d12e23709cead01446075a01ce999b56a8a88504be365442ea61239198e23d1fce7d00fcfc5cd3b44b7215f",
+}]
+```
+
+##### Returns
+
+`txHash` - The transaction hash of eth_sendRawTransaction result. 
+
+##### Example
+```js
+// Request
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmitted","params":{see above},"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": "0xf0458d1a96ed7678f3abfe469c754fcb974b79aa632fc7da246fa983f37a49ce"
+}
+```
 
 ***
 

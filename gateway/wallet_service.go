@@ -147,6 +147,7 @@ type OrderQuery struct {
 	Market          string `json:"market"`
 	OrderHash       string `json:"orderHash"`
 	Side            string `json:"side"`
+	OrderType       string `json:"orderType"`
 }
 
 type DepthQuery struct {
@@ -258,6 +259,10 @@ type LatestFill struct {
 	Amount     float64 `json:"amount"`
 	Side       string  `json:"side"`
 	RingHash   string  `json:"ringHash"`
+}
+
+type P2PRingRequest struct {
+	RawTx  string  `json:"rawTx"`
 }
 
 type WalletServiceImpl struct {
@@ -468,6 +473,22 @@ func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err er
 		fmt.Println(err)
 	}
 	return buildOrderResult(queryRst), err
+}
+
+func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonResult, err error) {
+	if len(query.OrderHash) == 0 {
+		return order, errors.New("order hash can't be null")
+	} else {
+		state, err := w.orderManager.GetOrderByHash(common.HexToHash(query.OrderHash)); if err != nil {
+			return order, err
+		} else {
+			return orderStateToJson(*state), err
+		}
+	}
+}
+
+func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
+	return res, err
 }
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
@@ -816,6 +837,12 @@ func convertFromQuery(orderQuery *OrderQuery) (query map[string]interface{}, sta
 
 	if orderQuery.OrderHash != "" {
 		query["order_hash"] = orderQuery.OrderHash
+	}
+
+	if orderQuery.OrderType != "" {
+		query["order_type"] = orderQuery.OrderType
+	} else {
+		query["order_type"] = types.ORDER_TYPE_MARKET
 	}
 
 	pageIndex = orderQuery.PageIndex

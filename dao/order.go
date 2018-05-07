@@ -70,6 +70,7 @@ type Order struct {
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 	Market                string  `gorm:"column:market;type:varchar(40)"`
 	Side                  string  `gorm:"column:side;type:varchar(40)`
+	OrderType             string  `gorm:"column:order_type;type:varchar(40)`
 }
 
 // convert types/orderState to dao/order
@@ -115,6 +116,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
 	o.Side = state.RawOrder.Side
+	o.OrderType = state.RawOrder.OrderType
 
 	return nil
 }
@@ -166,9 +168,12 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.BroadcastTime = o.BroadcastTime
 	state.RawOrder.Market = o.Market
 	state.RawOrder.CreateTime = o.CreateTime
-	state.RawOrder.Side = o.Side
-
-	state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
+	if o.Side == "" {
+		state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
+	} else {
+		state.RawOrder.Side = o.Side
+	}
+	state.RawOrder.OrderType = o.OrderType
 	return nil
 }
 

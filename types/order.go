@@ -37,8 +37,12 @@ const (
 	ORDER_CUTOFF   OrderStatus = 5
 	ORDER_EXPIRE   OrderStatus = 6
 	ORDER_PENDING  OrderStatus = 7
+	ORDER_PENDING_FOR_P2P  OrderStatus = 17
 	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
+
+	ORDER_TYPE_MARKET = "market"
+	ORDER_TYPE_P2P = "p2p"
 )
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
@@ -67,6 +71,7 @@ type Order struct {
 	CreateTime            int64                      `json:"createTime"`
 	PowNonce              uint64                     `json:"powNonce"`
 	Side                  string                     `json:"side"`
+	OrderType             string                     `json:"orderType"`
 }
 
 type orderMarshaling struct {
@@ -103,6 +108,7 @@ type OrderJsonRequest struct {
 	CreateTime            int64          `json:"createTime"`
 	PowNonce              uint64         `json:"powNonce"`
 	Side                  string         `json:"side"`
+	OrderType             string         `json:"orderType"`
 }
 
 type orderJsonRequestMarshaling struct {
