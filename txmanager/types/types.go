@@ -35,24 +35,18 @@ const (
 	// common type
 	TX_TYPE_UNKNOWN              TxType = 0
 	TX_TYPE_APPROVE              TxType = 1
+	TX_TYPE_SEND                 TxType = 2
+	TX_TYPE_RECEIVE              TxType = 3
+	TX_TYPE_SELL                 TxType = 4
+	TX_TYPE_BUY                  TxType = 5
 	TX_TYPE_CONVERT_INCOME       TxType = 7
 	TX_TYPE_CONVERT_OUTCOME      TxType = 8
 	TX_TYPE_CANCEL_ORDER         TxType = 9
 	TX_TYPE_CUTOFF               TxType = 10
 	TX_TYPE_CUTOFF_PAIR          TxType = 11
 	TX_TYPE_UNSUPPORTED_CONTRACT TxType = 12
-
-	// front type
-	TX_TYPE_SEND    TxType = 2
-	TX_TYPE_RECEIVE TxType = 3
-	TX_TYPE_SELL    TxType = 4
-	TX_TYPE_BUY     TxType = 5
-
-	// backend type
-	TX_TYPE_TRANSFER   TxType = 21
-	TX_TYPE_DEPOSIT    TxType = 22
-	TX_TYPE_WITHDRAWAL TxType = 23
-	TX_TYPE_FILL       TxType = 24
+	TX_TYPE_LRC_FEE              TxType = 13
+	TX_TYPE_LRC_REWARD           TxType = 14
 )
 
 func StatusStr(status types.TxStatus) string {
@@ -113,12 +107,10 @@ func TypeStr(typ TxType) string {
 		ret = "cutoff_trading_pair"
 	case TX_TYPE_UNSUPPORTED_CONTRACT:
 		ret = "unsupported_contract"
-	case TX_TYPE_TRANSFER:
-		ret = "transfer"
-	case TX_TYPE_DEPOSIT:
-		ret = "deposit"
-	case TX_TYPE_WITHDRAWAL:
-		ret = "withdrawal"
+	case TX_TYPE_LRC_FEE:
+		ret = "lrc_fee"
+	case TX_TYPE_LRC_REWARD:
+		ret = "lrc_reward"
 	default:
 		ret = "unknown"
 	}
@@ -151,12 +143,10 @@ func StrToTxType(typ string) TxType {
 		ret = TX_TYPE_CUTOFF_PAIR
 	case "unsupported_contract":
 		ret = TX_TYPE_UNSUPPORTED_CONTRACT
-	case "transfer":
-		ret = TX_TYPE_TRANSFER
-	case "deposit":
-		ret = TX_TYPE_DEPOSIT
-	case "withdrawal":
-		ret = TX_TYPE_WITHDRAWAL
+	case "lrc_fee":
+		ret = TX_TYPE_LRC_FEE
+	case "lrc_reward":
+		ret = TX_TYPE_LRC_REWARD
 	default:
 		ret = TX_TYPE_UNKNOWN
 	}
