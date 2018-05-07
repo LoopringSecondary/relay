@@ -31,6 +31,8 @@ type Cache interface {
 
 	Del(key string) error
 
+	Dels(keys []string) error
+
 	Exists(key string) (bool, error)
 
 	Keys(keyFormat string) ([][]byte, error)
@@ -70,6 +72,7 @@ func NewCache(cfg interface{}) {
 func Set(key string, value []byte, ttl int64) error { return cache.Set(key, value, ttl) }
 func Get(key string) ([]byte, error)                { return cache.Get(key) }
 func Del(key string) error                          { return cache.Del(key) }
+func Dels(keys []string) error                      { return cache.Dels(keys) }
 func Exists(key string) (bool, error)               { return cache.Exists(key) }
 func Keys(keyFormat string) ([][]byte, error)       { return cache.Keys(keyFormat) }
 
