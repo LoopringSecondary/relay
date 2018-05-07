@@ -53,11 +53,14 @@ func (market *Market) match() {
 
 	//step 1: evaluate received
 	for _, a2BOrder := range market.AtoBOrders {
-		if failedCount,err1 := OrderExecuteFailedCount(a2BOrder.RawOrder.Hash); nil == err1 && failedCount > 1 {
+		if failedCount, err1 := OrderExecuteFailedCount(a2BOrder.RawOrder.Hash); nil == err1 && failedCount > market.matcher.maxFailedCount {
+			log.Debugf("orderhash:%s has been failed to submit %d times", a2BOrder.RawOrder.Hash.Hex(), failedCount)
+
 			continue
 		}
 		for _, b2AOrder := range market.BtoAOrders {
-			if failedCount,err1 := OrderExecuteFailedCount(b2AOrder.RawOrder.Hash); nil == err1 && failedCount > 1 {
+			if failedCount, err1 := OrderExecuteFailedCount(b2AOrder.RawOrder.Hash); nil == err1 && failedCount > market.matcher.maxFailedCount {
+				log.Debugf("orderhash:%s has been failed to submit %d times", b2AOrder.RawOrder.Hash.Hex(), failedCount)
 				continue
 			}
 			//todo:move a2BOrder.RawOrder.Owner != b2AOrder.RawOrder.Owner after contract fix bug
@@ -66,7 +69,6 @@ func (market *Market) match() {
 					log.Errorf("err:%s", err.Error())
 					continue
 				} else {
-
 					if candidateRing.received.Sign() > 0 {
 						candidateRingList = append(candidateRingList, *candidateRing)
 					} else {
@@ -100,6 +102,12 @@ func (market *Market) match() {
 			log.Debugf("generate RingSubmitInfo err:%s", err.Error())
 			continue
 		} else {
+			uniqueId := ringForSubmit.RawRing.GenerateUniqueId()
+			if failedCount, err := RingExecuteFailedCount(uniqueId); nil == err && failedCount > market.matcher.maxFailedCount {
+				log.Debugf("ringSubmitInfo.UniqueId:%s , ringhash: %s , has been failed to submit %d times", uniqueId.Hex(), ringForSubmit.Ringhash.Hex(), failedCount)
+				continue
+			}
+
 			//todo:for test, release this limit
 			if ringForSubmit.RawRing.Received.Sign() > 0 {
 				for _, filledOrder := range ringForSubmit.RawRing.Orders {
@@ -209,7 +217,7 @@ func (market *Market) getOrdersForMatching(delegateAddress common.Address) {
 		} else {
 			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
-		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s, ",market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
+		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s, ", market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
 
 	for _, order := range btoAOrders {
@@ -219,7 +227,7 @@ func (market *Market) getOrdersForMatching(delegateAddress common.Address) {
 		} else {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, order.RawOrder.Hash)
 		}
-		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s",market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
+		log.Debugf("order status in this new round:%s, orderhash:%s, DealtAmountS:%s", market.matcher.lastRoundNumber.String(), order.RawOrder.Hash.Hex(), order.DealtAmountS.String())
 	}
 }
 

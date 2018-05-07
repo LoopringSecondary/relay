@@ -383,6 +383,9 @@ func (b *ChangedOfBlock) saveBalanceKey(owner, token common.Address) error {
 }
 
 func (b *ChangedOfBlock) cacheBalanceKey() string {
+	if nil == b.currentBlockNumber {
+		log.Error("b.currentBlockNumber is nil")
+	}
 	return "block_balance_" + b.currentBlockNumber.String()
 }
 
@@ -394,6 +397,9 @@ func (b *ChangedOfBlock) parseCacheBalanceField(data []byte) (owner, token commo
 }
 
 func (b *ChangedOfBlock) cacheAllowanceKey() string {
+	if nil == b.currentBlockNumber {
+		log.Error("b.currentBlockNumber is nil")
+	}
 	return "block_allowance_" + b.currentBlockNumber.String()
 }
 
@@ -765,7 +771,7 @@ func (a *AccountManager) HasUnlocked(owner string) (exists bool, err error) {
 
 func (a *AccountManager) handleBlockFork(input eventemitter.EventData) (err error) {
 	event := input.(*types.ForkedEvent)
-	log.Info("the eth network may be forked. flush all cache")
+	log.Infof("the eth network may be forked. flush all cache, detectedBlock:%s", event.DetectedBlock.String())
 
 	i := new(big.Int).Set(event.DetectedBlock)
 	for i.Cmp(event.ForkBlock) >= 0 {

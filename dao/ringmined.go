@@ -144,7 +144,7 @@ func (r *RingMinedMethod) ConvertUp(event *types.SubmitRingMethodEvent) error {
 	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)
 	event.TxHash = common.HexToHash(r.TxHash)
 	event.BlockNumber = big.NewInt(r.BlockNumber)
-	event.Status = event.Status
+	event.Status = types.TxStatus(r.Status)
 	event.GasLimit = new(big.Int)
 	event.GasLimit.SetString(r.GasLimit, 0)
 	event.GasUsed = new(big.Int)

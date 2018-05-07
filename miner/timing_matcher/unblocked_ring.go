@@ -33,14 +33,14 @@ import (
 //ringhash orderhash+owner+tokens
 //round orderhash
 const (
-	OrderHashPrefix = "matcher_orderhash_"
-	OwnerPrefix     = "matcher_owner_"
-	RingHashPrefix  = "matcher_ringhash_"
-	RoundPrefix     = "matcher_round_"
-	FailedRingPrefix = "failed_ring_"
-	FailedOrderPrefix = "failed_order_"
+	OrderHashPrefix          = "matcher_orderhash_"
+	OwnerPrefix              = "matcher_owner_"
+	RingHashPrefix           = "matcher_ringhash_"
+	RoundPrefix              = "matcher_round_"
+	FailedRingPrefix         = "failed_ring_"
+	FailedOrderPrefix        = "failed_order_"
 	RinghashToUniqueIdPrefix = "ringhash_uniqid_"
-	cacheTtl        = 86400 * 2
+	cacheTtl                 = 86400 * 2
 )
 
 type OrderMatchedState struct {
@@ -270,33 +270,27 @@ func CachedRinghashes() ([]common.Hash, error) {
 	}
 }
 
-func CacheRinghashToUniqueId(ringhash,uniqueId common.Hash) {
-	cache.Set(RinghashToUniqueIdPrefix + strings.ToLower(ringhash.Hex()), []byte(uniqueId.Hex()), cacheTtl)
+func CacheRinghashToUniqueId(ringhash, uniqueId common.Hash) {
+	cache.Set(RinghashToUniqueIdPrefix+strings.ToLower(ringhash.Hex()), []byte(uniqueId.Hex()), cacheTtl)
 }
 
 func GetUniqueIdByRinghash(ringhash common.Hash) (common.Hash, error) {
-	if data,err := cache.Get(RinghashToUniqueIdPrefix + strings.ToLower(ringhash.Hex())); nil == err {
+	if data, err := cache.Get(RinghashToUniqueIdPrefix + strings.ToLower(ringhash.Hex())); nil == err {
 		return common.BytesToHash(data), err
 	} else {
 		return types.NilHash, err
 	}
 }
 
-func AddFailedRingCache(ringhash, txhash common.Hash, orderhashes []common.Hash) {
-	if uniqueId,err := GetUniqueIdByRinghash(ringhash);nil == err && !types.IsZeroHash(uniqueId) {
-		cache.SAdd(FailedRingPrefix + strings.ToLower(uniqueId.Hex()),cacheTtl, []byte(strings.ToLower(txhash.Hex())))
-		for _,orderhash := range orderhashes {
-			cache.SAdd(FailedOrderPrefix + strings.ToLower(orderhash.Hex()), cacheTtl, []byte(strings.ToLower(uniqueId.Hex())))
-		}
+func AddFailedRingCache(uniqueId, txhash common.Hash, orderhashes []common.Hash) {
+	cache.SAdd(FailedRingPrefix+strings.ToLower(uniqueId.Hex()), cacheTtl, []byte(strings.ToLower(txhash.Hex())))
+	for _, orderhash := range orderhashes {
+		cache.SAdd(FailedOrderPrefix+strings.ToLower(orderhash.Hex()), cacheTtl, []byte(strings.ToLower(uniqueId.Hex())))
 	}
 }
 
-func RingExecuteFailedCount(ringhash common.Hash) (int64, error) {
-	if uniqueId,err := GetUniqueIdByRinghash(ringhash);nil == err && !types.IsZeroHash(uniqueId) {
-		return cache.SCard(FailedRingPrefix + strings.ToLower(uniqueId.Hex()))
-	} else {
-		return 0, err
-	}
+func RingExecuteFailedCount(uniqueId common.Hash) (int64, error) {
+	return cache.SCard(FailedRingPrefix + strings.ToLower(uniqueId.Hex()))
 }
 
 func OrderExecuteFailedCount(orderhash common.Hash) (int64, error) {

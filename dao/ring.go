@@ -22,6 +22,7 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
 
 type FilledOrder struct {
@@ -104,6 +105,19 @@ func (daoFilledOrder *FilledOrder) ConvertUp(filledOrder *types.FilledOrder, rds
 	return nil
 }
 
+func (s *RdsServiceImpl) GetFilledOrderByRinghash(ringhash common.Hash) ([]*FilledOrder, error) {
+	var (
+		filledOrders []*FilledOrder
+		err          error
+	)
+
+	err = s.db.Where("ringhash = ?", ringhash.Hex()).
+		Find(&filledOrders).
+		Error
+
+	return filledOrders, err
+}
+
 type RingSubmitInfo struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
@@ -116,11 +130,12 @@ type RingSubmitInfo struct {
 	ProtocolUsedGas  string `gorm:"column:protocol_used_gas;type:varchar(50)"`
 	ProtocolTxHash   string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
 
-	Status      int    `gorm:"column:status;type:int"`
-	RingIndex   string `gorm:"column:ring_index;type:varchar(50)"`
-	BlockNumber string `gorm:"column:block_number;type:varchar(50)"`
-	Miner       string `gorm:"column:miner;type:varchar(42)"`
-	Err         string `gorm:"column:err;type:text"`
+	Status      int       `gorm:"column:status;type:int"`
+	RingIndex   string    `gorm:"column:ring_index;type:varchar(50)"`
+	BlockNumber string    `gorm:"column:block_number;type:varchar(50)"`
+	Miner       string    `gorm:"column:miner;type:varchar(42)"`
+	Err         string    `gorm:"column:err;type:text"`
+	CreateTime  time.Time `gorm:"column:create_time;type:TIMESTAMP;default:CURRENT_TIMESTAMP"`
 }
 
 func getBigIntString(v *big.Int) string {
@@ -206,18 +221,17 @@ func (s *RdsServiceImpl) GetRingForSubmitByHash(ringhash common.Hash) (ringForSu
 	return
 }
 
-func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error) {
+func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]*RingSubmitInfo, error) {
 	var (
-		err       error
-		hashes    []common.Hash
-		hashesStr []string
+		err   error
+		infos []*RingSubmitInfo
 	)
 
-	err = s.db.Model(&RingSubmitInfo{}).Where("protocol_tx_hash = ? ", txHash.Hex()).Pluck("ringhash", &hashesStr).Error
-	for _, h := range hashesStr {
-		hashes = append(hashes, common.HexToHash(h))
-	}
-	return hashes, err
+	err = s.db.Where("protocol_tx_hash = ? ", txHash.Hex()).
+		Find(&infos).
+		Error
+
+	return infos, err
 }
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error {

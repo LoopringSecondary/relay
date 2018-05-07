@@ -166,12 +166,13 @@ type LogOptions struct {
 }
 
 type TimingMatcher struct {
-	RoundOrdersCount     int
-	Duration             int64
-	SubmitRingTime       int64
-	DelayedNumber        int64
-	MaxCacheRoundsLength int
-	LagBlocks            int64
+	RoundOrdersCount             int
+	Duration                     int64
+	ReservedSubmitTime           int64
+	MaxSumitFailedCount          int64
+	DelayedNumber                int64
+	MaxCacheRoundsLength         int
+	LagForCleanSubmitCacheBlocks int64
 }
 
 type PercentMinerAddress struct {
