@@ -19,6 +19,7 @@
 package types
 
 import (
+	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
@@ -41,34 +42,40 @@ type innerFill struct {
 	TotalAmountLrc *big.Int
 }
 
-func (fill *innerFill) prepare() {
-	fill.TotalAmountS = big.NewInt(0)
-	fill.TotalAmountB = big.NewInt(0)
-	fill.TotalAmountLrc = big.NewInt(0)
-}
-
 func (fill *innerFill) FromOrderFilledEvent(src *types.OrderFilledEvent) {
-	fill.prepare()
 	fill.TokenS = src.TokenS
 	fill.TokenB = src.TokenB
+	fill.SymbolS = util.AddressToAlias(fill.TokenS.Hex())
+	fill.SymbolB = util.AddressToAlias(fill.TokenB.Hex())
+
 	fill.AmountS = src.AmountS
 	fill.AmountB = src.AmountB
 	fill.SplitS = src.SplitS
 	fill.SplitB = src.SplitB
 	fill.LrcReward = src.LrcReward
 	fill.LrcFee = src.LrcFee
+
+	fill.TotalAmountS = big.NewInt(0)
+	fill.TotalAmountB = big.NewInt(0)
+	fill.TotalAmountLrc = big.NewInt(0)
 }
 
 func (fill *innerFill) FromOrderFillContent(src *OrderFilledContent) {
-	fill.prepare()
 	fill.TokenS = common.HexToAddress(src.TokenS)
 	fill.TokenB = common.HexToAddress(src.TokenB)
+	fill.SymbolS = util.AddressToAlias(fill.TokenS.Hex())
+	fill.SymbolB = util.AddressToAlias(fill.TokenB.Hex())
+
 	fill.AmountS, _ = new(big.Int).SetString(src.AmountS, 0)
 	fill.AmountB, _ = new(big.Int).SetString(src.AmountB, 0)
 	fill.SplitS, _ = new(big.Int).SetString(src.SplitS, 0)
 	fill.SplitB, _ = new(big.Int).SetString(src.SplitB, 0)
 	fill.LrcReward, _ = new(big.Int).SetString(src.LrcReward, 0)
 	fill.LrcFee, _ = new(big.Int).SetString(src.LrcFee, 0)
+
+	fill.TotalAmountS = big.NewInt(0)
+	fill.TotalAmountB = big.NewInt(0)
+	fill.TotalAmountLrc = big.NewInt(0)
 }
 
 // 将lrc量归纳到totalAmountS中
@@ -80,33 +87,24 @@ func (fill *innerFill) FromOrderFillContent(src *OrderFilledContent) {
 //
 // 如果用户卖的就是lrc,那么tokenS账户支出 = amountS + lrcFee + splitS - lrcReward
 // 如果用户卖的就是lrc,那么tokenB账户收入 = amountB + lrcReward - lrcFee - splitB
-// 如果用户交易不是lrc,那么lrc账户支出 = lrcFee - lrcReward
+// 如果用户交易不是lrc,那么lrc账户支出 = lrcFee or lrcReward
 
 func (fill *innerFill) calculateAmountS() {
-	fill.TotalAmountS = new(big.Int).Sub(fill.TotalAmountS, fill.AmountS)
-	fill.TotalAmountS = new(big.Int).Sub(fill.TotalAmountS, fill.SplitS)
+	fill.TotalAmountS = new(big.Int).Add(fill.TotalAmountS, fill.AmountS)
+	fill.TotalAmountS = new(big.Int).Add(fill.TotalAmountS, fill.SplitS)
+
+	if fill.SymbolS == SYMBOL_LRC {
+		fill.TotalAmountS = new(big.Int).Add(fill.TotalAmountS, fill.LrcFee)
+		fill.TotalAmountS = new(big.Int).Sub(fill.TotalAmountS, fill.LrcReward)
+	}
 }
 
 func (fill *innerFill) calculateAmountB() {
 	fill.TotalAmountB = new(big.Int).Add(fill.TotalAmountB, fill.AmountB)
 	fill.TotalAmountB = new(big.Int).Sub(fill.TotalAmountB, fill.SplitB)
-}
 
-func (fill *innerFill) calculateLrc() {
-	fill.TotalAmountLrc = new(big.Int).Add(fill.TotalAmountLrc, fill.LrcReward)
-	fill.TotalAmountLrc = new(big.Int).Sub(fill.TotalAmountLrc, fill.LrcFee)
-}
-
-func (fill *innerFill) calculateSellLrc() {
-	if fill.SymbolS == SYMBOL_LRC {
-		fill.TotalAmountS = new(big.Int).Add(fill.TotalAmountS, fill.TotalAmountLrc)
-		fill.TotalAmountLrc = big.NewInt(0)
-	}
-}
-
-func (fill *innerFill) calculateBuyLrc() {
 	if fill.SymbolB == SYMBOL_LRC {
-		fill.TotalAmountB = new(big.Int).Add(fill.TotalAmountB, fill.TotalAmountLrc)
-		fill.TotalAmountLrc = big.NewInt(0)
+		fill.TotalAmountB = new(big.Int).Add(fill.TotalAmountB, fill.LrcReward)
+		fill.TotalAmountB = new(big.Int).Sub(fill.TotalAmountB, fill.LrcFee)
 	}
 }

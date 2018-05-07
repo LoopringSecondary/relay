@@ -199,30 +199,26 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	)
 
 	fill.FromOrderFilledEvent(src)
-	fill.calculateLrc()
 
-	if fill.SymbolS = util.AddressToAlias(fill.TokenS.Hex()); fill.SymbolS != "" {
+	if fill.SymbolS != "" {
 		fill.calculateAmountS()
-		fill.calculateSellLrc()
-	}
-	if fill.SymbolB = util.AddressToAlias(fill.TokenB.Hex()); fill.SymbolB != "" {
-		fill.calculateAmountB()
-		fill.calculateBuyLrc()
-	}
 
-	if fill.TotalAmountS.Cmp(big.NewInt(0)) != 0 {
 		var tx TransactionView
 		tx.fullFilled(src.TxInfo)
+
 		tx.Owner = src.Owner
 		tx.Symbol = fill.SymbolS
 		tx.Type = TX_TYPE_SELL
-		tx.Amount = new(big.Int).Mul(fill.TotalAmountS, big.NewInt(-1))
+		tx.Amount = fill.TotalAmountS
 		list = append(list, tx)
 	}
 
-	if fill.TotalAmountB.Cmp(big.NewInt(0)) != 0 {
+	if fill.SymbolB != "" {
+		fill.calculateAmountB()
+
 		var tx TransactionView
 		tx.fullFilled(src.TxInfo)
+
 		tx.Owner = src.Owner
 		tx.Symbol = fill.SymbolB
 		tx.Type = TX_TYPE_BUY
@@ -230,20 +226,23 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 		list = append(list, tx)
 	}
 
-	if fill.TotalAmountLrc.Cmp(big.NewInt(0)) != 0 {
+	// lrcReward&lrcFee只会有一个大于0
+	if fill.SymbolS != SYMBOL_LRC && fill.SymbolB != SYMBOL_LRC {
 		var tx TransactionView
 		tx.fullFilled(src.TxInfo)
+
 		tx.Owner = src.Owner
 		tx.Symbol = SYMBOL_LRC
 
-		if fill.TotalAmountLrc.Cmp(big.NewInt(0)) > 0 {
-			tx.Type = TX_TYPE_BUY
-			tx.Amount = fill.TotalAmountB
-		} else {
-			tx.Type = TX_TYPE_SELL
-			tx.Amount = new(big.Int).Mul(fill.TotalAmountLrc, big.NewInt(-1))
+		if fill.LrcFee.Cmp(big.NewInt(0)) > 0 {
+			tx.Type = TX_TYPE_LRC_FEE
+			tx.Amount = fill.LrcFee
+			list = append(list, tx)
+		} else if fill.LrcReward.Cmp(big.NewInt(0)) > 0 {
+			tx.Type = TX_TYPE_LRC_REWARD
+			tx.Amount = fill.LrcReward
+			list = append(list, tx)
 		}
-		list = append(list, tx)
 	}
 
 	return list
