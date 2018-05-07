@@ -41,6 +41,9 @@ type TransactionJsonResult struct {
 	Status      string             `json:"status"`
 	CreateTime  int64              `json:"createTime"`
 	UpdateTime  int64              `json:"updateTime"`
+	GasPrice    string             `json:"gas_price"`
+	GasLimit    string             `json:"gas_limit"`
+	GasUsed     string             `json:"gas_used"`
 	Nonce       string             `json:"nonce"`
 }
 
@@ -234,4 +237,7 @@ func (r *TransactionJsonResult) beforeConvert(entity *TransactionEntity) {
 	r.From = entity.From
 	r.To = entity.To
 	r.Content = res
+	r.GasPrice = entity.GasPrice.String()
+	r.GasLimit = entity.GasLimit.String()
+	r.GasUsed = entity.GasUsed.String()
 }
