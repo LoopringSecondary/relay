@@ -42,7 +42,7 @@ type Order struct {
 	AuthAddress           string  `gorm:"column:auth_address;type:varchar(42)"`
 	PrivateKey            string  `gorm:"column:priv_key;type:varchar(128)"`
 	WalletAddress         string  `gorm:"column:wallet_address;type:varchar(42)"`
-	OrderHash             string  `gorm:"column:order_hash;type:varchar(82);unique_index"`
+	OrderHash             string  `gorm:"column:order_hash;type:varchar(82)"`
 	TokenS                string  `gorm:"column:token_s;type:varchar(42)"`
 	TokenB                string  `gorm:"column:token_b;type:varchar(42)"`
 	AmountS               string  `gorm:"column:amount_s;type:varchar(40)"`

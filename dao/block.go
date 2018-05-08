@@ -28,7 +28,7 @@ import (
 type Block struct {
 	ID          int    `gorm:"column:id;primary_key"`
 	BlockNumber int64  `gorm:"column:block_number;type:bigint"`
-	BlockHash   string `gorm:"column:block_hash;type:varchar(82);unique_index"`
+	BlockHash   string `gorm:"column:block_hash;type:varchar(82)"`
 	ParentHash  string `gorm:"column:parent_hash;type:varchar(82)"`
 	CreateTime  int64  `gorm:"column:create_time"`
 	Fork        bool   `gorm:"column:fork;"`

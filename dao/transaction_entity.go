@@ -88,11 +88,34 @@ func (tx *TransactionEntity) ConvertUp(dst *txtyp.TransactionEntity) error {
 	return nil
 }
 
-// 根据owner&hash查询pending tx
-func (s *RdsServiceImpl) FindPendingTxEntityByHash(hash string) ([]TransactionEntity, error) {
-	var txs []TransactionEntity
+// 根据hash查询pending tx
+func (s *RdsServiceImpl) FindPendingTxEntity(hash string) (TransactionEntity, error) {
+	var tx TransactionEntity
 
 	err := s.db.Where("tx_hash=?", hash).
+		Where("status=?", types.TX_STATUS_PENDING).
+		Where("fork=?", false).
+		First(&tx).Error
+
+	return tx, err
+}
+
+func (s *RdsServiceImpl) GetTxEntity(hashlist []string) ([]TransactionEntity, error) {
+	var txs []TransactionEntity
+
+	err := s.db.Where("tx_hash in (?)", hashlist).
+		Where("fork=?", false).
+		Find(&txs).Error
+
+	return txs, err
+}
+
+// 根据交易发起者from地址及nonce获取pending tx
+func (s *RdsServiceImpl) GetPendingTxEntity(from string, nonce int64) ([]TransactionEntity, error) {
+	var txs []TransactionEntity
+
+	err := s.db.Where("tx_from=?", from).
+		Where("nonce=?", nonce).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Find(&txs).Error
@@ -100,8 +123,8 @@ func (s *RdsServiceImpl) FindPendingTxEntityByHash(hash string) ([]TransactionEn
 	return txs, err
 }
 
-// 根据owner&nonce删除pending tx
-func (s *RdsServiceImpl) DelPendingTxEntityByHash(hash string) error {
+// 根据hash&status删除pending tx
+func (s *RdsServiceImpl) DelPendingTxEntity(hash string) error {
 	err := s.db.Where("tx_hash=?", hash).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
@@ -109,8 +132,18 @@ func (s *RdsServiceImpl) DelPendingTxEntityByHash(hash string) error {
 	return err
 }
 
-// entity不处理pending数据
-func (s *RdsServiceImpl) FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error) {
+func (s *RdsServiceImpl) SetPendingTxEntityFailed(hashlist []string) error {
+	err := s.db.Model(&TransactionEntity{}).
+		Where("tx_hash in (?)", hashlist).
+		Where("status=?", types.TX_STATUS_PENDING).
+		Where("fork=?", false).
+		Update("status", types.TX_STATUS_FAILED).Error
+
+	return err
+}
+
+// 根据hash&logIndex查找唯一tx
+func (s *RdsServiceImpl) FindTxEntity(txhash string, logIndex int64) (TransactionEntity, error) {
 	var tx TransactionEntity
 
 	err := s.db.Where("tx_hash=?", txhash).

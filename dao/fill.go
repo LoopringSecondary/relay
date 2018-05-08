@@ -109,12 +109,12 @@ func (f *FillEvent) ConvertUp(dst *types.OrderFilledEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error) {
+func (s *RdsServiceImpl) FindFillEvent(txhash string, FillIndex int64) (*FillEvent, error) {
 	var (
 		fill FillEvent
 		err  error
 	)
-	err = s.db.Where("ring_hash = ? and order_hash = ?", ringhash.Hex(), orderhash.Hex()).Where("fork = ?", false).First(&fill).Error
+	err = s.db.Where("tx_hash = ? and fill_index = ?", txhash, FillIndex).Where("fork = ?", false).First(&fill).Error
 
 	return &fill, err
 }

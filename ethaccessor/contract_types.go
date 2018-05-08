@@ -141,7 +141,7 @@ func (e *RingMinedEvent) ConvertDown() (*types.RingMinedEvent, []*types.OrderFil
 
 		fill.Ringhash = e.RingHash
 		fill.RingIndex = e.RingIndex
-		fill.FillIndex = big.NewInt(int64(idx))
+		fill.FillIndex = big.NewInt(int64(i))
 
 		fill.OrderHash = safeHash(e.OrderInfoList[start])
 		fill.PreOrderHash = preOrderHash

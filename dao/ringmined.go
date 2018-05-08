@@ -30,7 +30,7 @@ type RingMinedEvent struct {
 	ID                 int    `gorm:"column:id;primary_key" json:"id"`
 	Protocol           string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
 	DelegateAddress    string `gorm:"column:delegate_address;type:varchar(42)" json:"delegateAddress"`
-	RingIndex          string `gorm:"column:ring_index;type:varchar(40);unique_index" json:"ringIndex"`
+	RingIndex          string `gorm:"column:ring_index;type:varchar(40)" json:"ringIndex"`
 	RingHash           string `gorm:"column:ring_hash;type:varchar(82)" json:"ringHash"`
 	TxHash             string `gorm:"column:tx_hash;type:varchar(82)" json:"txHash"`
 	Miner              string `gorm:"column:miner;type:varchar(42);" json:"miner"`
@@ -76,13 +76,13 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	return nil
 }
 
-func (s *RdsServiceImpl) FindRingMinedByRingIndex(index string) (*RingMinedEvent, error) {
+func (s *RdsServiceImpl) FindRingMined(txhash string) (*RingMinedEvent, error) {
 	var (
 		model RingMinedEvent
 		err   error
 	)
 
-	err = s.db.Where("ring_index = ?", index).Where("fork = ?", false).First(&model).Error
+	err = s.db.Where("tx_hash=?", txhash).Where("fork = ?", false).First(&model).Error
 
 	return &model, err
 }

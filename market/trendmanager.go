@@ -934,6 +934,11 @@ func (t *TrendManager) GetTicker() (tickers []Ticker, err error) {
 				v.Last, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Last), 64)
 				v.High, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.High), 64)
 				v.Low, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", v.Low), 64)
+
+				if v.Change == "+0.00%" || v.Change == "-0.00%" {
+					v.Change = "0.00%"
+				}
+
 				tickers = append(tickers, v)
 			}
 
@@ -1048,6 +1053,11 @@ func (t *TrendManager) HandleOrderFilled(input eventemitter.EventData) (err erro
 
 		if newFillModel.Side == "" {
 			newFillModel.Side = util.GetSide(newFillModel.TokenS, newFillModel.TokenB)
+		}
+
+		if newFillModel.Side == util.SideBuy {
+			log.Debug("only calculate sell fill for ticker when ring length is 2")
+			return
 		}
 
 		market, wrapErr := util.WrapMarketByAddress(newFillModel.TokenS, newFillModel.TokenB)

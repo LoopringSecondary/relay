@@ -38,7 +38,7 @@ type RdsService interface {
 	FindAll(item interface{}) error
 
 	// ring mined table
-	FindRingMinedByRingIndex(index string) (*RingMinedEvent, error)
+	FindRingMined(txhash string) (*RingMinedEvent, error)
 	RollBackRingMined(from, to int64) error
 
 	// order table
@@ -65,7 +65,7 @@ type RdsService interface {
 	SaveBlock(latest *Block) error
 
 	// fill event table
-	FindFillEventByRinghashAndOrderhash(ringhash, orderhash common.Hash) (*FillEvent, error)
+	FindFillEvent(txhash string, FillIndex int64) (*FillEvent, error)
 	QueryRecentFills(mkt, owner string, start int64, end int64) (fills []FillEvent, err error)
 	GetFillForkEvents(from, to int64) ([]FillEvent, error)
 	RollBackFill(from, to int64) error
@@ -114,15 +114,17 @@ type RdsService interface {
 	GetTransactionById(id int) (Transaction, error)
 
 	// transactionEntity
-	FindTxEntityByHashAndLogIndex(txhash string, logIndex int64) (TransactionEntity, error)
-	FindPendingTxEntityByHash(hash string) ([]TransactionEntity, error)
-	DelPendingTxEntityByHash(hash string) error
+	FindPendingTxEntity(hash string) (TransactionEntity, error)
+	FindTxEntity(txhash string, logIndex int64) (TransactionEntity, error)
+	GetTxEntity(hashlist []string) ([]TransactionEntity, error)
+	GetPendingTxEntity(from string, nonce int64) ([]TransactionEntity, error)
+	SetPendingTxEntityFailed(hashlist []string) error
+	DelPendingTxEntity(hash string) error
 	RollBackTxEntity(from, to int64) error
 
 	// transactionView
-	FindPendingTxViewByOwnerAndHash(symbol, owner, hash string) ([]TransactionView, error)
-	DelPendingTxViewByOwnerAndNonce(hash, owner string, nonce int64) error
-	FindMinedTxViewByOwnerAndEvent(symbol, owner, hash string, logIndex int64) ([]TransactionView, error)
+	DelPendingTxView(hash string) error
+	SetPendingTxViewFailed(hashlist []string) error
 	GetTxViewByOwnerAndHashs(owner string, hashs []string) ([]TransactionView, error)
 	GetPendingTxViewByOwner(owner string) ([]TransactionView, error)
 	GetTxViewCountByOwner(owner string, symbol string, status types.TxStatus, typ txtyp.TxType) (int, error)

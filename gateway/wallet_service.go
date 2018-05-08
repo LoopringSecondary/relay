@@ -167,6 +167,7 @@ type FillQuery struct {
 
 type RingMinedQuery struct {
 	DelegateAddress string    `json:"delegateAddress"`
+	ProtocolAddress string    `json:"protocolAddress"`
 	RingIndex       types.Big `json:"ringIndex"`
 	PageIndex       int       `json:"pageIndex"`
 	PageSize        int       `json:"pageSize"`
@@ -457,13 +458,7 @@ func (w *WalletServiceImpl) GetOldVersionWethBalance(owner SingleOwner) (res str
 }
 
 func (w *WalletServiceImpl) SubmitOrder(order *types.OrderJsonRequest) (res string, err error) {
-	log.Debug("order input from wallet...................." + order.Hash.Hex())
-	err = HandleOrder(types.ToOrder(order))
-	if err != nil {
-		fmt.Println(err)
-	}
-	res = "SUBMIT_SUCCESS"
-	return res, err
+	return HandleInputOrder(types.ToOrder(order))
 }
 
 func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err error) {
@@ -915,32 +910,36 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 		minAmountS := amountS
 		var err error
 
-		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal); if err != nil {
-			log.Debug(err.Error())
+		minAmountS, err = w.getAvailableMinAmount(amountS, s.RawOrder.Owner, s.RawOrder.TokenS, s.RawOrder.DelegateAddress, tokenSDecimal)
+		if err != nil {
+			//log.Debug(err.Error())
 			continue
 		}
 
+		sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
+		buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
 		if s.RawOrder.BuyNoMoreThanAmountB {
 			//log.Info("order BuyNoMoreThanAmountB is true")
 			//log.Infof("amount s is %s", minAmountS)
 			//log.Infof("amount b is %s", minAmountB)
-			sellPrice := new(big.Rat).SetFrac(s.RawOrder.AmountS, s.RawOrder.AmountB)
 			//log.Infof("sellprice is %s", sellPrice.String())
 			limitedAmountS := new(big.Rat).Mul(minAmountB, sellPrice)
 			//log.Infof("limit amount s is %s", limitedAmountS)
 			if limitedAmountS.Cmp(minAmountS) < 0 {
 				minAmountS = limitedAmountS
 			}
+
+			minAmountB = minAmountB.Mul(minAmountS, buyPrice)
 		} else {
 			//log.Infof("amount s is %s", minAmountS)
 			//log.Infof("amount b is %s", minAmountB)
-			buyPrice := new(big.Rat).SetFrac(s.RawOrder.AmountB, s.RawOrder.AmountS)
 			//log.Infof("buyprice is %s", buyPrice.String())
 			limitedAmountB := new(big.Rat).Mul(minAmountS, buyPrice)
 			//log.Infof("limit amount b is %s", limitedAmountB)
 			if limitedAmountB.Cmp(minAmountB) < 0 {
 				minAmountB = limitedAmountB
 			}
+			minAmountS = minAmountS.Mul(minAmountB, sellPrice)
 		}
 
 		if isAsk {
@@ -1017,7 +1016,7 @@ func (w *WalletServiceImpl) getAvailableMinAmount(depthAmount *big.Rat, owner, t
 		amount = allowanceRat
 	}
 
-	if amount.Cmp(new(big.Rat).SetFloat64(0)) == 0 {
+	if amount.Cmp(new(big.Rat).SetFloat64(1e-8)) < 0 {
 		return nil, errors.New("amount is zero, skipped")
 	}
 
@@ -1077,6 +1076,9 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	}
 	if common.IsHexAddress(q.DelegateAddress) {
 		rst["delegate_address"] = q.DelegateAddress
+	}
+	if common.IsHexAddress(q.ProtocolAddress) {
+		rst["contract_address"] = q.ProtocolAddress
 	}
 	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) >= 0 {
 		rst["ring_index"] = q.RingIndex.BigInt().String()
