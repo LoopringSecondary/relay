@@ -190,7 +190,10 @@ type WethWithdrawalEvent struct {
 
 type SubmitRingMethodEvent struct {
 	TxInfo
-	Err error
+	OrderList    []Order
+	FeeReceipt   common.Address
+	FeeSelection uint16
+	Err          error
 }
 
 type RingSubmitResultEvent struct {
