@@ -142,7 +142,7 @@ Submit an order. The order is submitted to relay as a JSON object, this JSON wil
   - `r` - ECDSA signature parameter r.
   - `s` - ECDSA signature parameter s.
   - `powNonce` - Order submitting must be verified by our pow check logic. If orders submitted exceeded in certain team, we will increase pow difficult.
-  - `orderType` - The order type, enum is (market|p2p), default is market.
+  - `orderType` - The order type, enum is (market_order|p2p_order), default is market_order.
 
 ```js
 params: [{
@@ -200,7 +200,7 @@ Get loopring order list.
 - `delegateAddress` - The loopring [TokenTransferDelegate Protocol](https://github.com/Loopring/token-listing/blob/master/ethereum/deployment.md).
 - `market` - The market of the order.(format is LRC-WETH)
 - `side` - The side of order. only support "buy" and "sell".
-- `orderType` - The type of order. only support "market" and "p2p", default is "market".
+- `orderType` - The type of order. only support "market_order" and "p2p_order", default is "market_order".
 - `pageIndex` - The page want to query, default is 1.
 - `pageSize` - The size per page, default is 50.
 
@@ -1231,7 +1231,7 @@ params: [{
     "r" : "239dskjfsn23ck34323434md93jchek3",
     "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
     "powNonce" : 10,
-    "orderType" : "p2p",
+    "orderType" : "p2p_order",
   },
   "makerOrderHash" : "0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
   "rawTx" : "f889808609184e72a00082271094000000000000000000000000000000000000000080a47f74657374320000000000000000000000000000000000000000000000000000006000571ca08a8bbf888cfa37bbf0bb965423625641fc956967b81d12e23709cead01446075a01ce999b56a8a88504be365442ea61239198e23d1fce7d00fcfc5cd3b44b7215f",

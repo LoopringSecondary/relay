@@ -1202,6 +1202,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.AuthPrivateKey = string(auth)
 	rawOrder.CreateTime = src.RawOrder.CreateTime
 	rawOrder.Side = src.RawOrder.Side
+	rst.RawOrder.OrderType = src.RawOrder.OrderType
 	rst.RawOrder = rawOrder
 	return rst
 }
