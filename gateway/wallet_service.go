@@ -1196,7 +1196,7 @@ func orderStateToJson(src types.OrderState) OrderJsonResult {
 	rawOrder.R = src.RawOrder.R.Hex()
 	rawOrder.S = src.RawOrder.S.Hex()
 	rawOrder.WalletAddress = src.RawOrder.WalletAddress.Hex()
-	rawOrder.AuthAddr = src.RawOrder.AuthPrivateKey.Address().Hex()
+	rawOrder.AuthAddr = src.RawOrder.AuthAddr.Hex()
 	rawOrder.Market = src.RawOrder.Market
 	auth, _ := src.RawOrder.AuthPrivateKey.MarshalText()
 	rawOrder.AuthPrivateKey = string(auth)
