@@ -43,7 +43,8 @@ const SubmitRingMethod_LastId = "submitringmethod_lastid"
 type RingSubmitter struct {
 	minerAccountForSign accounts.Account
 	//minerNameInfos      map[common.Address][]*types.NameRegistryInfo
-	feeReceipt common.Address
+	feeReceipt       common.Address
+	currentBlockTime int64
 
 	maxGasLimit *big.Int
 	minGasLimit *big.Int
@@ -109,6 +110,33 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 	return submitter, nil
 }
 
+func (submitter *RingSubmitter) listenBlockNew() {
+	blockEventChan := make(chan *types.BlockEvent)
+	go func() {
+		for {
+			select {
+			case blockEvent := <-blockEventChan:
+				submitter.currentBlockTime = blockEvent.BlockTime
+			}
+		}
+	}()
+
+	watcher := &eventemitter.Watcher{
+		Concurrent: false,
+		Handle: func(eventData eventemitter.EventData) error {
+			e := eventData.(*types.BlockEvent)
+			log.Debugf("submitter.listenBlockNew blockNumber:%s, blocktime:%d", e.BlockNumber.String(), e.BlockTime)
+			blockEventChan <- e
+			return nil
+		},
+	}
+	eventemitter.On(eventemitter.Block_New, watcher)
+	submitter.stopFuncs = append(submitter.stopFuncs, func() {
+		close(blockEventChan)
+		eventemitter.Un(eventemitter.Block_New, watcher)
+	})
+}
+
 func (submitter *RingSubmitter) listenNewRings() {
 	ringSubmitInfoChan := make(chan []*types.RingSubmitInfo)
 	go func() {
@@ -133,7 +161,7 @@ func (submitter *RingSubmitter) listenNewRings() {
 								}
 							}
 						}
-						submitter.submitResult(ringState.Ringhash, txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err1)
+						submitter.submitResult(ringState.Ringhash, ringState.RawRing.GenerateUniqueId(), txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err1)
 					}
 				}
 			}
@@ -168,23 +196,17 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 
 	txHash := types.NilHash
 	var err error
-	lastTime := int64(0)
-	if nil != ringSubmitInfo.RawRing && len(ringSubmitInfo.RawRing.Orders) > 0 {
-		for _, order := range ringSubmitInfo.RawRing.Orders {
-			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
-			if lastTime <= thisTime {
-				lastTime = thisTime
-			}
-		}
-	}
+	lastTime := ringSubmitInfo.RawRing.ValidSinceTime()
 
-	if time.Now().Unix() >= (lastTime + int64(15)) {
-		_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
+	needPreExec := false
+	if submitter.currentBlockTime > 0 && lastTime <= submitter.currentBlockTime {
+		needPreExec = true
+		//_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
 	}
 
 	if nil == err {
 		txHashStr := "0x"
-		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData)
+		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData, needPreExec)
 		if nil != err {
 			log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
 			status = types.TX_STATUS_FAILED
@@ -200,55 +222,62 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 
 func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
 
-	go func() {
-		for {
-			select {
-			case <-time.After(5 * time.Second):
-				lastId := int(0)
+	processSubmitRingMethod := func() {
+		lastId := int(0)
 
-				if exists, err := cache.Exists(SubmitRingMethod_LastId); exists && nil == err {
-					if idBytes, err := cache.Get(SubmitRingMethod_LastId); nil == err {
-						if len(idBytes) > 0 {
-							var err1 error
-							if lastId, err1 = strconv.Atoi(string(idBytes)); nil != err1 {
-								log.Errorf("err:%s", err1.Error())
-							}
-						}
-					} else {
-						log.Errorf("err:%s", err.Error())
+		if exists, err := cache.Exists(SubmitRingMethod_LastId); exists && nil == err {
+			if idBytes, err := cache.Get(SubmitRingMethod_LastId); nil == err {
+				if len(idBytes) > 0 {
+					var err1 error
+					if lastId, err1 = strconv.Atoi(string(idBytes)); nil != err1 {
+						log.Errorf("err:%s", err1.Error())
 					}
 				}
+			} else {
+				log.Errorf("err:%s", err.Error())
+			}
+		}
 
-				if methodEvents, err2 := submitter.dbService.GetRingminedMethods(lastId, 500); nil == err2 {
-					for _, daoEvt := range methodEvents {
-						if lastId < daoEvt.ID {
-							lastId = daoEvt.ID
-						}
-						evt := &types.SubmitRingMethodEvent{}
-						if err3 := daoEvt.ConvertUp(evt); nil == err3 {
-							if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(evt.TxHash); nil != err {
-								log.Errorf("err:%s", err.Error())
-							} else {
-								var err1 error
-								if nil != evt.Err {
-									err1 = errors.New("failed to execute ring:" + evt.Err.Error())
-								} else {
-									err1 = errors.New("")
-								}
-
-								for _, ringhash := range ringhashes {
-									submitter.submitResult(ringhash, evt.TxHash, evt.Status, big.NewInt(0), evt.BlockNumber, evt.GasUsed, err1)
-								}
-							}
+		if methodEvents, err2 := submitter.dbService.GetRingminedMethods(lastId, 500); nil == err2 {
+			for _, daoEvt := range methodEvents {
+				if lastId < daoEvt.ID {
+					lastId = daoEvt.ID
+				}
+				evt := &types.SubmitRingMethodEvent{}
+				if err3 := daoEvt.ConvertUp(evt); nil == err3 {
+					if infos, err := submitter.dbService.GetRingHashesByTxHash(evt.TxHash); nil != err {
+						log.Errorf("err:%s", err.Error())
+					} else {
+						var err1 error
+						if nil != evt.Err {
+							err1 = evt.Err
 						} else {
-							log.Errorf("err:%s", err3.Error())
+							err1 = errors.New("")
+						}
+
+						for _, info := range infos {
+							ringhash := common.HexToHash(info.RingHash)
+							uniqueId := common.HexToHash(info.UniqueId)
+
+							submitter.submitResult(ringhash, uniqueId, evt.TxHash, evt.Status, big.NewInt(0), evt.BlockNumber, evt.GasUsed, err1)
 						}
 					}
 				} else {
-					log.Errorf("err:%s", err2.Error())
+					log.Errorf("err:%s", err3.Error())
 				}
+			}
+		} else {
+			log.Errorf("err:%s", err2.Error())
+		}
 
-				cache.Set(SubmitRingMethod_LastId, []byte(strconv.Itoa(lastId)), int64(0))
+		cache.Set(SubmitRingMethod_LastId, []byte(strconv.Itoa(lastId)), int64(0))
+	}
+	go func() {
+		processSubmitRingMethod()
+		for {
+			select {
+			case <-time.After(5 * time.Second):
+				processSubmitRingMethod()
 			}
 		}
 	}()
@@ -299,20 +328,20 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
 //	})
 //}
 
-func (submitter *RingSubmitter) submitResult(ringhash, txhash common.Hash, status types.TxStatus, ringIndex, blockNumber, usedGas *big.Int, err error) {
+func (submitter *RingSubmitter) submitResult(ringhash, uniqeId, txhash common.Hash, status types.TxStatus, ringIndex, blockNumber, usedGas *big.Int, err error) {
 	resultEvt := &types.RingSubmitResultEvent{
-		RingHash:    ringhash,
-		TxHash:      txhash,
-		Status:      status,
-		Err:         err,
-		RingIndex:   ringIndex,
-		BlockNumber: blockNumber,
-		UsedGas:     usedGas,
+		RingHash:     ringhash,
+		RingUniqueId: uniqeId,
+		TxHash:       txhash,
+		Status:       status,
+		Err:          err,
+		RingIndex:    ringIndex,
+		BlockNumber:  blockNumber,
+		UsedGas:      usedGas,
 	}
 	if err := submitter.dbService.UpdateRingSubmitInfoResult(resultEvt); nil != err {
 		log.Errorf("err:%s", err.Error())
 	}
-
 	eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
 }
 
@@ -395,6 +424,7 @@ func (submitter *RingSubmitter) stop() {
 func (submitter *RingSubmitter) start() {
 	submitter.listenNewRings()
 	submitter.listenSubmitRingMethodEventFromMysql()
+	submitter.listenBlockNew()
 	//submitter.listenSubmitRingMethodEvent()
 }
 

@@ -210,6 +210,7 @@ func (l *ExtractorServiceImpl) ProcessBlock() error {
 	blockEvent := &types.BlockEvent{}
 	blockEvent.BlockNumber = block.Number.BigInt()
 	blockEvent.BlockHash = block.Hash
+	blockEvent.BlockTime = block.Timestamp.Int64()
 	eventemitter.Emit(eventemitter.Block_New, blockEvent)
 
 	if len(block.Transactions) > 0 {
