@@ -145,7 +145,9 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
 	}
 	if len(o.PrivateKey) > 0 {
-		state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
+		authPrivateKey, err := crypto.NewPrivateKeyCrypto(false, o.PrivateKey); if err == nil {
+			state.RawOrder.AuthPrivateKey = authPrivateKey
+		}
 	}
 	state.RawOrder.WalletAddress = common.HexToAddress(o.WalletAddress)
 
