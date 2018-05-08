@@ -505,9 +505,6 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, err
 	}
 
-	if ordermanager.IsP2PMakerLocked(takerOrderHash) {
-		return res, errors.New("maker order has been submitted or expired")
-	}
 
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.makerOrderHash)); if err != nil {
 		return res, err
@@ -519,6 +516,10 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 	if p2pRing.taker.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || p2pRing.taker.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
 		return res, errors.New("the amount of maker and taker are not matched")
+	}
+
+	if ordermanager.IsP2PMakerLocked(maker.RawOrder.Hash.Hex()) {
+		return res, errors.New("maker order has been submitted or expired")
 	}
 
 	var txHashRst string

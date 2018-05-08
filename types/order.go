@@ -413,5 +413,6 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.Owner = request.Owner
 	order.WalletAddress = request.WalletAddress
 	order.PowNonce = request.PowNonce
+	order.OrderType = request.OrderType
 	return order
 }
