@@ -21,6 +21,7 @@ package ethaccessor
 import (
 	"errors"
 	"fmt"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -363,21 +364,91 @@ func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
 	return evt
 }
 
-type SubmitRingMethod struct {
+type SubmitRingMethodInputs struct {
 	AddressList        [][4]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS, wallet, authAddress
 	UintArgsList       [][6]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS.
 	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
 	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
 	VList              []uint8             `fieldName:"vList" fieldId:"4"`
-	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
-	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
+	RList              [][32]byte          `fieldName:"rList" fieldId:"5"`
+	SList              [][32]byte          `fieldName:"sList" fieldId:"6"`
 	FeeRecipient       common.Address      `fieldName:"feeRecipient" fieldId:"7"`
 	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
 	Protocol           common.Address
+	FeeReceipt         common.Address
+}
+
+func (inputs *SubmitRingMethodInputs) GenerateSubmitRingMethodInputsData(ring *types.Ring, feeReceipt common.Address, protocolAbi *abi.ABI) ([]byte, error) {
+	inputs = emptySubmitRingInputs(feeReceipt)
+	authVList := []uint8{}
+	authRList := [][32]byte{}
+	authSList := [][32]byte{}
+	ring.Hash = ring.GenerateHash(feeReceipt)
+	for _, filledOrder := range ring.Orders {
+		order := filledOrder.OrderState.RawOrder
+		inputs.AddressList = append(inputs.AddressList, [4]common.Address{order.Owner, order.TokenS, order.WalletAddress, order.AuthAddr})
+		rateAmountS, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
+		inputs.UintArgsList = append(inputs.UintArgsList, [6]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS})
+		inputs.Uint8ArgsList = append(inputs.Uint8ArgsList, [1]uint8{order.MarginSplitPercentage})
+
+		inputs.BuyNoMoreThanBList = append(inputs.BuyNoMoreThanBList, order.BuyNoMoreThanAmountB)
+
+		inputs.VList = append(inputs.VList, order.V)
+		inputs.RList = append(inputs.RList, order.R)
+		inputs.SList = append(inputs.SList, order.S)
+
+		//sign By authPrivateKey
+		if signBytes, err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
+			v, r, s := crypto.SigToVRS(signBytes)
+			authVList = append(authVList, v)
+			authRList = append(authRList, types.BytesToBytes32(r).Bytes32())
+			authSList = append(authSList, types.BytesToBytes32(s).Bytes32())
+		} else {
+			return []byte{}, err
+		}
+	}
+
+	inputs.VList = append(inputs.VList, authVList...)
+	inputs.RList = append(inputs.RList, authRList...)
+	inputs.SList = append(inputs.SList, authSList...)
+
+	inputs.FeeSelections = uint16(ring.FeeSelections().Uint64())
+
+	return protocolAbi.Pack("submitRing",
+		inputs.AddressList,
+		inputs.UintArgsList,
+		inputs.Uint8ArgsList,
+		inputs.BuyNoMoreThanBList,
+		inputs.VList,
+		inputs.RList,
+		inputs.SList,
+		inputs.FeeReceipt,
+		inputs.FeeSelections,
+	)
+	//if err := ring.GenerateAndSetSignature(miner); nil != err {
+	//	return nil, err
+	//} else {
+	//	ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
+	//	ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
+	//	ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
+	//}
+}
+
+func emptySubmitRingInputs(feeReceipt common.Address) *SubmitRingMethodInputs {
+	return &SubmitRingMethodInputs{
+		AddressList:        [][4]common.Address{},
+		UintArgsList:       [][6]*big.Int{},
+		Uint8ArgsList:      [][1]uint8{},
+		BuyNoMoreThanBList: []bool{},
+		VList:              []uint8{},
+		RList:              [][32]byte{},
+		SList:              [][32]byte{},
+		FeeReceipt:         feeReceipt,
+	}
 }
 
 // should add protocol, miner, feeRecipient
-func (m *SubmitRingMethod) ConvertDown() (*types.SubmitRingMethodEvent, error) {
+func (m *SubmitRingMethodInputs) ConvertDown() (*types.SubmitRingMethodEvent, error) {
 	var (
 		list  []types.Order
 		event types.SubmitRingMethodEvent
