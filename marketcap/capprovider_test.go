@@ -33,11 +33,15 @@ func TestStart(t *testing.T) {
 	util.Initialize(cfg.Market)
 	provider := marketcap.NewMarketCapProvider(cfg.MarketCap)
 	provider.Start()
+	//a := new(big.Rat).SetInt64(int64(1000000000000000000))
+	//s, _ := provider.LegalCurrencyValue(common.HexToAddress("0x5ca9a71b1d01849c0a95490cc00559717fcf0d1d"), a)
+	//t.Log(s.String())
 	for _, token := range util.AllTokens {
 		p1, _ := provider.GetMarketCap(token.Protocol)
 		p2, _ := provider.GetMarketCapByCurrency(token.Protocol, "USD")
 		t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.String(), p2.String())
 	}
+
 	//
 	//time.Sleep(3 * time.Minute)
 	//for _, token := range util.AllTokens {

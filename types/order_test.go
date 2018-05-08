@@ -40,7 +40,7 @@ func TestOrder_GenerateHash(t *testing.T) {
 "owner":"0x48ff2269e58a373120ffdbbdee3fbcea854ac30a",
 "tokenB":"0xEF68e7C694F40c8202821eDF525dE3782458639f","tokenS":"0x2956356cD2a2bf3202F771F50D3D14A367b48070",
 "authAddr":"0x90feb7c492db20afce48e830cc0c6bea1b6721dd",
-"authPrivateKey":"acfe437a8e0f65124c44647737c0471b8adc9a0763f139df76766f46d6af8e15",
+"authPrivateKey":"0ba0afaec38e602b8f565780be711b666a4554a010fa320ee31560c79874d4cb",
 "amountB":"0x56bc75e2d63100000","amountS":"0x16345785d8a0000",
 "lrcFee":"0xad78ebc5ac6200000",
 "validSince":"0x5aa104a5",
@@ -51,6 +51,7 @@ func TestOrder_GenerateHash(t *testing.T) {
 	if err := json.Unmarshal([]byte(s), oJson); nil != err {
 		t.Error(err.Error())
 	} else {
+		println(len("0ba0afaec38e602b8f565780be711b666a4554a010fa320ee31560c79874d4cb"), len("acfe437a8e0f65124c44647737c0471b8adc9a0763f139df76766f46d6af8e15"))
 		c := crypto.NewKSCrypto(true, nil)
 		crypto.Initialize(c)
 		o := types.ToOrder(oJson)

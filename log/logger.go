@@ -21,6 +21,8 @@ package log
 import (
 	"github.com/Loopring/relay/config"
 	"go.uber.org/zap"
+	"strings"
+	"time"
 )
 
 //todo: I'm not sure whether zap support Rotating
@@ -31,7 +33,13 @@ func Initialize(logOpts config.LogOptions) *zap.Logger {
 	var err error
 
 	cfg := logOpts.ZapOpts
-
+	outputPaths := []string{}
+	for idx, path := range cfg.OutputPaths {
+		outputPaths = append(outputPaths, path)
+		if !strings.HasPrefix(path, "std") {
+			cfg.OutputPaths[idx] = path + time.Now().Format("")
+		}
+	}
 	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	//"callerKey":"C"
 	//cfg.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
@@ -43,6 +51,20 @@ func Initialize(logOpts config.LogOptions) *zap.Logger {
 		panic(err)
 	}
 	sugaredLogger = logger.Sugar()
-
 	return logger
+}
+
+func logRotate(logOpts config.LogOptions, outputPaths []string) {
+	now := time.Now()
+	// 计算下一个零点
+	next := now.Add(time.Hour * 24)
+	next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
+	for {
+		select {
+		case <-time.After(time.Until(next)):
+
+			logger.WithOptions()
+		}
+
+	}
 }

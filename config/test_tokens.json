@@ -8,7 +8,7 @@
         "IsMarket":false
     },
     {
-        "Protocol":"0xfe5aFA7BfF3394359af2D277aCc9f00065CdBe2f",
+        "Protocol":"0x000000000000000000000000e1c541ba900cbf212bc830a5aaf88ab499931751",
         "Symbol":"LRC",
         "Source":"loopring",
         "Deny":false,
