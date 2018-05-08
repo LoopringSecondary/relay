@@ -190,17 +190,21 @@ type WethWithdrawalEvent struct {
 
 type SubmitRingMethodEvent struct {
 	TxInfo
-	Err error
+	OrderList    []Order
+	FeeReceipt   common.Address
+	FeeSelection uint16
+	Err          error
 }
 
 type RingSubmitResultEvent struct {
-	RingHash    common.Hash
-	TxHash      common.Hash
-	Status      TxStatus
-	RingIndex   *big.Int
-	BlockNumber *big.Int
-	UsedGas     *big.Int
-	Err         error
+	RingHash     common.Hash
+	RingUniqueId common.Hash
+	TxHash       common.Hash
+	Status       TxStatus
+	RingIndex    *big.Int
+	BlockNumber  *big.Int
+	UsedGas      *big.Int
+	Err          error
 }
 
 type ForkedEvent struct {
@@ -213,6 +217,7 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
+	BlockTime   int64
 }
 
 type ExtractorWarningEvent struct{}

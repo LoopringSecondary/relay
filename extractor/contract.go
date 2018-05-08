@@ -460,18 +460,38 @@ func (processor *AbiProcessor) loadTokenTransferDelegateProtocol() {
 func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventData) error {
 	contract := input.(MethodData)
 
-	// emit to miner
-	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = contract.TxInfo
-	if evt.Status == types.TX_STATUS_FAILED {
-		evt.Err = fmt.Errorf("method %s transaction failed", contract.Name)
-	} else {
-		evt.Err = nil
+	// unpack submit ring method
+	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+	ring.Protocol = contract.To
+	data := hexutil.MustDecode("0x" + contract.Input[10:])
+	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
+		log.Errorf("extractor,tx:%s submitRing method, unpack error:%s", contract.TxHash.Hex(), err.Error())
+		return nil
 	}
 
-	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s", evt.TxHash.Hex(), evt.GasUsed.String(), evt.GasPrice.String())
+	// convert data struct
+	event, err := ring.ConvertDown()
+	if err != nil {
+		log.Errorf("extractor,tx:%s submitRing method convert order data error:%s", contract.TxHash.Hex(), err.Error())
+		return nil
+	}
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
+	// set txinfo for event
+	event.TxInfo = contract.TxInfo
+	if event.Status == types.TX_STATUS_FAILED {
+		event.Err = fmt.Errorf("method %s transaction failed", contract.Name)
+	}
+
+	// 不需要发送订单到gateway
+	//for _, v := range event.OrderList {
+	//	v.Hash = v.GenerateHash()
+	//	log.Debugf("extractor,tx:%s submitRing method orderHash:%s,owner:%s,tokenS:%s,tokenB:%s,amountS:%s,amountB:%s", event.TxHash.Hex(), v.Hash.Hex(), v.Owner.Hex(), v.TokenS.Hex(), v.TokenB.Hex(), v.AmountS.String(), v.AmountB.String())
+	//	eventemitter.Emit(eventemitter.GatewayNewOrder, v)
+	//}
+
+	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s, status:%s", event.TxHash.Hex(), event.GasUsed.String(), event.GasPrice.String(), types.StatusStr(event.Status))
+
+	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &event)
 
 	return nil
 }

@@ -101,8 +101,9 @@ name = "Loopring corporation"
     		duration = 10000
     		delayed_number = 10000
     		max_cache_rounds_length = 1000
-    		lag_blocks = 200
-    		submitRingTime = 45
+    		lag_for_clean_submit_cache_blocks = 200
+    		reserved_submit_time = 45
+    		max_sumit_failed_count = 3
 
 [market]
     token_file = "/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/tokens.json"

@@ -364,26 +364,33 @@ func (e *WethWithdrawalEvent) ConvertDown() *types.WethWithdrawalEvent {
 }
 
 type SubmitRingMethod struct {
-	AddressList        [][4]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS,tokenB(authAddress)
+	AddressList        [][4]common.Address `fieldName:"addressList" fieldId:"0"`   // owner,tokenS, wallet, authAddress
 	UintArgsList       [][6]*big.Int       `fieldName:"uintArgsList" fieldId:"1"`  // amountS, amountB, validSince (second),validUntil (second), lrcFee, rateAmountS.
 	Uint8ArgsList      [][1]uint8          `fieldName:"uint8ArgsList" fieldId:"2"` // marginSplitPercentageList
 	BuyNoMoreThanBList []bool              `fieldName:"buyNoMoreThanAmountBList" fieldId:"3"`
 	VList              []uint8             `fieldName:"vList" fieldId:"4"`
 	RList              [][32]uint8         `fieldName:"rList" fieldId:"5"`
 	SList              [][32]uint8         `fieldName:"sList" fieldId:"6"`
-	Miner              common.Address      `fieldName:"miner" fieldId:"7"`
+	FeeRecipient       common.Address      `fieldName:"feeRecipient" fieldId:"7"`
 	FeeSelections      uint16              `fieldName:"feeSelections" fieldId:"8"`
 	Protocol           common.Address
 }
 
 // should add protocol, miner, feeRecipient
-func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
-	var list []*types.Order
-	length := len(m.AddressList)
-	vsrLength := 2*length + 1
+func (m *SubmitRingMethod) ConvertDown() (*types.SubmitRingMethodEvent, error) {
+	var (
+		list  []types.Order
+		event types.SubmitRingMethodEvent
+	)
 
-	if length != len(m.UintArgsList) || length != len(m.Uint8ArgsList) || vsrLength != len(m.VList) || vsrLength != len(m.SList) || vsrLength != len(m.RList) || length < 2 {
-		return nil, fmt.Errorf("ringMined method unpack error:orders length invalid")
+	length := len(m.AddressList)
+	vrsLength := 2 * length
+
+	orderLengthInvalid := length < 2
+	argLengthInvalid := length != len(m.UintArgsList) || length != len(m.Uint8ArgsList)
+	vrsLengthInvalid := vrsLength != len(m.VList) || vrsLength != len(m.RList) || vrsLength != len(m.SList)
+	if orderLengthInvalid || argLengthInvalid || vrsLengthInvalid {
+		return nil, fmt.Errorf("submitRing method unpack error:orders length invalid")
 	}
 
 	for i := 0; i < length; i++ {
@@ -415,10 +422,15 @@ func (m *SubmitRingMethod) ConvertDown() ([]*types.Order, error) {
 		order.R = m.RList[i]
 		order.S = m.SList[i]
 
-		list = append(list, &order)
+		list = append(list, order)
 	}
 
-	return list, nil
+	event.OrderList = list
+	event.FeeReceipt = m.FeeRecipient
+	event.FeeSelection = m.FeeSelections
+	event.Err = nil
+
+	return &event, nil
 }
 
 type CancelOrderMethod struct {

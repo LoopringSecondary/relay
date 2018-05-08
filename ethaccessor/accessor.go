@@ -113,8 +113,8 @@ func EstimateGas(callData []byte, to common.Address, blockNumber string) (gas, g
 	return accessor.EstimateGas(blockNumber, callData, to)
 }
 
-func SignAndSendTransaction(sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
-	return accessor.ContractSendTransactionByData("latest", sender, to, gas, gasPrice, value, callData)
+func SignAndSendTransaction(sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte, needPreExe bool) (string, error) {
+	return accessor.ContractSendTransactionByData("latest", sender, to, gas, gasPrice, value, callData, needPreExe)
 }
 
 func ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
