@@ -20,7 +20,7 @@ func (o OrderJsonRequest) MarshalJSON() ([]byte, error) {
 		TokenS                common.Address             `json:"tokenS" gencodec:"required"`
 		TokenB                common.Address             `json:"tokenB" gencodec:"required"`
 		AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`
-		AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
+		AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey"`
 		WalletAddress         common.Address             `json:"walletAddress" gencodec:"required"`
 		AmountS               *Big                       `json:"amountS" gencodec:"required"`
 		AmountB               *Big                       `json:"amountB" gencodec:"required"`
@@ -75,7 +75,7 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 		TokenS                *common.Address             `json:"tokenS" gencodec:"required"`
 		TokenB                *common.Address             `json:"tokenB" gencodec:"required"`
 		AuthAddr              *common.Address             `json:"authAddr" gencodec:"required"`
-		AuthPrivateKey        *crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`
+		AuthPrivateKey        *crypto.EthPrivateKeyCrypto `json:"authPrivateKey"`
 		WalletAddress         *common.Address             `json:"walletAddress" gencodec:"required"`
 		AmountS               *Big                        `json:"amountS" gencodec:"required"`
 		AmountB               *Big                        `json:"amountB" gencodec:"required"`
@@ -119,10 +119,9 @@ func (o *OrderJsonRequest) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'authAddr' for OrderJsonRequest")
 	}
 	o.AuthAddr = *dec.AuthAddr
-	if dec.AuthPrivateKey == nil {
-		return errors.New("missing required field 'authPrivateKey' for OrderJsonRequest")
+	if dec.AuthPrivateKey != nil {
+		o.AuthPrivateKey = *dec.AuthPrivateKey
 	}
-	o.AuthPrivateKey = *dec.AuthPrivateKey
 	if dec.WalletAddress == nil {
 		return errors.New("missing required field 'walletAddress' for OrderJsonRequest")
 	}
