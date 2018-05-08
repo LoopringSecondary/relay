@@ -189,18 +189,20 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 	}
 
 	var (
-		model = &dao.RingMinedEvent{}
-		err   error
+		model       = &dao.RingMinedEvent{}
+		methodModel = &dao.RingMinedMethod{}
+		err         error
 	)
+
+	// add data for miner
+	methodModel.FromRingMinedEvent(event)
+	om.rds.Add(methodModel)
 
 	model, err = om.rds.FindRingMined(event.TxHash.Hex())
 	if err == nil {
 		return fmt.Errorf("order manager,handle ringmined event,ring %s has already exist", event.Ringhash.Hex())
 	}
-	if err = model.ConvertDown(event); err != nil {
-		return err
-	}
-
+	model.ConvertDown(event)
 	if err = om.rds.Add(model); err != nil {
 		return fmt.Errorf("order manager,handle ringmined event,insert ring error:%s", err.Error())
 	}

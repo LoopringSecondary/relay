@@ -139,6 +139,19 @@ func (r *RingMinedMethod) ConvertDown(event *types.SubmitRingMethodEvent) error 
 	return nil
 }
 
+func (r *RingMinedMethod) FromRingMinedEvent(event *types.RingMinedEvent) error {
+	r.Protocol = event.Protocol.Hex()
+	r.DelegateAddress = event.DelegateAddress.Hex()
+	r.TxHash = event.TxHash.Hex()
+	r.BlockNumber = event.BlockNumber.Int64()
+	r.Status = uint8(event.Status)
+	r.GasLimit = event.GasLimit.String()
+	r.GasUsed = event.GasUsed.String()
+	r.GasPrice = event.GasPrice.String()
+
+	return nil
+}
+
 func (r *RingMinedMethod) ConvertUp(event *types.SubmitRingMethodEvent) error {
 	event.Protocol = common.HexToAddress(r.Protocol)
 	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)

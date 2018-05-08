@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/log"
@@ -41,7 +42,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"github.com/Loopring/relay/crypto"
 )
 
 func loadConfig() *config.GlobalConfig {

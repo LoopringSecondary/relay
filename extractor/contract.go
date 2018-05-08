@@ -653,10 +653,10 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	}
 
 	// emit to miner
-	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = contractData.TxInfo
-	evt.Err = nil
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
+	//var evt types.SubmitRingMethodEvent
+	//evt.TxInfo = contractData.TxInfo
+	//evt.Err = nil
+	//eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	// process ringmined to fills
 	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
