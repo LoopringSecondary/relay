@@ -296,7 +296,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 
 		switch contract.Name {
 		case ethaccessor.METHOD_SUBMIT_RING:
-			contract.Method = &ethaccessor.SubmitRingMethod{}
+			contract.Method = &ethaccessor.SubmitRingMethodInputs{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
 		case ethaccessor.METHOD_CANCEL_ORDER:
 			contract.Method = &ethaccessor.CancelOrderMethod{}
@@ -461,7 +461,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	contract := input.(MethodData)
 
 	// unpack submit ring method
-	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+	ring := contract.Method.(*ethaccessor.SubmitRingMethodInputs)
 	ring.Protocol = contract.To
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {

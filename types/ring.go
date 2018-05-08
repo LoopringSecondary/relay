@@ -120,51 +120,51 @@ func (ring *Ring) ValidSinceTime() int64 {
 	return latestValidSince
 }
 
-func (ring *Ring) GenerateSubmitArgs(miner common.Address) (*RingSubmitInputs, error) {
-	ringSubmitArgs := emptyRingSubmitArgs(miner)
-	authVList := []uint8{}
-	authRList := []Bytes32{}
-	authSList := []Bytes32{}
-	ring.Hash = ring.GenerateHash(miner)
-	for _, filledOrder := range ring.Orders {
-		order := filledOrder.OrderState.RawOrder
-		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [4]common.Address{order.Owner, order.TokenS, order.WalletAddress, order.AuthAddr})
-		rateAmountS, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
-		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [6]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS})
-		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [1]uint8{order.MarginSplitPercentage})
-
-		ringSubmitArgs.BuyNoMoreThanAmountBList = append(ringSubmitArgs.BuyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)
-
-		ringSubmitArgs.VList = append(ringSubmitArgs.VList, order.V)
-		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R)
-		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S)
-
-		//sign By authPrivateKey
-		if signBytes, err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
-			v, r, s := crypto.SigToVRS(signBytes)
-			authVList = append(authVList, v)
-			authRList = append(authRList, BytesToBytes32(r))
-			authSList = append(authSList, BytesToBytes32(s))
-		} else {
-			return nil, err
-		}
-	}
-
-	ringSubmitArgs.VList = append(ringSubmitArgs.VList, authVList...)
-	ringSubmitArgs.RList = append(ringSubmitArgs.RList, authRList...)
-	ringSubmitArgs.SList = append(ringSubmitArgs.SList, authSList...)
-
-	ringSubmitArgs.FeeSelections = ring.FeeSelections()
-	//if err := ring.GenerateAndSetSignature(miner); nil != err {
-	//	return nil, err
-	//} else {
-	//	ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
-	//	ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
-	//	ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
-	//}
-
-	return ringSubmitArgs, nil
-}
+//func (ring *Ring) GenerateSubmitArgs(miner common.Address) (*RingSubmitInputs, error) {
+//	ringSubmitArgs := emptyRingSubmitArgs(miner)
+//	authVList := []uint8{}
+//	authRList := []Bytes32{}
+//	authSList := []Bytes32{}
+//	ring.Hash = ring.GenerateHash(miner)
+//	for _, filledOrder := range ring.Orders {
+//		order := filledOrder.OrderState.RawOrder
+//		ringSubmitArgs.AddressList = append(ringSubmitArgs.AddressList, [4]common.Address{order.Owner, order.TokenS, order.WalletAddress, order.AuthAddr})
+//		rateAmountS, _ := new(big.Int).SetString(filledOrder.RateAmountS.FloatString(0), 10)
+//		ringSubmitArgs.UintArgsList = append(ringSubmitArgs.UintArgsList, [6]*big.Int{order.AmountS, order.AmountB, order.ValidSince, order.ValidUntil, order.LrcFee, rateAmountS})
+//		ringSubmitArgs.Uint8ArgsList = append(ringSubmitArgs.Uint8ArgsList, [1]uint8{order.MarginSplitPercentage})
+//
+//		ringSubmitArgs.BuyNoMoreThanAmountBList = append(ringSubmitArgs.BuyNoMoreThanAmountBList, order.BuyNoMoreThanAmountB)
+//
+//		ringSubmitArgs.VList = append(ringSubmitArgs.VList, order.V)
+//		ringSubmitArgs.RList = append(ringSubmitArgs.RList, order.R)
+//		ringSubmitArgs.SList = append(ringSubmitArgs.SList, order.S)
+//
+//		//sign By authPrivateKey
+//		if signBytes, err := order.AuthPrivateKey.Sign(ring.Hash.Bytes(), order.AuthPrivateKey.Address()); nil == err {
+//			v, r, s := crypto.SigToVRS(signBytes)
+//			authVList = append(authVList, v)
+//			authRList = append(authRList, BytesToBytes32(r))
+//			authSList = append(authSList, BytesToBytes32(s))
+//		} else {
+//			return nil, err
+//		}
+//	}
+//
+//	ringSubmitArgs.VList = append(ringSubmitArgs.VList, authVList...)
+//	ringSubmitArgs.RList = append(ringSubmitArgs.RList, authRList...)
+//	ringSubmitArgs.SList = append(ringSubmitArgs.SList, authSList...)
+//
+//	ringSubmitArgs.FeeSelections = ring.FeeSelections()
+//	//if err := ring.GenerateAndSetSignature(miner); nil != err {
+//	//	return nil, err
+//	//} else {
+//	//	ringSubmitArgs.VList = append(ringSubmitArgs.VList, ring.V)
+//	//	ringSubmitArgs.RList = append(ringSubmitArgs.RList, ring.R)
+//	//	ringSubmitArgs.SList = append(ringSubmitArgs.SList, ring.S)
+//	//}
+//
+//	return ringSubmitArgs, nil
+//}
 
 type RingSubmitInfo struct {
 	RawRing *Ring
@@ -182,30 +182,28 @@ type RingSubmitInfo struct {
 	SubmitTxHash common.Hash
 }
 
-type RingSubmitInputs struct {
-	AddressList              [][4]common.Address
-	UintArgsList             [][6]*big.Int
-	Uint8ArgsList            [][1]uint8
-	BuyNoMoreThanAmountBList []bool
-	VList                    []uint8
-	RList                    []Bytes32
-	SList                    []Bytes32
-	Miner                    common.Address
-	FeeSelections            *big.Int
-}
-
-func emptyRingSubmitArgs(miner common.Address) *RingSubmitInputs {
-	return &RingSubmitInputs{
-		AddressList:              [][4]common.Address{},
-		UintArgsList:             [][6]*big.Int{},
-		Uint8ArgsList:            [][1]uint8{},
-		BuyNoMoreThanAmountBList: []bool{},
-		VList: []uint8{},
-		RList: []Bytes32{},
-		SList: []Bytes32{},
-		Miner: miner,
-	}
-}
-
-type RingSubmitOuts struct {
-}
+//
+//type RingSubmitInputs struct {
+//	AddressList              [][4]common.Address
+//	UintArgsList             [][6]*big.Int
+//	Uint8ArgsList            [][1]uint8
+//	BuyNoMoreThanAmountBList []bool
+//	VList                    []uint8
+//	RList                    []Bytes32
+//	SList                    []Bytes32
+//	Miner                    common.Address
+//	FeeSelections            *big.Int
+//}
+//
+//func emptyRingSubmitArgs(miner common.Address) *RingSubmitInputs {
+//	return &RingSubmitInputs{
+//		AddressList:              [][4]common.Address{},
+//		UintArgsList:             [][6]*big.Int{},
+//		Uint8ArgsList:            [][1]uint8{},
+//		BuyNoMoreThanAmountBList: []bool{},
+//		VList: []uint8{},
+//		RList: []Bytes32{},
+//		SList: []Bytes32{},
+//		Miner: miner,
+//	}
+//}
