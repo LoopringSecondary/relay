@@ -252,6 +252,7 @@ type ethNodeAccessor struct {
 	mtx               sync.RWMutex
 	AddressNonce      map[common.Address]*big.Int
 	fetchTxRetryCount int
+	cacheDuration int64
 }
 
 type AddressNonce struct {

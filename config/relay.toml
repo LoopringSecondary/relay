@@ -63,6 +63,7 @@ name = "Loopring corporation"
 [accessor]
     raw_urls = ["http://127.0.0.1:8545"]
     fetch_tx_retry_count = 120
+    cache_duration = 36000
 
 [extractor]
     start_block_number = 5354906

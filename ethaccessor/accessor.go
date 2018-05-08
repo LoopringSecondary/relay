@@ -261,6 +261,11 @@ func Initialize(accessorOptions config.AccessorOptions, commonOptions config.Com
 	var err error
 	accessor = &ethNodeAccessor{}
 	accessor.mtx = sync.RWMutex{}
+	if accessorOptions.CacheDuration > 0 {
+		accessor.cacheDuration = accessorOptions.CacheDuration
+	} else {
+		accessor.cacheDuration = int64(36000)
+	}
 	if accessorOptions.FetchTxRetryCount > 0 {
 		accessor.fetchTxRetryCount = accessorOptions.FetchTxRetryCount
 	} else {

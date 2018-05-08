@@ -537,7 +537,7 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
-					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(36000))
+					cache.Set(blockWithTxHash.Hash.Hex(), blockData, accessor.cacheDuration)
 				}
 
 				return blockWithTxAndReceipt, nil

@@ -130,6 +130,7 @@ func (opts IpfsOptions) Url() string {
 type AccessorOptions struct {
 	RawUrls           []string `required:"true"`
 	FetchTxRetryCount int
+	CacheDuration int64
 }
 
 type ExtractorOptions struct {
