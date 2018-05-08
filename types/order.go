@@ -89,7 +89,7 @@ type OrderJsonRequest struct {
 	TokenS          common.Address             `json:"tokenS" gencodec:"required"`          // 卖出erc20代币智能合约地址
 	TokenB          common.Address             `json:"tokenB" gencodec:"required"`          // 买入erc20代币智能合约地址
 	AuthAddr        common.Address             `json:"authAddr" gencodec:"required"`        //
-	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey"`  //
 	WalletAddress   common.Address             `json:"walletAddress" gencodec:"required"`
 	AmountS         *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
 	AmountB         *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
