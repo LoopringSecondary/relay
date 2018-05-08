@@ -46,7 +46,7 @@ func TestExtractorServiceImpl_UnlockWallet(t *testing.T) {
 func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 
 	var tx ethaccessor.Transaction
-	if err := ethaccessor.GetTransactionByHash(&tx, "0x6d882116f39b6f1d596e441adfb1552fbb2fb6367816663717caa4fea7b8bc2a", "latest"); err != nil {
+	if err := ethaccessor.GetTransactionByHash(&tx, "0xe9972f9b965db498c05a8b8d3fde8638c518a266c0d45d312d5f29fa75c20726", "latest"); err != nil {
 		t.Fatalf(err.Error())
 	} else {
 		eventemitter.Emit(eventemitter.PendingTransaction, &tx)
@@ -55,6 +55,10 @@ func TestExtractorServiceImpl_ProcessPendingTransaction(t *testing.T) {
 	accmanager := test.GenerateAccountManager()
 	tm := txmanager.NewTxManager(test.Rds(), &accmanager)
 	tm.Start()
+
+	om := test.GenerateOrderManager()
+	om.Start()
+
 	processor := extractor.NewExtractorService(test.Cfg().Extractor, test.Rds())
 	processor.ProcessPendingTransaction(&tx)
 }

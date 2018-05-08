@@ -243,7 +243,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
 				if lastId < daoEvt.ID {
 					lastId = daoEvt.ID
 				}
-				evt := &types.SubmitRingMethodEvent{}
+				evt := &types.RingMinedEvent{}
 				if err3 := daoEvt.ConvertUp(evt); nil == err3 {
 					if infos, err := submitter.dbService.GetRingHashesByTxHash(evt.TxHash); nil != err {
 						log.Errorf("err:%s", err.Error())

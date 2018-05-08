@@ -107,7 +107,7 @@ type RdsService interface {
 	GetRingForSubmitByHash(ringhash common.Hash) (RingSubmitInfo, error)
 	GetRingHashesByTxHash(txHash common.Hash) ([]*RingSubmitInfo, error)
 	RingMinedPageQuery(query map[string]interface{}, pageIndex, pageSize int) (res PageResult, err error)
-	GetRingminedMethods(lastId int, limit int) ([]*RingMinedMethod, error)
+	GetRingminedMethods(lastId int, limit int) ([]RingMinedEvent, error)
 	GetFilledOrderByRinghash(ringhash common.Hash) ([]*FilledOrder, error)
 
 	// transactions

@@ -158,11 +158,26 @@ func (om *OrderManagerImpl) handleWarning(input eventemitter.EventData) error {
 }
 
 func (om *OrderManagerImpl) handleSubmitRingMethod(input eventemitter.EventData) error {
-	if evt, ok := input.(*types.SubmitRingMethodEvent); ok {
-		ringMinedMethod := &dao.RingMinedMethod{}
-		ringMinedMethod.ConvertDown(evt)
-		om.rds.Add(ringMinedMethod)
+	event := input.(*types.SubmitRingMethodEvent)
+
+	if event.Status != types.TX_STATUS_FAILED {
+		return nil
 	}
+
+	var (
+		model = &dao.RingMinedEvent{}
+		err   error
+	)
+
+	model, err = om.rds.FindRingMined(event.TxHash.Hex())
+	if err == nil {
+		return fmt.Errorf("order manager,handle ringmined event,tx %s has already exist", event.TxHash.Hex())
+	}
+	model.FromSubmitRingMethod(event)
+	if err = om.rds.Add(model); err != nil {
+		return fmt.Errorf("order manager,handle ringmined event,insert ring error:%s", err.Error())
+	}
+
 	return nil
 }
 
@@ -189,14 +204,9 @@ func (om *OrderManagerImpl) handleRingMined(input eventemitter.EventData) error 
 	}
 
 	var (
-		model       = &dao.RingMinedEvent{}
-		methodModel = &dao.RingMinedMethod{}
-		err         error
+		model = &dao.RingMinedEvent{}
+		err   error
 	)
-
-	// add data for miner
-	methodModel.FromRingMinedEvent(event)
-	om.rds.Add(methodModel)
 
 	model, err = om.rds.FindRingMined(event.TxHash.Hex())
 	if err == nil {

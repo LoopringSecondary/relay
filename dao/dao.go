@@ -82,7 +82,7 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &TransactionEntity{})
 	tables = append(tables, &TransactionView{})
 	tables = append(tables, &CheckPoint{})
-	tables = append(tables, &RingMinedMethod{})
+	//tables = append(tables, &RingMinedMethod{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

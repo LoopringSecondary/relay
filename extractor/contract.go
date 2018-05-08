@@ -491,7 +491,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s, status:%s", event.TxHash.Hex(), event.GasUsed.String(), event.GasPrice.String(), types.StatusStr(event.Status))
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &event)
+	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, event)
 
 	return nil
 }
