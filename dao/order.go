@@ -69,7 +69,7 @@ type Order struct {
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 	Market                string  `gorm:"column:market;type:varchar(40)"`
-	Side                  string  `gorm:"column:side;type:varchar(40)`
+	Side                  string  `gorm:"column:side;type:varchar(40)"`
 }
 
 // convert types/orderState to dao/order
