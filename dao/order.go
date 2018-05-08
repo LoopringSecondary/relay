@@ -190,7 +190,6 @@ func (s *RdsServiceImpl) MarkMinerOrders(filterOrderhashs []string, blockNumber 
 
 	err := s.db.Model(&Order{}).
 		Where("order_hash in (?)", filterOrderhashs).
-		Where("order_type = market").
 		Update("miner_block_mark", blockNumber).Error
 
 	return err

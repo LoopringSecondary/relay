@@ -198,6 +198,7 @@ type RawOrderJsonResult struct {
 	Market                string `json:"market"`
 	Side                  string `json:"side"`
 	CreateTime            int64  `json:"createTime"`
+	OrderType             string `json:"orderType"`
 }
 
 type OrderJsonResult struct {
@@ -263,6 +264,8 @@ type LatestFill struct {
 
 type P2PRingRequest struct {
 	RawTx  string  `json:"rawTx"`
+	taker  types.OrderJsonRequest `json:"taker"`
+	makerOrderHash string `json:"makerOrderHash"`
 }
 
 type WalletServiceImpl struct {
@@ -475,7 +478,7 @@ func (w *WalletServiceImpl) GetOrders(query *OrderQuery) (res PageResult, err er
 	orderQuery, statusList, pi, ps := convertFromQuery(query)
 	queryRst, err := w.orderManager.GetOrders(orderQuery, statusList, pi, ps)
 	if err != nil {
-		fmt.Println(err)
+		log.Info("query order error : " + err.Error())
 	}
 	return buildOrderResult(queryRst), err
 }
@@ -493,7 +496,41 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 }
 
 func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
-	return res, err
+
+	if p2pRing.taker.OrderType != types.ORDER_TYPE_P2P {
+		return res, errors.New("only p2p order can be submitted")
+	}
+
+	takerOrderHash, err := HandleInputOrder(p2pRing.taker); if err != nil {
+		return res, err
+	}
+
+	if ordermanager.IsP2PMakerLocked(takerOrderHash) {
+		return res, errors.New("maker order has been submitted or expired")
+	}
+
+	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.makerOrderHash)); if err != nil {
+		return res, err
+	}
+
+	if !maker.IsEffective() {
+		return res, errors.New("maker order has been finished, can't be match ring again")
+	}
+
+	if p2pRing.taker.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || p2pRing.taker.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
+		return res, errors.New("the amount of maker and taker are not matched")
+	}
+
+	var txHashRst string
+	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx); if err != nil {
+		return res, err
+	}
+
+	err = ordermanager.SaveP2POrderRelation(p2pRing.taker.Owner.Hex(), takerOrderHash, maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst); if err != nil {
+		return res, err
+	}
+
+	return txHashRst, nil
 }
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
@@ -885,7 +922,7 @@ func getStringStatus(order types.OrderState) string {
 		return "ORDER_EXPIRE"
 	}
 
-	if order.IsExpired() {
+	if order.RawOrder.OrderType == types.ORDER_TYPE_P2P && ordermanager.IsP2PMakerLocked(order.RawOrder.Hash.Hex()) {
 		return "ORDER_PENDING"
 	}
 
@@ -1321,4 +1358,8 @@ func toLatestFill(f dao.FillEvent) (latestFill LatestFill, err error) {
 		rst.Amount, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", amount), 64)
 	}
 	return rst, nil
+}
+
+func saveMatchedRelation(takerOrderHash, makerOrderHash, ringTxHash string) (err error) {
+	return nil
 }

@@ -297,7 +297,9 @@ func (ord *OrderState) IsExpired() bool {
 }
 
 func (ord *OrderState) IsEffective() bool {
-	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) && ord.RawOrder.ValidSince.Int64() >= time.Now().Unix() {
+	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) &&
+		ord.RawOrder.ValidSince.Int64() <= time.Now().Unix() &&
+		ord.RawOrder.ValidUntil.Int64() > time.Now().Unix() {
 		return true
 	}
 	return false
