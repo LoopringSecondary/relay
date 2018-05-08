@@ -21,6 +21,7 @@ package extractor_test
 import (
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -278,4 +279,27 @@ func TestExtractorServiceImpl_Compare(t *testing.T) {
 	} else {
 		t.Logf("%s <= %s", str1, str2)
 	}
+}
+
+func TestExtractorServiceImpl_UnpackNumbers(t *testing.T) {
+	str1 := "0xffffffffffffffffffffffffffffffffffffffffffffffffffa1d2c1fb1c2d9f"
+	str2 := "0xffffffffffffffffffffffffffffffffffffffffffffffffff90c5f64e557fa4"
+	str3 := "0x0000000000000000000000000000000000000000000000026508392204063330"
+	str4 := "0x0000000000000000000000000000000000000000000000031307535724740700"
+	list := []string{str1, str2, str3, str4}
+
+	for _, v := range list {
+		n1 := safeBig(v)
+		t.Logf("init data:%s -> number:%s", v, n1.String())
+	}
+}
+
+func safeBig(input string) *big.Int {
+	bytes := hexutil.MustDecode(input)
+	num := new(big.Int).SetBytes(bytes[:])
+	if bytes[0] > uint8(128) {
+		num.Xor(types.MaxUint256, num)
+		num.Not(num)
+	}
+	return num
 }

@@ -41,6 +41,11 @@ type RingMinedEvent struct {
 	TradeAmount        int    `gorm:"column:trade_amount" json:"tradeAmount"`
 	Time               int64  `gorm:"column:time;type:bigint" json:"timestamp"`
 	Fork               bool   `gorm:"column:fork"`
+	Status             uint8  `gorm:"column:status;type:tinyint(4)"`
+	GasLimit           string `gorm:"column:gas_limit;type:varchar(50)"`
+	GasUsed            string `gorm:"column:gas_used;type:varchar(50)"`
+	GasPrice           string `gorm:"column:gas_price;type:varchar(50)"`
+	Err                string `gorm:"column:err;type:text" json:"err"`
 }
 
 func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
@@ -55,6 +60,11 @@ func (r *RingMinedEvent) ConvertDown(event *types.RingMinedEvent) error {
 	r.BlockNumber = event.BlockNumber.Int64()
 	r.Time = event.BlockTime
 	r.TradeAmount = event.TradeAmount
+	r.Status = uint8(event.Status)
+	r.GasLimit = event.GasLimit.String()
+	r.GasUsed = event.GasUsed.String()
+	r.GasPrice = event.GasPrice.String()
+	r.Err = ""
 	r.Fork = false
 
 	return nil
@@ -72,7 +82,27 @@ func (r *RingMinedEvent) ConvertUp(event *types.RingMinedEvent) error {
 	event.TradeAmount = r.TradeAmount
 	event.Protocol = common.HexToAddress(r.Protocol)
 	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)
+	event.Status = types.TxStatus(r.Status)
+	event.GasLimit, _ = new(big.Int).SetString(r.GasLimit, 0)
+	event.GasUsed, _ = new(big.Int).SetString(r.GasUsed, 0)
+	event.GasPrice, _ = new(big.Int).SetString(r.GasPrice, 0)
+	event.Err = errors.New(r.Err)
 
+	return nil
+}
+
+func (r *RingMinedEvent) FromSubmitRingMethod(event *types.SubmitRingMethodEvent) error {
+	r.Protocol = event.Protocol.Hex()
+	r.DelegateAddress = event.DelegateAddress.Hex()
+	r.TxHash = event.TxHash.Hex()
+	r.BlockNumber = event.BlockNumber.Int64()
+	r.Status = uint8(event.Status)
+	r.GasLimit = event.GasLimit.String()
+	r.GasUsed = event.GasUsed.String()
+	r.GasPrice = event.GasPrice.String()
+	if nil != event.Err {
+		r.Err = event.Err.Error()
+	}
 	return nil
 }
 
@@ -111,6 +141,21 @@ func (s *RdsServiceImpl) RingMinedPageQuery(query map[string]interface{}, pageIn
 	return
 }
 
+func (s *RdsServiceImpl) GetRingminedMethods(lastId int, limit int) ([]RingMinedEvent, error) {
+	var (
+		list []RingMinedEvent
+		err  error
+	)
+
+	err = s.db.Where("id > ?", lastId).
+		Find(&list).
+		Limit(limit).
+		Error
+
+	return list, err
+}
+
+/*
 type RingMinedMethod struct {
 	ID              int    `gorm:"column:id;primary_key" json:"id"`
 	Protocol        string `gorm:"column:contract_address;type:varchar(42)" json:"protocol"`
@@ -139,6 +184,19 @@ func (r *RingMinedMethod) ConvertDown(event *types.SubmitRingMethodEvent) error 
 	return nil
 }
 
+func (r *RingMinedMethod) FromRingMinedEvent(event *types.RingMinedEvent) error {
+	r.Protocol = event.Protocol.Hex()
+	r.DelegateAddress = event.DelegateAddress.Hex()
+	r.TxHash = event.TxHash.Hex()
+	r.BlockNumber = event.BlockNumber.Int64()
+	r.Status = uint8(event.Status)
+	r.GasLimit = event.GasLimit.String()
+	r.GasUsed = event.GasUsed.String()
+	r.GasPrice = event.GasPrice.String()
+
+	return nil
+}
+
 func (r *RingMinedMethod) ConvertUp(event *types.SubmitRingMethodEvent) error {
 	event.Protocol = common.HexToAddress(r.Protocol)
 	event.DelegateAddress = common.HexToAddress(r.DelegateAddress)
@@ -154,17 +212,4 @@ func (r *RingMinedMethod) ConvertUp(event *types.SubmitRingMethodEvent) error {
 	event.Err = errors.New(r.Err)
 	return nil
 }
-
-func (s *RdsServiceImpl) GetRingminedMethods(lastId int, limit int) ([]*RingMinedMethod, error) {
-	var (
-		list []*RingMinedMethod
-		err  error
-	)
-
-	err = s.db.Where("id > ?", lastId).
-		Find(&list).
-		Limit(limit).
-		Error
-
-	return list, err
-}
+*/
