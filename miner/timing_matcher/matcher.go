@@ -47,6 +47,7 @@ type TimingMatcher struct {
 	lagBlocks       int64
 	roundOrderCount int
 	reservedTime    int64
+	maxFailedCount  int64
 
 	maxCacheRoundsLength int
 	delayedNumber        int64
@@ -66,8 +67,17 @@ func NewTimingMatcher(matcherOptions *config.TimingMatcher, submitter *miner.Rin
 	//matcher.rounds = NewRoundStates(matcherOptions.MaxCacheRoundsLength)
 	matcher.isOrdersReady = false
 	matcher.db = rds
-	matcher.lagBlocks = matcherOptions.LagBlocks
-	matcher.reservedTime = matcherOptions.SubmitRingTime
+	matcher.lagBlocks = matcherOptions.LagForCleanSubmitCacheBlocks
+	if matcherOptions.ReservedSubmitTime > 0 {
+		matcher.reservedTime = matcherOptions.ReservedSubmitTime
+	} else {
+		matcherOptions.ReservedSubmitTime = 45
+	}
+	if matcherOptions.MaxSumitFailedCount > 0 {
+		matcher.maxFailedCount = matcherOptions.MaxSumitFailedCount
+	} else {
+		matcher.maxFailedCount = 3
+	}
 
 	matcher.markets = []*Market{}
 	matcher.duration = big.NewInt(matcherOptions.Duration)
@@ -109,12 +119,12 @@ func (matcher *TimingMatcher) cleanMissedCache() {
 
 			if submitInfo, err1 := matcher.db.GetRingForSubmitByHash(ringhash); nil == err1 {
 				if submitInfo.ID <= 0 {
-					RemoveMinedRing(ringhash)
+					RemoveMinedRingAndReturnOrderhashes(ringhash)
 					//cache.Del(RingHashPrefix + strings.ToLower(ringhash.Hex()))
 				}
 			} else {
 				if strings.Contains(err1.Error(), "record not found") {
-					RemoveMinedRing(ringhash)
+					RemoveMinedRingAndReturnOrderhashes(ringhash)
 				}
 				log.Errorf("err:%s", err1.Error())
 			}

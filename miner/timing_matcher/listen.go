@@ -166,10 +166,20 @@ func (matcher *TimingMatcher) listenSubmitEvent() {
 			select {
 			case minedEvent := <-submitEventChan:
 				if minedEvent.Status == types.TX_STATUS_FAILED || minedEvent.Status == types.TX_STATUS_SUCCESS || minedEvent.Status == types.TX_STATUS_UNKNOWN {
-					log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s, status:%d", minedEvent.RingHash.Hex(), minedEvent.Status)
+					log.Debugf("received mined event, this round the related cache will be removed, ringhash:%s, status:%d", minedEvent.RingHash.Hex(), uint8(minedEvent.Status))
 					//matcher.rounds.RemoveMinedRing(minedEvent.RingHash)
-					if err := RemoveMinedRing(minedEvent.RingHash); nil != err {
+					if orderhashes, err := RemoveMinedRingAndReturnOrderhashes(minedEvent.RingHash); nil != err {
 						log.Errorf("err:%s", err.Error())
+					} else {
+						//do not submit if it failed several times
+						//ringhash 同一个ringhash执行失败，不再继续提交，
+						//涉及到order的，提交失败一定次数，不再继续提交该order相关的
+						if minedEvent.Status == types.TX_STATUS_FAILED {
+							log.Debugf("AddFailedRingCache:%s", minedEvent.RingHash.Hex())
+							//if strings.Contains(minedEvent.Err.Error(), "failed to execute ring:") {
+							AddFailedRingCache(minedEvent.RingUniqueId, minedEvent.TxHash, orderhashes)
+							//}
+						}
 					}
 				}
 			}

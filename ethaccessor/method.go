@@ -341,7 +341,7 @@ func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte, needPreExe bool) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -349,13 +349,22 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
+	if needPreExe {
+		if estimagetGas, _, err := EstimateGas(callData, to, "latest"); nil != err {
+			return txHash, err
+		} else {
+			gas = estimagetGas
+		}
+	}
 	nonce := accessor.addressCurrentNonce(sender)
-	log.Infof("nonce:%s", nonce.String())
+	log.Infof("nonce:%s, gas:%s", nonce.String(), gas.String())
 	if value == nil {
 		value = big.NewInt(0)
 	}
-	// todo: modify gas
+	//todo:modify it
+	//if gas.Cmp(big.NewInt(int64(350000)))  {
 	gas.SetString("500000", 0)
+	//}
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		value,
@@ -397,7 +406,7 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
 			log.Infof("sender:%s, %s", sender.Hex(), gasPrice.String())
-			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
+			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData, false)
 		}
 	}
 }
@@ -528,7 +537,7 @@ func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject
 				}
 
 				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
-					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400))
+					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(36000))
 				}
 
 				return blockWithTxAndReceipt, nil
@@ -591,7 +600,6 @@ func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *bi
 	}
 	nonce := new(big.Int)
 	nonce.Set(accessor.AddressNonce[address])
-	log.Debugf("addressCurrentNonce nonce:%s", nonce.String())
 	return nonce
 }
 

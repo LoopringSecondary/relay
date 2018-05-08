@@ -106,6 +106,20 @@ func (ring *Ring) GenerateHash(feeReceipt common.Address) common.Hash {
 //	}
 //}
 
+func (ring *Ring) ValidSinceTime() int64 {
+	latestValidSince := int64(0)
+	if nil != ring && len(ring.Orders) > 0 {
+		for _, order := range ring.Orders {
+			thisTime := order.OrderState.RawOrder.ValidSince.Int64()
+			if latestValidSince <= thisTime {
+				latestValidSince = thisTime
+			}
+		}
+	}
+
+	return latestValidSince
+}
+
 func (ring *Ring) GenerateSubmitArgs(miner common.Address) (*RingSubmitInputs, error) {
 	ringSubmitArgs := emptyRingSubmitArgs(miner)
 	authVList := []uint8{}
