@@ -212,7 +212,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 		Where("valid_since < ?", sinceTime).
 		Where("valid_until >= ? ", untilTime).
 		Where("status not in (?) ", filterStatus).
-		Where("order_type = " + types.ORDER_TYPE_MARKET).
+		Where("order_type = ? ", types.ORDER_TYPE_MARKET).
 		Where("miner_block_mark between ? and ?", startBlockNumber, endBlockNumber).
 		Order("price desc").
 		Limit(length).
@@ -293,7 +293,7 @@ func (s *RdsServiceImpl) GetOrderBook(delegate, tokenS, tokenB common.Address, l
 	err = s.db.Where("delegate_address = ?", delegate.Hex()).
 		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
 		Where("status in (?)", filterStatus).
-		Where("order_type = " + types.ORDER_TYPE_MARKET).
+		Where("order_type = ? ", types.ORDER_TYPE_MARKET).
 		Where("valid_since < ?", nowtime).
 		Where("valid_until >= ? ", nowtime).
 		Order("price desc").

@@ -41,8 +41,8 @@ const (
 	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 
-	ORDER_TYPE_MARKET = "type_market"
-	ORDER_TYPE_P2P = "type_p2p"
+	ORDER_TYPE_MARKET = "market_order"
+	ORDER_TYPE_P2P = "p2p_order"
 )
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
