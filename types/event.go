@@ -174,6 +174,7 @@ type RingMinedEvent struct {
 	Ringhash     common.Hash
 	Miner        common.Address
 	FeeRecipient common.Address
+	Err          error
 }
 
 type WethDepositEvent struct {

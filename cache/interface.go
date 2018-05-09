@@ -50,7 +50,7 @@ type Cache interface {
 	HExists(key string, field []byte) (bool, error)
 
 	SAdd(key string, ttl int64, members ...[]byte) error
-	SCard(key string) (int64,error)
+	SCard(key string) (int64, error)
 	SRem(key string, members ...[]byte) (int64, error)
 
 	SMembers(key string) ([][]byte, error)
@@ -98,7 +98,7 @@ func HExists(key string, field []byte) (bool, error) {
 func SAdd(key string, ttl int64, members ...[]byte) error {
 	return cache.SAdd(key, ttl, members...)
 }
-func SCard(key string) (int64,error) {
+func SCard(key string) (int64, error) {
 	return cache.SCard(key)
 }
 

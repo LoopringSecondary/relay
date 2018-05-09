@@ -325,7 +325,7 @@ func (impl *RedisCacheImpl) HDel(key string, fields ...[]byte) (int64, error) {
 		return res, err
 	}
 }
-func (impl *RedisCacheImpl) SCard(key string) (int64,error) {
+func (impl *RedisCacheImpl) SCard(key string) (int64, error) {
 
 	//log.Info("[REDIS-SCARD] key : " + key)
 

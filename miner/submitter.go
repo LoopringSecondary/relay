@@ -243,7 +243,7 @@ func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
 				if lastId < daoEvt.ID {
 					lastId = daoEvt.ID
 				}
-				evt := &types.SubmitRingMethodEvent{}
+				evt := &types.RingMinedEvent{}
 				if err3 := daoEvt.ConvertUp(evt); nil == err3 {
 					if infos, err := submitter.dbService.GetRingHashesByTxHash(evt.TxHash); nil != err {
 						log.Errorf("err:%s", err.Error())
@@ -361,8 +361,8 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	//todo:change to advice protocolAddress
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	var (
-		//signer *types.NameRegistryInfo
-		err error
+	//signer *types.NameRegistryInfo
+	//err error
 	)
 
 	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, ProtocolGasPrice: ringState.GasPrice, ProtocolGas: ringState.Gas}
@@ -381,31 +381,21 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		ringSubmitInfo.Miner = senderAddress
 	}
 	//submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
-
-	if ringSubmitArgs, err1 := ringState.GenerateSubmitArgs(submitter.feeReceipt); nil != err1 {
-		return nil, err1
-	} else {
-		ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",
-			ringSubmitArgs.AddressList,
-			ringSubmitArgs.UintArgsList,
-			ringSubmitArgs.Uint8ArgsList,
-			ringSubmitArgs.BuyNoMoreThanAmountBList,
-			ringSubmitArgs.VList,
-			ringSubmitArgs.RList,
-			ringSubmitArgs.SList,
-			ringSubmitArgs.Miner,
-			uint16(ringSubmitArgs.FeeSelections.Uint64()),
-		)
-	}
-	if nil != err {
+	submitRingInputs := &ethaccessor.SubmitRingMethodInputs{}
+	if protocolData, err := submitRingInputs.GenerateSubmitRingMethodInputsData(ringState, submitter.feeReceipt, protocolAbi); nil != err {
 		return nil, err
+	} else {
+		ringSubmitInfo.ProtocolData = protocolData
 	}
+	//if nil != err {
+	//	return nil, err
+	//}
 	//预先判断是否会提交成功
 	//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
 
-	if nil != err {
-		return nil, err
-	}
+	//if nil != err {
+	//	return nil, err
+	//}
 	if submitter.maxGasLimit.Sign() > 0 && ringSubmitInfo.ProtocolGas.Cmp(submitter.maxGasLimit) > 0 {
 		ringSubmitInfo.ProtocolGas.Set(submitter.maxGasLimit)
 	}

@@ -296,7 +296,7 @@ func (processor *AbiProcessor) loadProtocolContract() {
 
 		switch contract.Name {
 		case ethaccessor.METHOD_SUBMIT_RING:
-			contract.Method = &ethaccessor.SubmitRingMethod{}
+			contract.Method = &ethaccessor.SubmitRingMethodInputs{}
 			watcher = &eventemitter.Watcher{Concurrent: false, Handle: processor.handleSubmitRingMethod}
 		case ethaccessor.METHOD_CANCEL_ORDER:
 			contract.Method = &ethaccessor.CancelOrderMethod{}
@@ -461,7 +461,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 	contract := input.(MethodData)
 
 	// unpack submit ring method
-	ring := contract.Method.(*ethaccessor.SubmitRingMethod)
+	ring := contract.Method.(*ethaccessor.SubmitRingMethodInputs)
 	ring.Protocol = contract.To
 	data := hexutil.MustDecode("0x" + contract.Input[10:])
 	if err := contract.CAbi.UnpackMethodInput(ring, contract.Name, data); err != nil {
@@ -491,7 +491,7 @@ func (processor *AbiProcessor) handleSubmitRingMethod(input eventemitter.EventDa
 
 	log.Debugf("extractor,tx:%s submitRing method gas:%s, gasprice:%s, status:%s", event.TxHash.Hex(), event.GasUsed.String(), event.GasPrice.String(), types.StatusStr(event.Status))
 
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &event)
+	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, event)
 
 	return nil
 }
@@ -653,10 +653,10 @@ func (processor *AbiProcessor) handleRingMinedEvent(input eventemitter.EventData
 	}
 
 	// emit to miner
-	var evt types.SubmitRingMethodEvent
-	evt.TxInfo = contractData.TxInfo
-	evt.Err = nil
-	eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
+	//var evt types.SubmitRingMethodEvent
+	//evt.TxInfo = contractData.TxInfo
+	//evt.Err = nil
+	//eventemitter.Emit(eventemitter.Miner_SubmitRing_Method, &evt)
 
 	// process ringmined to fills
 	contractEvent := contractData.Event.(*ethaccessor.RingMinedEvent)
