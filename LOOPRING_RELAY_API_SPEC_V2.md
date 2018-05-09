@@ -1245,7 +1245,7 @@ params: [{
 ##### Example
 ```js
 // Request
-curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmitted","params":{see above},"id":64}'
+curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_submitRingForP2P","params":{see above},"id":64}'
 
 // Result
 {

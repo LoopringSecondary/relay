@@ -35,6 +35,13 @@ func init() {
 }
 
 func SaveP2POrderRelation(takerOwner, taker, makerOwner, maker, txHash string) error {
+
+	takerOwner = strings.ToLower(takerOwner)
+	taker = strings.ToLower(taker)
+	makerOwner = strings.ToLower(makerOwner)
+	maker = strings.ToLower(maker)
+	txHash = strings.ToLower(txHash)
+
 	cache.SAdd(p2pOrderPreKey + takerOwner, DefaultP2POrderExpireTime, []byte(taker))
 	cache.SAdd(p2pOrderPreKey + makerOwner, DefaultP2POrderExpireTime, []byte(makerOwner))
 	cache.Set(p2pRelationPreKey + taker, []byte(txHash), DefaultP2POrderExpireTime)
@@ -51,7 +58,7 @@ func IsP2PMakerLocked(maker string) bool {
 
 func HandleP2PRingMined(input eventemitter.EventData) error {
 	if evt, ok := input.(*types.OrderFilledEvent); ok && evt != nil && evt.Status == types.TX_STATUS_SUCCESS {
-		cache.Del(p2pOrderPreKey + strings.ToLower(evt.Owner.Hex()))
+		cache.SRem(p2pOrderPreKey + strings.ToLower(evt.Owner.Hex()), []byte(strings.ToLower(evt.OrderHash.Hex())))
 		cache.Del(p2pRelationPreKey + strings.ToLower(evt.OrderHash.Hex()))
 		cache.Del(p2pRelationPreKey + strings.ToLower(evt.NextOrderHash.Hex()))
 	}

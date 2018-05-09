@@ -501,10 +501,9 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, errors.New("only p2p order can be submitted")
 	}
 
-	takerOrderHash, err := HandleInputOrder(p2pRing.Taker); if err != nil {
+	takerOrderHash, err := HandleInputOrder(types.ToOrder(p2pRing.Taker)); if err != nil {
 		return res, err
 	}
-
 
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash)); if err != nil {
 		return res, err
