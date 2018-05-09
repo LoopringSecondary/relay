@@ -264,8 +264,8 @@ type LatestFill struct {
 
 type P2PRingRequest struct {
 	RawTx  string  `json:"rawTx"`
-	taker  types.OrderJsonRequest `json:"taker"`
-	makerOrderHash string `json:"makerOrderHash"`
+	Taker  types.OrderJsonRequest `json:"taker"`
+	MakerOrderHash string `json:"makerOrderHash"`
 }
 
 type WalletServiceImpl struct {
@@ -497,16 +497,16 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 
 func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
 
-	if p2pRing.taker.OrderType != types.ORDER_TYPE_P2P {
+	if p2pRing.Taker.OrderType != types.ORDER_TYPE_P2P {
 		return res, errors.New("only p2p order can be submitted")
 	}
 
-	takerOrderHash, err := HandleInputOrder(p2pRing.taker); if err != nil {
+	takerOrderHash, err := HandleInputOrder(p2pRing.Taker); if err != nil {
 		return res, err
 	}
 
 
-	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.makerOrderHash)); if err != nil {
+	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash)); if err != nil {
 		return res, err
 	}
 
@@ -514,11 +514,11 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, errors.New("maker order has been finished, can't be match ring again")
 	}
 
-	if p2pRing.taker.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || p2pRing.taker.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
+	if p2pRing.Taker.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || p2pRing.Taker.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
 		return res, errors.New("the amount of maker and taker are not matched")
 	}
 
-	if p2pRing.taker.Owner.Hex() == maker.RawOrder.Owner.Hex() {
+	if p2pRing.Taker.Owner.Hex() == maker.RawOrder.Owner.Hex() {
 		return res, errors.New("taker and maker's address can't be same")
 	}
 
@@ -531,7 +531,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, err
 	}
 
-	err = ordermanager.SaveP2POrderRelation(p2pRing.taker.Owner.Hex(), takerOrderHash, maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst); if err != nil {
+	err = ordermanager.SaveP2POrderRelation(p2pRing.Taker.Owner.Hex(), takerOrderHash, maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst); if err != nil {
 		return res, err
 	}
 
