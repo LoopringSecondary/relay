@@ -381,8 +381,7 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 		ringSubmitInfo.Miner = senderAddress
 	}
 	//submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
-	submitRingInputs := &ethaccessor.SubmitRingMethodInputs{}
-	if protocolData, err := submitRingInputs.GenerateSubmitRingMethodInputsData(ringState, submitter.feeReceipt, protocolAbi); nil != err {
+	if protocolData, err := ethaccessor.GenerateSubmitRingMethodInputsData(ringState, submitter.feeReceipt, protocolAbi); nil != err {
 		return nil, err
 	} else {
 		ringSubmitInfo.ProtocolData = protocolData

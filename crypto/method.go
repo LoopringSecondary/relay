@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 )
 
@@ -32,7 +33,7 @@ func ValidateSignatureValues(v byte, r, s []byte) bool {
 }
 
 func GenerateHash(data ...[]byte) []byte {
-	return crypto.GenerateHash(data...)
+	return ethCrypto.Keccak256(data...)
 }
 
 func Sign(hash []byte, signer common.Address) ([]byte, error) {
@@ -48,7 +49,12 @@ func VRSToSig(v byte, r, s []byte) ([]byte, error) {
 }
 
 func SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
-	return crypto.SigToVRS(sig)
+	r = make([]byte, 32)
+	s = make([]byte, 32)
+	v = byte(uint8(sig[64]) + uint8(27))
+	copy(r, sig[0:32])
+	copy(s, sig[32:64])
+	return v, r, s
 }
 
 func UnlockKSAccount(acc accounts.Account, passphrase string) error {
