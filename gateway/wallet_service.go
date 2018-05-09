@@ -501,10 +501,6 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, errors.New("only p2p order can be submitted")
 	}
 
-	takerOrderHash, err := HandleInputOrder(types.ToOrder(p2pRing.Taker)); if err != nil {
-		return res, err
-	}
-
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash)); if err != nil {
 		return res, err
 	}
@@ -522,7 +518,11 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 	}
 
 	if ordermanager.IsP2PMakerLocked(maker.RawOrder.Hash.Hex()) {
-		return res, errors.New("maker order has been submitted or expired")
+		return res, errors.New("maker order has been locked by other taker or expired")
+	}
+
+	takerOrderHash, err := HandleInputOrder(types.ToOrder(p2pRing.Taker)); if err != nil {
+		return res, err
 	}
 
 	var txHashRst string

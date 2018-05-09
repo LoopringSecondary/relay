@@ -43,7 +43,7 @@ func SaveP2POrderRelation(takerOwner, taker, makerOwner, maker, txHash string) e
 	txHash = strings.ToLower(txHash)
 
 	cache.SAdd(p2pOrderPreKey + takerOwner, DefaultP2POrderExpireTime, []byte(taker))
-	cache.SAdd(p2pOrderPreKey + makerOwner, DefaultP2POrderExpireTime, []byte(makerOwner))
+	cache.SAdd(p2pOrderPreKey + makerOwner, DefaultP2POrderExpireTime, []byte(maker))
 	cache.Set(p2pRelationPreKey + taker, []byte(txHash), DefaultP2POrderExpireTime)
 	cache.Set(p2pRelationPreKey + maker, []byte(txHash), DefaultP2POrderExpireTime)
 	return nil
