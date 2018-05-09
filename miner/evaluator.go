@@ -71,7 +71,7 @@ func ReducedRate(ringState *types.Ring) *big.Rat {
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	reducedRate := new(big.Rat)
 	reducedRate.Inv(rate)
-	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
+	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, reducedRate.RatString())
 
 	return reducedRate
 }
