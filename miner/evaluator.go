@@ -44,12 +44,7 @@ type Evaluator struct {
 	matcher Matcher
 }
 
-func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
-
-	if len(ringState.Orders) <= 1 {
-		return fmt.Errorf("length of ringState.Orders must > 1 , ringhash:%s", ringState.Hash.Hex())
-	}
-
+func ReducedRate(ringState *types.Ring) *big.Rat {
 	productAmountS := big.NewRat(int64(1), int64(1))
 	productAmountB := big.NewRat(int64(1), int64(1))
 
@@ -74,9 +69,20 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 	priceOfFloat, _ := productPrice.Float64()
 	rootOfRing := math.Pow(priceOfFloat, 1/float64(len(ringState.Orders)))
 	rate := new(big.Rat).SetFloat64(rootOfRing)
-	ringState.ReducedRate = new(big.Rat)
-	ringState.ReducedRate.Inv(rate)
+	reducedRate := new(big.Rat)
+	reducedRate.Inv(rate)
 	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, ringState.ReducedRate.RatString())
+
+	return reducedRate
+}
+
+func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
+
+	if len(ringState.Orders) <= 1 {
+		return fmt.Errorf("length of ringState.Orders must > 1 , ringhash:%s", ringState.Hash.Hex())
+	}
+
+	ringState.ReducedRate = ReducedRate(ringState)
 
 	//todo:get the fee for select the ring of mix income
 	//LRC等比例下降，首先需要计算fillAmountS
