@@ -518,6 +518,10 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, errors.New("the amount of maker and taker are not matched")
 	}
 
+	if p2pRing.taker.Owner.Hex() == maker.RawOrder.Owner.Hex() {
+		return res, errors.New("taker and maker's address can't be same")
+	}
+
 	if ordermanager.IsP2PMakerLocked(maker.RawOrder.Hash.Hex()) {
 		return res, errors.New("maker order has been submitted or expired")
 	}
