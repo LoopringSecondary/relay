@@ -378,12 +378,15 @@ type SubmitRingMethodInputs struct {
 	FeeReceipt         common.Address
 }
 
-func (inputs *SubmitRingMethodInputs) GenerateSubmitRingMethodInputsData(ring *types.Ring, feeReceipt common.Address, protocolAbi *abi.ABI) ([]byte, error) {
+func GenerateSubmitRingMethodInputsData(ring *types.Ring, feeReceipt common.Address, protocolAbi *abi.ABI) ([]byte, error) {
+	inputs := &SubmitRingMethodInputs{}
 	inputs = emptySubmitRingInputs(feeReceipt)
 	authVList := []uint8{}
 	authRList := [][32]byte{}
 	authSList := [][32]byte{}
-	ring.Hash = ring.GenerateHash(feeReceipt)
+	if types.IsZeroHash(ring.Hash) {
+		ring.Hash = ring.GenerateHash(feeReceipt)
+	}
 	for _, filledOrder := range ring.Orders {
 		order := filledOrder.OrderState.RawOrder
 		inputs.AddressList = append(inputs.AddressList, [4]common.Address{order.Owner, order.TokenS, order.WalletAddress, order.AuthAddr})
