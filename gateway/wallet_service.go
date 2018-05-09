@@ -264,7 +264,7 @@ type LatestFill struct {
 
 type P2PRingRequest struct {
 	RawTx  string  `json:"rawTx"`
-	Taker  types.OrderJsonRequest `json:"taker"`
+	Taker  *types.OrderJsonRequest `json:"taker"`
 	MakerOrderHash string `json:"makerOrderHash"`
 }
 
