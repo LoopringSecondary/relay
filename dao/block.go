@@ -28,7 +28,7 @@ import (
 type Block struct {
 	ID          int    `gorm:"column:id;primary_key"`
 	BlockNumber int64  `gorm:"column:block_number;type:bigint"`
-	BlockHash   string `gorm:"column:block_hash;type:varchar(82);unique_index"`
+	BlockHash   string `gorm:"column:block_hash;type:varchar(82)"`
 	ParentHash  string `gorm:"column:parent_hash;type:varchar(82)"`
 	CreateTime  int64  `gorm:"column:create_time"`
 	Fork        bool   `gorm:"column:fork;"`
@@ -61,35 +61,26 @@ func (s *RdsServiceImpl) FindBlockByHash(blockhash common.Hash) (*Block, error) 
 		return nil, errors.New("block table findBlockByHash get an illegal hash")
 	}
 
-	err := s.db.Where("block_hash = ?", blockhash.Hex()).First(&block).Error
-
-	return &block, err
-}
-
-func (s *RdsServiceImpl) FindBlockByParentHash(parenthash common.Hash) (*Block, error) {
-	var block Block
-
-	if types.IsZeroHash(parenthash) {
-		return nil, errors.New("block table findBlockByParentHash get an  illegal hash")
-	}
-
-	err := s.db.Where("block_hash = ?", parenthash.Hex()).First(&block).Error
+	err := s.db.Where("block_hash = ?", blockhash.Hex()).Where("fork = ?", false).First(&block).Error
 
 	return &block, err
 }
 
 func (s *RdsServiceImpl) FindLatestBlock() (*Block, error) {
 	var block Block
-	err := s.db.Order("create_time desc").First(&block).Error
+	err := s.db.Order("create_time desc").Where("fork = ?", false).First(&block).Error
 	return &block, err
 }
 
-func (s *RdsServiceImpl) FindForkBlock() (*Block, error) {
-	var block Block
-	err := s.db.Where("fork = ?", true).First(&block).Error
-	return &block, err
+func (s *RdsServiceImpl) SetForkBlock(from, to int64) error {
+	return s.db.Model(&Block{}).Where("block_number > ? and block_number <= ?", from, to).Update("fork", true).Error
 }
 
-func (s *RdsServiceImpl) SetForkBlock(blockhash common.Hash) error {
-	return s.db.Model(&Block{}).Where("block_hash", blockhash.String()).Update("fork = ?", true).Error
+func (s *RdsServiceImpl) SaveBlock(latest *Block) error {
+	var current Block
+	if err := s.db.Where("block_hash=?", latest.BlockHash).Find(&current).Error; err == nil {
+		return nil
+	}
+
+	return s.db.Create(latest).Error
 }

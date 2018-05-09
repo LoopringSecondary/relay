@@ -20,23 +20,25 @@ package ordermanager_test
 
 import (
 	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
 
 func TestOrderManagerImpl_MinerOrders(t *testing.T) {
-	entity := test.Entity()
+	//entity := test.Entity()
 
 	om := test.GenerateOrderManager()
-	protocol := test.Protocol()
-	tokenS := entity.Tokens["LRC"]
-	tokenB := entity.Tokens["WETH"]
+	//protocol := test.Protocol()
+	tokenS := common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
+	tokenB := common.HexToAddress("0xEF68e7C694F40c8202821eDF525dE3782458639f")
 
-	states := om.MinerOrders(protocol, tokenS, tokenB, 10, 10, 20, nil)
-	for k, v := range states {
-		t.Logf("list number %d, order.hash %s", k, v.RawOrder.Hash.Hex())
-		t.Logf("list number %d, order.tokenS %s", k, v.RawOrder.TokenS.Hex())
-		t.Logf("list number %d, order.price %s", k, v.RawOrder.Price.String())
+	states := om.MinerOrders(common.HexToAddress("0x7b126ab811f278f288bf1d62d47334351dA20d1d"), tokenS, tokenB, 10, 0, 200000000, &types.OrderDelayList{})
+	for _, v := range states {
+		t.Logf("owner:%s, hash:%s", v.RawOrder.Owner.Hex(), v.RawOrder.Hash.Hex())
+		//t.Logf("list number %d, order.hash %s", k, v.RawOrder.Hash.Hex())
+		//t.Logf("list number %d, order.tokenS %s", k, v.RawOrder.TokenS.Hex())
+		//t.Logf("list number %d, order.price %s", k, v.RawOrder.Price.String())
 	}
 }
 
@@ -60,5 +62,25 @@ func TestOrderManagerImpl_GetOrderBook(t *testing.T) {
 
 	for _, v := range list {
 		t.Logf("orderhash", v.RawOrder.Hash.Hex())
+	}
+}
+
+func TestOrderManagerImpl_GetOrders(t *testing.T) {
+	om := test.GenerateOrderManager()
+
+	query := map[string]interface{}{"order_hash": "0xf5b657335c4044e11170be3b35cda21b0819e396da0b7d258422f7203887aaf3"}
+	status := []types.OrderStatus{}
+	pageRes, err := om.GetOrders(query, status, 0, 20)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	for _, v := range pageRes.Data {
+		state := v.(types.OrderState)
+		t.Logf("dealtAmounts:%s, dealtAmountB:%s, cancelAmountS:%s, cancelAmountB:%s, status:%d",
+			state.DealtAmountS.String(),
+			state.DealtAmountB.String(),
+			state.CancelledAmountS.String(),
+			state.CancelledAmountB.String(),
+			state.Status)
 	}
 }

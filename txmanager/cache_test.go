@@ -16,13 +16,22 @@
 
 */
 
-package dao
+package txmanager_test
 
-type EventLog struct {
-	ID          int    `gorm:"column:id;primary_key;"`
-	Protocol    string `gorm:"column:protocol;type:varchar(42)"`
-	TxHash      string `gorm:"column:tx_hash;type:varchar(82)"`
-	BlockNumber int64  `gorm:"column:block_number"`
-	CreateTime  int64  `gorm:"column:create_time"`
-	Data        []byte `gorm:"column:data;type:text"`
+import (
+	"github.com/Loopring/relay/test"
+	"github.com/Loopring/relay/txmanager"
+	"testing"
+)
+
+func TestRollbackCache(t *testing.T) {
+	test.Cfg()
+
+	from := 42710
+	to := 42711
+	if err := txmanager.RollbackCache(int64(from), int64(to)); err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	t.Log("rollback tx cache success!")
 }

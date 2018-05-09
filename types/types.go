@@ -84,3 +84,8 @@ func HexToBigint(h string) *big.Int {
 type CheckNull interface {
 	IsNull() bool
 }
+
+var (
+	NilHash    = common.HexToHash("0x")
+	NilAddress = common.HexToAddress("0x")
+)

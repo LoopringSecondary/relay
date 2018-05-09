@@ -1,0 +1,6 @@
+#!/bin/bash
+PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin
+LOG_PATH=/var/log/svc/relay
+mkdir -p $LOG_PATH
+chown ubuntu:ubuntu $LOG_PATH
+exec setuidgid ubuntu multilog s10485760 -n5 $LOG_PATH

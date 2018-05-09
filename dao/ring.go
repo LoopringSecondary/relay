@@ -22,29 +22,25 @@ import (
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
+	"time"
 )
-
-type Ring struct {
-	ID   int    `gorm:"column:id;primary_key;"`
-	Hash string `gorm:"column:hash;type:varchar(82)"`
-}
 
 type FilledOrder struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
 	OrderHash        string `gorm:"column:orderhash;type:varchar(82)"`
 	FeeSelection     uint8  `gorm:"column:fee_selection" json:"feeSelection"`
-	RateAmountS      string `gorm:"column:rate_amount_s;type:varchar(82)" json:"rateAmountS"`
-	AvailableAmountS string `gorm:"column:available_amount_s;type:varchar(82)"json:"availableAmountS"`
-	AvailableAmountB string `gorm:"column:available_amount_b;type:varchar(82)"`
-	FillAmountS      string `gorm:"column:fill_amount_s;type:varchar(82)" json:"fillAmountS"`
-	FillAmountB      string `gorm:"column:fill_amount_b;type:varchar(82)" json:"fillAmountB"`
-	LrcReward        string `gorm:"column:lrc_reward;type:varchar(82)" json:"lrcReward"`
-	LrcFee           string `gorm:"column:lrc_fee;type:varchar(82)" json:"lrcFee"`
-	FeeS             string `gorm:"column:fee_s;type:varchar(82)" json:"feeS"`
-	LegalFee         string `gorm:"column:legal_fee;type:varchar(82)" json:"legalFee"`
-	SPrice           string `gorm:"column:s_price;type:varchar(82)" json:"sPrice"`
-	BPrice           string `gorm:"column:b_price;type:varchar(82)" json:"sPrice"`
+	RateAmountS      string `gorm:"column:rate_amount_s;type:text" json:"rateAmountS"`
+	AvailableAmountS string `gorm:"column:available_amount_s;type:text"json:"availableAmountS"`
+	AvailableAmountB string `gorm:"column:available_amount_b;type:text"`
+	FillAmountS      string `gorm:"column:fill_amount_s;type:text" json:"fillAmountS"`
+	FillAmountB      string `gorm:"column:fill_amount_b;type:text" json:"fillAmountB"`
+	LrcReward        string `gorm:"column:lrc_reward;type:text" json:"lrcReward"`
+	LrcFee           string `gorm:"column:lrc_fee;type:text" json:"lrcFee"`
+	FeeS             string `gorm:"column:fee_s;type:text" json:"feeS"`
+	LegalFee         string `gorm:"column:legal_fee;type:text" json:"legalFee"`
+	SPrice           string `gorm:"column:s_price;type:text" json:"sPrice"`
+	BPrice           string `gorm:"column:b_price;type:text" json:"sPrice"`
 }
 
 func getRatString(v *big.Rat) string {
@@ -109,26 +105,37 @@ func (daoFilledOrder *FilledOrder) ConvertUp(filledOrder *types.FilledOrder, rds
 	return nil
 }
 
+func (s *RdsServiceImpl) GetFilledOrderByRinghash(ringhash common.Hash) ([]*FilledOrder, error) {
+	var (
+		filledOrders []*FilledOrder
+		err          error
+	)
+
+	err = s.db.Where("ringhash = ?", ringhash.Hex()).
+		Find(&filledOrders).
+		Error
+
+	return filledOrders, err
+}
+
 type RingSubmitInfo struct {
 	ID               int    `gorm:"column:id;primary_key;"`
 	RingHash         string `gorm:"column:ringhash;type:varchar(82)"`
+	UniqueId         string `gorm:"column:unique_id;type:varchar(82)"`
 	ProtocolAddress  string `gorm:"column:protocol_address;type:varchar(42)"`
 	OrdersCount      int64  `gorm:"column:order_count;type:bigint"`
 	ProtocolData     string `gorm:"column:protocol_data;type:text"`
 	ProtocolGas      string `gorm:"column:protocol_gas;type:varchar(50)"`
 	ProtocolGasPrice string `gorm:"column:protocol_gas_price;type:varchar(50)"`
 	ProtocolUsedGas  string `gorm:"column:protocol_used_gas;type:varchar(50)"`
+	ProtocolTxHash   string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
 
-	RegistryData     string `gorm:"column:registry_data;type:text"`
-	RegistryGas      string `gorm:"column:registry_gas;type:varchar(50)"`
-	RegistryGasPrice string `gorm:"column:registry_gas_price;type:varchar(50)"`
-	RegistryUsedGas  string `gorm:"column:registry_used_gas;type:varchar(50)"`
-
-	ProtocolTxHash string `gorm:"column:protocol_tx_hash;type:varchar(82)"`
-	RegistryTxHash string `gorm:"column:registry_tx_hash;type:varchar(82)"`
-
-	Miner string `gorm:"column:miner;type:varchar(42)"`
-	Err   string `gorm:"column:err;type:text"`
+	Status      int       `gorm:"column:status;type:int"`
+	RingIndex   string    `gorm:"column:ring_index;type:varchar(50)"`
+	BlockNumber string    `gorm:"column:block_number;type:varchar(50)"`
+	Miner       string    `gorm:"column:miner;type:varchar(42)"`
+	Err         string    `gorm:"column:err;type:text"`
+	CreateTime  time.Time `gorm:"column:create_time;type:TIMESTAMP;default:CURRENT_TIMESTAMP"`
 }
 
 func getBigIntString(v *big.Int) string {
@@ -139,19 +146,20 @@ func getBigIntString(v *big.Int) string {
 	}
 }
 
-func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo) error {
+func (info *RingSubmitInfo) ConvertDown(typesInfo *types.RingSubmitInfo, err error) error {
 	info.RingHash = typesInfo.Ringhash.Hex()
+	info.UniqueId = typesInfo.RawRing.GenerateUniqueId().Hex()
 	info.ProtocolAddress = typesInfo.ProtocolAddress.Hex()
 	info.OrdersCount = typesInfo.OrdersCount.Int64()
 	info.ProtocolData = common.ToHex(typesInfo.ProtocolData)
 	info.ProtocolGas = getBigIntString(typesInfo.ProtocolGas)
 	info.ProtocolUsedGas = getBigIntString(typesInfo.ProtocolUsedGas)
 	info.ProtocolGasPrice = getBigIntString(typesInfo.ProtocolGasPrice)
-	info.RegistryData = common.ToHex(typesInfo.RegistryData)
-	info.RegistryGas = getBigIntString(typesInfo.RegistryGas)
-	info.RegistryUsedGas = getBigIntString(typesInfo.RegistryUsedGas)
-	info.RegistryGasPrice = getBigIntString(typesInfo.RegistryGasPrice)
 	info.Miner = typesInfo.Miner.Hex()
+	info.ProtocolTxHash = typesInfo.SubmitTxHash.Hex()
+	if nil != err {
+		info.Err = err.Error()
+	}
 	return nil
 }
 
@@ -166,64 +174,64 @@ func (info *RingSubmitInfo) ConvertUp(typesInfo *types.RingSubmitInfo) error {
 	typesInfo.ProtocolUsedGas.SetString(info.ProtocolUsedGas, 0)
 	typesInfo.ProtocolGasPrice = new(big.Int)
 	typesInfo.ProtocolGasPrice.SetString(info.ProtocolGasPrice, 0)
-	typesInfo.RegistryData = common.FromHex(info.RegistryData)
-	typesInfo.RegistryGas = new(big.Int)
-	typesInfo.RegistryGas.SetString(info.RegistryGas, 0)
-	typesInfo.RegistryUsedGas = new(big.Int)
-	typesInfo.RegistryUsedGas.SetString(info.RegistryUsedGas, 0)
-	typesInfo.RegistryGasPrice = new(big.Int)
-	typesInfo.RegistryGasPrice.SetString(info.RegistryGasPrice, 0)
 	typesInfo.SubmitTxHash = common.HexToHash(info.ProtocolTxHash)
-	typesInfo.RegistryTxHash = common.HexToHash(info.RegistryTxHash)
 	typesInfo.Miner = common.HexToAddress(info.Miner)
 	return nil
 }
 
-func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error {
-	hashes := []string{}
-	for _, h := range ringhashs {
-		hashes = append(hashes, h.Hex())
+//func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryTxHash(ringhashs []common.Hash, txHash string) error {
+//	hashes := []string{}
+//	for _, h := range ringhashs {
+//		hashes = append(hashes, h.Hex())
+//	}
+//	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash in (?)", hashes)
+//	return dbForUpdate.Update("registry_tx_hash", txHash).Error
+//}
+
+//func (s *RdsServiceImpl) UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error {
+//	hashes := []string{}
+//	for _, h := range ringhashs {
+//		hashes = append(hashes, h.Hex())
+//	}
+//	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash in (?) ", hashes)
+//	return dbForUpdate.Update("err", err).Error
+//}
+
+func (s *RdsServiceImpl) UpdateRingSubmitInfoResult(submitResult *types.RingSubmitResultEvent) error {
+	items := map[string]interface{}{
+		"status":            uint8(submitResult.Status),
+		"ring_index":        getBigIntString(submitResult.RingIndex),
+		"block_number":      getBigIntString(submitResult.BlockNumber),
+		"protocol_used_gas": getBigIntString(submitResult.UsedGas),
 	}
-	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash in (?)", hashes)
-	return dbForUpdate.Update("registry_tx_hash", txHash).Error
+	if nil != submitResult.Err {
+		items["err"] = submitResult.Err.Error()
+	}
+	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash = ? and protocol_tx_hash = ? ", submitResult.RingHash.Hex(), submitResult.TxHash.Hex())
+	return dbForUpdate.Update(items).Error
 }
 
-func (s *RdsServiceImpl) UpdateRingSubmitInfoFailed(ringhashs []common.Hash, err string) error {
-	hashes := []string{}
-	for _, h := range ringhashs {
-		hashes = append(hashes, h.Hex())
-	}
-	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash in (?) ", hashes)
-	return dbForUpdate.Update("err", err).Error
-}
-
-func (s *RdsServiceImpl) UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error {
-	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash = ?", ringhash.Hex())
-	return dbForUpdate.Update("protocol_tx_hash", txHash).Error
-}
+//func (s *RdsServiceImpl) UpdateRingSubmitInfoProtocolTxHash(ringhash common.Hash, txHash string) error {
+//	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("ringhash = ?", ringhash.Hex())
+//	return dbForUpdate.Update("protocol_tx_hash", txHash).Error
+//}
 
 func (s *RdsServiceImpl) GetRingForSubmitByHash(ringhash common.Hash) (ringForSubmit RingSubmitInfo, err error) {
 	err = s.db.Where("ringhash = ? ", ringhash.Hex()).First(&ringForSubmit).Error
 	return
 }
 
-func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]common.Hash, error) {
+func (s *RdsServiceImpl) GetRingHashesByTxHash(txHash common.Hash) ([]*RingSubmitInfo, error) {
 	var (
-		err       error
-		hashes    []common.Hash
-		hashesStr []string
+		err   error
+		infos []*RingSubmitInfo
 	)
 
-	err = s.db.Model(&RingSubmitInfo{}).Where("registry_tx_hash = ? or protocol_tx_hash = ? ", txHash.Hex(), txHash.Hex()).Pluck("ringhash", &hashesStr).Error
-	for _, h := range hashesStr {
-		hashes = append(hashes, common.HexToHash(h))
-	}
-	return hashes, err
-}
+	err = s.db.Where("protocol_tx_hash = ? ", txHash.Hex()).
+		Find(&infos).
+		Error
 
-func (s *RdsServiceImpl) UpdateRingSubmitInfoRegistryUsedGas(txHash string, usedGas *big.Int) error {
-	dbForUpdate := s.db.Model(&RingSubmitInfo{}).Where("registry_tx_hash = ?", txHash)
-	return dbForUpdate.Update("registry_used_gas", getBigIntString(usedGas)).Error
+	return infos, err
 }
 
 func (s *RdsServiceImpl) UpdateRingSubmitInfoSubmitUsedGas(txHash string, usedGas *big.Int) error {

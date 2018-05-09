@@ -81,8 +81,27 @@ type Transaction struct {
 	V                string    `json:"v"`
 }
 
+func (tx *Transaction) MethodId() string {
+	// filter method input
+	input := common.FromHex(tx.Input)
+	if len(input) < 4 || len(tx.Input) < 10 {
+		return ""
+	}
+
+	// filter method id
+	return common.ToHex(input[0:4])
+}
+
 func (tx *Transaction) IsNull() bool {
 	return types.IsZeroHash(common.HexToHash(tx.Hash))
+}
+
+func (tx *Transaction) IsPending() bool {
+	if tx.BlockNumber.BigInt().Cmp(big.NewInt(0)) <= 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
 type Log struct {
@@ -97,6 +116,13 @@ type Log struct {
 	Removed          bool      `json:"removed"`
 }
 
+func (evtlog *Log) EventId() common.Hash {
+	if len(evtlog.Topics) == 0 {
+		return types.NilHash
+	}
+	return common.HexToHash(evtlog.Topics[0])
+}
+
 type FilterQuery struct {
 	FromBlock string           `json:"fromBlock"`
 	ToBlock   string           `json:"toBlock"`
@@ -109,26 +135,51 @@ type LogParameter struct {
 }
 
 type TransactionReceipt struct {
-	BlockHash         string    `json:"blockHash"`
-	BlockNumber       types.Big `json:"blockNumber"`
-	ContractAddress   string    `json:"contractAddress"`
-	CumulativeGasUsed types.Big `json:"cumulativeGasUsed"`
-	From              string    `json:"from"`
-	GasUsed           types.Big `json:"gasUsed"`
-	Logs              []Log     `json:"logs"`
-	LogsBloom         string    `json:"logsBloom"`
-	Root              string    `json:"root"`
-	Status            types.Big `json:"status"`
-	To                string    `json:"to"`
-	TransactionHash   string    `json:"transactionHash"`
-	TransactionIndex  types.Big `json:"transactionIndex"`
+	BlockHash         string     `json:"blockHash"`
+	BlockNumber       types.Big  `json:"blockNumber"`
+	ContractAddress   string     `json:"contractAddress"`
+	CumulativeGasUsed types.Big  `json:"cumulativeGasUsed"`
+	From              string     `json:"from"`
+	GasUsed           types.Big  `json:"gasUsed"`
+	Logs              []Log      `json:"logs"`
+	LogsBloom         string     `json:"logsBloom"`
+	Root              string     `json:"root"`
+	Status            *types.Big `json:"status"`
+	To                string     `json:"to"`
+	TransactionHash   string     `json:"transactionHash"`
+	TransactionIndex  types.Big  `json:"transactionIndex"`
 }
 
-func (tx *TransactionReceipt) IsFailed() bool {
-	if tx.Status.BigInt().Int64() == 0 {
-		return true
+func (receipt *TransactionReceipt) AfterByzantiumFork() bool {
+	byzantiumBlock := big.NewInt(4370000)
+	return receipt.BlockNumber.BigInt().Cmp(byzantiumBlock) >= 0
+}
+
+func (receipt *TransactionReceipt) StatusInvalid() bool {
+	if !receipt.AfterByzantiumFork() {
+		return false
 	}
-	return false
+	return receipt.Status == nil
+}
+
+func (receipt *TransactionReceipt) HasNoLog() bool {
+	return len(receipt.Logs) == 0
+}
+
+func (receipt *TransactionReceipt) Failed(tx *Transaction) bool {
+	if receipt.AfterByzantiumFork() && receipt.Status.BigInt().Cmp(big.NewInt(1)) == 0 {
+		return false
+	}
+
+	// env:local or test net
+	if !receipt.AfterByzantiumFork() && !receipt.HasNoLog() {
+		return false
+	}
+	if !receipt.AfterByzantiumFork() && tx.Value.BigInt().Cmp(big.NewInt(0)) > 0 {
+		return false
+	}
+
+	return true
 }
 
 type BlockIterator struct {

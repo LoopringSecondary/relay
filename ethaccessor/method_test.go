@@ -16,18 +16,20 @@
 
 */
 
-package main
+package ethaccessor_test
 
-import "gopkg.in/urfave/cli.v1"
+import (
+	"github.com/Loopring/relay/ethaccessor"
+	"testing"
+)
 
-func chainclientCommands() cli.Command {
-	c := cli.Command{
-		Name:        "chainclient",
-		Usage:       "chainclient ",
-		Category:    "Chainclient Commands",
-		Subcommands: []cli.Command{
-		//秘钥以及地址，生成时的密码
-		},
+func TestEthNodeAccessor_ReceiptNilStatus(t *testing.T) {
+
+	var receipt ethaccessor.TransactionReceipt
+
+	if receipt.Status == nil {
+		t.Fatal("status is nil")
+	} else {
+		t.Log("status:", receipt.Status)
 	}
-	return c
 }

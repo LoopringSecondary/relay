@@ -23,6 +23,7 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"time"
 )
 
 type PageResult struct {
@@ -51,6 +52,10 @@ func NewRdsService(options config.MysqlOptions) *RdsServiceImpl {
 		log.Fatalf("mysql connection error:%s", err.Error())
 	}
 
+	db.DB().SetConnMaxLifetime(time.Duration(options.ConnMaxLifetime) * time.Second)
+	db.DB().SetMaxIdleConns(options.MaxIdleConnections)
+	db.DB().SetMaxOpenConns(options.MaxOpenConnections)
+
 	db.LogMode(options.Debug)
 
 	impl.db = db
@@ -68,12 +73,16 @@ func (s *RdsServiceImpl) Prepare() {
 	tables = append(tables, &FillEvent{})
 	tables = append(tables, &CancelEvent{})
 	tables = append(tables, &CutOffEvent{})
+	tables = append(tables, &CutOffPairEvent{})
 	tables = append(tables, &Trend{})
 	tables = append(tables, &WhiteList{})
 	tables = append(tables, &RingSubmitInfo{})
-	tables = append(tables, &Token{})
-	tables = append(tables, &EventLog{})
 	tables = append(tables, &FilledOrder{})
+	tables = append(tables, &Transaction{})
+	tables = append(tables, &TransactionEntity{})
+	tables = append(tables, &TransactionView{})
+	tables = append(tables, &CheckPoint{})
+	//tables = append(tables, &RingMinedMethod{})
 
 	for _, t := range tables {
 		if ok := s.db.HasTable(t); !ok {

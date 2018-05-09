@@ -26,7 +26,6 @@ import (
 	"github.com/Loopring/relay/crypto"
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -70,10 +69,10 @@ func (accessor *ethNodeAccessor) Erc20Allowance(tokenAddress, ownerAddress, spen
 
 func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
 	var amount types.Big
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(&amount, "cancelledOrFilled", blockNumStr, orderhash); err != nil {
 		return nil, err
 	}
@@ -81,12 +80,36 @@ func (accessor *ethNodeAccessor) GetCancelledOrFilled(contractAddress common.Add
 	return amount.BigInt(), nil
 }
 
+func (accessor *ethNodeAccessor) GetCancelled(contractAddress common.Address, orderhash common.Hash, blockNumStr string) (*big.Int, error) {
+	var amount types.Big
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
+		return nil, errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
+	if err := callMethod(&amount, "cancelled", blockNumStr, orderhash); err != nil {
+		return nil, err
+	}
+
+	return amount.BigInt(), nil
+}
+
 func (accessor *ethNodeAccessor) GetCutoff(result interface{}, contractAddress, owner common.Address, blockNumStr string) error {
-	if _, ok := accessor.ProtocolAddresses[contractAddress]; !ok {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
 		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
 	}
-	callMethod := accessor.ContractCallMethod(accessor.ProtocolImplAbi, contractAddress)
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
 	if err := callMethod(result, "cutoffs", blockNumStr, owner); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (accessor *ethNodeAccessor) GetCutoffPair(result interface{}, contractAddress, owner, token1, token2 common.Address, blockNumStr string) error {
+	if _, ok := accessor.DelegateAddresses[contractAddress]; !ok {
+		return errors.New("accessor: contract address invalid -> " + contractAddress.Hex())
+	}
+	callMethod := accessor.ContractCallMethod(accessor.DelegateAbi, contractAddress)
+	if err := callMethod(result, "getTradingPairCutoffs", blockNumStr, owner, token1, token2); err != nil {
 		return err
 	}
 	return nil
@@ -129,6 +152,52 @@ func (accessor *ethNodeAccessor) BatchErc20BalanceAndAllowance(routeParam string
 	return nil
 }
 
+func (accessor *ethNodeAccessor) BatchCall(routeParam string, reqElems []rpc.BatchElem) ([]rpc.BatchElem, error) {
+	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
+		return reqElems, err
+	}
+
+	return reqElems, nil
+}
+
+func (accessor *ethNodeAccessor) RetryBatchCall(routeParam string, reqElems []rpc.BatchElem, retry int) ([]rpc.BatchElem, error) {
+	var err error
+	for i := 0; i < retry; i++ {
+		if _, err = accessor.BatchCall(routeParam, reqElems); err == nil {
+			break
+		}
+		log.Debugf("accessor,RetryBatchCall %d'st time to get block's transactions", i+1)
+	}
+	return reqElems, err
+}
+
+func (accessor *ethNodeAccessor) BatchErc20Allowance(routeParam string, reqs []*BatchErc20AllowanceReq) error {
+	reqElems := make([]rpc.BatchElem, len(reqs))
+	erc20Abi := accessor.Erc20Abi
+
+	for idx, req := range reqs {
+		allowanceData, _ := erc20Abi.Pack("allowance", req.Owner, req.Spender)
+		allowanceArg := &CallArg{}
+		allowanceArg.To = req.Token
+		allowanceArg.Data = common.ToHex(allowanceData)
+		reqElems[idx] = rpc.BatchElem{
+			Method: "eth_call",
+			Args:   []interface{}{allowanceArg, req.BlockParameter},
+			Result: &req.Allowance,
+			Error:  req.AllowanceErr,
+		}
+	}
+
+	if _, err := accessor.MutilClient.BatchCall(routeParam, reqElems); err != nil {
+		return err
+	}
+
+	for idx, req := range reqs {
+		req.AllowanceErr = reqElems[idx].Error
+	}
+	return nil
+}
+
 func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int, reqs []*BatchTransactionReq) error {
 	if len(reqs) < 1 || retry < 1 {
 		return fmt.Errorf("ethaccessor:batchTransactions retry or reqs invalid")
@@ -143,34 +212,31 @@ func (accessor *ethNodeAccessor) BatchTransactions(routeParam string, retry int,
 		}
 	}
 
-	var err error
-	for i := 0; i < retry; i++ {
-		if _, err = accessor.MutilClient.BatchCall(routeParam, reqElems); err == nil {
-			break
-		}
-	}
-	if err != nil {
+	if _, err := accessor.RetryBatchCall(routeParam, reqElems, retry); err != nil {
 		return err
 	}
 
 	for idx, v := range reqElems {
-		var (
-			tx     Transaction
-			txhash string = reqs[idx].TxHash
-		)
-
-		if v.Error == nil {
-			continue
+		repeatCnt := 0
+	mark:
+		if repeatCnt > accessor.fetchTxRetryCount {
+			err := fmt.Errorf("can't get content of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
 		}
-
-		for i := 0; i < retry; i++ {
-			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionByHash", txhash); v.Error == nil {
-				break
+		if v.Error == nil && v.Result != nil {
+			if tx, ok := v.Result.(*Transaction); ok && len(tx.Hash) > 0 {
+				hash := common.HexToHash(tx.Hash)
+				if !types.IsZeroHash(hash) {
+					continue
+				}
 			}
 		}
-		if v.Error != nil {
-			return v.Error
-		}
+		repeatCnt++
+		time.Sleep(1 * time.Second)
+		log.Debugf("accessor,BatchTransactions %d's time to get Transaction:%s", repeatCnt, reqs[idx].TxHash)
+		_, v.Error = accessor.Call(routeParam, &reqs[idx].TxContent, "eth_getTransactionByHash", reqs[idx].TxHash)
+		goto mark
 	}
 
 	return nil
@@ -190,34 +256,31 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 		}
 	}
 
-	var err error
-	for i := 0; i < retry; i++ {
-		if _, err = accessor.BatchCall(routeParam, reqElems); err == nil {
-			break
-		}
-	}
-	if err != nil {
+	if _, err := accessor.RetryBatchCall(routeParam, reqElems, retry); err != nil {
 		return err
 	}
 
 	for idx, v := range reqElems {
-		var (
-			tx     TransactionReceipt
-			txhash string = reqs[idx].TxHash
-		)
-
-		if v.Error == nil {
-			continue
+		repeatCnt := 0
+	mark:
+		if repeatCnt > accessor.fetchTxRetryCount {
+			err := fmt.Errorf("can't get receipt of this tx:%s", reqs[idx].TxHash)
+			log.Errorf("accessor,BatchTransactions :%s", err.Error())
+			return err
 		}
-
-		for i := 0; i < retry; i++ {
-			if _, v.Error = accessor.Call(routeParam, &tx, "eth_getTransactionReceipt", txhash); v.Error == nil {
-				break
+		if v.Error == nil && v.Result != nil && !reqs[idx].TxContent.StatusInvalid() {
+			if tx, ok := v.Result.(*TransactionReceipt); ok && len(tx.TransactionHash) > 0 {
+				hash := common.HexToHash(tx.TransactionHash)
+				if !types.IsZeroHash(hash) {
+					continue
+				}
 			}
 		}
-		if v.Error != nil {
-			return v.Error
-		}
+		repeatCnt++
+		time.Sleep(1 * time.Second)
+		log.Debugf("accessor,BatchTransactions %d's time to get TransactionReceipt:%s and statusInvalid:%t", repeatCnt, reqs[idx].TxHash, reqs[idx].TxContent.StatusInvalid())
+		_, v.Error = accessor.Call(routeParam, &reqs[idx].TxContent, "eth_getTransactionReceipt", reqs[idx].TxHash)
+		goto mark
 	}
 
 	return nil
@@ -225,7 +288,7 @@ func (accessor *ethNodeAccessor) BatchTransactionRecipients(routeParam string, r
 
 func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte, to common.Address) (gas, gasPrice *big.Int, err error) {
 	var gasBig, gasPriceBig types.Big
-	if nil == accessor.gasPriceEvaluator.gasPrice {
+	if nil == accessor.gasPriceEvaluator.gasPrice || accessor.gasPriceEvaluator.gasPrice.Cmp(big.NewInt(int64(0))) <= 0 {
 		if err = accessor.RetryCall(routeParam, 2, &gasPriceBig, "eth_gasPrice"); nil != err {
 			return
 		}
@@ -237,9 +300,11 @@ func (accessor *ethNodeAccessor) EstimateGas(routeParam string, callData []byte,
 	callArg.To = to
 	callArg.Data = common.ToHex(callData)
 	callArg.GasPrice = gasPriceBig
+	log.Debugf("EstimateGas gasPrice:%s", gasPriceBig.BigInt().String())
 	if err = accessor.RetryCall(routeParam, 2, &gasBig, "eth_estimateGas", callArg); nil != err {
 		return
 	}
+	log.Debugf("EstimateGas finished")
 	gasPrice = gasPriceBig.BigInt()
 	gas = gasBig.BigInt()
 	return
@@ -259,7 +324,7 @@ func (accessor *ethNodeAccessor) ContractCallMethod(a *abi.ABI, contractAddress 
 	}
 }
 
-func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender accounts.Account, tx *ethTypes.Transaction) error {
+func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, sender common.Address, tx *ethTypes.Transaction) error {
 	var err error
 	if tx, err = crypto.SignTx(sender, tx, nil); nil != err {
 		return err
@@ -276,7 +341,7 @@ func (ethAccessor *ethNodeAccessor) SignAndSendTransaction(result interface{}, s
 	}
 }
 
-func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender accounts.Account, to common.Address, gas, gasPrice, value *big.Int, callData []byte) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string, sender common.Address, to common.Address, gas, gasPrice, value *big.Int, callData []byte, needPreExe bool) (string, error) {
 	if nil == gasPrice || gasPrice.Cmp(big.NewInt(0)) <= 0 {
 		return "", errors.New("gasPrice must be setted.")
 	}
@@ -284,15 +349,22 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		return "", errors.New("gas must be setted.")
 	}
 	var txHash string
-	var nonce types.Big
-	if err := accessor.RetryCall(routeParam, 2, &nonce, "eth_getTransactionCount", sender.Address.Hex(), "pending"); nil != err {
-		return "", err
+	if needPreExe {
+		if estimagetGas, _, err := EstimateGas(callData, to, "latest"); nil != err {
+			return txHash, err
+		} else {
+			gas = estimagetGas
+		}
 	}
+	nonce := accessor.addressCurrentNonce(sender)
+	log.Infof("nonce:%s, gas:%s", nonce.String(), gas.String())
 	if value == nil {
 		value = big.NewInt(0)
 	}
-	// todo: modify gas
-	gas.SetString("1000000", 0)
+	//todo:modify it
+	//if gas.Cmp(big.NewInt(int64(350000)))  {
+	gas.SetString("500000", 0)
+	//}
 	transaction := ethTypes.NewTransaction(nonce.Uint64(),
 		common.HexToAddress(to.Hex()),
 		value,
@@ -300,15 +372,30 @@ func (accessor *ethNodeAccessor) ContractSendTransactionByData(routeParam string
 		gasPrice,
 		callData)
 	if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
-		return "", err
-	} else {
-		return txHash, err
+		//if err.Error() == "nonce too low" {
+		accessor.resetAddressNonce(sender)
+		nonce = accessor.addressCurrentNonce(sender)
+		transaction = ethTypes.NewTransaction(nonce.Uint64(),
+			common.HexToAddress(to.Hex()),
+			value,
+			gas,
+			gasPrice,
+			callData)
+		if err := accessor.SignAndSendTransaction(&txHash, sender, transaction); nil != err {
+			log.Errorf("send raw transaction err:%s, manual check it please.", err.Error())
+			return "", err
+		}
+		//} else {
+		//
+		//}
 	}
+	accessor.addressNextNonce(sender)
+	return txHash, nil
 }
 
 //gas, gasPrice can be set to nil
-func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
-	return func(sender accounts.Account, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string, a *abi.ABI, contractAddress common.Address) func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
+	return func(sender common.Address, methodName string, gas, gasPrice, value *big.Int, args ...interface{}) (string, error) {
 		if callData, err := a.Pack(methodName, args...); nil != err {
 			return "", err
 		} else {
@@ -318,7 +405,8 @@ func (accessor *ethNodeAccessor) ContractSendTransactionMethod(routeParam string
 				}
 			}
 			gas.Add(gas, big.NewInt(int64(1000)))
-			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData)
+			log.Infof("sender:%s, %s", sender.Hex(), gasPrice.String())
+			return accessor.ContractSendTransactionByData(routeParam, sender, contractAddress, gas, gasPrice, value, callData, false)
 		}
 	}
 }
@@ -330,6 +418,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 
 	var blockNumber types.Big
 	if err := iterator.ethClient.RetryCall("latest", 2, &blockNumber, "eth_blockNumber"); nil != err {
+		log.Errorf("err:%s", err.Error())
 		return nil, err
 	} else {
 		confirmNumber := iterator.currentNumber.Uint64() + iterator.confirms
@@ -347,7 +436,7 @@ func (iterator *BlockIterator) Next() (interface{}, error) {
 		}
 	}
 
-	block, err := iterator.ethClient.getFullBlock(iterator.currentNumber, iterator.withTxData)
+	block, err := iterator.ethClient.GetFullBlock(iterator.currentNumber, iterator.withTxData)
 	if nil == err {
 		iterator.currentNumber.Add(iterator.currentNumber, big.NewInt(1))
 	}
@@ -368,16 +457,23 @@ func (accessor *ethNodeAccessor) getFullBlockFromCacheByHash(hash string) (*Bloc
 	}
 }
 
-func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject bool) (interface{}, error) {
+func (accessor *ethNodeAccessor) GetFullBlock(blockNumber *big.Int, withTxObject bool) (interface{}, error) {
 	blockWithTxHash := &BlockWithTxHash{}
 
-	if err := accessor.RetryCall(blockNumber.String(), 2, &blockWithTxHash, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), false); nil != err {
+	if err := accessor.RetryCall(blockNumber.String(), 2, &blockWithTxHash, "eth_getBlockByNumber", fmt.Sprintf("%#x", blockNumber), false); nil != err || blockWithTxHash == nil {
+		blockNumberStr := "0"
+		if nil != blockNumber {
+			blockNumberStr = blockNumber.String()
+		}
+		if blockWithTxHash == nil {
+			return nil, fmt.Errorf("err:%s, blockNumber:%s", "can't get blockWithTxHash by ", blockNumberStr)
+		}
+		log.Errorf("err:%s, blockNumber:%s", err.Error(), blockNumberStr)
 		return nil, err
 	} else {
 		if !withTxObject {
 			return blockWithTxHash, nil
 		} else {
-
 			if blockWithTxAndReceipt, err := accessor.getFullBlockFromCacheByHash(blockWithTxHash.Hash.Hex()); nil == err && nil != blockWithTxAndReceipt {
 				return blockWithTxAndReceipt, nil
 			} else {
@@ -416,9 +512,11 @@ func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject
 				}
 
 				if err := BatchTransactions(txReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					log.Errorf("err:%s, blockNumber:%s", err.Error(), blockWithTxAndReceipt.Number.BigInt().String())
 					return nil, err
 				}
 				if err := BatchTransactionRecipients(rcReqs, blockWithTxAndReceipt.Number.BigInt().String()); err != nil {
+					log.Errorf("err:%s, blockNumber:%s", err.Error(), blockWithTxAndReceipt.Number.BigInt().String())
 					return nil, err
 				}
 
@@ -427,9 +525,21 @@ func (accessor *ethNodeAccessor) getFullBlock(blockNumber *big.Int, withTxObject
 					blockWithTxAndReceipt.Receipts = append(blockWithTxAndReceipt.Receipts, rcReqs[idx].TxContent)
 				}
 
-				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
-					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(86400))
+				var txcnt types.Big
+				if err := accessor.RetryCall("latest", 2, &txcnt, "eth_getBlockTransactionCountByHash", blockWithTxAndReceipt.Hash.Hex()); err != nil {
+					return blockWithTxAndReceipt, err
 				}
+				txcntinblock := len(blockWithTxAndReceipt.Transactions)
+				if txcntinblock != txcnt.Int() || txcntinblock != len(blockWithTxAndReceipt.Receipts) {
+					err := fmt.Errorf("tx count isn't equal,txcount in chain:%d, txcount in block:%d, receipt count:%d", txcnt.Int(), txcntinblock, len(blockWithTxAndReceipt.Receipts))
+					log.Errorf("err:%s", err.Error())
+					return blockWithTxAndReceipt, err
+				}
+
+				if blockData, err := json.Marshal(blockWithTxAndReceipt); nil == err {
+					cache.Set(blockWithTxHash.Hash.Hex(), blockData, int64(36000))
+				}
+
 				return blockWithTxAndReceipt, nil
 			}
 
@@ -478,4 +588,35 @@ func (ethAccessor *ethNodeAccessor) GetSenderAddress(protocol common.Address) (c
 	}
 
 	return impl.DelegateAddress, nil
+}
+
+func (accessor *ethNodeAccessor) addressCurrentNonce(address common.Address) *big.Int {
+	if _, exists := accessor.AddressNonce[address]; !exists {
+		var nonce types.Big
+		if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
+			nonce = *(types.NewBigWithInt(0))
+		}
+		accessor.AddressNonce[address] = nonce.BigInt()
+	}
+	nonce := new(big.Int)
+	nonce.Set(accessor.AddressNonce[address])
+	return nonce
+}
+
+func (accessor *ethNodeAccessor) resetAddressNonce(address common.Address) {
+	var nonce types.Big
+	if err := accessor.RetryCall("pending", 2, &nonce, "eth_getTransactionCount", address.Hex(), "pending"); nil != err {
+		nonce = *(types.NewBigWithInt(0))
+	}
+	accessor.AddressNonce[address] = nonce.BigInt()
+}
+
+func (accessor *ethNodeAccessor) addressNextNonce(address common.Address) *big.Int {
+	accessor.mtx.Lock()
+	defer accessor.mtx.Unlock()
+
+	nonce := accessor.addressCurrentNonce(address)
+	nonce.Add(nonce, big.NewInt(int64(1)))
+	accessor.AddressNonce[address].Set(nonce)
+	return nonce
 }

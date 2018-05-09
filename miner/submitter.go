@@ -22,30 +22,34 @@ import (
 	"errors"
 	"math/big"
 
+	"encoding/json"
+	"github.com/Loopring/relay/cache"
 	"github.com/Loopring/relay/config"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
 	"github.com/Loopring/relay/eventemiter"
 	"github.com/Loopring/relay/log"
-	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"strconv"
+	"time"
 )
+
+const SubmitRingMethod_LastId = "submitringmethod_lastid"
 
 //保存ring，并将ring发送到区块链，同样需要分为待完成和已完成
 type RingSubmitter struct {
 	minerAccountForSign accounts.Account
-	ks                  *keystore.KeyStore
-	feeReceipt          common.Address //used to receive fee
-	ifRegistryRingHash  bool
+	//minerNameInfos      map[common.Address][]*types.NameRegistryInfo
+	feeReceipt       common.Address
+	currentBlockTime int64
 
 	maxGasLimit *big.Int
 	minGasLimit *big.Int
 
-	normalMinerAddresses  []*NormalMinerAddress
+	normalMinerAddresses  []*NormalSenderAddress
 	percentMinerAddresses []*SplitMinerAddress
 
 	dbService         dao.RdsService
@@ -60,32 +64,40 @@ type RingSubmitFailed struct {
 	err       error
 }
 
-func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketCapProvider marketcap.MarketCapProvider) *RingSubmitter {
+func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketCapProvider marketcap.MarketCapProvider) (*RingSubmitter, error) {
 	submitter := &RingSubmitter{}
 	submitter.maxGasLimit = big.NewInt(options.MaxGasLimit)
 	submitter.minGasLimit = big.NewInt(options.MinGasLimit)
+	if common.IsHexAddress(options.FeeReceipt) {
+		submitter.feeReceipt = common.HexToAddress(options.FeeReceipt)
+	} else {
+		return submitter, errors.New("miner.feeReceipt must be a address")
+	}
+
 	for _, addr := range options.NormalMiners {
-		//var nonce types.Big
-		//if err := accessor.Call(&nonce, "eth_getTransactionCount", addr.Address, "pending"); nil != err {
-		//	log.Errorf("err:%s", err.Error())
-		//}
-		miner := &NormalMinerAddress{}
-		miner.Address = common.HexToAddress(addr.Address)
+		var nonce types.Big
+		normalAddr := common.HexToAddress(addr.Address)
+		if err := ethaccessor.GetTransactionCount(&nonce, normalAddr, "pending"); nil != err {
+			log.Errorf("err:%s", err.Error())
+		}
+		miner := &NormalSenderAddress{}
+		miner.Address = normalAddr
 		miner.GasPriceLimit = big.NewInt(addr.GasPriceLimit)
 		miner.MaxPendingCount = addr.MaxPendingCount
 		miner.MaxPendingTtl = addr.MaxPendingTtl
-		//miner.Nonce = nonce.BigInt()
+		miner.Nonce = nonce.BigInt()
 		submitter.normalMinerAddresses = append(submitter.normalMinerAddresses, miner)
 	}
 
 	for _, addr := range options.PercentMiners {
-		//var nonce types.Big
-		//if err := accessor.Call(&nonce, "eth_getTransactionCount", addr.Address, "pending"); nil != err {
-		//	log.Errorf("err:%s", err.Error())
-		//}
+		var nonce types.Big
+		normalAddr := common.HexToAddress(addr.Address)
+		if err := ethaccessor.GetTransactionCount(&nonce, normalAddr, "pending"); nil != err {
+			log.Errorf("err:%s", err.Error())
+		}
 		miner := &SplitMinerAddress{}
-		//miner.Nonce = nonce.BigInt()
-		miner.Address = common.HexToAddress(addr.Address)
+		miner.Nonce = nonce.BigInt()
+		miner.Address = normalAddr
 		miner.FeePercent = addr.FeePercent
 		miner.StartFee = addr.StartFee
 		submitter.percentMinerAddresses = append(submitter.percentMinerAddresses, miner)
@@ -93,17 +105,36 @@ func NewSubmitter(options config.MinerOptions, dbService dao.RdsService, marketC
 
 	submitter.dbService = dbService
 	submitter.marketCapProvider = marketCapProvider
-	if len(options.NormalMiners) > 0 {
-		submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.NormalMiners[0].Address)}
-	} else {
-		submitter.minerAccountForSign = accounts.Account{Address: common.HexToAddress(options.PercentMiners[0].Address)}
-	}
-
-	submitter.feeReceipt = common.HexToAddress(options.FeeReceipt)
-	submitter.ifRegistryRingHash = options.IfRegistryRingHash
 
 	submitter.stopFuncs = []func(){}
-	return submitter
+	return submitter, nil
+}
+
+func (submitter *RingSubmitter) listenBlockNew() {
+	blockEventChan := make(chan *types.BlockEvent)
+	go func() {
+		for {
+			select {
+			case blockEvent := <-blockEventChan:
+				submitter.currentBlockTime = blockEvent.BlockTime
+			}
+		}
+	}()
+
+	watcher := &eventemitter.Watcher{
+		Concurrent: false,
+		Handle: func(eventData eventemitter.EventData) error {
+			e := eventData.(*types.BlockEvent)
+			log.Debugf("submitter.listenBlockNew blockNumber:%s, blocktime:%d", e.BlockNumber.String(), e.BlockTime)
+			blockEventChan <- e
+			return nil
+		},
+	}
+	eventemitter.On(eventemitter.Block_New, watcher)
+	submitter.stopFuncs = append(submitter.stopFuncs, func() {
+		close(blockEventChan)
+		eventemitter.Un(eventemitter.Block_New, watcher)
+	})
 }
 
 func (submitter *RingSubmitter) listenNewRings() {
@@ -113,51 +144,24 @@ func (submitter *RingSubmitter) listenNewRings() {
 			select {
 			case ringInfos := <-ringSubmitInfoChan:
 				if nil != ringInfos {
-					for _, info := range ringInfos {
+					for _, ringState := range ringInfos {
+						txHash, status, err1 := submitter.submitRing(ringState)
+						ringState.SubmitTxHash = txHash
+
 						daoInfo := &dao.RingSubmitInfo{}
-						daoInfo.ConvertDown(info)
+						daoInfo.ConvertDown(ringState, err1)
 						if err := submitter.dbService.Add(daoInfo); nil != err {
 							log.Errorf("Miner submitter,insert new ring err:%s", err.Error())
 						} else {
-							for _, filledOrder := range info.RawRing.Orders {
+							for _, filledOrder := range ringState.RawRing.Orders {
 								daoOrder := &dao.FilledOrder{}
-								daoOrder.ConvertDown(filledOrder, info.Ringhash)
+								daoOrder.ConvertDown(filledOrder, ringState.Ringhash)
 								if err1 := submitter.dbService.Add(daoOrder); nil != err1 {
 									log.Errorf("Miner submitter,insert filled Order err:%s", err1.Error())
 								}
 							}
 						}
-					}
-
-					if submitter.ifRegistryRingHash {
-						if len(ringInfos) == 1 {
-							if err := submitter.ringhashRegistry(ringInfos[0]); nil != err {
-								submitter.dbService.UpdateRingSubmitInfoFailed([]common.Hash{ringInfos[0].Ringhash}, err.Error())
-							}
-						} else {
-							infosMap := make(map[common.Address][]*types.RingSubmitInfo)
-							for _, info := range ringInfos {
-								if _, ok := infosMap[info.ProtocolAddress]; !ok {
-									infosMap[info.ProtocolAddress] = []*types.RingSubmitInfo{}
-								}
-								infosMap[info.ProtocolAddress] = append(infosMap[info.ProtocolAddress], info)
-							}
-							for protocolAddr, infos := range infosMap {
-								ringhashes := []common.Hash{}
-								miners := []common.Address{}
-								for _, info := range infos {
-									miners = append(miners, info.Miner)
-									ringhashes = append(ringhashes, info.Ringhash)
-								}
-								if err := submitter.batchRinghashRegistry(protocolAddr, ringhashes, miners); nil != err {
-									submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error())
-								}
-							}
-						}
-					} else {
-						for _, ringState := range ringInfos {
-							submitter.submitRing(ringState)
-						}
+						submitter.submitResult(ringState.Ringhash, ringState.RawRing.GenerateUniqueId(), txHash, status, big.NewInt(0), big.NewInt(0), big.NewInt(0), err1)
 					}
 				}
 			}
@@ -185,314 +189,218 @@ func (submitter *RingSubmitter) canSubmit(ringState *types.RingSubmitInfo) error
 	return errors.New("had been processed")
 }
 
-func (submitter *RingSubmitter) batchRinghashRegistry(contractAddress common.Address, ringhashes []common.Hash, miners []common.Address) error {
-	ringhashRegistryAbi := ethaccessor.RinghashRegistryAbi()
-	var ringhashRegistryAddress common.Address
-	if implAddress, exists := ethaccessor.ProtocolAddresses()[contractAddress]; !exists {
-		return errors.New("does't contain this version")
-	} else {
-		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
+func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) (common.Hash, types.TxStatus, error) {
+	status := types.TX_STATUS_PENDING
+	ordersStr, _ := json.Marshal(ringSubmitInfo.RawRing.Orders)
+	log.Debugf("submitring hash:%s, orders:%s", ringSubmitInfo.Ringhash.Hex(), string(ordersStr))
+
+	txHash := types.NilHash
+	var err error
+	lastTime := ringSubmitInfo.RawRing.ValidSinceTime()
+
+	needPreExec := false
+	if submitter.currentBlockTime > 0 && lastTime <= submitter.currentBlockTime {
+		needPreExec = true
+		//_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
 	}
-	if registryData, err := ringhashRegistryAbi.Pack("batchSubmitRinghash",
-		miners,
-		ringhashes); nil != err {
-		return err
+
+	if nil == err {
+		txHashStr := "0x"
+		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData, needPreExec)
+		if nil != err {
+			log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
+			status = types.TX_STATUS_FAILED
+		}
+		txHash = common.HexToHash(txHashStr)
 	} else {
-		if gas, gasPrice, err := ethaccessor.EstimateGas(registryData, ringhashRegistryAddress, "latest"); nil != err {
-			return err
-		} else {
-			if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: miners[0]}, ringhashRegistryAddress, gas, gasPrice, nil, registryData); nil != err {
-				return err
+		log.Errorf("submitring hash:%s, protocol:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), ringSubmitInfo.ProtocolAddress.Hex(), err.Error())
+		status = types.TX_STATUS_FAILED
+	}
+
+	return txHash, status, err
+}
+
+func (submitter *RingSubmitter) listenSubmitRingMethodEventFromMysql() {
+
+	processSubmitRingMethod := func() {
+		lastId := int(0)
+
+		if exists, err := cache.Exists(SubmitRingMethod_LastId); exists && nil == err {
+			if idBytes, err := cache.Get(SubmitRingMethod_LastId); nil == err {
+				if len(idBytes) > 0 {
+					var err1 error
+					if lastId, err1 = strconv.Atoi(string(idBytes)); nil != err1 {
+						log.Errorf("err:%s", err1.Error())
+					}
+				}
 			} else {
-				submitter.dbService.UpdateRingSubmitInfoRegistryTxHash(ringhashes, txHash)
+				log.Errorf("err:%s", err.Error())
 			}
 		}
-	}
-	return nil
-}
 
-func (submitter *RingSubmitter) ringhashRegistry(ringSubmitInfo *types.RingSubmitInfo) error {
-	contractAddress := ringSubmitInfo.ProtocolAddress
-	var ringhashRegistryAddress common.Address
-	if implAddress, exists := ethaccessor.ProtocolAddresses()[contractAddress]; !exists {
-		return errors.New("does't contains this version")
-	} else {
-		ringhashRegistryAddress = implAddress.RinghashRegistryAddress
-	}
-
-	if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: ringSubmitInfo.Miner}, ringhashRegistryAddress, ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, nil, ringSubmitInfo.RegistryData); nil != err {
-		return err
-	} else {
-		ringSubmitInfo.RegistryTxHash = common.HexToHash(txHash)
-		submitter.dbService.UpdateRingSubmitInfoRegistryTxHash([]common.Hash{ringSubmitInfo.Ringhash}, txHash)
-	}
-	return nil
-}
-
-func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo) error {
-	if txHash, err := ethaccessor.SignAndSendTransaction(accounts.Account{Address: ringSubmitInfo.Miner}, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData); nil != err {
-		submitter.submitFailed([]common.Hash{ringSubmitInfo.Ringhash}, err)
-		return err
-	} else {
-		ringSubmitInfo.SubmitTxHash = common.HexToHash(txHash)
-		submitter.dbService.UpdateRingSubmitInfoProtocolTxHash(ringSubmitInfo.Ringhash, txHash)
-	}
-	return nil
-}
-
-func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
-	submitRingMethodChan := make(chan *types.SubmitRingMethodEvent)
-	go func() {
-		for {
-			select {
-			case event := <-submitRingMethodChan:
-				if nil != event {
-					if nil != event.Err {
-						if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
-							log.Errorf("err:%s", err.Error())
+		if methodEvents, err2 := submitter.dbService.GetRingminedMethods(lastId, 500); nil == err2 {
+			for _, daoEvt := range methodEvents {
+				if lastId < daoEvt.ID {
+					lastId = daoEvt.ID
+				}
+				evt := &types.RingMinedEvent{}
+				if err3 := daoEvt.ConvertUp(evt); nil == err3 {
+					if infos, err := submitter.dbService.GetRingHashesByTxHash(evt.TxHash); nil != err {
+						log.Errorf("err:%s", err.Error())
+					} else {
+						var err1 error
+						if nil != evt.Err {
+							err1 = evt.Err
 						} else {
-							submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
+							err1 = errors.New("")
+						}
+
+						for _, info := range infos {
+							ringhash := common.HexToHash(info.RingHash)
+							uniqueId := common.HexToHash(info.UniqueId)
+
+							submitter.submitResult(ringhash, uniqueId, evt.TxHash, evt.Status, big.NewInt(0), evt.BlockNumber, evt.GasUsed, err1)
 						}
 					}
-					submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
+				} else {
+					log.Errorf("err:%s", err3.Error())
 				}
+			}
+		} else {
+			log.Errorf("err:%s", err2.Error())
+		}
+
+		cache.Set(SubmitRingMethod_LastId, []byte(strconv.Itoa(lastId)), int64(0))
+	}
+	go func() {
+		processSubmitRingMethod()
+		for {
+			select {
+			case <-time.After(5 * time.Second):
+				processSubmitRingMethod()
 			}
 		}
 	}()
 
-	watcher := &eventemitter.Watcher{
-		Concurrent: false,
-		Handle: func(eventData eventemitter.EventData) error {
-			e := eventData.(*types.SubmitRingMethodEvent)
-			submitRingMethodChan <- e
-			return nil
-		},
-	}
-	eventemitter.On(eventemitter.Miner_SubmitRing_Method, watcher)
-	submitter.stopFuncs = append(submitter.stopFuncs, func() {
-		close(submitRingMethodChan)
-		eventemitter.Un(eventemitter.Miner_SubmitRing_Method, watcher)
-	})
 }
 
-func (submitter *RingSubmitter) listenBatchSubmitRingMethodEvent() {
-	submitRingMethodChan := make(chan *types.BatchSubmitRingHashMethodEvent)
-	go func() {
-		for {
-			select {
-			case event := <-submitRingMethodChan:
-				if nil != event {
-					if nil != event.Err {
-						if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
-							log.Errorf("err:%s", err.Error())
-						} else {
-							submitter.submitFailed(ringhashes, errors.New("failed to execute ring"))
-						}
-					}
-					submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
-				}
-			}
-		}
-	}()
+//func (submitter *RingSubmitter) listenSubmitRingMethodEvent() {
+//	submitRingMethodChan := make(chan *types.SubmitRingMethodEvent)
+//	go func() {
+//		for {
+//			select {
+//			case event := <-submitRingMethodChan:
+//				if nil != event {
+//					//if event.Status == types.TX_STATUS_FAILED {
+//					if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
+//						log.Errorf("err:%s", err.Error())
+//					} else {
+//						var err1 error
+//						if nil != event.Err {
+//							err1 = errors.New("failed to execute ring:" + event.Err.Error())
+//						} else {
+//							err1 = errors.New("success")
+//						}
+//
+//						for _, ringhash := range ringhashes {
+//							submitter.submitResult(ringhash, event.TxHash, event.Status, big.NewInt(0), event.BlockNumber, event.GasUsed, err1)
+//						}
+//					}
+//					//}
+//				}
+//			}
+//		}
+//	}()
+//
+//	watcher := &eventemitter.Watcher{
+//		Concurrent: false,
+//		Handle: func(eventData eventemitter.EventData) error {
+//			e := eventData.(*types.SubmitRingMethodEvent)
+//			log.Debugf("eventemitter.Watchereventemitter.Watcher:%s", e.TxHash.Hex())
+//			submitRingMethodChan <- e
+//			return nil
+//		},
+//	}
+//	eventemitter.On(eventemitter.Miner_SubmitRing_Method, watcher)
+//	submitter.stopFuncs = append(submitter.stopFuncs, func() {
+//		close(submitRingMethodChan)
+//		eventemitter.Un(eventemitter.Miner_SubmitRing_Method, watcher)
+//	})
+//}
 
-	watcher := &eventemitter.Watcher{
-		Concurrent: false,
-		Handle: func(eventData eventemitter.EventData) error {
-			e := eventData.(*types.BatchSubmitRingHashMethodEvent)
-			submitRingMethodChan <- e
-			return nil
-		},
+func (submitter *RingSubmitter) submitResult(ringhash, uniqeId, txhash common.Hash, status types.TxStatus, ringIndex, blockNumber, usedGas *big.Int, err error) {
+	resultEvt := &types.RingSubmitResultEvent{
+		RingHash:     ringhash,
+		RingUniqueId: uniqeId,
+		TxHash:       txhash,
+		Status:       status,
+		Err:          err,
+		RingIndex:    ringIndex,
+		BlockNumber:  blockNumber,
+		UsedGas:      usedGas,
 	}
-	eventemitter.On(eventemitter.Miner_BatchSubmitRingHash_Method, watcher)
-	submitter.stopFuncs = append(submitter.stopFuncs, func() {
-		close(submitRingMethodChan)
-		eventemitter.Un(eventemitter.Miner_BatchSubmitRingHash_Method, watcher)
-	})
-}
-
-//提交错误，执行错误
-func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error) {
-	if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
+	if err := submitter.dbService.UpdateRingSubmitInfoResult(resultEvt); nil != err {
 		log.Errorf("err:%s", err.Error())
-	} else {
-		for _, ringhash := range ringhashes {
-			failedEvent := &types.RingSubmitFailedEvent{RingHash: ringhash}
-			eventemitter.Emit(eventemitter.Miner_RingSubmitFailed, failedEvent)
-		}
 	}
+	eventemitter.Emit(eventemitter.Miner_RingSubmitResult, resultEvt)
 }
 
-func (submitter *RingSubmitter) listenRegistryMethodEvent() {
-	submitRingMethodChan := make(chan *types.RingHashSubmitMethodEvent)
-	go func() {
-		for {
-			select {
-			case event := <-submitRingMethodChan:
-				if nil != event {
-					if nil != event.Err {
-						if ringhashes, err := submitter.dbService.GetRingHashesByTxHash(event.TxHash); nil != err {
-							log.Errorf("err:%s", err.Error())
-						} else {
-							submitter.submitFailed(ringhashes, errors.New("failed to execute ringhash registry:"+event.Err.Error()))
-						}
-					} else {
-						submitter.dbService.UpdateRingSubmitInfoRegistryUsedGas(event.TxHash.Hex(), event.UsedGas)
-					}
-				}
-			}
-		}
-	}()
-
-	watcher := &eventemitter.Watcher{
-		Concurrent: false,
-		Handle: func(eventData eventemitter.EventData) error {
-			e := eventData.(*types.RingHashSubmitMethodEvent)
-			submitRingMethodChan <- e
-			return nil
-		},
-	}
-	eventemitter.On(eventemitter.Miner_SubmitRingHash_Method, watcher)
-	submitter.stopFuncs = append(submitter.stopFuncs, func() {
-		close(submitRingMethodChan)
-		eventemitter.Un(eventemitter.Miner_SubmitRingHash_Method, watcher)
-	})
-}
-
-func (submitter *RingSubmitter) listenRegistryEvent() {
-	registryChan := make(chan *types.RinghashSubmittedEvent)
-	go func() {
-		for {
-			select {
-			case event := <-registryChan:
-				if nil != event {
-					var (
-						err         error
-						implAddress *ethaccessor.ProtocolAddress
-						exists      bool
-					)
-					info := &types.RingSubmitInfo{}
-					daoInfo, _ := submitter.dbService.GetRingForSubmitByHash(event.RingHash)
-					daoInfo.ConvertUp(info)
-					if types.IsZeroHash(info.Ringhash) {
-						err = errors.New("ring hash is zero")
-					} else {
-						if implAddress, exists = ethaccessor.ProtocolAddresses()[info.ProtocolAddress]; !exists {
-							err = errors.New("doesn't contain this version of protocol:" + info.ProtocolAddress.Hex())
-						}
-						var canSubmit bool
-						canSubmit, err = ethaccessor.ProtocolCanSubmit(implAddress, info.Ringhash, info.Miner)
-						if nil != err {
-							log.Errorf("err:%s", err.Error())
-						} else {
-							if !canSubmit {
-								err = errors.New("failed to call method:canSubmit")
-							}
-						}
-					}
-
-					if nil == err {
-						submitter.submitRing(info)
-					}
-				}
-			}
-		}
-	}()
-
-	watcher := &eventemitter.Watcher{
-		Concurrent: false,
-		Handle: func(eventData eventemitter.EventData) error {
-			e := eventData.(*types.RinghashSubmittedEvent)
-			registryChan <- e
-			return nil
-		},
-	}
-	eventemitter.On(eventemitter.RingHashSubmitted, watcher)
-	submitter.stopFuncs = append(submitter.stopFuncs, func() {
-		close(registryChan)
-		eventemitter.Un(eventemitter.RingHashSubmitted, watcher)
-	})
-}
+////提交错误，执行错误
+//func (submitter *RingSubmitter) submitFailed(ringhashes []common.Hash, err error) {
+//	if err := submitter.dbService.UpdateRingSubmitInfoFailed(ringhashes, err.Error()); nil != err {
+//		log.Errorf("err:%s", err.Error())
+//	} else {
+//		for _, ringhash := range ringhashes {
+//			failedEvent := &types.RingSubmitResultEvent{RingHash: ringhash, Status:types.TX_STATUS_FAILED}
+//			eventemitter.Emit(eventemitter.Miner_RingSubmitResult, failedEvent)
+//		}
+//	}
+//}
 
 func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*types.RingSubmitInfo, error) {
+	//todo:change to advice protocolAddress
 	protocolAddress := ringState.Orders[0].OrderState.RawOrder.Protocol
 	var (
-		implAddress *ethaccessor.ProtocolAddress
-		exists      bool
-		err         error
+	//signer *types.NameRegistryInfo
+	//err error
 	)
-	if implAddress, exists = ethaccessor.ProtocolAddresses()[protocolAddress]; !exists {
-		return nil, errors.New("doesn't contain this version of protocol:" + protocolAddress.Hex())
-	}
-	protocolAbi := ethaccessor.ProtocolImplAbi()
 
-	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState}
+	ringSubmitInfo := &types.RingSubmitInfo{RawRing: ringState, ProtocolGasPrice: ringState.GasPrice, ProtocolGas: ringState.Gas}
 	if types.IsZeroHash(ringState.Hash) {
-		ringState.Hash = ringState.GenerateHash()
+		ringState.Hash = ringState.GenerateHash(submitter.feeReceipt)
 	}
 
 	ringSubmitInfo.ProtocolAddress = protocolAddress
 	ringSubmitInfo.OrdersCount = big.NewInt(int64(len(ringState.Orders)))
 	ringSubmitInfo.Ringhash = ringState.Hash
 
-	if submitter.ifRegistryRingHash {
-		ringhashRegistryAbi := ethaccessor.RinghashRegistryAbi()
-		ringhashRegistryAddress := implAddress.RinghashRegistryAddress
-		ringSubmitInfo.RegistryData, err = ringhashRegistryAbi.Pack("submitRinghash",
-			submitter.minerAccountForSign,
-			ringSubmitInfo.Ringhash)
-		if nil != err {
-			return nil, err
-		}
-
-		log.Debugf("ringhashRegistryAddress", ringhashRegistryAddress.Hex())
-		ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.RegistryData, ringhashRegistryAddress, "latest")
-		if nil != err {
-			return nil, err
-		}
-		if submitter.maxGasLimit.Sign() > 0 && ringSubmitInfo.RegistryGas.Cmp(submitter.maxGasLimit) > 0 {
-			ringSubmitInfo.RegistryGas.Set(submitter.maxGasLimit)
-		}
-		if submitter.minGasLimit.Sign() > 0 && ringSubmitInfo.RegistryGas.Cmp(submitter.minGasLimit) < 0 {
-			ringSubmitInfo.RegistryGas.Set(submitter.minGasLimit)
-		}
-
-		ringSubmitInfo.RegistryGas.Add(ringSubmitInfo.RegistryGas, big.NewInt(1000))
+	protocolAbi := ethaccessor.ProtocolImplAbi()
+	if senderAddress, err := submitter.selectSenderAddress(); nil != err {
+		return ringSubmitInfo, err
+	} else {
+		ringSubmitInfo.Miner = senderAddress
 	}
-
-	ringSubmitArgs := ringState.GenerateSubmitArgs(submitter.minerAccountForSign.Address, submitter.feeReceipt)
-	ringSubmitInfo.ProtocolData, err = protocolAbi.Pack("submitRing",
-		ringSubmitArgs.AddressList,
-		ringSubmitArgs.UintArgsList,
-		ringSubmitArgs.Uint8ArgsList,
-		ringSubmitArgs.BuyNoMoreThanAmountBList,
-		ringSubmitArgs.VList,
-		ringSubmitArgs.RList,
-		ringSubmitArgs.SList,
-		ringSubmitArgs.Ringminer,
-		ringSubmitArgs.FeeRecepient,
-	)
-	if nil != err {
+	//submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
+	submitRingInputs := &ethaccessor.SubmitRingMethodInputs{}
+	if protocolData, err := submitRingInputs.GenerateSubmitRingMethodInputsData(ringState, submitter.feeReceipt, protocolAbi); nil != err {
 		return nil, err
+	} else {
+		ringSubmitInfo.ProtocolData = protocolData
 	}
-	ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
-	if nil != err {
-		return nil, err
-	}
+	//if nil != err {
+	//	return nil, err
+	//}
+	//预先判断是否会提交成功
+	//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
+
+	//if nil != err {
+	//	return nil, err
+	//}
 	if submitter.maxGasLimit.Sign() > 0 && ringSubmitInfo.ProtocolGas.Cmp(submitter.maxGasLimit) > 0 {
 		ringSubmitInfo.ProtocolGas.Set(submitter.maxGasLimit)
 	}
 	if submitter.minGasLimit.Sign() > 0 && ringSubmitInfo.ProtocolGas.Cmp(submitter.minGasLimit) < 0 {
 		ringSubmitInfo.ProtocolGas.Set(submitter.minGasLimit)
-	}
-
-	ringSubmitInfo.ProtocolGas.Add(ringSubmitInfo.ProtocolGas, big.NewInt(1000))
-
-	submitter.computeReceivedAndSelectMiner(ringSubmitInfo)
-	log.Debugf("miner,submitter generate ring info, legal cost:%s, legalFee:%s, received:%s", ringSubmitInfo.LegalCost.FloatString(2), ringState.LegalFee.FloatString(2), ringSubmitInfo.Received.FloatString(2))
-
-	if ringSubmitInfo.Received.Sign() <= 0 {
-		// todo: warning
-		//return nil, errors.New("received can't be less than 0")
 	}
 	return ringSubmitInfo, nil
 }
@@ -505,132 +413,131 @@ func (submitter *RingSubmitter) stop() {
 
 func (submitter *RingSubmitter) start() {
 	submitter.listenNewRings()
-	submitter.listenRegistryMethodEvent()
-	submitter.listenBatchSubmitRingMethodEvent()
-	submitter.listenSubmitRingMethodEvent()
-	submitter.listenRegistryEvent()
+	submitter.listenSubmitRingMethodEventFromMysql()
+	submitter.listenBlockNew()
+	//submitter.listenSubmitRingMethodEvent()
 }
 
-func (submitter *RingSubmitter) availabeMinerAddress() []*NormalMinerAddress {
-	minerAddresses := []*NormalMinerAddress{}
+func (submitter *RingSubmitter) availableSenderAddresses() []*NormalSenderAddress {
+	senderAddresses := []*NormalSenderAddress{}
 	for _, minerAddress := range submitter.normalMinerAddresses {
 		var blockedTxCount, txCount types.Big
+		//todo:change it by event
 		ethaccessor.GetTransactionCount(&blockedTxCount, minerAddress.Address, "latest")
 		ethaccessor.GetTransactionCount(&txCount, minerAddress.Address, "pending")
 		//submitter.Accessor.Call("latest", &blockedTxCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "latest")
 		//submitter.Accessor.Call("latest", &txCount, "eth_getTransactionCount", minerAddress.Address.Hex(), "pending")
-
+		//todo:check ethbalance
 		pendingCount := big.NewInt(int64(0))
 		pendingCount.Sub(txCount.BigInt(), blockedTxCount.BigInt())
 		if pendingCount.Int64() <= minerAddress.MaxPendingCount {
-			minerAddresses = append(minerAddresses, minerAddress)
+			senderAddresses = append(senderAddresses, minerAddress)
 		}
 	}
 
-	if len(minerAddresses) <= 0 {
-		minerAddresses = append(minerAddresses, submitter.normalMinerAddresses[0])
+	if len(senderAddresses) <= 0 {
+		senderAddresses = append(senderAddresses, submitter.normalMinerAddresses[0])
 	}
-	return minerAddresses
+	return senderAddresses
 }
 
-func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *types.RingSubmitInfo) error {
-	ringState := ringSubmitInfo.RawRing
-	ringState.LegalFee = new(big.Rat).SetInt(big.NewInt(int64(0)))
-	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
-	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
-	lrcAddress := ethaccessor.ProtocolAddresses()[ringState.Orders[0].OrderState.RawOrder.Protocol].LrcTokenAddress
-	useSplit := false
-	//for _,splitMiner := range submitter.splitMinerAddresses {
-	//	//todo:optimize it
-	//	if lrcFee > splitMiner.StartFee || splitFee > splitMiner.StartFee || len(submitter.normalMinerAddresses) <= 0  {
-	//		useSplit = true
-	//		ringState.Miner = splitMiner.Address
-	//		minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(splitMiner.Address, lrcAddress)
-	//		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
-	//		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
-	//
-	//
-	//		if ringState.LrcLegalFee.Cmp(ringState.SplitLegalFee) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
-	//			filledOrder.FeeSelection = 1
-	//			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
-	//			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
-	//			filledOrder.LrcReward = legalAmountOfLrc
-	//			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
-	//			filledOrder.LegalFee = legalAmountOfSaving
-	//
-	//			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
-	//			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-	//		} else {
-	//			filledOrder.FeeSelection = 0
-	//			filledOrder.LegalFee = legalAmountOfLrc
-	//		}
-	//
-	//		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
-	//	}
-	//}
-	minerAddresses := submitter.availabeMinerAddress()
-	if !useSplit {
-		for _, normalMinerAddress := range minerAddresses {
-			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress)
-
-			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
-			feeSelections := []uint8{}
-			legalFees := []*big.Rat{}
-			lrcRewards := []*big.Rat{}
-			for _, filledOrder := range ringState.Orders {
-				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
-				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
-				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
-					feeSelections = append(feeSelections, 1)
-					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
-					fee.Sub(fee, filledOrder.LegalLrcFee)
-					legalFees = append(legalFees, fee)
-					lrcRewards = append(lrcRewards, filledOrder.LegalLrcFee)
-					legalFee.Add(legalFee, fee)
-
-					minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
-					//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
-				} else {
-					feeSelections = append(feeSelections, 0)
-					legalFees = append(legalFees, filledOrder.LegalLrcFee)
-					lrcRewards = append(lrcRewards, new(big.Rat).SetInt(big.NewInt(int64(0))))
-					legalFee.Add(legalFee, filledOrder.LegalLrcFee)
-				}
-			}
-
-			if ringState.LegalFee.Sign() == 0 || ringState.LegalFee.Cmp(legalFee) < 0 {
-				ringState.LegalFee = legalFee
-				ringSubmitInfo.Miner = normalMinerAddress.Address
-				for idx, filledOrder := range ringState.Orders {
-					filledOrder.FeeSelection = feeSelections[idx]
-					filledOrder.LegalFee = legalFees[idx]
-					filledOrder.LrcReward = lrcRewards[idx]
-				}
-
-				if nil == ringSubmitInfo.ProtocolGasPrice || ringSubmitInfo.ProtocolGasPrice.Cmp(normalMinerAddress.GasPriceLimit) > 0 {
-					ringSubmitInfo.ProtocolGasPrice = normalMinerAddress.GasPriceLimit
-				}
-			}
-		}
+func (submitter *RingSubmitter) selectSenderAddress() (common.Address, error) {
+	senderAddresses := submitter.availableSenderAddresses()
+	if len(senderAddresses) <= 0 {
+		return types.NilAddress, errors.New("there isn't an available sender address")
+	} else {
+		return senderAddresses[0].Address, nil
 	}
-
-	registryCost := big.NewInt(int64(0))
-	if submitter.ifRegistryRingHash {
-		ringSubmitInfo.RegistryGasPrice = ringSubmitInfo.ProtocolGasPrice
-		registryCost.Mul(ringSubmitInfo.RegistryGas, ringSubmitInfo.RegistryGasPrice)
-	}
-
-	protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
-
-	costEth := new(big.Rat).SetInt(new(big.Int).Add(protocolCost, registryCost))
-	costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
-	ringSubmitInfo.LegalCost = costLegal
-	received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
-	ringSubmitInfo.Received = received
-
-	return nil
 }
 
-func (submitter *RingSubmitter) SetMatcher(matcher Matcher) {
-	submitter.matcher = matcher
-}
+//func (submitter *RingSubmitter) computeReceivedAndSelectMiner(ringSubmitInfo *types.RingSubmitInfo) error {
+//	ringState := ringSubmitInfo.RawRing
+//	ringState.LegalFee = new(big.Rat).SetInt(big.NewInt(int64(0)))
+//	ethPrice, _ := submitter.marketCapProvider.GetEthCap()
+//	ethPrice = ethPrice.Quo(ethPrice, new(big.Rat).SetInt(util.AllTokens["WETH"].Decimals))
+//	lrcAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].LrcTokenAddress
+//	spenderAddress := ethaccessor.ProtocolAddresses()[ringSubmitInfo.ProtocolAddress].DelegateAddress
+//	useSplit := false
+//	//for _,splitMiner := range submitter.splitMinerAddresses {
+//	//	//todo:optimize it
+//	//	if lrcFee > splitMiner.StartFee || splitFee > splitMiner.StartFee || len(submitter.normalMinerAddresses) <= 0  {
+//	//		useSplit = true
+//	//		ringState.Miner = splitMiner.Address
+//	//		minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(splitMiner.Address, lrcAddress)
+//	//		//the lrcreward should be send to order.owner when miner selects MarginSplit as the selection of fee
+//	//		//be careful！！！ miner will received nothing, if miner set FeeSelection=1 and he doesn't have enough lrc
+//	//
+//	//
+//	//		if ringState.LrcLegalFee.Cmp(ringState.SplitLegalFee) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
+//	//			filledOrder.FeeSelection = 1
+//	//			splitPer := new(big.Rat).SetInt64(int64(filledOrder.OrderState.RawOrder.MarginSplitPercentage))
+//	//			legalAmountOfSaving.Mul(legalAmountOfSaving, splitPer)
+//	//			filledOrder.LrcReward = legalAmountOfLrc
+//	//			legalAmountOfSaving.Sub(legalAmountOfSaving, legalAmountOfLrc)
+//	//			filledOrder.LegalFee = legalAmountOfSaving
+//	//
+//	//			minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
+//	//			//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+//	//		} else {
+//	//			filledOrder.FeeSelection = 0
+//	//			filledOrder.LegalFee = legalAmountOfLrc
+//	//		}
+//	//
+//	//		ringState.LegalFee.Add(ringState.LegalFee, filledOrder.LegalFee)
+//	//	}
+//	//}
+//	minerAddresses := submitter.availableSenderAddresses()
+//	if !useSplit {
+//		for _, normalMinerAddress := range minerAddresses {
+//			minerLrcBalance, _ := submitter.matcher.GetAccountAvailableAmount(normalMinerAddress.Address, lrcAddress, spenderAddress)
+//			legalFee := new(big.Rat).SetInt(big.NewInt(int64(0)))
+//			feeSelections := []uint8{}
+//			legalFees := []*big.Rat{}
+//			lrcRewards := []*big.Rat{}
+//			for _, filledOrder := range ringState.Orders {
+//				lrcFee := new(big.Rat).SetInt(big.NewInt(int64(2)))
+//				lrcFee.Mul(lrcFee, filledOrder.LegalLrcFee)
+//				log.Debugf("lrcFee:%s, filledOrder.LegalFeeS:%s, minerLrcBalance:%s, filledOrder.LrcFee:%s", lrcFee.FloatString(3), filledOrder.LegalFeeS.FloatString(3), minerLrcBalance.FloatString(3), filledOrder.LrcFee.FloatString(3))
+//				if lrcFee.Cmp(filledOrder.LegalFeeS) < 0 && minerLrcBalance.Cmp(filledOrder.LrcFee) > 0 {
+//					feeSelections = append(feeSelections, 1)
+//					fee := new(big.Rat).Set(filledOrder.LegalFeeS)
+//					fee.Sub(fee, filledOrder.LegalLrcFee)
+//					legalFees = append(legalFees, fee)
+//					lrcRewards = append(lrcRewards, filledOrder.LegalLrcFee)
+//					legalFee.Add(legalFee, fee)
+//
+//					minerLrcBalance.Sub(minerLrcBalance, filledOrder.LrcFee)
+//					//log.Debugf("Miner,lrcReward:%s  legalFee:%s", lrcReward.FloatString(10), filledOrder.LegalFee.FloatString(10))
+//				} else {
+//					feeSelections = append(feeSelections, 0)
+//					legalFees = append(legalFees, filledOrder.LegalLrcFee)
+//					lrcRewards = append(lrcRewards, new(big.Rat).SetInt(big.NewInt(int64(0))))
+//					legalFee.Add(legalFee, filledOrder.LegalLrcFee)
+//				}
+//			}
+//
+//			if ringState.LegalFee.Sign() == 0 || ringState.LegalFee.Cmp(legalFee) < 0 {
+//				ringState.LegalFee = legalFee
+//				ringSubmitInfo.Miner = normalMinerAddress.Address
+//				for idx, filledOrder := range ringState.Orders {
+//					filledOrder.FeeSelection = feeSelections[idx]
+//					filledOrder.LegalFee = legalFees[idx]
+//					filledOrder.LrcReward = lrcRewards[idx]
+//				}
+//
+//				if nil == ringSubmitInfo.ProtocolGasPrice || ringSubmitInfo.ProtocolGasPrice.Cmp(normalMinerAddress.GasPriceLimit) > 0 {
+//					ringSubmitInfo.ProtocolGasPrice = normalMinerAddress.GasPriceLimit
+//				}
+//			}
+//		}
+//	}
+//	//protocolCost := new(big.Int).Mul(ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice)
+//	//
+//	//costEth := new(big.Rat).SetInt(protocolCost)
+//	//costLegal, _ := submitter.marketCapProvider.LegalCurrencyValueOfEth(costEth)
+//	//ringSubmitInfo.LegalCost = costLegal
+//	//received := new(big.Rat).Sub(ringState.LegalFee, costLegal)
+//	//ringSubmitInfo.Received = received
+//
+//	return nil
+//}

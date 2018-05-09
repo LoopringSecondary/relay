@@ -19,6 +19,7 @@
 package ethaccessor
 
 import (
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
 	"math/big"
 	"sort"
@@ -31,23 +32,29 @@ type GasPriceEvaluator struct {
 	stopChan chan bool
 }
 
-func (e *GasPriceEvaluator) GasPrice(gasPriceLimit *big.Int) *big.Int {
+func (e *GasPriceEvaluator) GasPrice(minGasPrice, maxGasPrice *big.Int) *big.Int {
+	gasPrice := new(big.Int)
 	if nil != e.gasPrice {
-		if nil != gasPriceLimit && gasPriceLimit.Cmp(e.gasPrice) < 0 {
-			return gasPriceLimit
+		if nil != maxGasPrice && maxGasPrice.Cmp(e.gasPrice) < 0 {
+			gasPrice.Set(maxGasPrice)
+		} else if nil != minGasPrice && minGasPrice.Cmp(e.gasPrice) > 0 {
+			gasPrice.Set(minGasPrice)
 		} else {
-			return e.gasPrice
+			gasPrice.Set(e.gasPrice)
 		}
 	} else {
-		return gasPriceLimit
+		gasPrice.Set(maxGasPrice)
 	}
+	return gasPrice
 }
 
 func (e *GasPriceEvaluator) start() {
 	var blockNumber types.Big
 	if err := BlockNumber(&blockNumber); nil == err {
 		go func() {
-			iterator := NewBlockIterator(blockNumber.BigInt(), nil, true, uint64(0))
+			number := new(big.Int).Set(blockNumber.BigInt())
+			number.Sub(number, big.NewInt(30))
+			iterator := NewBlockIterator(number, nil, true, uint64(0))
 			for {
 				select {
 				case <-e.stopChan:
@@ -56,8 +63,9 @@ func (e *GasPriceEvaluator) start() {
 					blockInterface, err := iterator.Next()
 					if nil == err {
 						blockWithTxAndReceipt := blockInterface.(*BlockWithTxAndReceipt)
+						log.Debugf("gasPriceEvaluator, blockNumber:%s, gasPrice:%s", blockWithTxAndReceipt.Number.BigInt().String(), e.gasPrice.String())
 						e.Blocks = append(e.Blocks, blockWithTxAndReceipt)
-						if len(e.Blocks) > 5 {
+						if len(e.Blocks) > 30 {
 							e.Blocks = e.Blocks[1:]
 						}
 						var prices gasPrices = []*big.Int{}
@@ -95,8 +103,8 @@ func (prices gasPrices) Less(i, j int) bool {
 
 func (prices gasPrices) bestGasPrice() *big.Int {
 	sort.Sort(prices)
-	startIdx := len(prices) / 3
-	endIdx := startIdx * 2
+	startIdx := 0
+	endIdx := (len(prices) / 3) * 2
 
 	averagePrice := big.NewInt(0)
 	for _, price := range prices[startIdx:endIdx] {
@@ -104,5 +112,8 @@ func (prices gasPrices) bestGasPrice() *big.Int {
 	}
 	averagePrice.Div(averagePrice, big.NewInt(int64(endIdx-startIdx+1)))
 
+	if averagePrice.Cmp(big.NewInt(int64(0))) <= 0 {
+		averagePrice = big.NewInt(int64(1000000000))
+	}
 	return averagePrice
 }

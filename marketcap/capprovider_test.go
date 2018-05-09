@@ -19,24 +19,25 @@
 package marketcap_test
 
 import (
+	"github.com/Loopring/relay/config"
+	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
-	"github.com/Loopring/relay/test"
 	"testing"
-	"time"
 )
 
 func TestStart(t *testing.T) {
-	//cfg := test.LoadConfig()
-	//provider := marketcap.NewMarketCapProvider(cfg.MarketCap)
-	//provider.Start()
-	//
-	//for _, token := range util.AllTokens {
-	//	p1, _ := provider.GetMarketCap(token.Protocol)
-	//	p2, _ := provider.GetMarketCapByCurrency(token.Protocol, "USD")
-	//
-	//	t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.String(), p2.String())
-	//}
+	cfg := config.LoadConfig("/Users/yuhongyu/Desktop/service/go/src/github.com/Loopring/relay/config/relay.toml")
+
+	log.Initialize(cfg.Log)
+	util.Initialize(cfg.Market)
+	provider := marketcap.NewMarketCapProvider(cfg.MarketCap)
+	provider.Start()
+	for _, token := range util.AllTokens {
+		p1, _ := provider.GetMarketCap(token.Protocol)
+		p2, _ := provider.GetMarketCapByCurrency(token.Protocol, "USD")
+		t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.String(), p2.String())
+	}
 	//
 	//time.Sleep(3 * time.Minute)
 	//for _, token := range util.AllTokens {

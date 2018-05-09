@@ -19,11 +19,12 @@
 package extractor
 
 import (
+	"fmt"
 	"github.com/Loopring/relay/dao"
 	"github.com/Loopring/relay/ethaccessor"
-	"github.com/Loopring/relay/eventemiter"
-	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/types"
+	"log"
+	"math/big"
 )
 
 type forkDetector struct {
@@ -31,69 +32,67 @@ type forkDetector struct {
 	latestBlock *types.Block
 }
 
-func newForkDetector(db dao.RdsService) *forkDetector {
+func newForkDetector(db dao.RdsService, startBlockConfig *big.Int) *forkDetector {
 	detector := &forkDetector{}
 	detector.db = db
-	detector.latestBlock = nil
+	detector.latestBlock = &types.Block{}
+
+	if entity, err := detector.db.FindLatestBlock(); err == nil {
+		entity.ConvertUp(detector.latestBlock)
+		return detector
+	}
+
+	var block ethaccessor.Block
+	if err := ethaccessor.GetBlockByNumber(&block, startBlockConfig, false); err != nil {
+		log.Fatalf("extractor,fork detector can not find init block:%s", startBlockConfig.String())
+	}
+
+	detector.latestBlock.BlockNumber = block.Number.BigInt()
+	detector.latestBlock.BlockHash = block.Hash
+	detector.latestBlock.CreateTime = block.Timestamp.BigInt().Int64()
+	detector.latestBlock.ParentHash = block.ParentHash
+
+	model := &dao.Block{}
+	model.ConvertDown(detector.latestBlock)
+	detector.db.SaveBlock(model)
 
 	return detector
 }
 
-func (detector *forkDetector) Detect(currentBlock *types.Block) bool {
-	var (
-		forkEvent types.ForkedEvent
-	)
-
+func (detector *forkDetector) Detect(currentBlock *types.Block) (*types.ForkedEvent, error) {
 	// filter invalid block
 	if types.IsZeroHash(currentBlock.ParentHash) || types.IsZeroHash(currentBlock.BlockHash) {
-		log.Debugf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
-		return false
-	}
-
-	// initialize latest block
-	if detector.latestBlock == nil {
-		entity, err := detector.db.FindLatestBlock()
-		if err != nil {
-			detector.latestBlock = currentBlock
-			log.Debugf("extractor,fork detector started at first time")
-			return false
-		} else {
-			detector.latestBlock = new(types.Block)
-			entity.ConvertUp(detector.latestBlock)
-		}
+		return nil, fmt.Errorf("extractor,fork detector find invalid block:%s", currentBlock.BlockNumber.String())
 	}
 
 	// no fork
 	if detector.latestBlock.BlockHash == currentBlock.BlockHash || detector.latestBlock.BlockHash == currentBlock.ParentHash {
 		detector.latestBlock = currentBlock
-		return false
+		return nil, nil
 	}
 
 	// find forked root block
 	forkBlock, err := detector.getForkedBlock(currentBlock)
 	if err != nil {
-		log.Fatalf("extractor,get forked block failed :%s,node should be shut down...", err.Error())
+		return nil, fmt.Errorf("extractor,get forked block failed :%s,node should be shut down...", err.Error())
 	}
 	detector.latestBlock = forkBlock
 
-	// mark fork block in database
-	model := dao.Block{}
-	if err := model.ConvertDown(forkBlock); err == nil {
-		if err := detector.db.SetForkBlock(forkBlock.BlockHash); err != nil {
-			log.Fatalf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
-		}
-	}
-
-	// emit fork event
+	// set fork event
+	var forkEvent types.ForkedEvent
 	forkEvent.ForkHash = forkBlock.BlockHash
 	forkEvent.ForkBlock = forkBlock.BlockNumber
 	forkEvent.DetectedHash = currentBlock.BlockHash
 	forkEvent.DetectedBlock = currentBlock.BlockNumber
 
-	log.Debugf("extractor,detected chain fork, from :%d to %d", forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64())
-	eventemitter.Emit(eventemitter.ChainForkDetected, &forkEvent)
+	// mark fork block in database
+	model := dao.Block{}
+	model.ConvertDown(forkBlock)
+	if err := detector.db.SetForkBlock(forkEvent.ForkBlock.Int64(), forkEvent.DetectedBlock.Int64()); err != nil {
+		return nil, fmt.Errorf("extractor,fork detector mark fork block %s failed, you should mark it manual, err:%s", forkBlock.BlockHash.Hex(), err.Error())
+	}
 
-	return true
+	return &forkEvent, nil
 }
 
 func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, error) {
@@ -103,11 +102,12 @@ func (detector *forkDetector) getForkedBlock(block *types.Block) (*types.Block, 
 	)
 
 	// find parent block in database
-	if parentBlockModel, err := detector.db.FindBlockByParentHash(block.ParentHash); err == nil {
+	if parentBlockModel, err := detector.db.FindBlockByHash(block.ParentHash); err == nil {
 		parentBlockModel.ConvertUp(&parentBlock)
 		return &parentBlock, nil
 	}
 
+	// find parent block on chain
 	if err := ethaccessor.GetBlockByHash(&ethBlock, block.ParentHash.Hex(), false); err != nil {
 		return nil, err
 	}

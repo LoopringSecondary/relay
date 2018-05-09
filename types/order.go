@@ -36,48 +36,61 @@ const (
 	ORDER_CANCEL   OrderStatus = 4
 	ORDER_CUTOFF   OrderStatus = 5
 	ORDER_EXPIRE   OrderStatus = 6
+	ORDER_PENDING  OrderStatus = 7
+	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
+	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 )
-
-//订单原始信息
-/**
-1、是否整体成交
-2、指定成交对象，对方单的hash
-3、分润比例 是否需要设置
-4、成交方向 待定
-5、过期时间，使用块数
-*/
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
 type Order struct {
-	Protocol              common.Address `json:"protocol" gencodec:"required"`  // 智能合约地址
-	TokenS                common.Address `json:"tokenS" gencodec:"required"`    // 卖出erc20代币智能合约地址
-	TokenB                common.Address `json:"tokenB" gencodec:"required"`    // 买入erc20代币智能合约地址
-	AmountS               *big.Int       `json:"amountS" gencodec:"required"`   // 卖出erc20代币数量上限
-	AmountB               *big.Int       `json:"amountB" gencodec:"required"`   // 买入erc20代币数量上限
-	Timestamp             *big.Int       `json:"timestamp" gencodec:"required"` //
-	Ttl                   *big.Int       `json:"ttl" gencodec:"required"`       // 订单过期时间
-	Salt                  *big.Int       `json:"salt" gencodec:"required"`
-	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
-	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
-	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
-	V                     uint8          `json:"v" gencodec:"required"`
-	R                     Bytes32        `json:"r" gencodec:"required"`
-	S                     Bytes32        `json:"s" gencodec:"required"`
-	Price                 *big.Rat       `json:"price"`
-	Owner                 common.Address `json:"owner"`
-	Hash                  common.Hash    `json:"hash"`
+	Protocol              common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress       common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	AuthAddr              common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey        crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	WalletAddress         common.Address             `json:"walletAddress" gencodec:"required"`
+	TokenS                common.Address             `json:"tokenS" gencodec:"required"`     // 卖出erc20代币智能合约地址
+	TokenB                common.Address             `json:"tokenB" gencodec:"required"`     // 买入erc20代币智能合约地址
+	AmountS               *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
+	AmountB               *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
+	ValidSince            *big.Int                   `json:"validSince" gencodec:"required"` //
+	ValidUntil            *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
+	LrcFee                *big.Int                   `json:"lrcFee" `                        // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
+	BuyNoMoreThanAmountB  bool                       `json:"buyNoMoreThanAmountB" gencodec:"required"`
+	MarginSplitPercentage uint8                      `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
+	V                     uint8                      `json:"v" gencodec:"required"`
+	R                     Bytes32                    `json:"r" gencodec:"required"`
+	S                     Bytes32                    `json:"s" gencodec:"required"`
+	Price                 *big.Rat                   `json:"price"`
+	Owner                 common.Address             `json:"owner"`
+	Hash                  common.Hash                `json:"hash"`
+	Market                string                     `json:"market"`
+	CreateTime            int64                      `json:"createTime"`
+	PowNonce              uint64                     `json:"powNonce"`
+	Side                  string                     `json:"side"`
+}
+
+type orderMarshaling struct {
+	AmountS    *Big
+	AmountB    *Big
+	ValidSince *Big
+	ValidUntil *Big
+	LrcFee     *Big
 }
 
 //go:generate gencodec -type OrderJsonRequest -field-override orderJsonRequestMarshaling -out gen_order_request_json.go
 type OrderJsonRequest struct {
-	Protocol              common.Address `json:"protocol" gencodec:"required"` // 智能合约地址
-	TokenS                common.Address `json:"tokenS" gencodec:"required"`   // 卖出erc20代币智能合约地址
-	TokenB                common.Address `json:"tokenB" gencodec:"required"`   // 买入erc20代币智能合约地址
-	AmountS               *big.Int       `json:"amountS" gencodec:"required"`  // 卖出erc20代币数量上限
-	AmountB               *big.Int       `json:"amountB" gencodec:"required"`  // 买入erc20代币数量上限
-	Timestamp             int64          `json:"timestamp" gencodec:"required"`
-	Ttl                   int64          `json:"ttl" gencodec:"required"` // 订单过期时间
-	Salt                  int64          `json:"salt" gencodec:"required"`
+	Protocol        common.Address             `json:"protocol" gencodec:"required"`        // 智能合约地址
+	DelegateAddress common.Address             `json:"delegateAddress" gencodec:"required"` // 智能合约地址
+	TokenS          common.Address             `json:"tokenS" gencodec:"required"`          // 卖出erc20代币智能合约地址
+	TokenB          common.Address             `json:"tokenB" gencodec:"required"`          // 买入erc20代币智能合约地址
+	AuthAddr        common.Address             `json:"authAddr" gencodec:"required"`        //
+	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey" gencodec:"required"`  //
+	WalletAddress   common.Address             `json:"walletAddress" gencodec:"required"`
+	AmountS         *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
+	AmountB         *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
+	ValidSince      *big.Int                   `json:"validSince" gencodec:"required"` //
+	ValidUntil      *big.Int                   `json:"validUntil" gencodec:"required"` // 订单过期时间
+	// Salt                  int64          `json:"salt" gencodec:"required"`
 	LrcFee                *big.Int       `json:"lrcFee" ` // 交易总费用,部分成交的费用按该次撮合实际卖出代币额与比例计算
 	BuyNoMoreThanAmountB  bool           `json:"buyNoMoreThanAmountB" gencodec:"required"`
 	MarginSplitPercentage uint8          `json:"marginSplitPercentage" gencodec:"required"` // 不为0时支付给交易所的分润比例，否则视为100%
@@ -87,21 +100,17 @@ type OrderJsonRequest struct {
 	Price                 *big.Rat       `json:"price"`
 	Owner                 common.Address `json:"owner"`
 	Hash                  common.Hash    `json:"hash"`
-}
-
-type orderMarshaling struct {
-	AmountS   *Big
-	AmountB   *Big
-	Timestamp *Big
-	Ttl       *Big
-	Salt      *Big
-	LrcFee    *Big
+	CreateTime            int64          `json:"createTime"`
+	PowNonce              uint64         `json:"powNonce"`
+	Side                  string         `json:"side"`
 }
 
 type orderJsonRequestMarshaling struct {
-	AmountS *Big
-	AmountB *Big
-	LrcFee  *Big
+	AmountS    *Big
+	AmountB    *Big
+	ValidSince *Big
+	ValidUntil *Big
+	LrcFee     *Big
 }
 
 func (o *Order) GenerateHash() common.Hash {
@@ -113,21 +122,22 @@ func (o *Order) GenerateHash() common.Hash {
 	}
 
 	hashBytes := crypto.GenerateHash(
-		o.Protocol.Bytes(),
+		o.DelegateAddress.Bytes(),
 		o.Owner.Bytes(),
 		o.TokenS.Bytes(),
 		o.TokenB.Bytes(),
+		o.WalletAddress.Bytes(),
+		o.AuthAddr.Bytes(),
 		common.LeftPadBytes(o.AmountS.Bytes(), 32),
 		common.LeftPadBytes(o.AmountB.Bytes(), 32),
-		common.LeftPadBytes(o.Timestamp.Bytes(), 32),
-		common.LeftPadBytes(o.Ttl.Bytes(), 32),
-		common.LeftPadBytes(o.Salt.Bytes(), 32),
+		common.LeftPadBytes(o.ValidSince.Bytes(), 32),
+		common.LeftPadBytes(o.ValidUntil.Bytes(), 32),
 		common.LeftPadBytes(o.LrcFee.Bytes(), 32),
 		[]byte{buyNoMoreThanAmountB},
 		[]byte{byte(o.MarginSplitPercentage)},
 	)
-	h.SetBytes(hashBytes)
 
+	h.SetBytes(hashBytes)
 	return *h
 }
 
@@ -206,8 +216,7 @@ type FilledOrder struct {
 	LegalLrcFee      *big.Rat   `json:"legalLrcFee"`
 	FeeS             *big.Rat   `json:"feeS"`
 	LegalFeeS        *big.Rat   `json:"legalFeeS"`
-	//FeeB             *EnlargedInt
-	LegalFee *big.Rat `json:"legalFee"` //法币计算的fee
+	LegalFee         *big.Rat   `json:"legalFee"` //法币计算的fee
 
 	SPrice *big.Rat `json:"SPrice"`
 	BPrice *big.Rat `json:"BPrice"`
@@ -216,7 +225,7 @@ type FilledOrder struct {
 	AvailableTokenSBalance *big.Rat
 }
 
-func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat) *FilledOrder {
+func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBalance *big.Rat, lrcAddress common.Address) *FilledOrder {
 	filledOrder := &FilledOrder{}
 	filledOrder.OrderState = orderState
 	filledOrder.AvailableLrcBalance = new(big.Rat).Set(lrcBalance)
@@ -236,6 +245,9 @@ func ConvertOrderStateToFilledOrder(orderState OrderState, lrcBalance, tokenSBal
 		filledOrder.AvailableAmountB.Mul(filledOrder.AvailableAmountS, new(big.Rat).Inv(sellPrice))
 	}
 
+	if orderState.RawOrder.TokenB == lrcAddress && lrcBalance.Cmp(filledOrder.AvailableAmountB) < 0 {
+		filledOrder.AvailableLrcBalance.Set(filledOrder.AvailableAmountB)
+	}
 	return filledOrder
 }
 
@@ -258,24 +270,78 @@ type OrderDelayList struct {
 	DelayedCount int64
 }
 
-// 根据是否完全成交确定订单状态
-func (ord *OrderState) SettleFinishedStatus(isFullFinished bool) {
-	if isFullFinished {
-		ord.Status = ORDER_FINISHED
-	} else {
-		ord.Status = ORDER_PARTIAL
+func InUnchangeableStatus(status OrderStatus) bool {
+	unchangeableList := []OrderStatus{
+		ORDER_FINISHED, ORDER_UNKNOWN, ORDER_CANCEL, ORDER_CUTOFF}
+
+	for _, v := range unchangeableList {
+		if status == v {
+			return true
+		}
 	}
+
+	return false
 }
 
-func (ord *OrderState) IsOrderExpired() bool {
-	nowtime := time.Now().Unix()
-	validTime := ord.RawOrder.Timestamp.Int64()
-	ttl := ord.RawOrder.Ttl.Int64()
-	if validTime+ttl < nowtime {
+func (ord *OrderState) IsExpired() bool {
+	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) && ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
 		return true
 	}
 	return false
 }
+
+func (ord *OrderState) IsEffective() bool {
+	if (ord.Status == ORDER_NEW || ord.Status == ORDER_PARTIAL) && ord.RawOrder.ValidSince.Int64() >= time.Now().Unix() {
+		return true
+	}
+	return false
+}
+
+// 解释订单最终状态
+func (ord *OrderState) ResolveStatus(allowance, balance *big.Int) {
+	if InUnchangeableStatus(ord.Status) {
+		return
+	}
+
+	if ord.RawOrder.ValidUntil.Int64() < time.Now().Unix() {
+		ord.Status = ORDER_EXPIRE
+		return
+	}
+
+	//cancelOrFilled := new(big.Int).Add(ord.CancelledAmountS, ord.DealtAmountS)
+	//finished := new(big.Int).Add(cancelOrFilled, ord.SplitAmountS)
+
+	//if finished.Cmp(allowance) >= 0 {
+	//	ord.Status = ORDER_ALLOWANCE_INSUFFICIENT
+	//	return
+	//}
+	//
+	//if finished.Cmp(balance) >= 0 {
+	//	ord.Status = ORDER_BALANCE_INSUFFICIENT
+	//	return
+	//}
+}
+
+//const (
+//	SIDE_SELL    = "sell"
+//	SIDE_BUY     = "buy"
+//	SIDE_INVALID = ""
+//)
+
+// 根据市场确定订单方向
+//func (ord *OrderState) Side(market common.Address) string {
+//	var side string
+//	switch market {
+//	case ord.RawOrder.TokenS:
+//		side = SIDE_SELL
+//	case ord.RawOrder.TokenB:
+//		side = SIDE_BUY
+//	default:
+//		side = SIDE_INVALID
+//	}
+//
+//	return side
+//}
 
 func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remainedAmountB *big.Rat) {
 	remainedAmountS = new(big.Rat)
@@ -301,16 +367,35 @@ func (orderState *OrderState) RemainedAmount() (remainedAmountS *big.Rat, remain
 	return remainedAmountS, remainedAmountB
 }
 
+func (state *OrderState) DealtAndSplitAmount() (totalAmountS *big.Rat, totalAmountB *big.Rat) {
+	totalAmountS = new(big.Rat)
+	totalAmountB = new(big.Rat)
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		totalAmountB = totalAmountB.SetInt(new(big.Int).Add(state.DealtAmountB, state.SplitAmountB))
+		sellPrice := new(big.Rat).SetFrac(state.RawOrder.AmountS, state.RawOrder.AmountB)
+		totalAmountS = totalAmountS.Mul(totalAmountB, sellPrice)
+	} else {
+		totalAmountS = totalAmountS.SetInt(new(big.Int).Add(state.DealtAmountS, state.SplitAmountS))
+		buyPrice := new(big.Rat).SetFrac(state.RawOrder.AmountB, state.RawOrder.AmountS)
+		totalAmountB = totalAmountB.Mul(totalAmountS, buyPrice)
+	}
+
+	return totalAmountS, totalAmountB
+}
+
 func ToOrder(request *OrderJsonRequest) *Order {
 	order := &Order{}
 	order.Protocol = request.Protocol
+	order.DelegateAddress = request.DelegateAddress
 	order.TokenS = request.TokenS
 	order.TokenB = request.TokenB
 	order.AmountS = request.AmountS
 	order.AmountB = request.AmountB
-	order.Timestamp = big.NewInt(request.Timestamp)
-	order.Ttl = big.NewInt(request.Ttl)
-	order.Salt = big.NewInt(request.Salt)
+	order.ValidSince = request.ValidSince
+	order.ValidUntil = request.ValidUntil
+	order.AuthAddr = request.AuthAddr
+	order.AuthPrivateKey = request.AuthPrivateKey
 	order.LrcFee = request.LrcFee
 	order.BuyNoMoreThanAmountB = request.BuyNoMoreThanAmountB
 	order.MarginSplitPercentage = request.MarginSplitPercentage
@@ -318,5 +403,7 @@ func ToOrder(request *OrderJsonRequest) *Order {
 	order.R = request.R
 	order.S = request.S
 	order.Owner = request.Owner
+	order.WalletAddress = request.WalletAddress
+	order.PowNonce = request.PowNonce
 	return order
 }

@@ -19,7 +19,6 @@ make relay
    --ringMaxLength, --rml,              the max length of ring
    --miner,                             the encrypted private key used to sign ring
    --feeRecepient, -r,                  the fee recepient address when mined a ring
-   --ifRegistryRingHash, --reg          the submitter will registry ringhash first if it set ture
    --throwIfLrcIsInsuffcient, -t        the contract will revert when the lrc is insuffcient if it set ture
    --help, -h                           show help
 

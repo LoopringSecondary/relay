@@ -23,202 +23,189 @@ import (
 	"math/big"
 )
 
+type TxStatus uint8
+
+const (
+	TX_STATUS_UNKNOWN TxStatus = 0
+	TX_STATUS_PENDING TxStatus = 1
+	TX_STATUS_SUCCESS TxStatus = 2
+	TX_STATUS_FAILED  TxStatus = 3
+)
+
+func StatusStr(status TxStatus) string {
+	var ret string
+	switch status {
+	case TX_STATUS_PENDING:
+		ret = "pending"
+	case TX_STATUS_SUCCESS:
+		ret = "success"
+	case TX_STATUS_FAILED:
+		ret = "failed"
+	default:
+		ret = "unknown"
+	}
+
+	return ret
+}
+
+func StrToTxStatus(txType string) TxStatus {
+	var ret TxStatus
+	switch txType {
+	case "pending":
+		ret = TX_STATUS_PENDING
+	case "success":
+		ret = TX_STATUS_SUCCESS
+	case "failed":
+		ret = TX_STATUS_FAILED
+	default:
+		ret = TX_STATUS_UNKNOWN
+	}
+
+	return ret
+}
+
+type TxInfo struct {
+	Protocol        common.Address `json:"from"`
+	DelegateAddress common.Address `json:"to"`
+	From            common.Address `json:"from"`
+	To              common.Address `json:"to"`
+	BlockHash       common.Hash    `json:"block_hash"`
+	BlockNumber     *big.Int       `json:"block_number"`
+	BlockTime       int64          `json:"block_time"`
+	TxHash          common.Hash    `json:"tx_hash"`
+	TxIndex         int64          `json:"tx_index"`
+	TxLogIndex      int64          `json:"tx_log_index"`
+	Value           *big.Int       `json:"value"`
+	Status          TxStatus       `json:"status"`
+	GasLimit        *big.Int       `json:"gas_limit"`
+	GasUsed         *big.Int       `json:"gas_used"`
+	GasPrice        *big.Int       `json:"gas_price"`
+	Nonce           *big.Int       `json:"nonce"`
+	Identify        string         `json:"identify"`
+}
+
 type TokenRegisterEvent struct {
-	Token           common.Address
-	ContractAddress common.Address
-	Symbol          string
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Token  common.Address
+	Symbol string
 }
 
 type TokenUnRegisterEvent struct {
-	Token           common.Address
-	ContractAddress common.Address
-	Symbol          string
-	Blocknumber     *big.Int
-	Time            *big.Int
-}
-
-type RinghashSubmittedEvent struct {
-	RingHash        common.Hash
-	RingMiner       common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Token  common.Address
+	Symbol string
 }
 
 type AddressAuthorizedEvent struct {
-	Protocol        common.Address
-	ContractAddress common.Address
-	Number          int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Protocol common.Address
+	Number   int
 }
 
 type AddressDeAuthorizedEvent struct {
-	Protocol        common.Address
-	ContractAddress common.Address
-	Number          int
-	Blocknumber     *big.Int
-	Time            *big.Int
-}
-
-// todo: unpack transaction and create event
-type EtherBalanceUpdateEvent struct {
-	Owner common.Address
-}
-
-// todo: transfer change to
-type TokenBalanceUpdateEvent struct {
-	Owner       common.Address
-	Value       *big.Int
-	BlockNumber *big.Int
-	BlockHash   common.Hash
-}
-
-// todo: erc20 event
-type TokenAllowanceUpdateEvent struct {
-	Owner       common.Address
-	Spender     common.Address
-	Value       *big.Int
-	BlockNumber *big.Int
-	BlockHash   common.Hash
+	TxInfo
+	Protocol common.Address
+	Number   int
 }
 
 type TransferEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	Value           *big.Int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Sender   common.Address
+	Receiver common.Address
+	Amount   *big.Int
 }
 
 type ApprovalEvent struct {
-	Owner           common.Address
-	Spender         common.Address
-	ContractAddress common.Address
-	Value           *big.Int
-	Blocknumber     *big.Int
-	Time            *big.Int
+	TxInfo
+	Owner   common.Address
+	Spender common.Address
+	Amount  *big.Int
 }
 
 type OrderFilledEvent struct {
-	Ringhash        common.Hash
-	PreOrderHash    common.Hash
-	OrderHash       common.Hash
-	NextOrderHash   common.Hash
-	TxHash          common.Hash
-	ContractAddress common.Address
-	Owner           common.Address
-	TokenS          common.Address
-	TokenB          common.Address
-	RingIndex       *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
-	AmountS         *big.Int
-	AmountB         *big.Int
-	LrcReward       *big.Int
-	LrcFee          *big.Int
-	SplitS          *big.Int
-	SplitB          *big.Int
-	Market          string
-	FillIndex       *big.Int
+	TxInfo
+	Ringhash      common.Hash
+	PreOrderHash  common.Hash
+	OrderHash     common.Hash
+	NextOrderHash common.Hash
+	Owner         common.Address
+	TokenS        common.Address
+	TokenB        common.Address
+	SellTo        common.Address
+	BuyFrom       common.Address
+	RingIndex     *big.Int
+	AmountS       *big.Int
+	AmountB       *big.Int
+	LrcReward     *big.Int
+	LrcFee        *big.Int
+	SplitS        *big.Int
+	SplitB        *big.Int
+	Market        string
+	FillIndex     *big.Int
 }
 
 type OrderCancelledEvent struct {
+	TxInfo
 	OrderHash       common.Hash
-	TxHash          common.Hash
-	ContractAddress common.Address
-	Time            *big.Int
-	Blocknumber     *big.Int
 	AmountCancelled *big.Int
 }
 
 type CutoffEvent struct {
-	Owner           common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Time            *big.Int
-	Blocknumber     *big.Int
-	Cutoff          *big.Int
+	TxInfo
+	Owner         common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
+}
+
+type CutoffPairEvent struct {
+	TxInfo
+	Owner         common.Address
+	Token1        common.Address
+	Token2        common.Address
+	Cutoff        *big.Int
+	OrderHashList []common.Hash
 }
 
 type RingMinedEvent struct {
-	RingIndex          *big.Int
-	Time               *big.Int
-	Blocknumber        *big.Int
-	TotalLrcFee        *big.Int
-	TradeAmount        int
-	Ringhash           common.Hash
-	TxHash             common.Hash
-	Miner              common.Address
-	FeeRecipient       common.Address
-	ContractAddress    common.Address
-	IsRinghashReserved bool
+	TxInfo
+	RingIndex    *big.Int
+	TotalLrcFee  *big.Int
+	TradeAmount  int
+	Ringhash     common.Hash
+	Miner        common.Address
+	FeeRecipient common.Address
+	Err          error
 }
 
-type WethDepositMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
+type WethDepositEvent struct {
+	TxInfo
+	Dst    common.Address
+	Amount *big.Int
 }
 
-type WethWithdrawalMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
-}
-
-type ApproveMethodEvent struct {
-	From            common.Address
-	To              common.Address
-	ContractAddress common.Address
-	TxHash          common.Hash
-	Spender         common.Address
-	Value           *big.Int
-	Time            *big.Int
-	Blocknumber     *big.Int
-	Owner           common.Address
-	Success         bool
+type WethWithdrawalEvent struct {
+	TxInfo
+	Src    common.Address
+	Amount *big.Int
 }
 
 type SubmitRingMethodEvent struct {
-	TxHash       common.Hash
-	UsedGas      *big.Int
-	UsedGasPrice *big.Int
+	TxInfo
+	OrderList    []Order
+	FeeReceipt   common.Address
+	FeeSelection uint16
 	Err          error
 }
 
-type RingHashSubmitMethodEvent struct {
-	RingMiner    common.Address
+type RingSubmitResultEvent struct {
 	RingHash     common.Hash
+	RingUniqueId common.Hash
 	TxHash       common.Hash
+	Status       TxStatus
+	RingIndex    *big.Int
+	BlockNumber  *big.Int
 	UsedGas      *big.Int
-	UsedGasPrice *big.Int
 	Err          error
-}
-
-type BatchSubmitRingHashMethodEvent struct {
-	RingHashMinerMap map[common.Hash]common.Address
-	TxHash           common.Hash
-	UsedGas          *big.Int
-	UsedGasPrice     *big.Int
-	Err              error
-}
-
-type RingSubmitFailedEvent struct {
-	RingHash common.Hash
-	Err      error
 }
 
 type ForkedEvent struct {
@@ -231,4 +218,21 @@ type ForkedEvent struct {
 type BlockEvent struct {
 	BlockNumber *big.Int
 	BlockHash   common.Hash
+	BlockTime   int64
+}
+
+type ExtractorWarningEvent struct{}
+
+type TransactionEvent struct {
+	Tx TxInfo
+}
+
+type DepthUpdateEvent struct {
+	DelegateAddress string
+	Market          string
+}
+
+type BalanceUpdateEvent struct {
+	DelegateAddress string
+	Owner           string
 }

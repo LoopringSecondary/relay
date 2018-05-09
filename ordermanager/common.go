@@ -25,6 +25,7 @@ import (
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
 	"github.com/Loopring/relay/types"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
@@ -40,15 +41,24 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 	state.CancelledAmountB = big.NewInt(0)
 	state.CancelledAmountS = big.NewInt(0)
 
-	// get order cancelled or filled amount from chain
-	if cancelOrFilledAmount, err := ethaccessor.GetCancelledOrFilled(state.RawOrder.Protocol, state.RawOrder.Hash, blockNumberStr); err != nil {
-		return nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", state.RawOrder.Hash.Hex(), err.Error())
+	state.RawOrder.Side = util.GetSide(state.RawOrder.TokenS.Hex(), state.RawOrder.TokenB.Hex())
+
+	protocol := state.RawOrder.DelegateAddress
+	cancelAmount, dealtAmount, getAmountErr := getCancelledAndDealtAmount(protocol, state.RawOrder.Hash, blockNumberStr)
+	if getAmountErr != nil {
+		return nil, getAmountErr
+	}
+
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		state.DealtAmountB = dealtAmount
+		state.CancelledAmountB = cancelAmount
 	} else {
-		state.CancelledAmountS = cancelOrFilledAmount
+		state.DealtAmountS = dealtAmount
+		state.CancelledAmountS = cancelAmount
 	}
 
 	// check order finished status
-	settleOrderStatus(state, mc)
+	settleOrderStatus(state, mc, ORDER_FROM_FILL)
 
 	if blockNumber == nil {
 		state.UpdatedBlock = big.NewInt(0)
@@ -68,50 +78,64 @@ func newOrderEntity(state *types.OrderState, mc marketcap.MarketCapProvider, blo
 }
 
 // 写入订单状态
-func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider) {
+type OrderFillOrCancelType string
+
+const (
+	ORDER_FROM_FILL   OrderFillOrCancelType = "fill"
+	ORDER_FROM_CANCEL OrderFillOrCancelType = "cancel"
+)
+
+func settleOrderStatus(state *types.OrderState, mc marketcap.MarketCapProvider, source OrderFillOrCancelType) {
 	zero := big.NewInt(0)
 	finishAmountS := big.NewInt(0).Add(state.CancelledAmountS, state.DealtAmountS)
 	totalAmountS := big.NewInt(0).Add(finishAmountS, state.SplitAmountS)
 	finishAmountB := big.NewInt(0).Add(state.CancelledAmountB, state.DealtAmountB)
 	totalAmountB := big.NewInt(0).Add(finishAmountB, state.SplitAmountB)
 	totalAmount := big.NewInt(0).Add(totalAmountS, totalAmountB)
+
 	if totalAmount.Cmp(zero) <= 0 {
 		state.Status = types.ORDER_NEW
-	} else {
-		finished := isOrderFullFinished(state, mc)
-		state.SettleFinishedStatus(finished)
+		return
 	}
-}
 
-// 读取时根据订单相关参数，解释订单重叠状态
-// TODO other status ex,cancel
-func resolveOrderStatus(state *types.OrderState) {
-	if state.IsOrderExpired() && (state.Status == types.ORDER_NEW || state.Status == types.ORDER_PARTIAL) {
-		state.Status = types.ORDER_EXPIRE
+	if !isOrderFullFinished(state, mc) {
+		state.Status = types.ORDER_PARTIAL
+		return
+	}
+
+	if source == ORDER_FROM_FILL {
+		state.Status = types.ORDER_FINISHED
+		return
+	}
+	if source == ORDER_FROM_CANCEL {
+		state.Status = types.ORDER_CANCEL
+		return
 	}
 }
 
 func isOrderFullFinished(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
-	var valueOfRemainAmount *big.Rat
+	remainedAmountS, _ := state.RemainedAmount()
+	remainedValue, _ := mc.LegalCurrencyValue(state.RawOrder.TokenS, remainedAmountS)
 
-	if state.RawOrder.BuyNoMoreThanAmountB {
-		dealtAndSplitAmountB := new(big.Int).Add(state.DealtAmountB, state.SplitAmountB)
-		cancelOrFilledAmountB := new(big.Int).Add(dealtAndSplitAmountB, state.CancelledAmountB)
-		remainAmountB := new(big.Int).Sub(state.RawOrder.AmountB, cancelOrFilledAmountB)
-		ratRemainAmountB := new(big.Rat).SetInt(remainAmountB)
-		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenB, ratRemainAmountB)
-	} else {
-		dealtAndSplitAmountS := new(big.Int).Add(state.DealtAmountS, state.SplitAmountS)
-		cancelOrFilledAmountS := new(big.Int).Add(dealtAndSplitAmountS, state.CancelledAmountS)
-		remainAmountS := new(big.Int).Sub(state.RawOrder.AmountS, cancelOrFilledAmountS)
-		ratRemainAmountS := new(big.Rat).SetInt(remainAmountS)
-		valueOfRemainAmount, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, ratRemainAmountS)
-	}
-
-	return isValueDusted(valueOfRemainAmount)
+	return isValueDusted(remainedValue)
 }
 
-// todo: if valueOfRemainAmount is nil procedure of this may have problem
+// 判断cancel的量大于灰尘丁价值，如果是则为cancel，如果不是则为finished
+func isOrderCancelled(state *types.OrderState, mc marketcap.MarketCapProvider) bool {
+	if state.Status != types.ORDER_CANCEL && state.Status != types.ORDER_FINISHED {
+		return false
+	}
+
+	var cancelValue *big.Rat
+	if state.RawOrder.BuyNoMoreThanAmountB {
+		cancelValue, _ = mc.LegalCurrencyValue(state.RawOrder.TokenB, new(big.Rat).SetInt(state.CancelledAmountB))
+	} else {
+		cancelValue, _ = mc.LegalCurrencyValue(state.RawOrder.TokenS, new(big.Rat).SetInt(state.CancelledAmountS))
+	}
+
+	return !isValueDusted(cancelValue)
+}
+
 func isValueDusted(value *big.Rat) bool {
 	minValue := big.NewInt(dustOrderValue)
 	if value == nil || value.Cmp(new(big.Rat).SetInt(minValue)) > 0 {
@@ -130,4 +154,32 @@ func blockNumberToString(blockNumber *big.Int) string {
 	}
 
 	return blockNumberStr
+}
+
+func getCancelledAndDealtAmount(protocol common.Address, orderhash common.Hash, blockNumberStr string) (*big.Int, *big.Int, error) {
+	// TODO(fuk): 系统暂时只会从gateway接收新订单,而不会有部分成交的订单
+	return big.NewInt(0), big.NewInt(0), nil
+
+	var (
+		cancelled, cancelOrFilled, dealt *big.Int
+		err                              error
+	)
+
+	// get order cancelled amount from chain
+	if cancelled, err = ethaccessor.GetCancelled(protocol, orderhash, blockNumberStr); err != nil {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelled error:%s", orderhash.Hex(), err.Error())
+	}
+
+	// get order cancelledOrFilled amount from chain
+	if cancelOrFilled, err = ethaccessor.GetCancelledOrFilled(protocol, orderhash, blockNumberStr); err != nil {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s getCancelledOrFilled error:%s", orderhash.Hex(), err.Error())
+	}
+
+	if cancelOrFilled.Cmp(cancelled) < 0 {
+		return nil, nil, fmt.Errorf("order manager,handle gateway order,order %s cancelOrFilledAmount:%s < cancelledAmount:%s", orderhash.Hex(), cancelOrFilled.String(), cancelled.String())
+	}
+
+	dealt = big.NewInt(0).Sub(cancelOrFilled, cancelled)
+
+	return cancelled, dealt, nil
 }

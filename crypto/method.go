@@ -19,6 +19,8 @@
 package crypto
 
 import (
+	"errors"
+	"github.com/Loopring/relay/log"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -33,8 +35,7 @@ func GenerateHash(data ...[]byte) []byte {
 	return crypto.GenerateHash(data...)
 }
 
-func Sign(hash []byte, signerAddr common.Address) ([]byte, error) {
-	signer := accounts.Account{Address: signerAddr}
+func Sign(hash []byte, signer common.Address) ([]byte, error) {
 	return crypto.Sign(hash, signer)
 }
 
@@ -50,11 +51,24 @@ func SigToVRS(sig []byte) (v byte, r []byte, s []byte) {
 	return crypto.SigToVRS(sig)
 }
 
-func UnlockAccount(acc accounts.Account, passphrase string) error {
-	return crypto.UnlockAccount(acc, passphrase)
+func UnlockKSAccount(acc accounts.Account, passphrase string) error {
+	if c, ok := crypto.(EthKSCrypto); ok {
+		return c.UnlockAccount(acc, passphrase)
+	} else {
+		return errors.New("can't unlock ")
+	}
 }
 
-func SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func IsKSAccountUnlocked(addr common.Address) bool {
+	if c, ok := crypto.(EthKSCrypto); ok {
+		return c.IsUnlocked(addr)
+	} else {
+		log.Errorf("unable to get address :%s lock status", addr.Hex())
+		return false
+	}
+}
+
+func SignTx(a common.Address, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	return crypto.SignTx(a, tx, chainID)
 }
 

@@ -59,6 +59,8 @@ func LoadConfig(file string) *GlobalConfig {
 	//	}
 	//}
 
+	// extractor.IsDevNet default false
+
 	return c
 }
 
@@ -72,6 +74,7 @@ type GlobalConfig struct {
 	Redis          RedisOptions
 	Ipfs           IpfsOptions
 	Jsonrpc        JsonrpcOptions
+	Websocket      WebsocketOptions
 	GatewayFilters GatewayFiltersOptions
 	OrderManager   OrderManagerOptions
 	Gateway        GateWayOptions
@@ -84,10 +87,19 @@ type GlobalConfig struct {
 	Market         MarketOptions
 	MarketCap      MarketCapOptions
 	UserManager    UserManagerOptions
+	AccountManager AccountManagerOptions
+}
+
+type AccountManagerOptions struct {
+	CacheDuration int64
 }
 
 type JsonrpcOptions struct {
-	Port int
+	Port string
+}
+
+type WebsocketOptions struct {
+	Port string
 }
 
 func (c *GlobalConfig) defaultConfig() {
@@ -116,16 +128,17 @@ func (opts IpfsOptions) Url() string {
 }
 
 type AccessorOptions struct {
-	RawUrls []string `required:"true"`
+	RawUrls           []string `required:"true"`
+	FetchTxRetryCount int
 }
 
 type ExtractorOptions struct {
-	Debug                   bool
-	SaveEventLog            bool
-	UseTestStartBlockNumber bool
-	ConfirmBlockNumber      uint64
-	StartBlockNumber        *big.Int
-	EndBlockNumber          *big.Int
+	StartBlockNumber   *big.Int
+	EndBlockNumber     *big.Int
+	ConfirmBlockNumber uint64
+	ForkWaitingTime    int64
+	Debug              bool
+	Open               bool
 }
 
 type KeyStoreOptions struct {
@@ -137,7 +150,6 @@ type KeyStoreOptions struct {
 type ProtocolOptions struct {
 	Address          map[string]string
 	ImplAbi          string
-	RegistryAbi      string
 	DelegateAbi      string
 	TokenRegistryAbi string
 }
@@ -154,10 +166,13 @@ type LogOptions struct {
 }
 
 type TimingMatcher struct {
-	RoundOrdersCount     int
-	Duration             int64
-	DelayedNumber        int64
-	MaxCacheRoundsLength int
+	RoundOrdersCount             int
+	Duration                     int64
+	ReservedSubmitTime           int64
+	MaxSumitFailedCount          int64
+	DelayedNumber                int64
+	MaxCacheRoundsLength         int
+	LagForCleanSubmitCacheBlocks int64
 }
 
 type PercentMinerAddress struct {
@@ -174,33 +189,45 @@ type NormalMinerAddress struct {
 }
 
 type MinerOptions struct {
-	RingMaxLength         int `required:"true"` //recommended value:4
-	FeeRecepient          string
-	Miner                 string
-	FeeReceipt            string //address the receipt of fee
-	IfRegistryRingHash    bool
+	RingMaxLength         int `` //recommended value:4
+	Name                  string
+	Subsidy               float64
+	WalletSplit           float64
 	NormalMiners          []NormalMinerAddress  //
 	PercentMiners         []PercentMinerAddress //
 	TimingMatcher         *TimingMatcher
 	RateRatioCVSThreshold int64
 	MinGasLimit           int64
 	MaxGasLimit           int64
+	FeeReceipt            string
 }
 
 type MarketOptions struct {
-	TokenFile string
+	TokenFile             string
+	OldVersionWethAddress string
+	CronJobLock           bool
 }
 
 type MarketCapOptions struct {
 	BaseUrl  string
 	Currency string
 	Duration int
+	IsSync   bool
 }
 
 type GatewayFiltersOptions struct {
 	BaseFilter struct {
-		MinLrcFee int64
-		MaxPrice  int64
+		MinLrcFee             int64
+		MinLrcHold            int64
+		MaxPrice              int64
+		MinSplitPercentage    float64
+		MaxSplitPercentage    float64
+		MinTokeSAmount        map[string]string
+		MinTokenSUsdAmount    float64
+		MaxValidSinceInterval int64
+	}
+	PowFilter struct {
+		Difficulty string
 	}
 }
 
@@ -210,13 +237,16 @@ type GateWayOptions struct {
 }
 
 type MysqlOptions struct {
-	Hostname    string
-	Port        string
-	User        string
-	Password    string
-	DbName      string
-	TablePrefix string
-	Debug       bool
+	Hostname           string
+	Port               string
+	User               string
+	Password           string
+	DbName             string
+	TablePrefix        string
+	MaxOpenConnections int
+	MaxIdleConnections int
+	ConnMaxLifetime    int
+	Debug              bool
 }
 
 type RedisOptions struct {
