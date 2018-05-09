@@ -23,6 +23,8 @@ import (
 	"github.com/Loopring/relay/log"
 	"github.com/Loopring/relay/market/util"
 	"github.com/Loopring/relay/marketcap"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
 	"testing"
 )
 
@@ -36,7 +38,22 @@ func TestStart(t *testing.T) {
 	for _, token := range util.AllTokens {
 		p1, _ := provider.GetMarketCap(token.Protocol)
 		p2, _ := provider.GetMarketCapByCurrency(token.Protocol, "USD")
-		t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.String(), p2.String())
+		t.Logf("second round token:%s, p1:%s, p2:%s", token.Symbol, p1.FloatString(2), p2.FloatString(2))
+	}
+
+	a := new(big.Rat)
+	a.SetString("284186332622238284")
+	f, err := provider.LegalCurrencyValueByCurrency(common.HexToAddress("0xBeB6fdF4ef6CEb975157be43cBE0047B248a8922"), a, "USD")
+	if nil != err {
+		t.Errorf(err.Error())
+	} else {
+		println(f.FloatString(2))
+	}
+	f1, err := provider.LegalCurrencyValueByCurrency(common.HexToAddress("0xEF68e7C694F40c8202821eDF525dE3782458639f"), a, "USD")
+	if nil != err {
+		t.Errorf(err.Error())
+	} else {
+		println(f1.FloatString(2))
 	}
 	//
 	//time.Sleep(3 * time.Minute)
