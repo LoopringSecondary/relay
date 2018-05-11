@@ -234,15 +234,6 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		return nil
 	}
 
-	newFillModel := &dao.FillEvent{}
-	newFillModel.ConvertDown(event)
-	newFillModel.Fork = false
-	newFillModel.Side = util.GetSide(util.AddressToAlias(event.TokenS.Hex()), util.AddressToAlias(event.TokenB.Hex()))
-	if err := om.rds.Add(newFillModel); err != nil {
-		log.Debugf("order manager,handle order filled event error:fill %s insert failed", event.OrderHash.Hex())
-		return err
-	}
-
 	// get rds.Order and types.OrderState
 	state := &types.OrderState{UpdatedBlock: event.BlockNumber}
 	model, err := om.rds.GetOrderByHash(event.OrderHash)
@@ -250,6 +241,16 @@ func (om *OrderManagerImpl) handleOrderFilled(input eventemitter.EventData) erro
 		return err
 	}
 	if err := model.ConvertUp(state); err != nil {
+		return err
+	}
+
+	newFillModel := &dao.FillEvent{}
+	newFillModel.ConvertDown(event)
+	newFillModel.Fork = false
+	newFillModel.OrderType = state.RawOrder.OrderType
+	newFillModel.Side = util.GetSide(util.AddressToAlias(event.TokenS.Hex()), util.AddressToAlias(event.TokenB.Hex()))
+	if err := om.rds.Add(newFillModel); err != nil {
+		log.Debugf("order manager,handle order filled event error:fill %s insert failed", event.OrderHash.Hex())
 		return err
 	}
 

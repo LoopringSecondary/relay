@@ -164,6 +164,7 @@ type FillQuery struct {
 	PageIndex       int    `json:"pageIndex"`
 	PageSize        int    `json:"pageSize"`
 	Side            string `json:"side"`
+	OrderType       string `json:"orderType"`
 }
 
 type RingMinedQuery struct {
@@ -260,6 +261,9 @@ type LatestFill struct {
 	Amount     float64 `json:"amount"`
 	Side       string  `json:"side"`
 	RingHash   string  `json:"ringHash"`
+	LrcFee     string  `json:"lrcFee"`
+	SplitS     string  `json:"splitS"`
+	SplitB     string  `json:"splitB"`
 }
 
 type P2PRingRequest struct {
@@ -618,6 +622,7 @@ func (w *WalletServiceImpl) GetFills(query FillQuery) (dao.PageResult, error) {
 }
 
 func (w *WalletServiceImpl) GetLatestFills(query FillQuery) ([]LatestFill, error) {
+
 	rst := make([]LatestFill, 0)
 	fillQuery, _, _ := fillQueryToMap(query)
 	res, err := w.orderManager.GetLatestFills(fillQuery, 40)
@@ -1133,6 +1138,12 @@ func fillQueryToMap(q FillQuery) (map[string]interface{}, int, int) {
 		rst["side"] = q.Side
 	}
 
+	if q.OrderType == types.ORDER_TYPE_MARKET || q.OrderType == types.ORDER_TYPE_P2P {
+		rst["order_type"] = q.OrderType
+	} else {
+		rst["order_type"] = types.ORDER_TYPE_MARKET
+	}
+
 	return rst, pi, ps
 }
 
@@ -1342,6 +1353,9 @@ func toLatestFill(f dao.FillEvent) (latestFill LatestFill, err error) {
 	rst.Price, _ = strconv.ParseFloat(fmt.Sprintf("%0.8f", price), 64)
 	rst.Side = f.Side
 	rst.RingHash = f.RingHash
+	rst.LrcFee = f.LrcFee
+	rst.SplitS = f.SplitS
+	rst.SplitB = f.SplitB
 	var amount float64
 	if util.GetSide(f.TokenS, f.TokenB) == util.SideBuy {
 		amountB, _ := new(big.Int).SetString(f.AmountB, 0)
