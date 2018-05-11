@@ -71,7 +71,7 @@ func ReducedRate(ringState *types.Ring) *big.Rat {
 	rate := new(big.Rat).SetFloat64(rootOfRing)
 	reducedRate := new(big.Rat)
 	reducedRate.Inv(rate)
-	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.String(), priceOfFloat, len(ringState.Orders), rootOfRing, reducedRate.RatString())
+	log.Debugf("Miner,rate:%s, priceFloat:%f , len:%d, rootOfRing:%f, reducedRate:%s ", rate.FloatString(2), priceOfFloat, len(ringState.Orders), rootOfRing, reducedRate.FloatString(2))
 
 	return reducedRate
 }
@@ -103,14 +103,14 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 		filledOrder.RateAmountS = new(big.Rat).Set(amountS)
 		filledOrder.RateAmountS.Mul(amountS, ringState.ReducedRate)
 		//if BuyNoMoreThanAmountB , AvailableAmountS need to be reduced by the ratePrice
-		//if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
-		//	availbleAmountB := new(big.Rat).Set(filledOrder.AvailableAmountB)
-		//	availableAmountS := new(big.Rat).Mul(filledOrder.RateAmountS, availbleAmountB)
-		//	availableAmountS.Quo(availableAmountS, amountB)
-		//	if filledOrder.AvailableAmountB.Cmp(new(big.Rat).SetInt(filledOrder.OrderState.RawOrder.AmountB)) < 0 {
-		//		filledOrder.AvailableAmountS.Set(availableAmountS)
-		//	}
-		//}
+		//recompute availabeAmountS and availableAmountB by the latest price
+		if filledOrder.OrderState.RawOrder.BuyNoMoreThanAmountB {
+			//filledOrder.AvailableAmountS = new(big.Rat)
+			filledOrder.AvailableAmountS.Mul(filledOrder.SPrice, filledOrder.AvailableAmountB)
+		} else {
+			filledOrder.AvailableAmountB.Mul(filledOrder.BPrice, filledOrder.AvailableAmountS)
+		}
+		log.Debugf("orderhash:%s availableAmountS:%s, availableAmountB:%s", filledOrder.OrderState.RawOrder.Hash.Hex(), filledOrder.AvailableAmountS.FloatString(2), filledOrder.AvailableAmountB.FloatString(2))
 
 		//与上一订单的买入进行比较
 		var lastOrder *types.FilledOrder
