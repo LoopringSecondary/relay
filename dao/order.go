@@ -69,7 +69,8 @@ type Order struct {
 	MinerBlockMark        int64   `gorm:"column:miner_block_mark;type:bigint"`
 	BroadcastTime         int     `gorm:"column:broadcast_time;type:bigint"`
 	Market                string  `gorm:"column:market;type:varchar(40)"`
-	Side                  string  `gorm:"column:side;type:varchar(40)"`
+	Side                  string  `gorm:"column:side;type:varchar(40)`
+	OrderType             string  `gorm:"column:order_type;type:varchar(40)`
 }
 
 // convert types/orderState to dao/order
@@ -115,6 +116,7 @@ func (o *Order) ConvertDown(state *types.OrderState) error {
 	o.PowNonce = src.PowNonce
 	o.BroadcastTime = state.BroadcastTime
 	o.Side = state.RawOrder.Side
+	o.OrderType = state.RawOrder.OrderType
 
 	return nil
 }
@@ -142,7 +144,11 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	if len(o.AuthAddress) > 0 {
 		state.RawOrder.AuthAddr = common.HexToAddress(o.AuthAddress)
 	}
-	state.RawOrder.AuthPrivateKey, _ = crypto.NewPrivateKeyCrypto(false, o.PrivateKey)
+	if len(o.PrivateKey) > 0 {
+		authPrivateKey, err := crypto.NewPrivateKeyCrypto(false, o.PrivateKey); if err == nil {
+			state.RawOrder.AuthPrivateKey = authPrivateKey
+		}
+	}
 	state.RawOrder.WalletAddress = common.HexToAddress(o.WalletAddress)
 
 	state.RawOrder.BuyNoMoreThanAmountB = o.BuyNoMoreThanAmountB
@@ -166,9 +172,12 @@ func (o *Order) ConvertUp(state *types.OrderState) error {
 	state.BroadcastTime = o.BroadcastTime
 	state.RawOrder.Market = o.Market
 	state.RawOrder.CreateTime = o.CreateTime
-	state.RawOrder.Side = o.Side
-
-	state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
+	if o.Side == "" {
+		state.RawOrder.Side = util.GetSide(o.TokenS, o.TokenB)
+	} else {
+		state.RawOrder.Side = o.Side
+	}
+	state.RawOrder.OrderType = o.OrderType
 	return nil
 }
 
@@ -207,6 +216,7 @@ func (s *RdsServiceImpl) GetOrdersForMiner(protocol, tokenS, tokenB string, leng
 		Where("valid_since < ?", sinceTime).
 		Where("valid_until >= ? ", untilTime).
 		Where("status not in (?) ", filterStatus).
+		Where("order_type = ? ", types.ORDER_TYPE_MARKET).
 		Where("miner_block_mark between ? and ?", startBlockNumber, endBlockNumber).
 		Order("price desc").
 		Limit(length).
@@ -287,6 +297,7 @@ func (s *RdsServiceImpl) GetOrderBook(delegate, tokenS, tokenB common.Address, l
 	err = s.db.Where("delegate_address = ?", delegate.Hex()).
 		Where("token_s = ? and token_b = ?", tokenS.Hex(), tokenB.Hex()).
 		Where("status in (?)", filterStatus).
+		Where("order_type = ? ", types.ORDER_TYPE_MARKET).
 		Where("valid_since < ?", nowtime).
 		Where("valid_until >= ? ", nowtime).
 		Order("price desc").
