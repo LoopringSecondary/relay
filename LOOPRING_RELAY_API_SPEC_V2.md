@@ -43,6 +43,7 @@ SocketIO(mainnet) : https://relay1.loopring.io/socket.io/
 * [loopring_getGetFrozenLRCFee](#loopring_getgetfrozenlrcfee)
 * [loopring_getSupportedMarket](#loopring_getsupportedmarket)
 * [loopring_getSupportedTokens](#loopring_getsupportedtokens)
+* [loopring_getContracts](#loopring_getcontracts)
 * [loopring_getLooprSupportedMarket](#loopring_getlooprsupportedmarket)
 * [loopring_getLooprSupportedTokens](#loopring_getlooprsupportedtokens)
 * [loopring_getPortfolio](#loopring_getportfolio)
@@ -992,6 +993,36 @@ curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getSupportedTokens","par
         "isMarket":false
       },....
   ]
+}
+```
+***
+
+#### loopring_getContracts
+
+Get relay supported all contracts. The result struct is map[delegateAddress] List(loopringProtocol)
+
+##### Parameters
+no input params.
+
+```js
+params: [{}]
+```
+
+##### Returns
+- `json object` - The map of delegateAddress with list of loopringProtocol.
+
+##### Example
+```js
+// Request
+curl -X GET --data '{"jsonrpc":"2.0","method":"loopring_getContracts","params":[{}],"id":64}'
+
+// Result
+{
+  "id":64,
+  "jsonrpc": "2.0",
+  "result": {
+      "0x17233e07c67d086464fD408148c3ABB56245FA64": ["0x8d8812b72d1e4ffCeC158D25f56748b7d67c1e78"]
+  }
 }
 ```
 ***
