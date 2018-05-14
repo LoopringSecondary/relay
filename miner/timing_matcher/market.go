@@ -103,7 +103,7 @@ func (market *Market) match() {
 			continue
 		} else {
 
-			if exists,err := CachedMatchedRing(ringForSubmit.Ringhash); nil != err || exists {
+			if exists, err := CachedMatchedRing(ringForSubmit.Ringhash); nil != err || exists {
 				if nil != err {
 					log.Error(err.Error())
 				} else {

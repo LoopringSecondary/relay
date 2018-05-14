@@ -69,7 +69,7 @@ func (c ringCache) save(fields ...[]byte) error {
 	return cache.SAdd(c.cacheKey(), cacheTtl, fields...)
 }
 
-func (c ringCache) exists() (bool,error) {
+func (c ringCache) exists() (bool, error) {
 	return cache.Exists(c.cacheKey())
 }
 
