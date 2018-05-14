@@ -167,7 +167,6 @@ func (submitter *RingSubmitter) listenNewRings() {
 	//		}
 	//	}
 	//}()
-
 	watcher := &eventemitter.Watcher{
 		Concurrent: false,
 		Handle: func(eventData eventemitter.EventData) error {
@@ -217,17 +216,10 @@ func (submitter *RingSubmitter) submitRing(ringSubmitInfo *types.RingSubmitInfo)
 
 	txHash := types.NilHash
 	var err error
-	lastTime := ringSubmitInfo.RawRing.ValidSinceTime()
-
-	needPreExec := false
-	if submitter.currentBlockTime > 0 && lastTime <= submitter.currentBlockTime {
-		needPreExec = true
-		//_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
-	}
 
 	if nil == err {
 		txHashStr := "0x"
-		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData, needPreExec)
+		txHashStr, err = ethaccessor.SignAndSendTransaction(ringSubmitInfo.Miner, ringSubmitInfo.ProtocolAddress, ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, nil, ringSubmitInfo.ProtocolData, false)
 		if nil != err {
 			log.Errorf("submitring hash:%s, err:%s", ringSubmitInfo.Ringhash.Hex(), err.Error())
 			status = types.TX_STATUS_FAILED
@@ -411,7 +403,16 @@ func (submitter *RingSubmitter) GenerateRingSubmitInfo(ringState *types.Ring) (*
 	//	return nil, err
 	//}
 	//预先判断是否会提交成功
-	//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
+	lastTime := ringSubmitInfo.RawRing.ValidSinceTime()
+	if submitter.currentBlockTime > 0 && lastTime <= submitter.currentBlockTime {
+		var err error
+		_, _, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, ringSubmitInfo.ProtocolAddress, "latest")
+		//ringSubmitInfo.ProtocolGas, ringSubmitInfo.ProtocolGasPrice, err = ethaccessor.EstimateGas(ringSubmitInfo.ProtocolData, protocolAddress, "latest")
+		if nil != err {
+			log.Errorf("can't generate ring ,err:%s", err.Error())
+			return nil,err
+		}
+	}
 
 	//if nil != err {
 	//	return nil, err
