@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sort"
-	"github.com/Loopring/relay-lib/cache"
 )
 
 type Market struct {
