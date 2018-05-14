@@ -69,6 +69,10 @@ func (c ringCache) save(fields ...[]byte) error {
 	return cache.SAdd(c.cacheKey(), cacheTtl, fields...)
 }
 
+func (c ringCache) exists() (bool,error) {
+	return cache.Exists(c.cacheKey())
+}
+
 type ownerCache struct {
 	owner  common.Address
 	tokenS common.Address
@@ -223,6 +227,13 @@ func AddMinedRing(ringState *types.RingSubmitInfo) {
 		ownerC.save(orderhash)
 	}
 	//ringC.save(ringFieldData...)
+}
+
+func CachedMatchedRing(ringhash common.Hash) (bool, error) {
+	ringC := ringCache{}
+	ringC.ringhash = ringhash
+	return ringC.exists()
+
 }
 
 func FilledAmountS(owner, tokenS common.Address) (filledAmountS *big.Rat, err error) {
