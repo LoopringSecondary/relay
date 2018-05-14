@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sort"
+	"github.com/Loopring/relay-lib/cache"
 )
 
 type Market struct {
@@ -102,6 +103,16 @@ func (market *Market) match() {
 			log.Debugf("generate RingSubmitInfo err:%s", err.Error())
 			continue
 		} else {
+
+			if exists,err := CachedMatchedRing(ringForSubmit.Ringhash); nil != err || exists {
+				if nil != err {
+					log.Error(err.Error())
+				} else {
+					log.Errorf("ringhash:%s has been submitted", ringForSubmit.Ringhash.Hex())
+				}
+				continue
+			}
+
 			uniqueId := ringForSubmit.RawRing.GenerateUniqueId()
 			if failedCount, err := RingExecuteFailedCount(uniqueId); nil == err && failedCount > market.matcher.maxFailedCount {
 				log.Debugf("ringSubmitInfo.UniqueId:%s , ringhash: %s , has been failed to submit %d times", uniqueId.Hex(), ringForSubmit.Ringhash.Hex(), failedCount)
