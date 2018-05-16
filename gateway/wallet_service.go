@@ -1067,7 +1067,11 @@ func (w *WalletServiceImpl) calculateDepth(states []types.OrderState, length int
 	})
 
 	if length < len(depth) {
-		return depth[:length]
+		if isAsk {
+			return depth[len(depth)-length-1:]
+		} else {
+			return depth[:length]
+		}
 	}
 	return depth
 }
