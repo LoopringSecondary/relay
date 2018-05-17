@@ -1234,36 +1234,17 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmit
 #### loopring_submitRingForP2P
 
 submit signed raw transaction of ring information, then relay can help submitting the ring while tracing the status of orders for wallet. 
+please submit taker and maker order before invoke this method.
 
 ##### Parameters
 
-- `take` - The taker order, please refer to the loopring_submitOrder input data. 
+- `takerOrderHash` - The taker order hash.
 - `makerOrderHash` - The maker order hash.
 - `rawTx` - The raw transaction.
 
 ```js
 params: [{
-  "taker" : {
-    "protocol" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-    "delegateAddress" : "0x5567ee920f7E62274284985D793344351A00142B",
-    "owner" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-    "walletAddress" : "0x847983c3a34afa192cfee860698584c030f4c9db1",
-    "authAddr" : "0xcE862ca5e8DE3c5258B05C558daFDC4B7703a217",
-    "tokenS" : "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-    "tokenB" : "0xEF68e7C694F40c8202821eDF525dE3782458639f",
-    "amountS" : "0x0001234d234",
-    "amountB" : "0x002a7d",
-    "validSince" : "0x5af28fb2",
-    "valiUntil": "0x5af28fb2",
-    "lrcFee" : "0x14",
-    "buyNoMoreThanAmountB" : true,
-    "marginSplitPercentage" : 50, // 0~100
-    "v" : 112,
-    "r" : "239dskjfsn23ck34323434md93jchek3",
-    "s" : "dsfsdf234ccvcbdsfsdf23438cjdkldy",
-    "powNonce" : 10,
-    "orderType" : "p2p_order",
-  },
+  "takerOrderHash" : "0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
   "makerOrderHash" : "0x52c90064a0503ce566a50876fc41e0d549bffd2ba757f859b1749a75be798819",
   "rawTx" : "f889808609184e72a00082271094000000000000000000000000000000000000000080a47f74657374320000000000000000000000000000000000000000000000000000006000571ca08a8bbf888cfa37bbf0bb965423625641fc956967b81d12e23709cead01446075a01ce999b56a8a88504be365442ea61239198e23d1fce7d00fcfc5cd3b44b7215f",
 }]
