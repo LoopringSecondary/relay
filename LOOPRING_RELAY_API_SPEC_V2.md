@@ -1202,18 +1202,33 @@ wallet should notify relay there was a transaction sending to eth network, then 
 ##### Parameters
 
 - `txHash` - The txHash.
+- `nonce` - The owner newest nonce.
+- `to` - The target address to send.
+- `value` - The value in transaction.
+- `gasPrice`.
+- `gas`.
+- `input` - The value input in transaction.
+- `from` - The transaction sender.
+
 
 ```js
 params: [{
-  "txHash" : "0xf462c63f46a4e1dc87a7256d40c5e2ec8262cd006fe98ac0839d1aae61818f84",
-}]
+    "hash":"0xb98c216fd29b627a2845a9c3eb6e2ac591049c07c71cd4e4c0f00962adfb4409",
+    "nonce":"0x66",
+    "to":"0x07a7191de1ba70dbe875f12e744b020416a5712b",
+    "value":"0x16345785d8a0000",
+    "gasPrice":"0x4e3b29200",
+    "gas":"0x5208",
+    "input":"0x",
+    "from":"0x71c079107b5af8619d54537a93dbf16e5aab4900",
+  }]
 ```
 
 ##### Returns
 
-`Account` - Account balance info object.
+`String` - txHash.
 
-1. no result.if failed, you can see error info in param.
+1. no result if failed, you can see error info in param.
 
 ##### Example
 ```js
@@ -1224,7 +1239,7 @@ curl -X POST --data '{"jsonrpc":"2.0","method":"loopring_notifyTransactionSubmit
 {
   "id":64,
   "jsonrpc": "2.0",
-  "result": ""
+  "result": "0xb98c216fd29b627a2845a9c3eb6e2ac591049c07c71cd4e4c0f00962adfb4409"
 }
 ```
 
