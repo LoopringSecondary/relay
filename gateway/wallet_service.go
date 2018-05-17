@@ -267,9 +267,10 @@ type LatestFill struct {
 }
 
 type P2PRingRequest struct {
-	RawTx  string  `json:"rawTx"`
-	Taker  *types.OrderJsonRequest `json:"taker"`
-	MakerOrderHash string `json:"makerOrderHash"`
+	RawTx          string                  `json:"rawTx"`
+	//Taker          *types.OrderJsonRequest `json:"taker"`
+	TakerOrderHash string				   `json:"takerOrderHash"`
+	MakerOrderHash string                  `json:"makerOrderHash"`
 }
 
 type WalletServiceImpl struct {
@@ -501,23 +502,30 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 
 func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
 
-	if p2pRing.Taker.OrderType != types.ORDER_TYPE_P2P {
-		return res, errors.New("only p2p order can be submitted")
+
+	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash))
+	if err != nil {
+		return res, err
 	}
 
-	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash)); if err != nil {
+	taker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.TakerOrderHash))
+	if err != nil {
 		return res, err
+	}
+
+	if taker.RawOrder.OrderType != types.ORDER_TYPE_P2P || maker.RawOrder.OrderType != types.ORDER_TYPE_P2P {
+		return res, errors.New("only p2p order can be submitted")
 	}
 
 	if !maker.IsEffective() {
 		return res, errors.New("maker order has been finished, can't be match ring again")
 	}
 
-	if p2pRing.Taker.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || p2pRing.Taker.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
+	if taker.RawOrder.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || taker.RawOrder.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
 		return res, errors.New("the amount of maker and taker are not matched")
 	}
 
-	if p2pRing.Taker.Owner.Hex() == maker.RawOrder.Owner.Hex() {
+	if taker.RawOrder.Owner.Hex() == maker.RawOrder.Owner.Hex() {
 		return res, errors.New("taker and maker's address can't be same")
 	}
 
@@ -525,16 +533,14 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 		return res, errors.New("maker order has been locked by other taker or expired")
 	}
 
-	takerOrderHash, err := HandleInputOrder(types.ToOrder(p2pRing.Taker)); if err != nil {
-		return res, err
-	}
-
 	var txHashRst string
-	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx); if err != nil {
+	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx)
+	if err != nil {
 		return res, err
 	}
 
-	err = ordermanager.SaveP2POrderRelation(p2pRing.Taker.Owner.Hex(), takerOrderHash, maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst); if err != nil {
+	err = ordermanager.SaveP2POrderRelation(taker.RawOrder.Owner.Hex(), taker.RawOrder.Hash.Hex(), maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst)
+	if err != nil {
 		return res, err
 	}
 
