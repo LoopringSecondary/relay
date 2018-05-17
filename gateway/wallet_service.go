@@ -549,7 +549,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
-	defaultDepthLength := 10
+	defaultDepthLength := 20
 
 	mkt := strings.ToUpper(query.Market)
 	delegateAddress := query.DelegateAddress
