@@ -104,7 +104,7 @@ func readFixedBytes(t Type, word []byte) (interface{}, error) {
 
 // iteratively unpack elements
 func forEachUnpack(t Type, output []byte, start, size int) (interface{}, error) {
-	if start+32*size > len(output) {
+	if start+32*size > len(output) || size < 0 {
 		return nil, fmt.Errorf("abi: cannot marshal in to go array: offset %d would go over slice boundary (len=%d)", len(output), start+32*size)
 	}
 
