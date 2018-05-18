@@ -44,8 +44,6 @@ import (
 
 const DefaultCapCurrency = "CNY"
 const PendingTxPreKey = "PENDING_TX_"
-const code_10001 = "-100001"
-const code_10002 = "-100002"
 
 type Portfolio struct {
 	Token      string `json:"token"`
@@ -502,51 +500,51 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 	}
 }
 
-func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, code string, err error) {
+func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
 
 
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash))
 	if err != nil {
-		return res, code_10001, err
+		return res, err
 	}
 
 	taker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.TakerOrderHash))
 	if err != nil {
-		return res, code_10001, err
+		return res, err
 	}
 
 	if taker.RawOrder.OrderType != types.ORDER_TYPE_P2P || maker.RawOrder.OrderType != types.ORDER_TYPE_P2P {
-		return res, code_10002, errors.New("only p2p order can be submitted")
+		return res, errors.New("only p2p order can be submitted")
 	}
 
 	if !maker.IsEffective() {
-		return res, code_10002, errors.New("maker order has been finished, can't be match ring again")
+		return res, errors.New("maker order has been finished, can't be match ring again")
 	}
 
 	if taker.RawOrder.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || taker.RawOrder.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
-		return res, code_10002, errors.New("the amount of maker and taker are not matched")
+		return res, errors.New("the amount of maker and taker are not matched")
 	}
 
 	if taker.RawOrder.Owner.Hex() == maker.RawOrder.Owner.Hex() {
-		return res, code_10002, errors.New("taker and maker's address can't be same")
+		return res, errors.New("taker and maker's address can't be same")
 	}
 
 	if ordermanager.IsP2PMakerLocked(maker.RawOrder.Hash.Hex()) {
-		return res, code_10002, errors.New("maker order has been locked by other taker or expired")
+		return res, errors.New("maker order has been locked by other taker or expired")
 	}
 
 	var txHashRst string
 	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx)
 	if err != nil {
-		return res, code_10002, err
+		return res, err
 	}
 
 	err = ordermanager.SaveP2POrderRelation(taker.RawOrder.Owner.Hex(), taker.RawOrder.Hash.Hex(), maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst)
 	if err != nil {
-		return res, code_10002, err
+		return res, err
 	}
 
-	return txHashRst, code_10002, nil
+	return txHashRst, nil
 }
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
