@@ -45,12 +45,14 @@ import (
 const DefaultCapCurrency = "CNY"
 const PendingTxPreKey = "PENDING_TX_"
 
+const SYS_10001 = "10001"
 const P2P_50001 = "50001"
 const P2P_50002 = "50002"
 const P2P_50003 = "50003"
 const P2P_50004 = "50004"
 const P2P_50005 = "50005"
 const P2P_50006 = "50006"
+const P2P_50007 = "50007"
 
 type Portfolio struct {
 	Token      string `json:"token"`
@@ -548,12 +550,12 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 	var txHashRst string
 	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx)
 	if err != nil {
-		return res, errors.New(P2P_50001)
+		return res, errors.New(P2P_50007)
 	}
 
 	err = ordermanager.SaveP2POrderRelation(taker.RawOrder.Owner.Hex(), taker.RawOrder.Hash.Hex(), maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst)
 	if err != nil {
-		return res, errors.New(P2P_50001)
+		return res, errors.New(SYS_10001)
 	}
 
 	return txHashRst, nil
