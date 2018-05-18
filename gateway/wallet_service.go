@@ -52,7 +52,7 @@ const P2P_50003 = "50003"
 const P2P_50004 = "50004"
 const P2P_50005 = "50005"
 const P2P_50006 = "50006"
-const P2P_50007 = "50007"
+const P2P_50008 = "50008"
 
 type Portfolio struct {
 	Token      string `json:"token"`
@@ -519,7 +519,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 	taker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.TakerOrderHash))
 	if err != nil {
-		return res, errors.New(P2P_50001)
+		return res, errors.New(P2P_50008)
 	}
 
 	if taker.RawOrder.OrderType != types.ORDER_TYPE_P2P || maker.RawOrder.OrderType != types.ORDER_TYPE_P2P {
@@ -550,7 +550,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 	var txHashRst string
 	err = ethaccessor.SendRawTransaction(&txHashRst, p2pRing.RawTx)
 	if err != nil {
-		return res, errors.New(P2P_50007)
+		return res, err
 	}
 
 	err = ordermanager.SaveP2POrderRelation(taker.RawOrder.Owner.Hex(), taker.RawOrder.Hash.Hex(), maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst)
