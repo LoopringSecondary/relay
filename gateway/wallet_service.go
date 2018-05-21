@@ -45,6 +45,15 @@ import (
 const DefaultCapCurrency = "CNY"
 const PendingTxPreKey = "PENDING_TX_"
 
+const SYS_10001 = "10001"
+const P2P_50001 = "50001"
+const P2P_50002 = "50002"
+const P2P_50003 = "50003"
+const P2P_50004 = "50004"
+const P2P_50005 = "50005"
+const P2P_50006 = "50006"
+const P2P_50008 = "50008"
+
 type Portfolio struct {
 	Token      string `json:"token"`
 	Amount     string `json:"amount"`
@@ -170,7 +179,7 @@ type FillQuery struct {
 type RingMinedQuery struct {
 	DelegateAddress string    `json:"delegateAddress"`
 	ProtocolAddress string    `json:"protocolAddress"`
-	RingIndex       types.Big `json:"ringIndex"`
+	RingIndex       string    `json:"ringIndex"`
 	PageIndex       int       `json:"pageIndex"`
 	PageSize        int       `json:"pageSize"`
 }
@@ -505,32 +514,37 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash))
 	if err != nil {
-		return res, err
+		return res, errors.New(P2P_50001)
 	}
 
 	taker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.TakerOrderHash))
 	if err != nil {
-		return res, err
+		return res, errors.New(P2P_50008)
 	}
 
 	if taker.RawOrder.OrderType != types.ORDER_TYPE_P2P || maker.RawOrder.OrderType != types.ORDER_TYPE_P2P {
-		return res, errors.New("only p2p order can be submitted")
+		//return res, errors.New("only p2p order can be submitted")
+		return res, errors.New(P2P_50002)
 	}
 
 	if !maker.IsEffective() {
-		return res, errors.New("maker order has been finished, can't be match ring again")
+		//return res, errors.New("maker order has been finished, can't be match ring again")
+		return res, errors.New(P2P_50003)
 	}
 
 	if taker.RawOrder.AmountS.Cmp(maker.RawOrder.AmountB) != 0 || taker.RawOrder.AmountB.Cmp(maker.RawOrder.AmountS) != 0 {
-		return res, errors.New("the amount of maker and taker are not matched")
+		//return res, errors.New("the amount of maker and taker are not matched")
+		return res, errors.New(P2P_50004)
 	}
 
 	if taker.RawOrder.Owner.Hex() == maker.RawOrder.Owner.Hex() {
-		return res, errors.New("taker and maker's address can't be same")
+		//return res, errors.New("taker and maker's address can't be same")
+		return res, errors.New(P2P_50005)
 	}
 
 	if ordermanager.IsP2PMakerLocked(maker.RawOrder.Hash.Hex()) {
-		return res, errors.New("maker order has been locked by other taker or expired")
+		//return res, errors.New("maker order has been locked by other taker or expired")
+		return res, errors.New(P2P_50006)
 	}
 
 	var txHashRst string
@@ -541,7 +555,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 	err = ordermanager.SaveP2POrderRelation(taker.RawOrder.Owner.Hex(), taker.RawOrder.Hash.Hex(), maker.RawOrder.Owner.Hex(), maker.RawOrder.Hash.Hex(), txHashRst)
 	if err != nil {
-		return res, err
+		return res, errors.New(SYS_10001)
 	}
 
 	return txHashRst, nil
@@ -549,7 +563,7 @@ func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string
 
 func (w *WalletServiceImpl) GetDepth(query DepthQuery) (res Depth, err error) {
 
-	defaultDepthLength := 10
+	defaultDepthLength := 50
 
 	mkt := strings.ToUpper(query.Market)
 	delegateAddress := query.DelegateAddress
@@ -663,8 +677,9 @@ func (w *WalletServiceImpl) GetRingMined(query RingMinedQuery) (res dao.PageResu
 }
 
 func (w *WalletServiceImpl) GetRingMinedDetail(query RingMinedQuery) (res RingMinedDetail, err error) {
-	if query.RingIndex.BigInt().Cmp(big.NewInt(0)) < 0 {
-		return res, errors.New("ring index can't < 0")
+
+	if query.RingIndex == "" {
+		return res, errors.New("ringIndex must be supplied")
 	}
 
 	rings, err := w.orderManager.RingMinedPageQuery(ringMinedQueryToMap(query))
@@ -1176,8 +1191,8 @@ func ringMinedQueryToMap(q RingMinedQuery) (map[string]interface{}, int, int) {
 	if common.IsHexAddress(q.ProtocolAddress) {
 		rst["contract_address"] = q.ProtocolAddress
 	}
-	if q.RingIndex.BigInt().Cmp(big.NewInt(0)) >= 0 {
-		rst["ring_index"] = q.RingIndex.BigInt().String()
+	if q.RingIndex != "" {
+		rst["ring_index"] = types.HexToBigint(q.RingIndex).String()
 	}
 
 	return rst, pi, ps

@@ -178,6 +178,7 @@ func (so *SocketIOServiceImpl) Start() {
 		aliasOfV := v
 
 		server.OnEvent("/", aliasOfV+EventPostfixReq, func(s socketio.Conn, msg string) {
+			fmt.Println("input emit msg is ....." + msg)
 			context := make(map[string]string)
 			if s != nil && s.Context() != nil {
 				context = s.Context().(map[string]string)
@@ -186,6 +187,7 @@ func (so *SocketIOServiceImpl) Start() {
 			s.SetContext(context)
 			so.connIdMap.Store(s.ID(), s)
 			//log.Infof("[SOCKETIO-EMIT]response emit by key : %s, connId : %s", aliasOfV, s.ID())
+			fmt.Println("out emit msg is ....." + aliasOfV)
 			so.EmitNowByEventType(aliasOfV, s, msg)
 		})
 
