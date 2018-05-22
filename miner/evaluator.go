@@ -177,6 +177,9 @@ func (e *Evaluator) ComputeRing(ringState *types.Ring) error {
 		if cvs.Int64() <= e.rateRatioCVSThreshold {
 			return nil
 		} else {
+			for _, o := range ringState.Orders {
+				log.Debugf("cvs bigger than RateRatioCVSThreshold orderhash:%s", o.OrderState.RawOrder.Hash.Hex())
+			}
 			return errors.New("Miner,cvs must less than RateRatioCVSThreshold")
 		}
 	}
@@ -351,9 +354,12 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 		subSquare := new(big.Int).Mul(sub, sub)
 		cvs.Add(cvs, subSquare)
 	}
-	log.Debugf("CVSquare, scale:%s", scale)
-	log.Debugf("CVSquare, avg:%s", scale)
-	log.Debugf("CVSquare, length1:%s", scale)
+	//log.Debugf("CVSquare, scale:%s", scale)
+	//log.Debugf("CVSquare, avg:%s", scale)
+	//log.Debugf("CVSquare, length1:%s", scale)
+	if avg.Sign() <= 0 {
+		return new(big.Int).SetInt64(math.MaxInt64)
+	}
 	//todo:avg may be zero??
 	return cvs.Mul(cvs, scale).Div(cvs, avg).Mul(cvs, scale).Div(cvs, avg).Div(cvs, length1)
 }
