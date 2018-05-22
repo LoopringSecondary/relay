@@ -354,9 +354,9 @@ func CVSquare(rateRatios []*big.Int, scale *big.Int) *big.Int {
 		subSquare := new(big.Int).Mul(sub, sub)
 		cvs.Add(cvs, subSquare)
 	}
-	log.Debugf("CVSquare, scale:%s", scale)
-	log.Debugf("CVSquare, avg:%s", scale)
-	log.Debugf("CVSquare, length1:%s", scale)
+	log.Debugf("CVSquare, scale:%s", scale.String())
+	log.Debugf("CVSquare, avg:%s", avg.String())
+	log.Debugf("CVSquare, length1:%s", length1.String())
 	if avg.Sign() <= 0 {
 		return new(big.Int).SetInt64(math.MaxInt64)
 	}
