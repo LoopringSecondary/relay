@@ -137,16 +137,23 @@ func (market *Market) match() {
 	}
 
 	for orderHash, _ := range market.AtoBOrders {
-		if fullFilled, exists := matchedOrderHashes[orderHash]; exists && fullFilled {
+		fullFilled, exists := matchedOrderHashes[orderHash]
+		if exists && fullFilled {
+			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, orderHash)
+		} else if !exists && (len(market.AtoBOrders) >= market.matcher.roundOrderCount) {
 			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, orderHash)
 		}
 	}
 
 	for orderHash, _ := range market.BtoAOrders {
-		if fullFilled, exists := matchedOrderHashes[orderHash]; exists && fullFilled {
+		fullFilled, exists := matchedOrderHashes[orderHash]
+		if exists && fullFilled {
 			market.BtoAOrderHashesExcludeNextRound = append(market.BtoAOrderHashesExcludeNextRound, orderHash)
+		} else if !exists && (len(market.BtoAOrders) >= market.matcher.roundOrderCount) {
+			market.AtoBOrderHashesExcludeNextRound = append(market.AtoBOrderHashesExcludeNextRound, orderHash)
 		}
 	}
+
 	if len(ringSubmitInfos) > 0 {
 		eventemitter.Emit(eventemitter.Miner_NewRing, ringSubmitInfos)
 	}
