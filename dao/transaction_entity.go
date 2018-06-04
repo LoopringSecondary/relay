@@ -115,7 +115,7 @@ func (s *RdsServiceImpl) GetPendingTxEntity(from string, nonce int64) ([]Transac
 	var txs []TransactionEntity
 
 	err := s.db.Where("tx_from=?", from).
-		Where("nonce=?", nonce).
+		Where("nonce<=?", nonce).
 		Where("status=?", types.TX_STATUS_PENDING).
 		Where("fork=?", false).
 		Find(&txs).Error
