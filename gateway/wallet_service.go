@@ -177,11 +177,11 @@ type FillQuery struct {
 }
 
 type RingMinedQuery struct {
-	DelegateAddress string    `json:"delegateAddress"`
-	ProtocolAddress string    `json:"protocolAddress"`
-	RingIndex       string    `json:"ringIndex"`
-	PageIndex       int       `json:"pageIndex"`
-	PageSize        int       `json:"pageSize"`
+	DelegateAddress string `json:"delegateAddress"`
+	ProtocolAddress string `json:"protocolAddress"`
+	RingIndex       string `json:"ringIndex"`
+	PageIndex       int    `json:"pageIndex"`
+	PageSize        int    `json:"pageSize"`
 }
 
 type RawOrderJsonResult struct {
@@ -276,10 +276,10 @@ type LatestFill struct {
 }
 
 type P2PRingRequest struct {
-	RawTx          string                  `json:"rawTx"`
+	RawTx string `json:"rawTx"`
 	//Taker          *types.OrderJsonRequest `json:"taker"`
-	TakerOrderHash string				   `json:"takerOrderHash"`
-	MakerOrderHash string                  `json:"makerOrderHash"`
+	TakerOrderHash string `json:"takerOrderHash"`
+	MakerOrderHash string `json:"makerOrderHash"`
 }
 
 type WalletServiceImpl struct {
@@ -501,7 +501,8 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 	if len(query.OrderHash) == 0 {
 		return order, errors.New("order hash can't be null")
 	} else {
-		state, err := w.orderManager.GetOrderByHash(common.HexToHash(query.OrderHash)); if err != nil {
+		state, err := w.orderManager.GetOrderByHash(common.HexToHash(query.OrderHash))
+		if err != nil {
 			return order, err
 		} else {
 			return orderStateToJson(*state), err
@@ -510,7 +511,6 @@ func (w *WalletServiceImpl) GetOrderByHash(query OrderQuery) (order OrderJsonRes
 }
 
 func (w *WalletServiceImpl) SubmitRingForP2P(p2pRing P2PRingRequest) (res string, err error) {
-
 
 	maker, err := w.orderManager.GetOrderByHash(common.HexToHash(p2pRing.MakerOrderHash))
 	if err != nil {

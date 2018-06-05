@@ -42,15 +42,16 @@ func SaveP2POrderRelation(takerOwner, taker, makerOwner, maker, txHash string) e
 	maker = strings.ToLower(maker)
 	txHash = strings.ToLower(txHash)
 
-	cache.SAdd(p2pOrderPreKey + takerOwner, DefaultP2POrderExpireTime, []byte(taker))
-	cache.SAdd(p2pOrderPreKey + makerOwner, DefaultP2POrderExpireTime, []byte(maker))
-	cache.Set(p2pRelationPreKey + taker, []byte(txHash), DefaultP2POrderExpireTime)
-	cache.Set(p2pRelationPreKey + maker, []byte(txHash), DefaultP2POrderExpireTime)
+	cache.SAdd(p2pOrderPreKey+takerOwner, DefaultP2POrderExpireTime, []byte(taker))
+	cache.SAdd(p2pOrderPreKey+makerOwner, DefaultP2POrderExpireTime, []byte(maker))
+	cache.Set(p2pRelationPreKey+taker, []byte(txHash), DefaultP2POrderExpireTime)
+	cache.Set(p2pRelationPreKey+maker, []byte(txHash), DefaultP2POrderExpireTime)
 	return nil
 }
 
 func IsP2PMakerLocked(maker string) bool {
-	exist, err := cache.Exists(p2pRelationPreKey + maker); if err != nil || exist == true {
+	exist, err := cache.Exists(p2pRelationPreKey + maker)
+	if err != nil || exist == true {
 		return true
 	}
 	return false
@@ -58,7 +59,7 @@ func IsP2PMakerLocked(maker string) bool {
 
 func HandleP2PRingMined(input eventemitter.EventData) error {
 	if evt, ok := input.(*types.OrderFilledEvent); ok && evt != nil && evt.Status == types.TX_STATUS_SUCCESS {
-		cache.SRem(p2pOrderPreKey + strings.ToLower(evt.Owner.Hex()), []byte(strings.ToLower(evt.OrderHash.Hex())))
+		cache.SRem(p2pOrderPreKey+strings.ToLower(evt.Owner.Hex()), []byte(strings.ToLower(evt.OrderHash.Hex())))
 		cache.Del(p2pRelationPreKey + strings.ToLower(evt.OrderHash.Hex()))
 		cache.Del(p2pRelationPreKey + strings.ToLower(evt.NextOrderHash.Hex()))
 	}
