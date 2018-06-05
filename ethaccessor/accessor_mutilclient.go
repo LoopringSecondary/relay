@@ -216,6 +216,23 @@ func (mc *MutilClient) Call(routeParam string, result interface{}, method string
 	}
 	if "eth_blockNumber" == method && nil == err {
 		return "", nil
+	} else if "eth_sendRawTransaction" == method {
+		var (
+			sendSuccess bool
+			err error
+		)
+		for _,client := range mc.clients {
+			if err1 := client.client.Call(result, method, args...); nil == err1 {
+				sendSuccess = true
+			} else {
+				err = err1
+			}
+		}
+		if !sendSuccess {
+			return "", err
+		} else {
+			return "", nil
+		}
 	} else {
 		rpcClient := mc.bestClient(routeParam)
 		if nil == rpcClient {
