@@ -21,6 +21,8 @@ package txmanager_test
 import (
 	"github.com/Loopring/relay/test"
 	"github.com/Loopring/relay/txmanager"
+	txtyp "github.com/Loopring/relay/txmanager/types"
+	"github.com/Loopring/relay/types"
 	"testing"
 )
 
@@ -67,4 +69,20 @@ func TestTransactionViewImpl_GetAllTransactions(t *testing.T) {
 	for k, v := range txs {
 		t.Logf("%d >>>>>> txhash:%s, symbol:%s, protocol:%s, from:%s, to:%s, type:%s, status:%s", k, v.TxHash.Hex(), v.Symbol, v.Protocol.Hex(), v.From.Hex(), v.To.Hex(), v.Type, v.Status)
 	}
+}
+
+func TestTransactionViewerImpl_FillView(t *testing.T) {
+	txhash := "0x23e58f736fd83345353a594efc1a4d137f7780f2f9c2a41556ee935af4eeb3a6"
+	fillindex := int64(0)
+
+	rds := test.Rds()
+	model, err := rds.FindFillEvent(txhash, fillindex)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	var event types.OrderFilledEvent
+	model.ConvertUp(&event)
+
+	list := txtyp.OrderFilledView(&event)
+	t.Log(len(list))
 }

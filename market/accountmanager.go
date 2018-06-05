@@ -574,9 +574,9 @@ func (accountManager *AccountManager) Start() {
 	blockEndWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleBlockEnd}
 	blockNewWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleBlockNew}
 	ethTransferWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleEthTransfer}
-	cancelOrderWather := &eventemitter.Watcher{Concurrent:false, Handle:accountManager.handleCancelOrder}
-	cutoffAllWatcher := &eventemitter.Watcher{Concurrent:false, Handle:accountManager.handleCutOff}
-	cutoffPairAllWatcher := &eventemitter.Watcher{Concurrent:false, Handle:accountManager.handleCutOffPair}
+	cancelOrderWather := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleCancelOrder}
+	cutoffAllWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleCutOff}
+	cutoffPairAllWatcher := &eventemitter.Watcher{Concurrent: false, Handle: accountManager.handleCutOffPair}
 
 	eventemitter.On(eventemitter.WethDeposit, wethDepositWatcher)
 	eventemitter.On(eventemitter.WethWithdrawal, wethWithdrawalWatcher)

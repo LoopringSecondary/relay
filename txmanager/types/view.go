@@ -203,7 +203,10 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	if symbolS != "" {
 		totalAmountS := big.NewInt(0)
 		totalAmountS = new(big.Int).Add(totalAmountS, src.AmountS)
-		totalAmountS = new(big.Int).Add(totalAmountS, src.SplitS)
+		// todo:合约有bug，后续需要放开判断
+		if symbolS != SYMBOL_LRC {
+			totalAmountS = new(big.Int).Add(totalAmountS, src.SplitS)
+		}
 		if symbolS == SYMBOL_LRC {
 			totalAmountS = new(big.Int).Add(totalAmountS, src.LrcFee)
 			totalAmountS = new(big.Int).Sub(totalAmountS, src.LrcReward)
@@ -221,7 +224,10 @@ func OrderFilledView(src *types.OrderFilledEvent) []TransactionView {
 	if symbolB != "" {
 		totalAmountB := big.NewInt(0)
 		totalAmountB = new(big.Int).Add(totalAmountB, src.AmountB)
-		totalAmountB = new(big.Int).Sub(totalAmountB, src.SplitB)
+		// todo:合约有bug，后续需要放开判断
+		if symbolB != SYMBOL_LRC {
+			totalAmountB = new(big.Int).Sub(totalAmountB, src.SplitB)
+		}
 		if symbolB == SYMBOL_LRC {
 			totalAmountB = new(big.Int).Add(totalAmountB, src.LrcReward)
 			totalAmountB = new(big.Int).Sub(totalAmountB, src.LrcFee)

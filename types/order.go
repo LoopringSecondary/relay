@@ -29,20 +29,20 @@ import (
 type OrderStatus uint8
 
 const (
-	ORDER_UNKNOWN  OrderStatus = 0
-	ORDER_NEW      OrderStatus = 1
-	ORDER_PARTIAL  OrderStatus = 2
-	ORDER_FINISHED OrderStatus = 3
-	ORDER_CANCEL   OrderStatus = 4
-	ORDER_CUTOFF   OrderStatus = 5
-	ORDER_EXPIRE   OrderStatus = 6
-	ORDER_PENDING  OrderStatus = 7
-	ORDER_PENDING_FOR_P2P  OrderStatus = 17
+	ORDER_UNKNOWN         OrderStatus = 0
+	ORDER_NEW             OrderStatus = 1
+	ORDER_PARTIAL         OrderStatus = 2
+	ORDER_FINISHED        OrderStatus = 3
+	ORDER_CANCEL          OrderStatus = 4
+	ORDER_CUTOFF          OrderStatus = 5
+	ORDER_EXPIRE          OrderStatus = 6
+	ORDER_PENDING         OrderStatus = 7
+	ORDER_PENDING_FOR_P2P OrderStatus = 17
 	//ORDER_BALANCE_INSUFFICIENT   OrderStatus = 7
 	//ORDER_ALLOWANCE_INSUFFICIENT OrderStatus = 8
 
 	ORDER_TYPE_MARKET = "market_order"
-	ORDER_TYPE_P2P = "p2p_order"
+	ORDER_TYPE_P2P    = "p2p_order"
 )
 
 //go:generate gencodec -type Order -field-override orderMarshaling -out gen_order_json.go
@@ -89,7 +89,7 @@ type OrderJsonRequest struct {
 	TokenS          common.Address             `json:"tokenS" gencodec:"required"`          // 卖出erc20代币智能合约地址
 	TokenB          common.Address             `json:"tokenB" gencodec:"required"`          // 买入erc20代币智能合约地址
 	AuthAddr        common.Address             `json:"authAddr" gencodec:"required"`        //
-	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey"`  //
+	AuthPrivateKey  crypto.EthPrivateKeyCrypto `json:"authPrivateKey"`                      //
 	WalletAddress   common.Address             `json:"walletAddress" gencodec:"required"`
 	AmountS         *big.Int                   `json:"amountS" gencodec:"required"`    // 卖出erc20代币数量上限
 	AmountB         *big.Int                   `json:"amountB" gencodec:"required"`    // 买入erc20代币数量上限
