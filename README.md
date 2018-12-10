@@ -3,7 +3,7 @@
 The Loopring relay contains two parts: The Relay and Miner. The Relay is the service for wallet to broadcast orders to the ipfs network.  The Miner found ring from the unmatched order. It can act as one or both of them:<br>
 
 
-**THIS REPOSITORY HAS BEEN DEPRECATED. PLEASE USE OUR [relay-cluster](https://https://github.com/Loopring/relay-cluster) INSTEAD**
+**THIS REPOSITORY HAS BEEN DEPRECATED. PLEASE USE OUR [relay-cluster](https://github.com/Loopring/relay-cluster) INSTEAD**
 
 ## SETUP
 ### Ethereum
