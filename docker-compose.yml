@@ -18,7 +18,7 @@ services:
       - /YOUR_IPFS_DIR/staging:/export
       - /YOUR_IPFS_DIR/data:/data/ipfs
     command: --enable-pubsub-experiment
-    image: ipfs/go-ipfs:v0.4.11
+    image: ipfs/go-ipfs:v0.4.14
 
   eth:
     ports:
