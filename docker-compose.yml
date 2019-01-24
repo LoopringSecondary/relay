@@ -26,7 +26,7 @@ services:
       - 30303:30303
     volumes:
       - /YOUR_ETH_DATA_DIR:/root
-    command: --datadir /root/.ethereum --rpc --rpcaddr 0.0.0.0 --fast
+    command: --datadir /root/.ethereum --rpc --rpcaddr 0.0.0.0 --fast --cache 1024
     image: ethereum/client-go:v1.7.3
 
   relay:
